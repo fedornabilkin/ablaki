@@ -1,0 +1,215 @@
+/*html,*/
+/*body {*/
+    /*height: 100%;*/
+/*}*/
+
+/*.wrap {*/
+    /*min-height: 100%;*/
+    /*height: auto;*/
+    /*margin: 0 auto -60px;*/
+    /*padding: 0 0 60px;*/
+/*}*/
+
+/*.wrap > .container {*/
+    /*padding: 70px 15px 20px;*/
+/*}*/
+
+/*.footer {*/
+    /*height: 60px;*/
+    /*background-color: #f5f5f5;*/
+    /*border-top: 1px solid #ddd;*/
+    /*padding-top: 20px;*/
+/*}*/
+
+html{height: 100%; font-size: 14px;}
+body {position:relative; min-height: 100%;font-size:1rem;}
+.width-fix{margin:0 auto; max-width:1060px;}
+.container-fluid{padding-bottom:5rem;}
+.wrap {position: relative;}
+main {float:left; width:100%;}
+article { position:relative; margin:0 0 0 20rem; padding:.75rem 0; min-height:25rem;}
+aside {float:left; margin-left: -100%; padding:0 0 1rem 0; width: 19rem; overflow:hidden;}
+aside.right{ float:left; margin-left:-19rem;}
+footer{position:absolute; bottom: 0; left: 0; right: 0; font-size: .73rem}
+footer .alert{margin-bottom:0}
+
+.breadcrumb{margin-bottom: .15rem; padding: 0; background: white}
+
+h1, .h1{margin-top:0; font-size:1.5rem}
+h2, .h2{font-size:1.4rem}
+h3, .h3{font-size:1.3rem}
+h4, .h4{font-size:1.2rem}
+h5, .h5, h6, .h6{font-size:1.15rem}
+
+.pointer{cursor: pointer;}
+.no-underline, a.no-underline{text-decoration: none;}
+.text-default{color:black;}
+.dashed{border-bottom:.1rem dashed #ccc;}
+.strong{font-weight: bold}
+.relative{position:relative}
+.absolute{position:absolute}
+
+.m-t-1{margin-top: 1rem}
+.m-r-1{margin-right: 1rem}
+.m-b-1{margin-bottom: 1rem}
+.m-l-1{margin-left: 1rem}
+
+.pos-t-1{top:1rem}
+.pos-r-1{right:1rem}
+.pos-b-1{bottom:1rem}
+.pos-l-1{left:1rem}
+
+aside .block{margin-top:1rem; padding-bottom:1rem; border-bottom:.1rem solid whitesmoke;}
+aside .last-comment{padding-bottom:0; border-bottom: 0;}
+aside .last-comment .login{display:block;}
+
+.navbar-top{padding: .15rem 1rem; border-radius: 0;}
+
+
+
+.jumbotron {
+    text-align: center;
+    background-color: transparent;
+}
+
+.jumbotron .btn {
+    font-size: 21px;
+    padding: 14px 24px;
+}
+
+.not-set {
+    color: #c55;
+    font-style: italic;
+}
+
+/* add sorting icons to gridview sort links */
+a.asc:after, a.desc:after {
+    position: relative;
+    top: 1px;
+    display: inline-block;
+    font-family: 'Glyphicons Halflings';
+    font-style: normal;
+    font-weight: normal;
+    line-height: 1;
+    padding-left: 5px;
+}
+
+a.asc:after {
+    content: "\e151";
+}
+
+a.desc:after {
+    content: "\e152";
+}
+
+.sort-numerical a.asc:after {
+    content: "\e153";
+}
+
+.sort-numerical a.desc:after {
+    content: "\e154";
+}
+
+.sort-ordinal a.asc:after {
+    content: "\e155";
+}
+
+.sort-ordinal a.desc:after {
+    content: "\e156";
+}
+
+.grid-view td {
+    white-space: nowrap;
+}
+
+.grid-view .filters input,
+.grid-view .filters select {
+    min-width: 50px;
+}
+
+.hint-block {
+    display: block;
+    margin-top: 5px;
+    color: #999;
+}
+
+.error-summary {
+    color: #a94442;
+    background: #fdf7f7;
+    border-left: 3px solid #eed3d7;
+    padding: 10px 20px;
+    margin: 0 0 15px 0;
+}
+
+/* align the logout "link" (button in form) of the navbar */
+.nav li > form > button.logout {
+    padding: 15px;
+    border: none;
+}
+
+@media(max-width:767px) {
+    .nav li > form > button.logout {
+        display:block;
+        text-align: left;
+        width: 100%;
+        padding: 10px 15px;
+    }
+}
+
+.nav > li > form > button.logout:focus,
+.nav > li > form > button.logout:hover {
+    text-decoration: none;
+}
+
+.nav > li > form > button.logout:focus {
+    outline: none;
+}
+
+/* new */
+@media (max-width: 1280px) {
+
+}
+
+@media (max-width: 991px) {
+    article { margin:0 .35rem .4rem 13rem;}
+    .asides{float:left; margin-left: -100%; width: 12rem; overflow:hidden;}
+    aside, aside.right{float:none; margin:0; padding-left:.35rem; padding-right:0; width:100%;}
+    h1, .h1{font-size:1.3rem;}
+    h2, .h2{font-size:1.2rem;}
+    h3, .h3{font-size:1.15rem;}
+    h4, .h4, h5, .h5, h6, .h6{font-size:1.1rem;}
+
+}
+
+@media screen and (max-width: 800px) {
+
+}
+
+@media (max-width: 767px) {
+    html{font-size: 16px;}
+    .wrap{float:none;}
+    article { margin:0; min-height:10rem;}
+    .asides{float:none; margin: .5rem 0; width: 100%;}
+    aside .block{float: left; padding-right:1rem; width:50%;}
+}
+
+@media screen and (max-width: 700px) {
+
+}
+
+@media screen and (max-width: 580px) {
+    aside .block{float: none; padding-right:0; width:100%;}
+}
+
+@media screen and (max-width: 400px) {
+
+}
+
+@media screen and (max-width: 360px) {
+    article { margin:0;}
+}
+
+@media screen and (max-width: 320px) {
+    article { margin:0;}
+    aside, aside.right{ float:none; width:100%;}
+}

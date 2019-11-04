@@ -1,0 +1,45 @@
+{
+    "name": "fedornabilkin/ablaki",
+    "description": "Ablaki game simple project",
+    "keywords": ["ablaki"],
+    "homepage": "http://ablaki.ru/",
+    "type": "project",
+    "license": "empty",
+    "minimum-stability": "stable",
+    "require": {
+        "php": ">=5.4.0",
+        "yiisoft/yii2": "~2.0.6",
+        "yiisoft/yii2-bootstrap": "~2.0.0",
+        "yiisoft/yii2-swiftmailer": "~2.0.0 || ~2.1.0",
+        "yiisoft/yii2-httpclient": "^2.0",
+
+        "dektrium/yii2-user": "^0.9.12",
+        "bigpaulie/yii2-social-share": "dev-master",
+
+        "fedornabilkin/yii2-binds": "*",
+        "fedornabilkin/yii2-redirect": "~0.0.1",
+
+        "mdmsoft/yii2-admin": "~2.0",
+        "dmstr/yii2-adminlte-asset": "~2.0",
+        "kartik-v/yii2-widget-switchinput": "*"
+    },
+    "require-dev": {
+        "yiisoft/yii2-debug": "~2.0.0",
+        "yiisoft/yii2-gii": "~2.0.0",
+        "yiisoft/yii2-faker": "~2.0.0",
+        "codeception/base": "^2.2.3",
+        "codeception/verify": "~0.3.1"
+    },
+    "config": {
+        "process-timeout": 1800,
+        "fxp-asset": {
+            "enabled": false
+        }
+    },
+    "repositories": [
+        {
+            "type": "composer",
+            "url": "https://asset-packagist.org"
+        }
+    ]
+}

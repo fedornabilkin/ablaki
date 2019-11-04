@@ -1,0 +1,53 @@
+version: "3"
+volumes:
+  postgresdata:
+services:
+  nginx:
+    image: nginx:1.15
+    volumes:
+      - ./docker/nginx/site.conf:/etc/nginx/conf.d/site.conf
+      - ./docker/nginx/add/:/etc/nginx/add/
+      - ./yii2/:/web/yii2/
+      - ./frontend/:/web/frontend/
+    ports:
+      - ${port_service_nginx}:80
+    links:
+      - php
+      - vuejs
+
+  php:
+    build:
+      context: docker/php
+      dockerfile: Dockerfile
+    volumes:
+      - ./yii2/:/web/yii2/
+    ports:
+      - 9000
+
+  composer:
+    image: composer:1.8
+    volumes:
+      - ./yii2/:/web/yii2/
+      - ./docker/composer/docker-entrypoint.sh:/docker-entrypoint.sh
+    entrypoint: /docker-entrypoint.sh
+
+  postgres:
+    image: postgres:11
+    ports:
+      - ${port_service_db}:5432
+    volumes:
+      - postgresdata:/data/postgres
+    environment:
+      PGDATA: /data/postgres
+      POSTGRES_PASSWORD: ${pg_db_password}
+      POSTGRES_USER: ${pg_db_user}
+      POSTGRES_DB: ${pg_db_name}
+
+  vuejs:
+    build:
+      context: docker/vuejs
+      dockerfile: Dockerfile
+    volumes:
+      - ./frontend/:/web/frontend/
+      - ./docker/vuejs/docker-entrypoint.sh:/docker-entrypoint.sh
+    entrypoint: /docker-entrypoint.sh
