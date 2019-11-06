@@ -84,6 +84,7 @@
         $menuItems = \mdm\admin\components\Helper::filter($menuItems);
         ?>
 
+        <!-- widget -->
         <?= dmstr\widgets\Menu::widget(
             [
                 'options' => ['class' => 'sidebar-menu tree', 'data-widget'=> 'tree'],

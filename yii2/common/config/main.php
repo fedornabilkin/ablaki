@@ -17,6 +17,15 @@ return [
             'defaultTimeZone' => 'UTC',
             'timeZone' => 'Europe/Moscow',
         ],
+        'log' => [
+            'traceLevel' => YII_DEBUG ? 3 : 0,
+            'targets' => [
+                [
+                    'class' => 'yii\log\FileTarget',
+                    'levels' => ['error', 'warning'],
+                ],
+            ],
+        ],
     ],
 
     'modules' => [
@@ -24,7 +33,6 @@ return [
             'class' => 'dektrium\user\Module',
             'enableFlashMessages' => false,
             'enableRegistration' => true,
-            'admins' => ['demix'],
             'modelMap' => [
                 'User' => \common\models\user\User::class,
             ],

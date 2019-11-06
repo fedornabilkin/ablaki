@@ -8,7 +8,7 @@ use yii\helpers\Html;
 <header class="main-header">
 
     <?= Html::a(
-        '<span class="logo-mini">PLN</span><span class="logo-lg">' . Yii::$app->name . '</span>',
+        '<span class="logo-mini">Adm</span><span class="logo-lg">' . Yii::$app->name . '</span>',
         Yii::$app->homeUrl, ['class' => 'logo']
     ) ?>
 
@@ -265,7 +265,7 @@ use yii\helpers\Html;
                             </div>
                             <div class="pull-right">
                                 <?= Html::a(
-                                    Yii::t('main', 'Logout'),
+                                    Yii::t('app', 'Logout'),
                                     ['/user/security/logout'],
                                     ['data-method' => 'post', 'class' => 'btn btn-default btn-flat']
                                 ) ?>

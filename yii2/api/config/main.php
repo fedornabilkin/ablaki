@@ -48,15 +48,6 @@ return [
         'session' => [
             'name' => 'api',
         ],
-        'log' => [
-            'traceLevel' => YII_DEBUG ? 3 : 0,
-            'targets' => [
-                [
-                    'class' => 'yii\log\FileTarget',
-                    'levels' => ['error', 'warning'],
-                ],
-            ],
-        ],
 //        'errorHandler' => [
 //            'class' => 'api\components\ErrorHandler',
 //        ],
