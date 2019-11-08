@@ -17,7 +17,7 @@ class TodoSearch extends Todo
     public function rules()
     {
         return [
-            [['id', 'user_id', 'status', 'updated_at', 'created_at'], 'integer'],
+            [['user_id', 'status', 'updated_at', 'created_at'], 'integer'],
             [['title', 'comment'], 'safe'],
         ];
     }
@@ -58,7 +58,6 @@ class TodoSearch extends Todo
 
         // grid filtering conditions
         $query->andFilterWhere([
-            'id' => $this->id,
             'user_id' => $this->user_id,
             'status' => $this->status,
             'updated_at' => $this->updated_at,

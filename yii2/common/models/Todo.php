@@ -32,6 +32,8 @@ class Todo extends \yii\db\ActiveRecord
     {
         return [
             [['user_id', 'status', 'updated_at', 'created_at'], 'integer'],
+            [['status'], 'default', 'value' => 0],
+            [['title', 'comment'], 'required'],
             [['comment'], 'string'],
             [['title'], 'string', 'max' => 50],
         ];
