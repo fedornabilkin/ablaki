@@ -13,7 +13,6 @@ $this->params['breadcrumbs'][] = $this->title;
 <div class="todo-index">
 
     <h1><?= Html::encode($this->title) ?></h1>
-    <?php // echo $this->render('_search', ['model' => $searchModel]); ?>
 
     <p>
         <?= Html::a(Yii::t('app', 'Create Todo'), ['create'], ['class' => 'btn btn-success']) ?>
@@ -30,8 +29,14 @@ $this->params['breadcrumbs'][] = $this->title;
             'title',
             'comment:ntext',
             'status',
-            //'updated_at',
-            //'created_at',
+            [
+                'attribute' => 'created_at',
+                'format' => ['date', 'php:H:i d.m.y']
+            ],
+            [
+                'attribute' => 'updated_at',
+                'format' => ['date', 'php:H:i d.m.y']
+            ],
 
             ['class' => 'yii\grid\ActionColumn'],
         ],
