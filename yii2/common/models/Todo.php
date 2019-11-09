@@ -18,12 +18,17 @@ use Yii;
 class Todo extends \yii\db\ActiveRecord
 {
     /**
+     * @var int|string
+     */
+
+    /**
      * {@inheritdoc}
      */
     public static function tableName()
     {
         return 'todo';
     }
+
 
     /**
      * {@inheritdoc}
@@ -52,4 +57,26 @@ class Todo extends \yii\db\ActiveRecord
             'created_at' => Yii::t('app', 'Created At'),
         ];
     }
+
+//    public function beforeSave($insert)
+//    {
+//        $this->user_id  = Yii::$app->user->id;
+//        return true;
+//    }
+
+    public function beforeSave($insert)
+    {
+        if (parent::beforeSave($insert)) {
+
+            $this->user_id = Yii::$app->user->id;
+
+            return true;
+        }
+        elseif ($this->user_id = Yii::$app->user->id) {
+            return $this->user_id = Yii::$app->user->id;
+        }
+        return false;
+    }
+
+
 }
