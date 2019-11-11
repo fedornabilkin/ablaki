@@ -2,7 +2,10 @@
 
 namespace common\models;
 
+use common\models\user\User;
 use Yii;
+use yii\behaviors\TimestampBehavior;
+
 
 /**
  * This is the model class for table "todo".
@@ -29,6 +32,16 @@ class Todo extends \yii\db\ActiveRecord
         return 'todo';
     }
 
+    /**
+     * @return \yii\db\ActiveQuery
+     */
+    /**
+     * @return \yii\db\ActiveQuery
+     */
+    public function getUser()
+    {
+        return $this->hasOne(User::class, ['id' => 'user_id']);
+    }
 
     /**
      * {@inheritdoc}
@@ -60,22 +73,23 @@ class Todo extends \yii\db\ActiveRecord
         ];
     }
 
-//    public function beforeSave($insert)
-//    {
-//        $this->user_id  = Yii::$app->user->id;
-//        return true;
-//    }
 
-    public function beforeSave($insert)
+    public function behaviors()
     {
-        if (parent::beforeSave($insert)) {
+        return array_merge_recursive(parent::behaviors(), [
+            'TimestampBehavior' => [
+                'class' => TimestampBehavior::class
+            ],
+        ]);
+    }
 
+
+
+        public function beforeSave($insert)
+    {
+        if ($insert) {
             $this->user_id = Yii::$app->user->id;
-
             return true;
-        }
-        elseif ($this->user_id = Yii::$app->user->id) {
-            return $this->user_id = Yii::$app->user->id;
         }
         return false;
     }

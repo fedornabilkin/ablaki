@@ -1,5 +1,6 @@
 <?php
 
+use yii\behaviors\TimestampBehavior;
 use yii\helpers\Html;
 use yii\grid\GridView;
 
@@ -27,6 +28,11 @@ $this->params['breadcrumbs'][] = $this->title;
             'id',
             'user_id',
             'title',
+            ['attribute' => 'user_id',
+                'value' => function ($model) {
+                    return $model->user->username;
+                }
+            ],
             'comment:ntext',
             'status',
             [
