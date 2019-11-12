@@ -17,7 +17,7 @@ class FactSearch extends FactModel
     public function rules()
     {
         return [
-            [['id', 'hide'], 'integer'],
+            [['hide'], 'integer'],
             [['title', 'type'], 'safe'],
         ];
     }
@@ -58,7 +58,6 @@ class FactSearch extends FactModel
 
         // grid filtering conditions
         $query->andFilterWhere([
-            'id' => $this->id,
             'hide' => $this->hide,
         ]);
 

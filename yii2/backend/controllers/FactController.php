@@ -4,7 +4,7 @@ namespace backend\controllers;
 
 use Yii;
 use common\models\Fact;
-use backend\models\FactSearch as FactSearch;
+use backend\models\FactSearch;
 use yii\web\Controller;
 use yii\web\NotFoundHttpException;
 use yii\filters\VerbFilter;
@@ -21,7 +21,7 @@ class FactController extends Controller
     {
         return [
             'verbs' => [
-                'class' => VerbFilter::className(),
+                'class' => VerbFilter::class,
                 'actions' => [
                     'delete' => ['POST'],
                 ],
