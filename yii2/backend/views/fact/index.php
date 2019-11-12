@@ -26,7 +26,17 @@ $this->params['breadcrumbs'][] = $this->title;
 
             'title',
             'type',
-            'hide',
+            [
+                'attribute' => 'hide',
+                'format' => 'raw',
+                 'filter' => ['ВЫКЛ', 'ВКЛ'],
+                'value' => function ($model) {
+                    return $model->hide ? "ВКЛ" : "ВЫКЛ" ;
+                },
+            ],
+
+
+//            'hide',
 
             ['class' => 'yii\grid\ActionColumn'],
         ],
