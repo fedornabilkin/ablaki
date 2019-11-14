@@ -33,7 +33,7 @@ class SiteController extends FrontendController
 //                ],
 //            ],
 //            'verbs' => [
-//                'class' => VerbFilter::className(),
+//                'class' => VerbFilter::class,
 //                'actions' => [
 //                    'logout' => ['post'],
 //                ],

@@ -8,9 +8,9 @@
 
 namespace common\models\user;
 
-
 use common\models\Todo;
 use common\services\cookies\CookieService;
+use Yii;
 
 class User extends \dektrium\user\models\User
 {
@@ -32,10 +32,10 @@ class User extends \dektrium\user\models\User
         parent::afterSave($insert, $changedAttributes);
         if ($insert) {
             if (!$this->person) {
-                $this->person = \Yii::createObject(Person::class);
+                $this->person = Yii::createObject(Person::class);
             }
 
-            if(\Yii::$app->id == 'app-frontend'){
+            if (\Yii::$app->id == 'app-frontend') {
                 $this->cookieParams = \Yii::$app->params['cookies'];
                 $this->setRefovod();
                 $this->setReferrer();

@@ -13,7 +13,7 @@
         "yiisoft/yii2-swiftmailer": "~2.0.0 || ~2.1.0",
         "yiisoft/yii2-httpclient": "^2.0",
 
-        "dektrium/yii2-user": "^0.9.12",
+        "dektrium/yii2-user": "^0.9.13",
         "bigpaulie/yii2-social-share": "dev-master",
 
         "fedornabilkin/yii2-binds": "*",
