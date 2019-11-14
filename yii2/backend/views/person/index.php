@@ -13,9 +13,6 @@ $this->params['breadcrumbs'][] = $this->title;
 <div class="person-index">
 
     <h1><?= Html::encode($this->title) ?></h1>
-    <?php // echo $this->render('_search', ['model' => $searchModel]); ?>
-
-
 
     <?= GridView::widget([
         'dataProvider' => $dataProvider,
@@ -24,27 +21,25 @@ $this->params['breadcrumbs'][] = $this->title;
             ['class' => 'yii\grid\SerialColumn'],
 
 
-            ['attribute' => 'user_id',
+            [
+                'attribute' => 'user_id',
+                'format' => 'raw',
                 'value' => function ($model) {
-                    return $model->user->username . '<br><p class="text-success">' . $model->balance_out . '</p> <p class="text-danger">' . $model->balance_in . '</p>';
+                    return $model->user->username . '<br>
+                        <span class="text-success">' . $model->balance_out . '</span>
+                        <span class="text-danger">' . $model->balance_in . '</span>';
             }
             ],
             'balance',
-//            'balance_in',//
-//            \'balance_out\',
             'credit',
-//            'refovod',
-            ['attribute' => 'refovod',
+            [
+                'attribute' => 'refovod',
                 'value' => function ($model) {
                     return $model->refovodUser->username;
-                                }
+                }
             ],
             'rating',
-            //'referrer:ntext',
-            //'bonus_count',
-            //'autoriz',
-
-//            ['class' => 'yii\grid\ActionColumn'],
+            'bonus_count',
         ],
     ]); ?>
 </div>
