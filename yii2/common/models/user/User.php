@@ -14,7 +14,7 @@ use common\services\cookies\CookieService;
 class User extends \dektrium\user\models\User
 {
     private $person;
-
+    public $status;
     public $cookieParams;
 
     /**
