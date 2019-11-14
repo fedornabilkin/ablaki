@@ -8,6 +8,7 @@
 
 namespace common\models\user;
 
+use common\models\Todo;
 use common\services\cookies\CookieService;
 use Yii;
 
@@ -68,4 +69,13 @@ class User extends \dektrium\user\models\User
         ]);
         $this->person->referrer = $service->getValue();
     }
+
+    /**
+     * @return \yii\db\ActiveQuery
+     */
+    public function getTodo()
+    {
+        return $this->hasMany(Todo::class, ['user_id' => 'id']);
+    }
+
 }

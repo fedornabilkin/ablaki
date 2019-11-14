@@ -2,6 +2,7 @@
 
 namespace common\models;
 
+use common\models\user\User;
 use Yii;
 
 /**
@@ -35,7 +36,7 @@ class Bonus extends \yii\db\ActiveRecord
             [['user_id', 'created_at', 'updated_at'], 'integer'],
             [['amount'], 'number'],
             [['type'], 'string', 'max' => 50],
-            [['user_id'], 'exist', 'skipOnError' => true, 'targetClass' => User::className(), 'targetAttribute' => ['user_id' => 'id']],
+            [['user_id'], 'exist', 'skipOnError' => true, 'targetClass' => User::class, 'targetAttribute' => ['user_id' => 'id']],
         ];
     }
 
@@ -59,6 +60,6 @@ class Bonus extends \yii\db\ActiveRecord
      */
     public function getUser()
     {
-        return $this->hasOne(User::className(), ['id' => 'user_id']);
+        return $this->hasOne(User::class, ['id' => 'user_id']);
     }
 }

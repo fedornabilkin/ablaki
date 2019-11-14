@@ -29,13 +29,24 @@
         <?php
         $menuItems = [
             [
-                'label' => 'Admin',
+                'label' => Yii::t('app', 'Admin'),
                 'url' => '#',
                 'items' => [
-                    ['label' => 'Rbac', 'icon' => 'user-secret', 'url' => ['/admin/assignment']],
-                    ['label' => 'Пользователи', 'icon' => 'user', 'url' => ['/user/admin']],
-                    ['label' => 'Редиректы', 'icon' => 'share', 'url' => ['/redirect/manager']],
-                    ['label' => 'Каталог', 'icon' => 'tree', 'url' => ['/binds/catalog']],
+                    ['label' => Yii::t('app', 'Rbac'), 'icon' => 'user-secret', 'url' => ['/admin/assignment']],
+                    ['label' => Yii::t('app', 'Users'), 'icon' => 'user', 'url' => ['/user/admin']],
+
+                    ['label' => Yii::t('app', 'Gii'), 'icon' => 'file-code-o', 'url' => ['/gii/']],
+                    ['label' => Yii::t('app', 'Debug'), 'icon' => 'dashboard', 'url' => ['/debug/']],
+                ],
+            ],
+            [
+                'label' => Yii::t('app', 'Moderator'),
+                'icon' => 'user-secret',
+                'url' => '#',
+                'items' => [
+                    ['label' => Yii::t('app', 'Tasks'), 'icon' => 'tasks', 'url' => ['/todo/']],
+                    ['label' => Yii::t('app', 'Redirect'), 'icon' => 'share', 'url' => ['/redirect/manager']],
+                    ['label' => Yii::t('app', 'Catalog'), 'icon' => 'tree', 'url' => ['/binds/catalog']],
                 ],
             ],
 
@@ -46,8 +57,6 @@
             ['label' => 'Статьи', 'icon' => 'file-o', 'url' => ['/post']],
 
             ['label' => 'Other', 'options' => ['class' => 'header']],
-            ['label' => 'Gii', 'icon' => 'file-code-o', 'url' => ['/gii']],
-            ['label' => 'Debug', 'icon' => 'dashboard', 'url' => ['/debug']],
 
             ['label' => 'Login', 'url' => ['site/login'], 'visible' => Yii::$app->user->isGuest],
 
@@ -56,21 +65,21 @@
 //                'icon' => 'share',
 //                'url' => '#',
 //                'items' => [
-//                    ['label' => 'Gii', 'icon' => 'file-code-o', 'url' => ['/gii'],],
-//                    ['label' => 'Debug', 'icon' => 'dashboard', 'url' => ['/debug'],],
+//                    ['label' => 'Gii', 'icon' => 'file-code-o', 'url' => ['/gii/'],],
+//                    ['label' => 'Debug', 'icon' => 'dashboard', 'url' => ['/debug/'],],
 //                    [
 //                        'label' => 'Level One',
 //                        'icon' => 'circle-o',
 //                        'url' => '#',
 //                        'items' => [
-//                            ['label' => 'Level Two', 'icon' => 'circle-o', 'url' => '#',],
+//                            ['label' => 'Level Two', 'icon' => 'circle-o', 'url' => '/gii/',],
 //                            [
 //                                'label' => 'Level Two',
 //                                'icon' => 'circle-o',
 //                                'url' => '#',
 //                                'items' => [
-//                                    ['label' => 'Level Three', 'icon' => 'circle-o', 'url' => '#',],
-//                                    ['label' => 'Level Three', 'icon' => 'circle-o', 'url' => '#',],
+//                                    ['label' => 'Level Three', 'icon' => 'circle-o', 'url' => '/gii/',],
+//                                    ['label' => 'Level Three', 'icon' => 'circle-o', 'url' => '/gii/',],
 //                                ],
 //                            ],
 //                        ],

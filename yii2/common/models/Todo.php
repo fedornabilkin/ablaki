@@ -2,7 +2,10 @@
 
 namespace common\models;
 
+use common\models\user\User;
 use Yii;
+use yii\behaviors\TimestampBehavior;
+
 
 /**
  * This is the model class for table "todo".
@@ -18,11 +21,26 @@ use Yii;
 class Todo extends \yii\db\ActiveRecord
 {
     /**
+     * @var int|string
+     */
+
+    /**
      * {@inheritdoc}
      */
     public static function tableName()
     {
         return 'todo';
+    }
+
+    /**
+     * @return \yii\db\ActiveQuery
+     */
+    /**
+     * @return \yii\db\ActiveQuery
+     */
+    public function getUser()
+    {
+        return $this->hasOne(User::class, ['id' => 'user_id']);
     }
 
     /**
@@ -32,6 +50,8 @@ class Todo extends \yii\db\ActiveRecord
     {
         return [
             [['user_id', 'status', 'updated_at', 'created_at'], 'integer'],
+            [['status'], 'default', 'value' => 0],
+            [['title', 'comment'], 'required'],
             [['comment'], 'string'],
             [['title'], 'string', 'max' => 50],
         ];
@@ -52,4 +72,27 @@ class Todo extends \yii\db\ActiveRecord
             'created_at' => Yii::t('app', 'Created At'),
         ];
     }
+
+
+    public function behaviors()
+    {
+        return array_merge_recursive(parent::behaviors(), [
+            'TimestampBehavior' => [
+                'class' => TimestampBehavior::class
+            ],
+        ]);
+    }
+
+
+
+        public function beforeSave($insert)
+    {
+        if ($insert) {
+            $this->user_id = Yii::$app->user->id;
+            return true;
+        }
+        return false;
+    }
+
+
 }
