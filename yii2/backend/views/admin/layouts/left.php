@@ -43,6 +43,7 @@
             ['label' => Yii::t('app', 'Customers'), 'icon' => 'users', 'url' => ['/customer/index']],
             ['label' => Yii::t('app', 'Vacancies'), 'icon' => 'user-md', 'url' => ['/vacancy/index']],
             ['label' => Yii::t('app', 'Candidates'), 'icon' => 'user-secret', 'url' => ['/candidate/index']],
+            ['label' => Yii::t('app', 'Fact'), 'icon' => 'user-secret', 'url' => ['/fact/']],
 
             ['label' => 'Статьи', 'icon' => 'file-o', 'url' => ['/post']],
 

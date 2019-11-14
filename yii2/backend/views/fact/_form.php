@@ -17,7 +17,6 @@ use yii\widgets\ActiveForm;
     <?= $form->field($model, 'type')->textInput(['maxlength' => true]) ?>
 
     <?= $form->field($model, 'hide')->checkbox([ 'value' => '1', 'checked ' => true])->label('');?>
-<!--    --><?//= $form->field($model, 'hide')->textInput() ?>
 
     <div class="form-group">
         <?= Html::submitButton(Yii::t('app', 'Save'), ['class' => 'btn btn-success']) ?>

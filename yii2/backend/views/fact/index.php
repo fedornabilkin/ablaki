@@ -1,7 +1,7 @@
 <?php
 
-use yii\helpers\Html;
 use yii\grid\GridView;
+use yii\helpers\Html;
 
 /* @var $this yii\web\View */
 /* @var $searchModel backend\models\FactSearch */
@@ -29,14 +29,11 @@ $this->params['breadcrumbs'][] = $this->title;
             [
                 'attribute' => 'hide',
                 'format' => 'raw',
-                 'filter' => ['ВЫКЛ', 'ВКЛ'],
+                'filter' => ['Выкл', 'Вкл'],
                 'value' => function ($model) {
-                    return $model->hide ? "ВКЛ" : "ВЫКЛ" ;
+                    return $model->hide ? 'Вкл' : 'Выкл';
                 },
             ],
-
-
-//            'hide',
 
             ['class' => 'yii\grid\ActionColumn'],
         ],
