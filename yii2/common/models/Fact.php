@@ -28,6 +28,7 @@ class Fact extends \yii\db\ActiveRecord
     public function rules()
     {
         return [
+            [ ['title', 'type'], 'required' ],
             [['hide'], 'integer'],
             [['title'], 'string', 'max' => 255],
             [['type'], 'string', 'max' => 50],

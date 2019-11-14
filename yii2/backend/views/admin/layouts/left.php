@@ -41,6 +41,7 @@
 
 
             ['label' => Yii::t('app', 'Person'), 'icon' => 'users', 'url' => ['/person/']],
+            ['label' => Yii::t('app', 'Fact'), 'icon' => 'user-secret', 'url' => ['/fact/']],
 
             ['label' => 'Статьи', 'icon' => 'file-o', 'url' => ['/post']],
 
