@@ -25,8 +25,7 @@ $this->params['breadcrumbs'][] = $this->title;
         'columns' => [
             ['class' => 'yii\grid\SerialColumn'],
 
-            'id',
-            'user_id',
+
             'title',
             ['attribute' => 'user_id',
                 'value' => function ($model) {
@@ -34,7 +33,14 @@ $this->params['breadcrumbs'][] = $this->title;
                 }
             ],
             'comment:ntext',
-            'status',
+            [
+                'attribute' => 'status',
+                'format' => 'raw',
+                'filter' => ['Выкл', 'Вкл'],
+                'value' => function ($model) {
+                    return $model->status ? 'Вкл' : 'Выкл';
+                },
+            ],
             [
                 'attribute' => 'created_at',
                 'format' => ['date', 'php:H:i d.m.y']
