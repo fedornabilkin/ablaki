@@ -33,14 +33,15 @@ class Todo extends \yii\db\ActiveRecord
     }
 
     /**
-     * @return \yii\db\ActiveQuery
+     * @return array
      */
-    /**
-     * @return \yii\db\ActiveQuery
-     */
-    public function getUser()
+    public function behaviors()
     {
-        return $this->hasOne(User::class, ['id' => 'user_id']);
+        return array_merge_recursive(parent::behaviors(), [
+            TimestampBehavior::class => [
+                'class' => TimestampBehavior::class,
+            ],
+        ]);
     }
 
     /**
@@ -54,6 +55,7 @@ class Todo extends \yii\db\ActiveRecord
             [['title', 'comment'], 'required'],
             [['comment'], 'string'],
             [['title'], 'string', 'max' => 50],
+            [['updated_at', 'created_at'], 'safe'],
         ];
     }
 
@@ -73,26 +75,24 @@ class Todo extends \yii\db\ActiveRecord
         ];
     }
 
-
-    public function behaviors()
-    {
-        return array_merge_recursive(parent::behaviors(), [
-            'TimestampBehavior' => [
-                'class' => TimestampBehavior::class
-            ],
-        ]);
-    }
-
-
-
-        public function beforeSave($insert)
+    /**
+     * @param bool $insert
+     * @return bool
+     */
+    public function beforeSave($insert)
     {
         if ($insert) {
             $this->user_id = Yii::$app->user->id;
-            return true;
         }
-        return false;
+
+        return parent::beforeSave($insert);
     }
 
-
+    /**
+     * @return \yii\db\ActiveQuery
+     */
+    public function getUser()
+    {
+        return $this->hasOne(User::class, ['id' => 'user_id']);
+    }
 }
