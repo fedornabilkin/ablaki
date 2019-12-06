@@ -78,14 +78,14 @@ return [
                     ],
                 ],
                 [
-                'class' => 'yii\rest\UrlRule',
-                'controller' => ['v1/orel'],
-                'except' => ['view'],
-                'extraPatterns' => [
-                    'GET remove' => 'remove',
-                    'GET everyday/{id}' => 'everyday',
+                    'class' => 'yii\rest\UrlRule',
+                    'controller' => ['v1/orel'],
+                    'except' => ['view'],
+                    'extraPatterns' => [
+                        'GET remove' => 'remove',
+                        'POST play/{id}' => 'play',
+                    ],
                 ],
-            ],
              [
                     'class' => 'yii\rest\UrlRule',
                     'controller' => ['v1/rating'],
