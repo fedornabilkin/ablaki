@@ -78,12 +78,30 @@ return [
                     ],
                 ],
                 [
+                'class' => 'yii\rest\UrlRule',
+                'controller' => ['v1/orel'],
+                'except' => ['view'],
+                'extraPatterns' => [
+                    'GET remove' => 'remove',
+                    'POST everyday/{id}' => 'everyday',
+                ],
+            ],
+             [
                     'class' => 'yii\rest\UrlRule',
-                    'controller' => ['v1/orel'],
-                    'except' => ['view'],
+                    'controller' => ['v1/rating'],
+                    'only' => ['everyday', 'test'],
                     'extraPatterns' => [
-                        'GET remove' => 'remove',
-                        'POST play/{id}' => 'play',
+                        'GET everyday' => 'everyday',
+                        'GET test' => 'test',
+                    ],
+                ],
+             [
+                    'class' => 'yii\rest\UrlRule',
+                    'controller' => ['v1/bonus'],
+                    'only' => ['everyday', 'test'],
+                    'extraPatterns' => [
+                        'GET everyday' => 'everyday',
+                        'GET test' => 'test',
                     ],
                 ],
             ],

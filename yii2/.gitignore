@@ -39,3 +39,6 @@ phpunit.phar
 /.vagrant
 
 /db.sql.gz
+
+# composer
+/phpmyadmin
