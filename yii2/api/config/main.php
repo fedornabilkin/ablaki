@@ -83,7 +83,7 @@ return [
                 'except' => ['view'],
                 'extraPatterns' => [
                     'GET remove' => 'remove',
-                    'POST everyday/{id}' => 'everyday',
+                    'GET everyday/{id}' => 'everyday',
                 ],
             ],
              [

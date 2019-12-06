@@ -40,5 +40,4 @@ phpunit.phar
 
 /db.sql.gz
 
-# composer
-/phpmyadmin
+
