@@ -31,7 +31,6 @@ class Persone extends \yii\db\ActiveRecord
     {
         return 'persone';
     }
-
     /**
      * @inheritdoc
      */

@@ -86,6 +86,22 @@ return [
                         'POST play/{id}' => 'play',
                     ],
                 ],
+             [
+                    'class' => 'yii\rest\UrlRule',
+                    'controller' => ['v1/rating'],
+                    'only' => ['everyday'],
+                    'extraPatterns' => [
+                        'GET everyday' => 'everyday',
+                    ],
+                ],
+             [
+                    'class' => 'yii\rest\UrlRule',
+                    'controller' => ['v1/bonus'],
+                    'only' => ['everyday'],
+                    'extraPatterns' => [
+                        'GET everyday' => 'everyday',
+                    ],
+                ],
             ],
         ],
     ],
