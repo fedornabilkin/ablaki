@@ -2,18 +2,16 @@
 
 
 namespace api\modules\v1\controllers;
+
 use api\filters\Auth;
 use common\models\HistoryRating;
-use common\models\Persone;
 use common\models\user\Person;
-use yii\filters\AccessControl;
-//use mdm\admin\components\AccessControl;
+use Yii;
 use yii\rest\Controller;
+
 
 class RatingController extends Controller
 {
-
-
 
 
     public function behaviors()
@@ -29,25 +27,18 @@ class RatingController extends Controller
     }
 
 
-    public function actionEveryday(){
-
-        $person = Person::findOne(\Yii::$app->user->identity->id);
+    public function actionEveryday()
+    {
+        $person = Person::findOne(Yii::$app->user->identity->id);
         $userHistory = new HistoryRating();
-        $userHistory->user_id = \Yii::$app->user->identity->id;
+        $userHistory->user_id = Yii::$app->user->identity->id;
         $userHistory->rating = 0.01;
         $userHistory->type = 'everyday';
         $userHistory->comment = 'everyday';
         $userHistory->save();
         $upd = $person->updateCounters(['rating' => 0.01]);
         return $upd;
-
-
     }
-
-    public function actionTest(){
-        return true;
-    }
-
 
 
 }

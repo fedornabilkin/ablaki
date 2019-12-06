@@ -89,19 +89,17 @@ return [
              [
                     'class' => 'yii\rest\UrlRule',
                     'controller' => ['v1/rating'],
-                    'only' => ['everyday', 'test'],
+                    'only' => ['everyday'],
                     'extraPatterns' => [
                         'GET everyday' => 'everyday',
-                        'GET test' => 'test',
                     ],
                 ],
              [
                     'class' => 'yii\rest\UrlRule',
                     'controller' => ['v1/bonus'],
-                    'only' => ['everyday', 'test'],
+                    'only' => ['everyday'],
                     'extraPatterns' => [
                         'GET everyday' => 'everyday',
-                        'GET test' => 'test',
                     ],
                 ],
             ],

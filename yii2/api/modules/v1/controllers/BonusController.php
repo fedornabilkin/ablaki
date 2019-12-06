@@ -2,13 +2,11 @@
 
 
 namespace api\modules\v1\controllers;
+
 use api\filters\Auth;
 use common\models\HistoryBalance;
-use common\models\HistoryRating;
-use common\models\Persone;
 use common\models\user\Person;
-use yii\filters\AccessControl;
-//use mdm\admin\components\AccessControl;
+use Yii;
 use yii\rest\Controller;
 
 class BonusController extends Controller
@@ -29,11 +27,12 @@ class BonusController extends Controller
         return array_merge($parent, $arr);
     }
 
-    public function actionEveryday(){
+    public function actionEveryday()
+    {
 
-        $person = Person::findOne(\Yii::$app->user->identity->id);
+        $person = Person::findOne(Yii::$app->user->identity->id);
         $historyBalance = new HistoryBalance();
-        $historyBalance->user_id = \Yii::$app->user->identity->id;
+        $historyBalance->user_id = Yii::$app->user->identity->id;
         $historyBalance->balance = $person->balance;
         $historyBalance->credit = $person->credit;
         $historyBalance->balance_up = 0;
@@ -46,9 +45,6 @@ class BonusController extends Controller
 
     }
 
-    public function actionTest(){
-        return true;
-    }
 
 
 }
