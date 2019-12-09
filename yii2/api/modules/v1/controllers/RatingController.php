@@ -31,7 +31,6 @@ class RatingController extends Controller
 
     public function actionEveryday()
     {
-
         $timeZone = Yii::$app->getTimeZone();
         Yii::$app->setTimeZone('UTC');
         $beginOfDay = strtotime("midnight", time());
@@ -44,12 +43,8 @@ class RatingController extends Controller
             ->andWhere(['<=', 'created_at', $endOfDay])
             ->one();
         if ($todayRating) {
-            return 'Рейтинг пользователя сегодня уже был обновлен';
+            return ['message' => 'Рейтинг уже был обновлен сегодня'];
         }
-//        if ($todayRating) {
-//            return 'Рейтинг пользователя сегодня уже был обновлен (beginOfDay: ' . $beginOfDay  . ', еndOfDay: ' . $еndOfDay . ', created_at:' . $todayRating->created_at . ')';
-//        }
-
         $person = Person::findOne(Yii::$app->user->identity->id);
         $userHistory = new HistoryRating();
         $userHistory->user_id = Yii::$app->user->identity->id;
@@ -60,8 +55,4 @@ class RatingController extends Controller
         $upd = $person->updateCounters(['rating' => $this->rating]);
         return $upd;
     }
-
-
-
-
 }
