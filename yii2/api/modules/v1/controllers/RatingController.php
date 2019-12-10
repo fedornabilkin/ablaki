@@ -31,11 +31,11 @@ class RatingController extends Controller
 
     public function actionEveryday()
     {
-        $timeZone = Yii::$app->getTimeZone();
-        Yii::$app->setTimeZone('UTC');
+//        $timeZone = Yii::$app->getTimeZone();
+//        Yii::$app->setTimeZone('UTC');
         $beginOfDay = strtotime("midnight", time());
         $endOfDay = strtotime("tomorrow midnight", time()) - 1;
-        Yii::$app->setTimeZone($timeZone);
+//        Yii::$app->setTimeZone($timeZone);
         $user = Yii::$app->user;
         $todayRating = HistoryRating::find()
             ->where(['user_id' => $user->id])
