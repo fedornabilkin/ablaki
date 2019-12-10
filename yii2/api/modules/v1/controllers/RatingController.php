@@ -33,7 +33,6 @@ class RatingController extends Controller
     {
         $beginOfDay = strtotime("midnight", time());
         $user = Yii::$app->user;
-        $user = Yii::$app->user;
         $todayRating = HistoryRating::find()
             ->where(['user_id' => $user->id])
             ->andWhere(['>=', 'created_at', $beginOfDay])
