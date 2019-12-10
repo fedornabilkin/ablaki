@@ -33,12 +33,10 @@ class RatingController extends Controller
     {
 
         $beginOfDay = strtotime("midnight", time());
-        $endOfDay = strtotime("tomorrow midnight", time()) - 1;
         $user = Yii::$app->user;
         $todayRating = HistoryRating::find()
             ->where(['user_id' => $user->id])
             ->andWhere(['>=', 'created_at', $beginOfDay])
-            ->andWhere(['<=', 'created_at', $endOfDay])
             ->one();
         if ($todayRating) {
             return ['message' => 'Рейтинг уже был обновлен сегодня'];
