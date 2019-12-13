@@ -102,6 +102,14 @@ return [
                         'GET everyday' => 'everyday',
                     ],
                 ],
+                [
+                    'class' => 'yii\rest\UrlRule',
+                    'controller' => ['v1/user'],
+                    'only' => ['wall'],
+                    'extraPatterns' => [
+                        'GET wall/<login:\w+>' => 'wall',
+                        ],
+                ],
             ],
         ],
     ],

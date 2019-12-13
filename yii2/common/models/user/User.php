@@ -18,6 +18,11 @@ class User extends \dektrium\user\models\User
 
     public $cookieParams;
 
+    public static function tableName()
+    {
+        return 'user';
+    }
+
     /**
      * @return \yii\db\ActiveQuery
      */
@@ -78,4 +83,13 @@ class User extends \dektrium\user\models\User
         return $this->hasMany(Todo::class, ['user_id' => 'id']);
     }
 
+    public function fields()
+    {
+        return ['id', 'email'];
+    }
+
+    public function extraFields()
+    {
+        return ['profile'];
+    }
 }

@@ -17,4 +17,7 @@ class UserIdentity extends User
     {
         return static::findOne(['auth_key' => $token]);
     }
+
+
+
 }

@@ -8,6 +8,7 @@ use common\models\HistoryRating;
 use common\models\user\Person;
 use Yii;
 use yii\rest\Controller;
+use yii\web;
 
 
 class RatingController extends Controller
@@ -31,6 +32,7 @@ class RatingController extends Controller
 
     public function actionEveryday()
     {
+
         $person = Person::findOne(Yii::$app->user->identity->id);
         $userHistory = new HistoryRating();
         $userHistory->user_id = Yii::$app->user->identity->id;
