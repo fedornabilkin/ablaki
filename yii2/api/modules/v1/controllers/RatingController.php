@@ -31,8 +31,8 @@ class RatingController extends Controller
 
     public function actionEveryday()
     {
-
         $beginOfDay = strtotime("midnight", time());
+        $user = Yii::$app->user;
         $user = Yii::$app->user;
         $todayRating = HistoryRating::find()
             ->where(['user_id' => $user->id])
