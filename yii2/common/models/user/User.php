@@ -18,8 +18,8 @@ use yii\db\ActiveQuery;
  * Class User
  * @package common\models\user
  *
- * @property ActiveQuery $person
- * @property ActiveQuery $todo
+ * @property Person $person
+ * @property Todo $todo
  */
 class User extends \dektrium\user\models\User
 {
@@ -89,4 +89,8 @@ class User extends \dektrium\user\models\User
         return $this->hasMany(Todo::class, ['user_id' => 'id']);
     }
 
+    public function fields()
+    {
+        return ['username', 'person'];
+    }
 }
