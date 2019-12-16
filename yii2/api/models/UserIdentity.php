@@ -12,6 +12,7 @@ use common\models\user\User;
 
 class UserIdentity extends User
 {
+
     public static function findIdentityByAccessToken($token, $type = null)
     {
         return static::findOne(['auth_key' => $token]);
