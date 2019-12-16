@@ -31,7 +31,6 @@ class RatingController extends Controller
 
     public function actionEveryday()
     {
-
         $person = Person::findOne(Yii::$app->user->identity->id);
         $userHistory = new HistoryRating();
         $userHistory->user_id = Yii::$app->user->identity->id;
