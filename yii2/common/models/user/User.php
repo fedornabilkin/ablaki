@@ -8,8 +8,6 @@
 
 namespace common\models\user;
 
-
-use common\models\Persone;
 use common\models\Todo;
 use common\services\cookies\CookieService;
 use Yii;
@@ -29,11 +27,7 @@ class User extends \dektrium\user\models\User
     /**
      * @return \yii\db\ActiveQuery
      */
-    public function getPersone()
-    {
-        return $this->hasOne(Persone::class, ['user_id' => 'id'])->inverseOf('user');
-    }
-    
+
     public function getPerson()
     {
         return $this->hasOne(Person::class, ['user_id' => 'id'])->inverseOf('user');
@@ -94,7 +88,7 @@ class User extends \dektrium\user\models\User
 
     public function fields()
     {
-        return ['username', 'persone',];
+        return ['username', 'person', ];
 
     }
 

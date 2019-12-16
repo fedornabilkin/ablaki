@@ -24,32 +24,26 @@ use Yii;
 class Person extends \yii\db\ActiveRecord
 {
     /**
-     * {@inheritdoc}
+     * @inheritdoc
      */
-
-
-    public function fields()
+    public static function tableName()
     {
-        return [
-            'balance',
-            'credit',
-            'balance',
-            'refovod',
-            'rating',
-        ];
+        return 'persone';
     }
-
     /**
-     * {@inheritdoc}
+     * @inheritdoc
      */
     public function rules()
     {
         return [
-            [['user_id', 'refovod'], 'integer'],
-            [['balance', 'credit', 'rating'], 'number'],
+            [['user_id', 'refovod', 'bonus_count', 'autoriz'], 'default', 'value' => null],
+            [['user_id', 'refovod', 'bonus_count', 'autoriz'], 'integer'],
+            [['balance', 'balance_in', 'balance_out', 'credit', 'rating'], 'number'],
+            [['referrer'], 'string'],
             [['user_id'], 'exist', 'skipOnError' => true, 'targetClass' => User::class, 'targetAttribute' => ['user_id' => 'id']],
         ];
     }
+
     /**
      * {@inheritdoc}
      */
@@ -59,27 +53,32 @@ class Person extends \yii\db\ActiveRecord
             'id' => Yii::t('app', 'ID'),
             'user_id' => Yii::t('app', 'User ID'),
             'balance' => Yii::t('app', 'Balance'),
+            'balance_in' => Yii::t('app', 'Balance In'),
+            'balance_out' => Yii::t('app', 'Balance Out'),
             'credit' => Yii::t('app', 'Credit'),
             'refovod' => Yii::t('app', 'Refovod'),
             'rating' => Yii::t('app', 'Rating'),
+            'referrer' => Yii::t('app', 'Referrer'),
+            'bonus_count' => Yii::t('app', 'Bonus Count'),
+            'autoriz' => Yii::t('app', 'Autoriz'),
         ];
     }
+
     /**
      * @return \yii\db\ActiveQuery
      */
     public function getUser()
     {
-        return $this->hasOne(User::class, ['id' => 'user_id'])->inverseOf('person');
+        return $this->hasOne(User::class, ['id' => 'user_id']);
     }
 
-    /**
-     * @return \yii\db\ActiveQuery
-     */
-    public function getRefovodUser()
+    public function fields()
     {
-        return $this->hasOne(User::class, ['id' => 'refovod']);
+        return [
+
+            'refovod',
+            'rating',
+        ];
     }
-
-
 
 }
