@@ -8,8 +8,6 @@ use common\models\HistoryRating;
 use common\models\user\Person;
 use Yii;
 use yii\rest\Controller;
-use yii\web;
-
 
 class RatingController extends Controller
 {

@@ -11,7 +11,6 @@ use yii\web\NotFoundHttpException;
 
 class UserController extends Controller
 {
-
     public function actionWall($login){
         $user = User::find()->where(['username' => $login])->with([ 'person'])->one();
         if ($user) {
@@ -20,9 +19,4 @@ class UserController extends Controller
         throw new NotFoundHttpException(Yii::t('app', 'The requested user does not exist.'));
 
     }
-
-
-
-
-
 }

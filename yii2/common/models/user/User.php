@@ -15,9 +15,7 @@ use Yii;
 class User extends \dektrium\user\models\User
 {
     private $person;
-
     public $cookieParams;
-    public $rating;
     /**
      * @return \yii\db\ActiveQuery
      */
@@ -26,8 +24,6 @@ class User extends \dektrium\user\models\User
     {
         return $this->hasOne(Person::class, ['user_id' => 'id'])->inverseOf('user');
     }
-
-
     /** @inheritdoc */
     public function afterSave($insert, $changedAttributes)
     {
