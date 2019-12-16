@@ -16,14 +16,15 @@ class User extends \dektrium\user\models\User
 {
     private $person;
     public $cookieParams;
+
     /**
      * @return \yii\db\ActiveQuery
      */
-
     public function getPerson()
     {
         return $this->hasOne(Person::class, ['user_id' => 'id'])->inverseOf('user');
     }
+
     /** @inheritdoc */
     public function afterSave($insert, $changedAttributes)
     {
@@ -78,7 +79,6 @@ class User extends \dektrium\user\models\User
 
     public function fields()
     {
-        return ['username', 'person', ];
+        return ['username', 'person'];
     }
-
 }

@@ -1,5 +1,7 @@
 <?php
+
 namespace common\models\user;
+
 use Yii;
 /**
  * This is the model class for table "persone".
@@ -27,6 +29,7 @@ class Person extends \yii\db\ActiveRecord
     {
         return 'persone';
     }
+
     public function fields()
     {
         return [
@@ -34,6 +37,7 @@ class Person extends \yii\db\ActiveRecord
             'rating',
         ];
     }
+
     /**
      * {@inheritdoc}
      */
@@ -45,6 +49,7 @@ class Person extends \yii\db\ActiveRecord
             [['user_id'], 'exist', 'skipOnError' => true, 'targetClass' => User::class, 'targetAttribute' => ['user_id' => 'id']],
         ];
     }
+
     /**
      * {@inheritdoc}
      */
@@ -59,6 +64,7 @@ class Person extends \yii\db\ActiveRecord
             'rating' => Yii::t('app', 'Rating'),
         ];
     }
+
     /**
      * @return \yii\db\ActiveQuery
      */
@@ -66,6 +72,7 @@ class Person extends \yii\db\ActiveRecord
     {
         return $this->hasOne(User::class, ['id' => 'user_id'])->inverseOf('person');
     }
+
     /**
      * @return \yii\db\ActiveQuery
      */
