@@ -11,11 +11,10 @@ use yii\rest\Controller;
 
 class BonusController extends Controller
 {
-
-
+    /** @var int $credit */
     public $credit = 1;
 
-    public function behaviors()
+    public function behaviors(): array
     {
         $parent = parent::behaviors();
         $arr = [
@@ -29,10 +28,22 @@ class BonusController extends Controller
 
     public function actionEveryday()
     {
+        $beginOfDay = strtotime("midnight", time());
+        $user = Yii::$app->user->identity;
 
-        $person = Person::findOne(Yii::$app->user->identity->id);
+        $todayBalance = HistoryBalance::find()
+            ->where(['user_id' => $user->id])
+            ->andWhere(['>=', 'created_at', $beginOfDay])
+            ->one();
+
+        if ($todayBalance) {
+            return ['message' => 'Бонус уже был обновлен сегодня'];
+        }
+
+        $person = $user->person;
+
         $historyBalance = new HistoryBalance();
-        $historyBalance->user_id = Yii::$app->user->identity->id;
+        $historyBalance->user_id = $user->id;
         $historyBalance->balance = $person->balance;
         $historyBalance->credit = $person->credit;
         $historyBalance->balance_up = 0;
@@ -40,8 +51,9 @@ class BonusController extends Controller
         $historyBalance->type = 'everyday';
         $historyBalance->comment = 'everyday';
         $historyBalance->save();
-        $upd = $person->updateCounters(['credit' => $this->credit]);
-        return $upd;
+
+        return $person->updateCounters(['credit' => $this->credit]);
+
 
     }
 
