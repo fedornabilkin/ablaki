@@ -6,6 +6,13 @@ return [
     ],
     'vendorPath' => dirname(dirname(__DIR__)) . '/vendor',
     'components' => [
+        'db' => [
+            'class' => 'yii\db\Connection',
+            'dsn' => 'pgsql:host=' . getenv('PG_DB_HOST') . ';dbname=' . getenv('PG_DB_NAME'),
+            'username' => getenv('PG_DB_USER'),
+            'password' => getenv('PG_DB_PASSWORD'),
+//            'charset' => 'utf8',
+        ],
         'cache' => [
             'class' => 'yii\caching\FileCache',
         ],

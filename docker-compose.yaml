@@ -10,7 +10,7 @@ services:
       - ./yii2/:/web/yii2/
       - ./frontend/:/web/frontend/
     ports:
-      - ${port_service_nginx}:80
+      - ${PORT_SERVICE_NGINX}:80
     links:
       - php
       - vuejs
@@ -19,8 +19,11 @@ services:
     build:
       context: docker/php
       dockerfile: Dockerfile
+    env_file:
+      - .env
     volumes:
       - ./yii2/:/web/yii2/
+      - ./.env:/etc/environment
     ports:
       - 9000
 
@@ -34,14 +37,14 @@ services:
   postgres:
     image: postgres:11
     ports:
-      - ${port_service_db}:5432
+      - ${PG_DB_PORT}:5432
     volumes:
       - postgresdata:/data/postgres
     environment:
       PGDATA: /data/postgres
-      POSTGRES_PASSWORD: ${pg_db_password}
-      POSTGRES_USER: ${pg_db_user}
-      POSTGRES_DB: ${pg_db_name}
+      POSTGRES_PASSWORD: ${PG_DB_PASSWORD}
+      POSTGRES_USER: ${PG_DB_USER}
+      POSTGRES_DB: ${PG_DB_NAME}
 
   vuejs:
     build:
