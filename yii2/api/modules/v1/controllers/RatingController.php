@@ -1,22 +1,17 @@
 <?php
 
-
 namespace api\modules\v1\controllers;
 
 use api\filters\Auth;
 use common\models\HistoryRating;
-use common\models\user\Person;
 use Yii;
 use yii\rest\Controller;
 
-
 class RatingController extends Controller
 {
-
     public $rating = 0.01;
 
-
-    public function behaviors()
+    public function behaviors(): array
     {
         $parent = parent::behaviors();
         $arr = [
@@ -28,26 +23,27 @@ class RatingController extends Controller
         return array_merge($parent, $arr);
     }
 
-
     public function actionEveryday()
     {
         $beginOfDay = strtotime("midnight", time());
-        $user = Yii::$app->user;
+        $user = Yii::$app->user->identity;
+
         $todayRating = HistoryRating::find()
             ->where(['user_id' => $user->id])
             ->andWhere(['>=', 'created_at', $beginOfDay])
             ->one();
+
         if ($todayRating) {
             return ['message' => 'Рейтинг уже был обновлен сегодня'];
         }
-        $person = Person::findOne(Yii::$app->user->identity->id);
+
         $userHistory = new HistoryRating();
-        $userHistory->user_id = Yii::$app->user->identity->id;
+        $userHistory->user_id = $user->id;
         $userHistory->rating = $this->rating;
         $userHistory->type = 'everyday';
         $userHistory->comment = 'everyday';
         $userHistory->save();
-        $upd = $person->updateCounters(['rating' => $this->rating]);
-        return $upd;
+
+        return $user->person->updateCounters(['rating' => $this->rating]);
     }
 }
