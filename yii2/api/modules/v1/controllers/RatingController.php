@@ -9,6 +9,7 @@ use common\models\user\Person;
 use Yii;
 use yii\rest\Controller;
 
+
 class RatingController extends Controller
 {
 
