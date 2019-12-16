@@ -1,9 +1,6 @@
 <?php
-
 namespace common\models\user;
-
 use Yii;
-
 /**
  * This is the model class for table "persone".
  *
@@ -23,25 +20,31 @@ use Yii;
  */
 class Person extends \yii\db\ActiveRecord
 {
-
+    /**
+     * {@inheritdoc}
+     */
     public static function tableName()
     {
         return 'persone';
     }
+    public function fields()
+    {
+        return [
+            'refovod',
+            'rating',
+        ];
+    }
     /**
-     * @inheritdoc
+     * {@inheritdoc}
      */
     public function rules()
     {
         return [
-            [['user_id', 'refovod', 'bonus_count', 'autoriz'], 'default', 'value' => null],
-            [['user_id', 'refovod', 'bonus_count', 'autoriz'], 'integer'],
-            [['balance', 'balance_in', 'balance_out', 'credit', 'rating'], 'number'],
-            [['referrer'], 'string'],
+            [['user_id', 'refovod'], 'integer'],
+            [['balance', 'credit', 'rating'], 'number'],
             [['user_id'], 'exist', 'skipOnError' => true, 'targetClass' => User::class, 'targetAttribute' => ['user_id' => 'id']],
         ];
     }
-
     /**
      * {@inheritdoc}
      */
@@ -51,33 +54,18 @@ class Person extends \yii\db\ActiveRecord
             'id' => Yii::t('app', 'ID'),
             'user_id' => Yii::t('app', 'User ID'),
             'balance' => Yii::t('app', 'Balance'),
-            'balance_in' => Yii::t('app', 'Balance In'),
-            'balance_out' => Yii::t('app', 'Balance Out'),
             'credit' => Yii::t('app', 'Credit'),
             'refovod' => Yii::t('app', 'Refovod'),
             'rating' => Yii::t('app', 'Rating'),
-            'referrer' => Yii::t('app', 'Referrer'),
-            'bonus_count' => Yii::t('app', 'Bonus Count'),
-            'autoriz' => Yii::t('app', 'Autoriz'),
         ];
     }
-
     /**
      * @return \yii\db\ActiveQuery
      */
     public function getUser()
     {
-        return $this->hasOne(User::class, ['id' => 'user_id']);
+        return $this->hasOne(User::class, ['id' => 'user_id'])->inverseOf('person');
     }
-
-    public function fields()
-    {
-        return [
-            'refovod',
-            'rating',
-        ];
-    }
-
     /**
      * @return \yii\db\ActiveQuery
      */
@@ -85,5 +73,4 @@ class Person extends \yii\db\ActiveRecord
     {
         return $this->hasOne(User::class, ['id' => 'refovod']);
     }
-
 }
