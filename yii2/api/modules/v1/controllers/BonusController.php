@@ -30,6 +30,15 @@ class BonusController extends Controller
     public function actionEveryday()
     {
 
+        $beginOfDay = strtotime("midnight", time());
+        $user = Yii::$app->user;
+        $todayBalance = HistoryBalance::find()
+            ->where(['user_id' => $user->id])
+            ->andWhere(['>=', 'created_at', $beginOfDay])
+            ->one();
+        if ($todayBalance) {
+            return ['message' => 'Бонус уже был обновлен сегодня'];
+        }
         $person = Person::findOne(Yii::$app->user->identity->id);
         $historyBalance = new HistoryBalance();
         $historyBalance->user_id = Yii::$app->user->identity->id;
