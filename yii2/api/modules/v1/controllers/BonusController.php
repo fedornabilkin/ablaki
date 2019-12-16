@@ -29,7 +29,6 @@ class BonusController extends Controller
 
     public function actionEveryday()
     {
-
         $person = Person::findOne(Yii::$app->user->identity->id);
         $historyBalance = new HistoryBalance();
         $historyBalance->user_id = Yii::$app->user->identity->id;

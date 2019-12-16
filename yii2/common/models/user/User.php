@@ -18,12 +18,6 @@ class User extends \dektrium\user\models\User
 
     public $cookieParams;
     public $rating;
-
-    public static function tableName()
-    {
-        return 'user';
-    }
-
     /**
      * @return \yii\db\ActiveQuery
      */
@@ -89,14 +83,6 @@ class User extends \dektrium\user\models\User
     public function fields()
     {
         return ['username', 'person', ];
-
     }
-
-
-    public function extraFields()
-    {
-        return ['profile'];
-    }
-
 
 }

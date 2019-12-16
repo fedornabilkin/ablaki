@@ -23,9 +23,7 @@ use Yii;
  */
 class Person extends \yii\db\ActiveRecord
 {
-    /**
-     * @inheritdoc
-     */
+
     public static function tableName()
     {
         return 'persone';
@@ -75,10 +73,17 @@ class Person extends \yii\db\ActiveRecord
     public function fields()
     {
         return [
-
             'refovod',
             'rating',
         ];
+    }
+
+    /**
+     * @return \yii\db\ActiveQuery
+     */
+    public function getRefovodUser()
+    {
+        return $this->hasOne(User::class, ['id' => 'refovod']);
     }
 
 }
