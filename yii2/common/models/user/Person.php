@@ -26,10 +26,7 @@ class Person extends \yii\db\ActiveRecord
     /**
      * {@inheritdoc}
      */
-    public static function tableName()
-    {
-        return 'persone';
-    }
+
 
     public function fields()
     {
@@ -82,4 +79,7 @@ class Person extends \yii\db\ActiveRecord
     {
         return $this->hasOne(User::class, ['id' => 'refovod']);
     }
+
+
+
 }

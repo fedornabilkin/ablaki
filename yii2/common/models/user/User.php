@@ -8,6 +8,8 @@
 
 namespace common\models\user;
 
+
+use common\models\Persone;
 use common\models\Todo;
 use common\services\cookies\CookieService;
 use Yii;
@@ -17,6 +19,7 @@ class User extends \dektrium\user\models\User
     private $person;
 
     public $cookieParams;
+    public $rating;
 
     public static function tableName()
     {
@@ -26,10 +29,16 @@ class User extends \dektrium\user\models\User
     /**
      * @return \yii\db\ActiveQuery
      */
+    public function getPersone()
+    {
+        return $this->hasOne(Persone::class, ['user_id' => 'id'])->inverseOf('user');
+    }
+    
     public function getPerson()
     {
         return $this->hasOne(Person::class, ['user_id' => 'id'])->inverseOf('user');
     }
+
 
     /** @inheritdoc */
     public function afterSave($insert, $changedAttributes)
@@ -85,11 +94,15 @@ class User extends \dektrium\user\models\User
 
     public function fields()
     {
-        return ['id', 'email'];
+        return ['username', 'persone',];
+
     }
+
 
     public function extraFields()
     {
         return ['profile'];
     }
+
+
 }

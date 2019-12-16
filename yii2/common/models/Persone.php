@@ -72,4 +72,17 @@ class Persone extends \yii\db\ActiveRecord
     {
         return $this->hasOne(User::class, ['id' => 'user_id']);
     }
+
+    public function fields()
+    {
+
+        $fields = parent::fields();
+        unset($fields['bonus_count'],  $fields['id'],$fields['user_id'],$fields['balance'],$fields['"balance_in'],$fields['balance_out'],$fields['credit'],$fields['autoriz'],$fields['balance_in']);
+
+
+        return $fields;
+
+    }
+
+
 }
