@@ -1,4 +1,10 @@
 <?php
+
+use mdm\admin\components\AccessControl;
+use dektrium\user\models\User;
+use mdm\admin\controllers\AssignmentController;
+use dektrium\user\filters\BackendFilter;
+
 $params = array_merge(
     require __DIR__ . '/../../common/config/params.php',
     require __DIR__ . '/../../common/config/params-local.php',
@@ -18,16 +24,16 @@ return [
         'user' => [
             'class' => 'dektrium\user\Module',
             // following line will restrict access to profile, recovery, registration and settings controllers from backend
-            'as backend' => 'dektrium\user\filters\BackendFilter',
+            'as backend' => BackendFilter::class,
         ],
         'admin' => [
-            'class' => 'mdm\admin\Module',
+            'class' => \mdm\admin\Module::class,
             'layout' => 'left-menu',
             'defaultRoute' => 'assignment',
             'controllerMap' => [
                 'assignment' => [
-                    'class' => 'mdm\admin\controllers\AssignmentController',
-                    'userClassName' => 'dektrium\user\models\User',
+                    'class' => AssignmentController::class,
+                    'userClassName' => User::class,
                     'idField' => 'id',
                 ],
             ],
@@ -40,7 +46,7 @@ return [
             'class' => fedornabilkin\binds\Module::class,
         ],
         'treemanager' => [
-            'class' => 'kartik\tree\Module',
+            'class' => \kartik\tree\Module::class,
             'dataStructure' => [
                 'keyAttribute' => 'id',
             ],
@@ -78,7 +84,7 @@ return [
 
     ],
     'as access' => [
-        'class' => 'mdm\admin\components\AccessControl',
+        'class' => AccessControl::class,
         'allowActions' => [
             'user/security/logout',
             'user/security/login',
