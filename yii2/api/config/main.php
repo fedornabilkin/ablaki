@@ -1,5 +1,6 @@
 <?php
 
+use yii\rest\UrlRule;
 use yii\web\Response;
 
 $params = array_merge(
@@ -67,7 +68,7 @@ return [
                 'login' => 'site/login',
                 'logout' => 'site/logout',
                 [
-                    'class' => 'yii\rest\UrlRule',
+                    'class' => UrlRule::class,
                     'controller' => 'v1/saper',
                     'except' => ['view'],
                     'extraPatterns' => [
@@ -78,13 +79,37 @@ return [
                     ],
                 ],
                 [
-                    'class' => 'yii\rest\UrlRule',
+                    'class' => UrlRule::class,
                     'controller' => ['v1/orel'],
                     'except' => ['view'],
                     'extraPatterns' => [
                         'GET remove' => 'remove',
                         'POST play/{id}' => 'play',
                     ],
+                ],
+             [
+                    'class' => UrlRule::class,
+                    'controller' => ['v1/rating'],
+                    'only' => ['everyday'],
+                    'extraPatterns' => [
+                        'GET everyday' => 'everyday',
+                    ],
+                ],
+             [
+                    'class' => UrlRule::class,
+                    'controller' => ['v1/bonus'],
+                    'only' => ['everyday'],
+                    'extraPatterns' => [
+                        'GET everyday' => 'everyday',
+                    ],
+                ],
+                [
+                    'class' => UrlRule::class,
+                    'controller' => ['v1/user'],
+                    'only' => ['wall'],
+                    'extraPatterns' => [
+                        'GET wall/<login:\w+>' => 'wall',
+                        ],
                 ],
             ],
         ],

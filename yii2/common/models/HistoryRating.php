@@ -37,7 +37,6 @@ class HistoryRating extends \yii\db\ActiveRecord
     {
         return 'history_rating';
     }
-
     /**
      * {@inheritdoc}
      */

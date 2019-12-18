@@ -3,7 +3,6 @@
 namespace common\models\user;
 
 use Yii;
-
 /**
  * This is the model class for table "persone".
  *
@@ -34,9 +33,6 @@ class Person extends \yii\db\ActiveRecord
     public function fields()
     {
         return [
-            'balance',
-            'credit',
-            'balance',
             'refovod',
             'rating',
         ];
