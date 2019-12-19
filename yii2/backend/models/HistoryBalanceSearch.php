@@ -18,8 +18,6 @@ class HistoryBalanceSearch extends HistoryBalance
     {
         return [
             [['id', 'user_id', 'created_at'], 'integer'],
-            [['balance', 'credit', 'balance_up', 'credit_up'], 'number'],
-            [['type', 'comment'], 'safe'],
         ];
     }
 
@@ -59,7 +57,6 @@ class HistoryBalanceSearch extends HistoryBalance
 
         // grid filtering conditions
         $query->andFilterWhere([
-            'id' => $this->id,
             'user_id' => $this->user_id,
             'balance' => $this->balance,
             'credit' => $this->credit,
