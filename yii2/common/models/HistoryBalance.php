@@ -24,6 +24,11 @@ use yii\behaviors\TimestampBehavior;
 class HistoryBalance extends \yii\db\ActiveRecord
 {
 
+    public const HT_EVERYDAY = 'каждый день';
+    public const HT_OREL = 'игра орел';
+    public const HT_SAPER = 'игра сапер';
+    public const HT_DUEL = 'игра дуэль';
+
     public function behaviors()
     {
         return array_merge_recursive(parent::behaviors(), [
@@ -80,5 +85,14 @@ class HistoryBalance extends \yii\db\ActiveRecord
     public function getUser()
     {
         return $this->hasOne(User::class, ['id' => 'user_id']);
+    }
+
+    public static function getSortLabels() {
+        return [
+            self::HT_EVERYDAY  => Yii::t('app', self::HT_EVERYDAY),
+            self::HT_OREL => Yii::t('app', self::HT_EVERYDAY),
+            self::HT_SAPER  => Yii::t('app', self::HT_EVERYDAY),
+            self::HT_DUEL  => Yii::t('app', self::HT_EVERYDAY),
+        ];
     }
 }

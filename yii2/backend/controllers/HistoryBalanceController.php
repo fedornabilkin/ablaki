@@ -14,10 +14,7 @@ use yii\filters\VerbFilter;
  */
 class HistoryBalanceController extends Controller
 {
-    public const HT_EVERYDAY = 'everyday';
-    public const HT_OREL = 'game_orel';
-    public const HT_SAPER = 'game_saper';
-    public const HT_DUEL = 'game_duel';
+
     /**
      * {@inheritdoc}
      */
@@ -32,15 +29,6 @@ class HistoryBalanceController extends Controller
             ],
         ];
     }
-    public static function getSortLabels() {
-        return [
-            self::HT_EVERYDAY  => 'everyday',
-            self::HT_OREL => 'game_orel',
-            self::HT_SAPER  => 'game_saper',
-            self::HT_DUEL => 'game_duel',
-        ];
-    }
-
     /**
      * Lists all HistoryBalance models.
      * @return mixed

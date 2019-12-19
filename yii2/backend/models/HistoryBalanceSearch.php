@@ -17,7 +17,9 @@ class HistoryBalanceSearch extends HistoryBalance
     public function rules()
     {
         return [
-            [['id', 'user_id', 'created_at'], 'integer'],
+            [['user_id', 'created_at'], 'integer'],
+            [['balance', 'credit', 'balance_up', 'credit_up'], 'number'],
+            [['type', 'comment'], 'safe'],
         ];
     }
 
