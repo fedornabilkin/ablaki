@@ -25,6 +25,8 @@ class User extends \dektrium\user\models\User
 {
     public $cookieParams;
 
+    private $person;
+
     /**
      * @return ActiveQuery
      */
@@ -82,9 +84,9 @@ class User extends \dektrium\user\models\User
     }
 
     /**
-     * @return \yii\db\ActiveQuery
+     * @return ActiveQuery
      */
-    public function getTodo()
+    public function getTodo(): ActiveQuery
     {
         return $this->hasMany(Todo::class, ['user_id' => 'id']);
     }
