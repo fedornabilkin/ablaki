@@ -24,10 +24,10 @@ use yii\behaviors\TimestampBehavior;
 class HistoryBalance extends \yii\db\ActiveRecord
 {
 
-    public const HT_EVERYDAY = 'каждый день';
-    public const HT_OREL = 'игра орел';
-    public const HT_SAPER = 'игра сапер';
-    public const HT_DUEL = 'игра дуэль';
+    public const HT_EVERYDAY = 'everyday';
+    public const HT_OREL = 'game_orel';
+    public const HT_SAPER = 'game_saper';
+    public const HT_DUEL = 'game_duel';
 
     public function behaviors()
     {
@@ -90,9 +90,9 @@ class HistoryBalance extends \yii\db\ActiveRecord
     public static function getSortLabels() {
         return [
             self::HT_EVERYDAY  => Yii::t('app', self::HT_EVERYDAY),
-            self::HT_OREL => Yii::t('app', self::HT_EVERYDAY),
-            self::HT_SAPER  => Yii::t('app', self::HT_EVERYDAY),
-            self::HT_DUEL  => Yii::t('app', self::HT_EVERYDAY),
+            self::HT_OREL => Yii::t('app', self::HT_OREL),
+            self::HT_SAPER  => Yii::t('app', self::HT_SAPER),
+            self::HT_DUEL  => Yii::t('app', self::HT_DUEL),
         ];
     }
 }

@@ -1,5 +1,6 @@
 <?php
 
+use common\models\HistoryBalance;
 use yii\grid\GridView;
 use yii\helpers\ArrayHelper;
 use yii\helpers\Html;
@@ -42,22 +43,26 @@ $this->params['breadcrumbs'][] = $this->title;
             'attribute' => 'balance_up',
             'format' => 'raw',
             'value' => function($model) {
-                return \yii\helpers\Html::tag('span', $model->balance_up . $model->credit_up . (($model->credit_up >= 0) ? '+' : '-'), [
+                return \yii\helpers\Html::tag('span', $model->balance_up . '<br>' . $model->credit_up . (($model->credit_up >= 0)), [
                   'class' => ($model->credit_up >= 0) ? 'text-success' : 'text-danger'
                 ]);
               }
             ],
             [
                 'attribute' => 'type',
-                'filter' => Html::activeDropDownList($searchModel, 'type', ArrayHelper::map(\common\models\HistoryBalance::find()->all(), 'type', 'type'), ['everyday' => '', 'class' => 'form-control form-control-sm']),
+                'filter' => Html::activeDropDownList(
+                    $searchModel,
+                    'type',
+                    HistoryBalance::getSortLabels(),
+                    [
+                        'everyday' => 'каждый день',
+                        'class' =>
+                        'form-control form-control-sm'
+                    ]
+                ),
             ],
             'comment',
-            [
-                'attribute' => 'created_at',
-                'format' => ['date', 'php:H:i d.m.y']
-            ],
 
-            ['class' => 'yii\grid\ActionColumn'],
         ],
     ]); ?>
 </div>
