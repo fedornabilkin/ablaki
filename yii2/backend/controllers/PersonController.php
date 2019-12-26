@@ -51,7 +51,6 @@ class PersonController extends Controller
     {
         $model = $this->findModel($id);
         $searchModel  = new  HistoryBalanceSearch;
-	    $dataProvider = $searchModel->search(\Yii::$app->getRequest()->get());
         $dataProvider = new ActiveDataProvider([
             'query' => HistoryBalance::find()
                 ->andWhere(['user_id' => $id])

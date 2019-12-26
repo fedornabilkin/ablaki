@@ -100,9 +100,4 @@ class HistoryBalance extends ActiveRecord
         return $this->hasOne(User::class, ['id' => 'user_id']);
     }
 
-    public function getPerson()
-    {
-        return $this->hasOne(Person::className(), ['person_id' => 'person_id']);
-    }
-
 }
