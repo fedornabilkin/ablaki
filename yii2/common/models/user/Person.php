@@ -2,7 +2,11 @@
 
 namespace common\models\user;
 
+use common\models\HistoryBalance;
 use Yii;
+use yii\db\ActiveQuery;
+use yii\db\ActiveRecord;
+
 /**
  * This is the model class for table "persone".
  *
@@ -20,7 +24,7 @@ use Yii;
  *
  * @property User $user
  */
-class Person extends \yii\db\ActiveRecord
+class Person extends ActiveRecord
 {
     /**
      * {@inheritdoc}
@@ -66,7 +70,7 @@ class Person extends \yii\db\ActiveRecord
     }
 
     /**
-     * @return \yii\db\ActiveQuery
+     * @return ActiveQuery
      */
     public function getUser()
     {
@@ -74,10 +78,16 @@ class Person extends \yii\db\ActiveRecord
     }
 
     /**
-     * @return \yii\db\ActiveQuery
+     * @return ActiveQuery
      */
     public function getRefovodUser()
     {
         return $this->hasOne(User::class, ['id' => 'refovod']);
     }
+
+    public function getHistoryBalance()
+    {
+        return $this->hasMany(HistoryBalance::className(), ['id' => 'user_id']);
+    }
+
 }

@@ -2,9 +2,12 @@
 
 namespace common\models;
 
+use common\models\user\Person;
 use common\models\user\User;
 use Yii;
 use yii\behaviors\TimestampBehavior;
+use yii\db\ActiveQuery;
+use yii\db\ActiveRecord;
 
 /**
  * This is the model class for table "history_balance".
@@ -21,13 +24,31 @@ use yii\behaviors\TimestampBehavior;
  *
  * @property User $user
  */
-class HistoryBalance extends \yii\db\ActiveRecord
+class HistoryBalance extends ActiveRecord
 {
 
     public const HT_EVERYDAY = 'everyday';
     public const HT_OREL = 'game_orel';
     public const HT_SAPER = 'game_saper';
     public const HT_DUEL = 'game_duel';
+
+    /**
+     * {@inheritdoc}
+     */
+    public static function tableName()
+    {
+        return 'history_balance';
+    }
+
+    public static function getSortLabels()
+    {
+        return [
+            self::HT_EVERYDAY => Yii::t('app', self::HT_EVERYDAY),
+            self::HT_OREL => Yii::t('app', self::HT_OREL),
+            self::HT_SAPER => Yii::t('app', self::HT_SAPER),
+            self::HT_DUEL => Yii::t('app', self::HT_DUEL),
+        ];
+    }
 
     public function behaviors()
     {
@@ -37,14 +58,6 @@ class HistoryBalance extends \yii\db\ActiveRecord
                 'updatedAtAttribute' => 'created_at',
             ],
         ]);
-    }
-
-    /**
-     * {@inheritdoc}
-     */
-    public static function tableName()
-    {
-        return 'history_balance';
     }
 
     /**
@@ -80,19 +93,16 @@ class HistoryBalance extends \yii\db\ActiveRecord
     }
 
     /**
-     * @return \yii\db\ActiveQuery
+     * @return ActiveQuery
      */
     public function getUser()
     {
         return $this->hasOne(User::class, ['id' => 'user_id']);
     }
 
-    public static function getSortLabels() {
-        return [
-            self::HT_EVERYDAY  => Yii::t('app', self::HT_EVERYDAY),
-            self::HT_OREL => Yii::t('app', self::HT_OREL),
-            self::HT_SAPER  => Yii::t('app', self::HT_SAPER),
-            self::HT_DUEL  => Yii::t('app', self::HT_DUEL),
-        ];
+    public function getPerson()
+    {
+        return $this->hasOne(Person::className(), ['person_id' => 'person_id']);
     }
+
 }

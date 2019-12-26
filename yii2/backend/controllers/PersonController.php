@@ -2,9 +2,12 @@
 
 namespace backend\controllers;
 
+use backend\models\HistoryBalanceSearch;
+use common\models\HistoryBalance;
 use Yii;
 use common\models\user\Person;
 use backend\models\PersonSearch;
+use yii\data\ActiveDataProvider;
 use yii\web\Controller;
 use yii\web\NotFoundHttpException;
 use yii\filters\VerbFilter;
@@ -46,8 +49,19 @@ class PersonController extends Controller
 
     public function actionView($id)
     {
+        $model = $this->findModel($id);
+        $searchModel  = new  HistoryBalanceSearch;
+	    $dataProvider = $searchModel->search(\Yii::$app->getRequest()->get());
+        $dataProvider = new ActiveDataProvider([
+            'query' => HistoryBalance::find()
+                ->andWhere(['user_id' => $id])
+                ->orderBy(['id' => SORT_DESC])
+                ->limit(30)
+        ]);
         return $this->render('view', [
-            'model' => $this->findModel($id),
+            'model' => $model,
+            'dataProvider' => $dataProvider,
+            'searchModel' => $searchModel,
         ]);
     }
 
