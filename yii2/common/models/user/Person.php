@@ -85,9 +85,4 @@ class Person extends ActiveRecord
         return $this->hasOne(User::class, ['id' => 'refovod']);
     }
 
-    public function getHistoryBalance()
-    {
-        return $this->hasMany(HistoryBalance::className(), ['id' => 'user_id']);
-    }
-
 }
