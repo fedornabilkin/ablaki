@@ -44,5 +44,14 @@ class HistoryBalanceController extends Controller
         ]);
     }
 
+    public function actionNew()
+    {
+        $searchModel = new HistoryBalanceSearch();
+        $dataProvider = $searchModel->search(Yii::$app->request->queryParams);
 
+        return $this->render('new', [
+            'searchModel' => $searchModel,
+            'dataProvider' => $dataProvider,
+        ]);
+    }
 }
