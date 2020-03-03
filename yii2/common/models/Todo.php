@@ -84,15 +84,17 @@ class Todo extends \yii\db\ActiveRecord
     }
 
 
-
-        public function beforeSave($insert)
+    public function beforeSave($insert)
     {
-        if ($insert) {
-            $this->user_id = Yii::$app->user->id;
+        if (parent::beforeSave($insert)) {
+            if ($insert) {
+                $this->user_id = Yii::$app->user->id;
+                return true;
+            }
             return true;
+        } else {
+            return false;
         }
-        return false;
     }
-
 
 }
