@@ -38,5 +38,5 @@ YiiAsset::register($this);
 
 </div>
 
-<? echo $this->render('/new', ['dataProvider' => $dataProvider, 'searchModel' => $searchModel]) ?>
+<? echo $this->render('@app/common/views/history-balance/list.php', ['dataProvider' => $dataProvider, 'searchModel' => $searchModel]) ?>
 

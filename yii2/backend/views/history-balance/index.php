@@ -12,4 +12,4 @@ use yii\widgets\ListView;
 $this->title = Yii::t('app', 'History Balances');
 $this->params['breadcrumbs'][] = $this->title;
 ?>
-<? echo $this->render('/new', ['dataProvider' => $dataProvider, 'searchModel' => $searchModel]) ?>
+<? echo $this->render('@app/views/history-balance/list.php', ['dataProvider' => $dataProvider, 'searchModel' => $searchModel]) ?>
