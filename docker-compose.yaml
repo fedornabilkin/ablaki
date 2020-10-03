@@ -9,7 +9,9 @@ services:
       - ./docker/nginx/add/:/etc/nginx/add/
       - ./yii2/:/web/yii2/
     ports:
-      - ${PORT_SERVICE_NGINX}:80
+      - ${PORT_NGINX_API}:80
+      - ${PORT_NGINX_FRONT}:88
+      - ${PORT_NGINX_ADMIN}:8080
     links:
       - php
 
@@ -22,15 +24,19 @@ services:
     volumes:
       - ./yii2/:/web/yii2/
       - ./.env:/etc/environment
+      - ./docker/php/entrypoint.sh:/entrypoint.sh
+    entrypoint: /entrypoint.sh
     ports:
       - 9000
 
   composer:
-    image: composer:1.8
+    build:
+      context: docker/composer
+      dockerfile: Dockerfile
     volumes:
       - ./yii2/:/web/yii2/
-      - ./docker/composer/docker-entrypoint.sh:/docker-entrypoint.sh
-    entrypoint: /docker-entrypoint.sh
+      - ./docker/composer/entrypoint.sh:/entrypoint.sh
+    entrypoint: /entrypoint.sh
 
   postgres:
     image: postgres:11
