@@ -50,13 +50,8 @@ class SiteController extends Controller
         $model = \Yii::createObject(LoginForm::class);
         if ($model->load(Yii::$app->request->post(), '') && $model->login()) {
             return [
-                'user' => [
-                    'username' => $model->login,
-                    'token' => $model->token,
-                ],
-                'person' => [
-                    \Yii::$app->user->identity->person,
-                ],
+                'user' => $model->getUser(),
+                'token' => $model->token,
             ];
         } else {
             throw new UserException('No auth', '401');

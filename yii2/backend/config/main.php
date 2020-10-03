@@ -7,9 +7,9 @@ use dektrium\user\filters\BackendFilter;
 
 $params = array_merge(
     require __DIR__ . '/../../common/config/params.php',
-    require __DIR__ . '/../../common/config/params-local.php',
+    getLocalConfig(__DIR__ . '/../../common/config/params-local.php'),
     require __DIR__ . '/params.php',
-    require __DIR__ . '/params-local.php'
+    getLocalConfig(__DIR__ . '/params-local.php')
 );
 
 return [
@@ -55,6 +55,7 @@ return [
     'components' => [
         'request' => [
             'csrfParam' => '_csrf-backend',
+            'cookieValidationKey' => 'zrBj4r-V6wTo1eEnPlGYqOdvhXAhGQJW',
         ],
         'user' => [
             'identityClass' => \common\models\user\User::class,

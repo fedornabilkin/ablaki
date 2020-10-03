@@ -32,10 +32,17 @@ class Person extends \yii\db\ActiveRecord
 
     public function fields()
     {
-        return [
+        $f = [
             'refovod',
             'rating',
         ];
+
+        if (!\Yii::$app->user->getIsGuest()) {
+            $f[] = 'balance';
+            $f[] = 'credit';
+        }
+
+        return $f;
     }
 
     /**

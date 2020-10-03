@@ -1,9 +1,10 @@
 <?php
+
 $params = array_merge(
     require __DIR__ . '/../../common/config/params.php',
-    require __DIR__ . '/../../common/config/params-local.php',
+    getLocalConfig(__DIR__ . '/../../common/config/params-local.php'),
     require __DIR__ . '/params.php',
-    require __DIR__ . '/params-local.php'
+    getLocalConfig(__DIR__ . '/params-local.php')
 );
 
 return [
@@ -18,6 +19,7 @@ return [
     'components' => [
         'request' => [
             'csrfParam' => '_csrf-frontend',
+            'cookieValidationKey' => 'SVK01iZH047QrU-FDE0HumgBSnqljvnc',
         ],
         'session' => [
             // this is the name of the session cookie used for login on the frontend

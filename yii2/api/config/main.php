@@ -5,9 +5,9 @@ use yii\web\Response;
 
 $params = array_merge(
     require __DIR__ . '/../../common/config/params.php',
-    require __DIR__ . '/../../common/config/params-local.php',
+    getLocalConfig(__DIR__ . '/../../common/config/params-local.php'),
     require __DIR__ . '/params.php',
-    require __DIR__ . '/params-local.php'
+    getLocalConfig(__DIR__ . '/params-local.php')
 );
 
 return [
@@ -35,6 +35,7 @@ return [
         ],
         'request' => [
             'enableCsrfValidation' => false,
+            'cookieValidationKey' => 'JDaZ5GOpnlg94q38dzWDLKjPR5rQXXlF',
             'parsers' => [
                 'application/json' => 'yii\web\JsonParser'
             ]
@@ -87,7 +88,7 @@ return [
                         'POST play/{id}' => 'play',
                     ],
                 ],
-             [
+                [
                     'class' => UrlRule::class,
                     'controller' => ['v1/rating'],
                     'only' => ['everyday'],
@@ -95,7 +96,7 @@ return [
                         'GET everyday' => 'everyday',
                     ],
                 ],
-             [
+                [
                     'class' => UrlRule::class,
                     'controller' => ['v1/bonus'],
                     'only' => ['everyday'],
@@ -109,7 +110,7 @@ return [
                     'only' => ['wall'],
                     'extraPatterns' => [
                         'GET wall/<login:\w+>' => 'wall',
-                        ],
+                    ],
                 ],
             ],
         ],
