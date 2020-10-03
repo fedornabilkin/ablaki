@@ -34,6 +34,7 @@ return [
         'setWritable' => [
             'api/runtime',
             'api/web/assets',
+            'api/web/.gitkeep',
             'backend/runtime',
             'backend/web/assets',
             'frontend/runtime',
@@ -51,6 +52,7 @@ return [
         'setWritable' => [
             'api/runtime',
             'api/web/assets',
+            'api/web/.gitkeep',
             'backend/runtime',
             'backend/web/assets',
             'frontend/runtime',

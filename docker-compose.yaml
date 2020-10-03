@@ -7,7 +7,7 @@ services:
     image: nginx:1.15
     restart: unless-stopped
     volumes:
-      - ./docker/nginx/site.conf:/etc/nginx/conf.d/site.conf
+      - ./docker/nginx/conf.d/:/etc/nginx/conf.d/
       - ./docker/nginx/add/:/etc/nginx/add/
       - ./yii2/:/web/yii2/
     ports:
