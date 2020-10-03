@@ -6,3 +6,11 @@ RUN apt-get update \
 && docker-php-ext-install pdo pdo_pgsql pdo_mysql intl gd \
 && docker-php-ext-enable gd
 
+ARG ENV
+COPY xdebugInstall.sh xdebugInstall.sh
+RUN chmod u+x xdebugInstall.sh && ./xdebugInstall.sh
+
+COPY ./entrypoint.sh /entrypoint.sh
+RUN chmod a+x /entrypoint.sh
+
+CMD /entrypoint.sh

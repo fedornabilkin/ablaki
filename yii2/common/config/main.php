@@ -1,10 +1,14 @@
 <?php
+
+use common\helpers\Env;
+use yii\redis\Cache;
+
 return [
     'aliases' => [
         '@bower' => '@vendor/bower-asset',
         '@npm'   => '@vendor/npm-asset',
     ],
-    'vendorPath' => dirname(dirname(__DIR__)) . '/vendor',
+    'vendorPath' => dirname(__DIR__, 2) . '/vendor',
     'components' => [
         'db' => [
             'class' => 'yii\db\Connection',
@@ -15,6 +19,16 @@ return [
         ],
         'cache' => [
             'class' => 'yii\caching\FileCache',
+        ],
+        'redis' => [
+            'class' => Cache::class,
+            'keyPrefix' => 'crm:cache',
+            'redis' => [
+                'hostname' => Env::redisHost(),
+                'port'     => Env::redisPort(),
+                'database' => Env::redisCacheDatabase(),
+                'password' => Env::redisPassword(),
+            ],
         ],
         'authManager' => [
             'class' => 'yii\rbac\DbManager',

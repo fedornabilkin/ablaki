@@ -12,6 +12,11 @@ class LoginForm extends \dektrium\user\models\LoginForm
 {
     public $token;
 
+    public function getUser()
+    {
+        return $this->user;
+    }
+
     /**
      * @return bool whether the user is logged in successfully
      * @throws BaseException
