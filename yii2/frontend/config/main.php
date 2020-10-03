@@ -1,9 +1,14 @@
 <?php
+
+use fedornabilkin\binds\behaviors\SeoBehavior;
+use frontend\controllers\user\WallController;
+use frontend\modules\advertising\Module;
+
 $params = array_merge(
     require __DIR__ . '/../../common/config/params.php',
-    require __DIR__ . '/../../common/config/params-local.php',
+    getLocalConfig(__DIR__ . '/../../common/config/params-local.php'),
     require __DIR__ . '/params.php',
-    require __DIR__ . '/params-local.php'
+    getLocalConfig(__DIR__ . '/params-local.php')
 );
 
 return [
@@ -18,6 +23,7 @@ return [
     'components' => [
         'request' => [
             'csrfParam' => '_csrf-frontend',
+            'cookieValidationKey' => 'SVK01iZH047QrU-FDE0HumgBSnqljvnc',
         ],
         'session' => [
             // this is the name of the session cookie used for login on the frontend
@@ -51,7 +57,7 @@ return [
 
         'view' => [
             'as seo' => [
-                'class' => \fedornabilkin\binds\behaviors\SeoBehavior::class,
+                'class' => SeoBehavior::class,
             ],
             'theme' => [
                 'pathMap' => [
@@ -66,7 +72,7 @@ return [
             'as frontend' => 'dektrium\user\filters\FrontendFilter',
             'class' => \dektrium\user\Module::class,
             'controllerMap' => [
-                'wall' => \frontend\controllers\user\WallController::class
+                'wall' => WallController::class
             ],
         ],
         'treemanager' => [
@@ -79,7 +85,7 @@ return [
             'class' => \common\modules\games\Module::class,
         ],
         'advertising' => [
-            'class' => \frontend\modules\advertising\Module::class,
+            'class' => Module::class,
         ],
     ],
     'params' => $params,

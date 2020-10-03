@@ -1,15 +1,16 @@
 <?php
 
-use mdm\admin\components\AccessControl;
-use dektrium\user\models\User;
-use mdm\admin\controllers\AssignmentController;
 use dektrium\user\filters\BackendFilter;
+use dektrium\user\models\User;
+use kartik\tree\Module;
+use mdm\admin\components\AccessControl;
+use mdm\admin\controllers\AssignmentController;
 
 $params = array_merge(
     require __DIR__ . '/../../common/config/params.php',
-    require __DIR__ . '/../../common/config/params-local.php',
+    getLocalConfig(__DIR__ . '/../../common/config/params-local.php'),
     require __DIR__ . '/params.php',
-    require __DIR__ . '/params-local.php'
+    getLocalConfig(__DIR__ . '/params-local.php')
 );
 
 return [
@@ -46,7 +47,7 @@ return [
             'class' => fedornabilkin\binds\Module::class,
         ],
         'treemanager' => [
-            'class' => \kartik\tree\Module::class,
+            'class' => Module::class,
             'dataStructure' => [
                 'keyAttribute' => 'id',
             ],
@@ -55,6 +56,7 @@ return [
     'components' => [
         'request' => [
             'csrfParam' => '_csrf-backend',
+            'cookieValidationKey' => 'zrBj4r-V6wTo1eEnPlGYqOdvhXAhGQJW',
         ],
         'user' => [
             'identityClass' => \common\models\user\User::class,

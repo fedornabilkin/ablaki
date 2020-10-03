@@ -12,6 +12,11 @@ class LoginForm extends \dektrium\user\models\LoginForm
 {
     public $token;
 
+    public function getUser()
+    {
+        return $this->user;
+    }
+
     /**
      * @return bool whether the user is logged in successfully
      * @throws BaseException
@@ -30,8 +35,8 @@ class LoginForm extends \dektrium\user\models\LoginForm
      */
     public function logout()
     {
-        $user = \Yii::$app->user->identity;
-        $user->auth_key = \Yii::$app->security->generateRandomString();
+        $user = Yii::$app->user->identity;
+        $user->auth_key = Yii::$app->security->generateRandomString();
         $user->save();
 
         return Yii::$app->user->logout();

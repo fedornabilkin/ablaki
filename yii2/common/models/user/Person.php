@@ -3,6 +3,9 @@
 namespace common\models\user;
 
 use Yii;
+use yii\db\ActiveQuery;
+use yii\db\ActiveRecord;
+
 /**
  * This is the model class for table "persone".
  *
@@ -20,7 +23,7 @@ use Yii;
  *
  * @property User $user
  */
-class Person extends \yii\db\ActiveRecord
+class Person extends ActiveRecord
 {
     /**
      * {@inheritdoc}
@@ -32,10 +35,17 @@ class Person extends \yii\db\ActiveRecord
 
     public function fields()
     {
-        return [
+        $f = [
             'refovod',
             'rating',
         ];
+
+        if (!Yii::$app->user->getIsGuest()) {
+            $f[] = 'balance';
+            $f[] = 'credit';
+        }
+
+        return $f;
     }
 
     /**
@@ -66,7 +76,7 @@ class Person extends \yii\db\ActiveRecord
     }
 
     /**
-     * @return \yii\db\ActiveQuery
+     * @return ActiveQuery
      */
     public function getUser()
     {
@@ -74,7 +84,7 @@ class Person extends \yii\db\ActiveRecord
     }
 
     /**
-     * @return \yii\db\ActiveQuery
+     * @return ActiveQuery
      */
     public function getRefovodUser()
     {

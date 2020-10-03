@@ -1,13 +1,14 @@
 <?php
 
+use api\models\UserIdentity;
+use api\modules\v1\Module;
 use yii\rest\UrlRule;
-use yii\web\Response;
 
 $params = array_merge(
     require __DIR__ . '/../../common/config/params.php',
-    require __DIR__ . '/../../common/config/params-local.php',
+    getLocalConfig(__DIR__ . '/../../common/config/params-local.php'),
     require __DIR__ . '/params.php',
-    require __DIR__ . '/params-local.php'
+    getLocalConfig(__DIR__ . '/params-local.php')
 );
 
 return [
@@ -35,12 +36,13 @@ return [
         ],
         'request' => [
             'enableCsrfValidation' => false,
+            'cookieValidationKey' => 'JDaZ5GOpnlg94q38dzWDLKjPR5rQXXlF',
             'parsers' => [
                 'application/json' => 'yii\web\JsonParser'
             ]
         ],
         'user' => [
-            'identityClass' => \api\models\UserIdentity::class,
+            'identityClass' => UserIdentity::class,
             'enableSession' => false,
             'loginUrl' => null,
             'enableAutoLogin' => true,
@@ -87,7 +89,7 @@ return [
                         'POST play/{id}' => 'play',
                     ],
                 ],
-             [
+                [
                     'class' => UrlRule::class,
                     'controller' => ['v1/rating'],
                     'only' => ['everyday'],
@@ -95,7 +97,7 @@ return [
                         'GET everyday' => 'everyday',
                     ],
                 ],
-             [
+                [
                     'class' => UrlRule::class,
                     'controller' => ['v1/bonus'],
                     'only' => ['everyday'],
@@ -109,7 +111,7 @@ return [
                     'only' => ['wall'],
                     'extraPatterns' => [
                         'GET wall/<login:\w+>' => 'wall',
-                        ],
+                    ],
                 ],
             ],
         ],
@@ -117,7 +119,7 @@ return [
 
     'modules' => [
         'v1' => [
-            'class' => \api\modules\v1\Module::class,
+            'class' => Module::class,
         ],
     ],
 

@@ -2,11 +2,12 @@
 namespace api\controllers;
 
 use api\filters\Auth;
+use api\models\LoginForm;
 use Yii;
 use yii\base\Exception;
+use yii\base\InvalidConfigException;
 use yii\base\UserException;
 use yii\rest\Controller;
-use api\models\LoginForm;
 
 /**
  * Site controller
@@ -47,16 +48,11 @@ class SiteController extends Controller
      */
     public function actionLogin()
     {
-        $model = \Yii::createObject(LoginForm::class);
+        $model = Yii::createObject(LoginForm::class);
         if ($model->load(Yii::$app->request->post(), '') && $model->login()) {
             return [
-                'user' => [
-                    'username' => $model->login,
-                    'token' => $model->token,
-                ],
-                'person' => [
-                    \Yii::$app->user->identity->person,
-                ],
+                'user' => $model->getUser(),
+                'token' => $model->token,
             ];
         } else {
             throw new UserException('No auth', '401');
@@ -65,11 +61,11 @@ class SiteController extends Controller
 
     /**
      * @return bool
-     * @throws \yii\base\InvalidConfigException
+     * @throws InvalidConfigException
      */
     public function actionLogout()
     {
-        $model = \Yii::createObject(LoginForm::class);
+        $model = Yii::createObject(LoginForm::class);
         return $model->logout();
     }
 }

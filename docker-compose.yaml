@@ -1,9 +1,11 @@
 version: "3"
 volumes:
   postgresdata:
+  redisData:
 services:
   nginx:
     image: nginx:1.15
+    restart: unless-stopped
     volumes:
       - ./docker/nginx/site.conf:/etc/nginx/conf.d/site.conf
       - ./docker/nginx/add/:/etc/nginx/add/
@@ -16,6 +18,7 @@ services:
       - php
 
   php:
+    restart: unless-stopped
     build:
       context: docker/php
       dockerfile: Dockerfile
@@ -26,8 +29,6 @@ services:
       - ./.env:/etc/environment
       - ./docker/php/entrypoint.sh:/entrypoint.sh
     entrypoint: /entrypoint.sh
-    ports:
-      - 9000
 
   composer:
     build:
@@ -40,6 +41,7 @@ services:
 
   postgres:
     image: postgres:11
+    restart: unless-stopped
     ports:
       - ${PG_DB_PORT}:5432
     volumes:
@@ -49,3 +51,27 @@ services:
       POSTGRES_PASSWORD: ${PG_DB_PASSWORD}
       POSTGRES_USER: ${PG_DB_USER}
       POSTGRES_DB: ${PG_DB_NAME}
+
+#  mailcatcher:
+#    image: dockage/mailcatcher:0.6.5
+#    ports:
+#      - ${BLK_MAILCATCHER_PORT}:1080
+
+#  redis:
+#    image: redis:5.0.6-alpine
+#    restart: unless-stopped
+#    command: ["sh", "-c", "exec redis-server --requirepass \"${BLK_REDIS_PASSWORD}\""]
+#    entrypoint: redis-server /usr/local/etc/redis/redis.conf --appendonly yes
+#    ports:
+#      - ${BLK_REDIS_PORT}:6379
+#    volumes:
+#      - ./docker/redis/redis.conf:/usr/local/etc/redis/redis.conf
+#      - redisData:/data
+
+networks:
+  default:
+    driver: bridge
+    ipam:
+      driver: default
+      config:
+        - subnet: 192.168.22.0/24

@@ -6,18 +6,11 @@ RUN apt-get update \
 && docker-php-ext-install pdo pdo_pgsql pdo_mysql intl gd \
 && docker-php-ext-enable gd
 
+ARG ENV
+COPY xdebugInstall.sh xdebugInstall.sh
+RUN chmod u+x xdebugInstall.sh && ./xdebugInstall.sh
+
 COPY ./entrypoint.sh /entrypoint.sh
 RUN chmod a+x /entrypoint.sh
-
-#COPY ./cron /var/spool/cron/crontabs/root
-#RUN chmod 600 /var/spool/cron/crontabs/root
-#
-#RUN rm -f /etc/localtime && ln -sf /usr/share/zoneinfo/Europe/Moscow /etc/localtime \
-#
-#&& echo '[PHP]\ndate.timezone = "Europe/Moscow"\n' > /usr/local/etc/php/conf.d/tzone.ini
-#
-#ARG ENV
-#COPY devinstall.sh devinstall.sh
-#RUN chmod u+x devinstall.sh && ./devinstall.sh
 
 CMD /entrypoint.sh
