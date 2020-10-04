@@ -69,6 +69,7 @@ return [
             'rules' => [
                 'login' => 'site/login',
                 'logout' => 'site/logout',
+                'registration' => 'site/registration',
                 [
                     'class' => UrlRule::class,
                     'controller' => 'v1/saper',

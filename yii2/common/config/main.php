@@ -4,7 +4,7 @@ use common\helpers\Env;
 use common\models\user\User;
 use yii\redis\Cache;
 
-return [
+$config = [
     'aliases' => [
         '@bower' => '@vendor/bower-asset',
         '@npm' => '@vendor/npm-asset',
@@ -39,15 +39,6 @@ return [
             'defaultTimeZone' => 'UTC',
             'timeZone' => 'Europe/Moscow',
         ],
-        'log' => [
-            'traceLevel' => YII_DEBUG ? 3 : 0,
-            'targets' => [
-                [
-                    'class' => 'yii\log\FileTarget',
-                    'levels' => ['error', 'warning'],
-                ],
-            ],
-        ],
     ],
 
     'modules' => [
@@ -61,3 +52,10 @@ return [
         ],
     ],
 ];
+
+foreach (glob(__DIR__ . '/components/*.php') as $file) {
+    $componentName = str_replace('.php', '', basename($file));
+    $config['components'][$componentName] = require $file;
+}
+
+return $config;
