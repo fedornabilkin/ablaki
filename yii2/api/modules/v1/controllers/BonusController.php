@@ -1,11 +1,9 @@
 <?php
 
-
 namespace api\modules\v1\controllers;
 
 use api\filters\Auth;
 use common\models\HistoryBalance;
-use common\models\user\Person;
 use Yii;
 use yii\rest\Controller;
 
@@ -16,14 +14,11 @@ class BonusController extends Controller
 
     public function behaviors(): array
     {
-        $parent = parent::behaviors();
-        $arr = [
+        return array_merge(parent::behaviors(), [
             'authenticator' => [
                 'class' => Auth::class,
             ],
-        ];
-
-        return array_merge($parent, $arr);
+        ]);
     }
 
     public function actionEveryday()
@@ -54,9 +49,5 @@ class BonusController extends Controller
 
         return $person->updateCounters(['credit' => $this->credit]);
 
-
     }
-
-
-
 }

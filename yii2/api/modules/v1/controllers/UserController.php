@@ -16,7 +16,7 @@ class UserController extends Controller
             ->with(['person'])
             ->one();
 
-        if ($user) {
+        if (!$user) {
             throw new NotFoundHttpException(Yii::t('app', 'The requested user does not exist.'));
         }
 

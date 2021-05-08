@@ -8,7 +8,6 @@ use dektrium\user\Module;
 use Yii;
 use yii\base\Exception;
 use yii\base\InvalidConfigException;
-use yii\base\UserException;
 use yii\rest\Controller;
 use yii\web\NotFoundHttpException;
 
@@ -53,13 +52,15 @@ class SiteController extends Controller
     {
         $model = Yii::createObject(LoginForm::class);
         if ($model->load(Yii::$app->request->post(), '') && $model->login()) {
-            return [
+            $response = [
                 'user' => $model->getUser(),
                 'token' => $model->token,
             ];
+        } else {
+            $response['errors'] = $model->getFirstErrors();
         }
 
-        throw new UserException('No auth', '401');
+        return $response;
     }
 
     /**
