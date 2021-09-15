@@ -10,6 +10,7 @@ namespace common\modules\games\models\repo;
 
 use common\models\user\User;
 use yii\behaviors\TimestampBehavior;
+use yii\db\ActiveQuery;
 use yii\db\ActiveRecord;
 
 /**
@@ -80,7 +81,7 @@ class Saper extends ActiveRecord
     }
 
     /**
-     * @return \yii\db\ActiveQuery
+     * @return ActiveQuery
      */
     public function getUser()
     {
@@ -88,7 +89,7 @@ class Saper extends ActiveRecord
     }
 
     /**
-     * @return \yii\db\ActiveQuery
+     * @return ActiveQuery
      */
     public function getUserGamer()
     {

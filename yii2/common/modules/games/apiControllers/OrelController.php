@@ -14,13 +14,14 @@ use common\middleware\HistoryCommissionMiddleware;
 use common\modules\games\apiActions\orel\CreateAction;
 use common\modules\games\apiActions\orel\DeleteAction;
 use common\modules\games\apiActions\orel\RemoveAction;
-use common\modules\games\middleware\GamerCheckCreditMiddleware;
 use common\modules\games\middleware\CheckFreeGameMiddleware;
+use common\modules\games\middleware\GamerCheckCreditMiddleware;
 use common\modules\games\middleware\orel\PlayMiddleware;
 use common\modules\games\middleware\orel\SwitchCreatorMiddleware;
 use common\modules\games\models\GameOrel;
 use Yii;
 use yii\base\UserException;
+use yii\db\Exception;
 use yii\rest\ActiveController;
 
 class OrelController extends ActiveController
@@ -69,7 +70,7 @@ class OrelController extends ActiveController
      * @param $id
      * @return array|bool
      * @throws UserException
-     * @throws \yii\db\Exception
+     * @throws Exception
      */
     public function actionPlay($id)
     {
@@ -82,7 +83,7 @@ class OrelController extends ActiveController
 
         $data = new DataMiddleware([
             'game' => $model,
-            'user' => \Yii::$app->user->identity->person,
+            'user' => Yii::$app->user->identity->person,
         ]);
 
         $middleware = new GamerCheckCreditMiddleware();
@@ -94,12 +95,9 @@ class OrelController extends ActiveController
             ->linkWith(new SwitchCreatorMiddleware())
             ->linkWith(new HistoryCommissionMiddleware());
 
-
-        if ($middleware->check()) {
-            Yii::$app->getResponse()->setStatusCode(201);
-        } else {
+        if (!$middleware->check()) {
             $errors = $middleware->getErrors();
-            throw new UserException(\Yii::t('games', $errors[0]));
+            throw new UserException(Yii::t('games', $errors[0]));
         }
 
         return true;

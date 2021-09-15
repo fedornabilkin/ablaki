@@ -3,12 +3,9 @@
 namespace common\modules\games\models;
 
 use common\models\user\Person;
-use common\models\user\User;
 use common\modules\games\models\repo\Saper;
 use common\modules\games\traites\PersonTrait;
-use phpDocumentor\Reflection\Types\Self_;
 use Yii;
-use yii\behaviors\TimestampBehavior;
 
 /**
  * Class GameSaper
@@ -41,14 +38,14 @@ class GameSaper extends Saper
         return $scenarios;
     }
 
-    public function getHistoryType()
+    public function getHistoryType(): string
     {
         return self::HISTORY_TYPE;
     }
 
-    public function getRandomType()
+    public function getRandomType(): int
     {
-        return rand(1,7);
+        return random_int(1, 7);
     }
 
     /**
@@ -81,9 +78,9 @@ class GameSaper extends Saper
 //        }
 //    }
 
-    public function validatePlay($attribute)
+    public function validatePlay($attribute): void
     {
-        if($this->checkHod() && $attribute == 'row'){
+        if ($this->checkHod() && $attribute === 'row') {
             $this->checkComplete();
         }
     }
@@ -214,7 +211,7 @@ class GameSaper extends Saper
         ];
     }
 
-    public function fields()
+    public function fields(): array
     {
         return [
             'id',

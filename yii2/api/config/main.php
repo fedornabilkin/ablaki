@@ -73,6 +73,7 @@ return [
                 [
                     'class' => UrlRule::class,
                     'controller' => 'v1/saper',
+                    'pluralize' => false,
                     'except' => ['view'],
                     'extraPatterns' => [
                         'GET remove' => 'remove',
@@ -84,6 +85,7 @@ return [
                 [
                     'class' => UrlRule::class,
                     'controller' => ['v1/orel'],
+                    'pluralize' => false,
                     'except' => ['view'],
                     'extraPatterns' => [
                         'GET remove' => 'remove',

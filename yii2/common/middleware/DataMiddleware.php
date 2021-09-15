@@ -12,7 +12,6 @@ use common\models\user\Person;
 use common\modules\games\models\GameOrel;
 use common\modules\games\models\GameSaper;
 use yii\base\BaseObject;
-use yii\db\Transaction;
 
 class DataMiddleware extends BaseObject
 {
@@ -37,29 +36,10 @@ class DataMiddleware extends BaseObject
     public $historyType = 'other';
     /** @var string */
     public $historyComment = 'other';
-    /** @var Transaction */
-    private $transaction;
 
     const COMMISSION_CREDIT = 'credit';
 
-    public function init()
-    {
-        parent::init();
-
-        if (!$this->transaction) {
-            $this->transaction = $this->user::getDb()->beginTransaction();
-        }
-    }
-
-    /**
-     * @return Transaction
-     */
-    public function getTransaction()
-    {
-        return $this->transaction;
-    }
-
-    public function getUpdatePersonCounters()
+    public function getUpdatePersonCounters(): array
     {
         return [
             'balance' => $this->changingBalance,

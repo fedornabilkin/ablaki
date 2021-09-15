@@ -2,15 +2,7 @@
 
 namespace common\modules\games\models;
 
-use common\behaviors\BalanceBehavior;
-use common\behaviors\RatingBehavior;
 use common\models\user\Person;
-use common\models\user\User;
-use common\modules\games\behaviors\orel\GamerBalanceBehavior;
-use common\modules\games\behaviors\orel\GamerRatingBehavior;
-use common\modules\games\behaviors\orel\OrelBehavior;
-use common\modules\games\behaviors\orel\UserBalanceBehavior;
-use common\modules\games\behaviors\orel\UserRatingBehavior;
 use common\modules\games\models\repo\Orel;
 use common\modules\games\traites\PersonTrait;
 use Yii;
@@ -49,7 +41,7 @@ class GameOrel extends Orel
             ['hod', 'integer', 'on' => self::SCENARIO_PLAY],
         ];
 
-        return array_merge($parent, $arr);
+        return array_merge(parent::rules(), $arr);
     }
 
     /**
@@ -69,7 +61,7 @@ class GameOrel extends Orel
         ];
     }
 
-    public function getHistoryType()
+    public function getHistoryType(): string
     {
         return self::HISTORY_TYPE;
     }
@@ -77,12 +69,12 @@ class GameOrel extends Orel
     /**
      * @return int
      */
-    public function getRandomType()
+    public function getRandomType(): int
     {
-        return rand(1,2);
+        return random_int(1, 2);
     }
 
-    public function getCommissionAmount($amount)
+    public function getCommissionAmount($amount): float
     {
         return $amount * 0.05;
     }
@@ -91,9 +83,9 @@ class GameOrel extends Orel
      * Если игрок победил = true
      * @return bool
      */
-    public function isWin()
+    public function isWin(): bool
     {
-        return $this->type === intval($this->hod);
+        return $this->type === (int)$this->hod;
     }
 
     /**
@@ -101,8 +93,9 @@ class GameOrel extends Orel
      * @param float $kon
      * @return float|int
      */
-    public function normalizeRating($person, $kon = 0.0) {
-        if(!($person instanceof Person)){
+    public function normalizeRating($person, float $kon = 0.0): float
+    {
+        if (!($person instanceof Person)) {
             return 0;
         }
 
@@ -112,5 +105,19 @@ class GameOrel extends Orel
         $kon = ($kon < 1) ? $this->kon : $kon;
 
         return round(($kon / 50) / ($rating + $kef), 5);
+    }
+
+    public function fields(): array
+    {
+        return [
+            'id',
+            'username' => function (Orel $model) {
+                return $model->user->username;
+            },
+            'user_gamer',
+            'kon',
+            'created_at',
+            'updated_at',
+        ];
     }
 }

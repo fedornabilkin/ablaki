@@ -9,13 +9,17 @@
 namespace common\modules\games\traites;
 
 use common\singletones\Person;
+use yii\db\ActiveRecord;
 
+/**
+ * @deprecated
+ */
 trait PersonTrait
 {
     /**
      * Возвращает модель персоны текущего пользователя
      *
-     * @return null|\yii\db\ActiveRecord
+     * @return null|ActiveRecord
      */
     public function getPersonInstance()
     {

@@ -10,6 +10,7 @@ namespace common\modules\games\models\repo;
 
 use common\models\user\User;
 use yii\behaviors\TimestampBehavior;
+use yii\db\ActiveQuery;
 use yii\db\ActiveRecord;
 
 /**
@@ -24,6 +25,7 @@ use yii\db\ActiveRecord;
  * @property int $updated_at
  * @property int $created_at
  *
+ * @property User $user
  * @property User $userGamer
  */
 class Orel extends ActiveRecord
@@ -59,7 +61,7 @@ class Orel extends ActiveRecord
     }
 
     /**
-     * @return \yii\db\ActiveQuery
+     * @return ActiveQuery
      */
     public function getUser()
     {
@@ -67,7 +69,7 @@ class Orel extends ActiveRecord
     }
 
     /**
-     * @return \yii\db\ActiveQuery
+     * @return ActiveQuery
      */
     public function getUserGamer()
     {
