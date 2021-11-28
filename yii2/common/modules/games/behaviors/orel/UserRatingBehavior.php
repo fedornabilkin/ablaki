@@ -10,7 +10,11 @@ namespace common\modules\games\behaviors\orel;
 
 
 use common\behaviors\RatingBehavior;
+use Yii;
 
+/**
+ * @deprecated
+ */
 class UserRatingBehavior extends RatingBehavior
 {
     private $historyValues = [];
@@ -19,7 +23,7 @@ class UserRatingBehavior extends RatingBehavior
     {
         if (!$event->sender->isWin()) {
             parent::setRating($event);
-            $this->historyValues['comment'] = \Yii::t('games', 'Victory in the game #{attr}', ['attr' => $event->sender->id]);
+            $this->historyValues['comment'] = Yii::t('games', 'Victory in the game #{attr}', ['attr' => $event->sender->id]);
         }
     }
 
