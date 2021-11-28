@@ -11,6 +11,9 @@ namespace common\modules\games\behaviors\saper;
 
 use yii\db\ActiveRecord;
 
+/**
+ * @deprecated
+ */
 class SaperBehavior extends AbstractGameBehavior
 {
 

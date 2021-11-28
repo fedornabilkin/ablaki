@@ -9,6 +9,9 @@ use yii\base\InvalidValueException;
 use yii\filters\AccessControl;
 use yii\filters\VerbFilter;
 
+/**
+ * @deprecated
+ */
 class SaperController extends AbstractGamesController
 {
     /**

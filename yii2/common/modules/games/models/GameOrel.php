@@ -4,7 +4,6 @@ namespace common\modules\games\models;
 
 use common\models\user\Person;
 use common\modules\games\models\repo\Orel;
-use common\modules\games\traites\PersonTrait;
 use Yii;
 
 /**
@@ -13,7 +12,7 @@ use Yii;
  */
 class GameOrel extends Orel
 {
-    use PersonTrait;
+//    use PersonTrait;
 
     public $count = 1;
 
@@ -23,7 +22,7 @@ class GameOrel extends Orel
     /**
      * @return array
      */
-    public function scenarios()
+    public function scenarios(): array
     {
         $scenarios = parent::scenarios();
         $scenarios[self::SCENARIO_PLAY] = ['hod'];
@@ -33,9 +32,8 @@ class GameOrel extends Orel
     /**
      * {@inheritdoc}
      */
-    public function rules()
+    public function rules(): array
     {
-        $parent = parent::rules();
         $arr = [
             ['count', 'integer', 'min' => 1, 'max' => 100],
             ['hod', 'integer', 'on' => self::SCENARIO_PLAY],

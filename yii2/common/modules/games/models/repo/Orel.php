@@ -60,6 +60,11 @@ class Orel extends ActiveRecord
         ];
     }
 
+    public static function find()
+    {
+        return new OrelQuery(get_called_class());
+    }
+
     /**
      * @return ActiveQuery
      */

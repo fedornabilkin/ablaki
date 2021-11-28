@@ -5,10 +5,15 @@ namespace api\behaviors;
 use common\models\GroupSession;
 use common\models\Session;
 use yii\filters\auth\QueryParamAuth;
+use yii\web\IdentityInterface;
 use yii\web\Request;
 use yii\web\Response;
+use yii\web\UnauthorizedHttpException;
 use yii\web\User;
 
+/**
+ * @deprecated
+ */
 class HeaderParamGroupAuth extends QueryParamAuth
 {
 
@@ -21,8 +26,8 @@ class HeaderParamGroupAuth extends QueryParamAuth
      * @param User $user
      * @param Request $request
      * @param Response $response
-     * @return null|\yii\web\IdentityInterface
-     * @throws \yii\web\UnauthorizedHttpException
+     * @return null|IdentityInterface
+     * @throws UnauthorizedHttpException
      */
     public function authenticate($user, $request, $response)
     {

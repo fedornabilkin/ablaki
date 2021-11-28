@@ -18,15 +18,6 @@ return [
     'controllerNamespace' => 'api\controllers',
     'components' => [
         'response' => [
-            'on beforeSend' => function ($event) {
-                $event->sender->headers->add('Access-Control-Allow-Origin', '*');
-                $event->sender->headers->add('Access-Control-Allow-Methods', 'GET, POST, HEAD, OPTIONS');
-                $event->sender->headers->add('Access-Control-Allow-Headers', 'Content-Type, session-token, Authorization');
-                $event->sender->headers->add('Access-Control-Expose-Headers', 'Content-Type, session-token');
-                if (Yii::$app->request->isOptions) {
-                    $event->sender->statusCode = 200;
-                }
-            },
             'format' => yii\web\Response::FORMAT_JSON,
             /** https://www.yiiframework.com/doc/guide/2.0/ru/rest-response-formatting */
 //            'formatters' => [
@@ -89,6 +80,8 @@ return [
                     'except' => ['view'],
                     'extraPatterns' => [
                         'GET remove' => 'remove',
+                        'GET my' => 'my',
+                        'GET history' => 'history',
                         'POST play/{id}' => 'play',
                     ],
                 ],
@@ -111,8 +104,9 @@ return [
                 [
                     'class' => UrlRule::class,
                     'controller' => ['v1/user'],
-                    'only' => ['wall'],
+                    'only' => ['wall', 'data'],
                     'extraPatterns' => [
+                        'GET data' => 'data',
                         'GET wall/<login:\w+>' => 'wall',
                     ],
                 ],

@@ -22,4 +22,11 @@ class UserController extends Controller
 
         return $user;
     }
+
+    public function actionData()
+    {
+        return [
+            'user' => 'admin',
+        ];
+    }
 }

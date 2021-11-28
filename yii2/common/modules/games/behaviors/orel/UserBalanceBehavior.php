@@ -11,6 +11,7 @@ namespace common\modules\games\behaviors\orel;
 
 use common\behaviors\BalanceBehavior;
 use common\modules\games\models\GameOrel;
+use Yii;
 use yii\db\ActiveRecord;
 
 /**
@@ -19,6 +20,7 @@ use yii\db\ActiveRecord;
  * Изменение баланса создателя игры
  *
  * @package common\modules\games\behaviors
+ * @deprecated
  */
 class UserBalanceBehavior extends BalanceBehavior
 {
@@ -32,7 +34,7 @@ class UserBalanceBehavior extends BalanceBehavior
         // удаление игры
         if($event->name == ActiveRecord::EVENT_AFTER_DELETE){
             $this->changingCredit = $model->changeCredit;
-            $this->historyValues['comment'] = \Yii::t('games', 'Remove the game #{attr}', ['attr' => $model->id]);
+            $this->historyValues['comment'] = Yii::t('games', 'Remove the game #{attr}', ['attr' => $model->id]);
         }
 
         // когда кто-то проиграл
@@ -40,7 +42,7 @@ class UserBalanceBehavior extends BalanceBehavior
             if(!$model->isWin()){
                 $this->commission = $this->setCommission($model->changeCredit * 2);
                 $this->changingCredit = $model->changeCredit * 2 - $this->commission;
-                $this->historyValues['comment'] = \Yii::t('games', 'Victory in the game #{attr}', ['attr' => $model->id]);
+                $this->historyValues['comment'] = Yii::t('games', 'Victory in the game #{attr}', ['attr' => $model->id]);
             }
         }
 
@@ -48,7 +50,7 @@ class UserBalanceBehavior extends BalanceBehavior
         else{
             $this->changingCredit = 0 - $model->changeCredit;
             $kon = $model->count > 1 ? $model->changeCredit / $model->count : $model->changeCredit;
-            $this->historyValues['comment'] = \Yii::t('games', 'Create game {count}x{kon}', ['count' => $model->count, 'kon' => $kon]);
+            $this->historyValues['comment'] = Yii::t('games', 'Create game {count}x{kon}', ['count' => $model->count, 'kon' => $kon]);
         }
     }
 

@@ -11,6 +11,7 @@ use yii\filters\VerbFilter;
 
 /**
  * OrelController implements the CRUD actions for GameOrel model.
+ * @deprecated
  */
 class OrelController extends AbstractGamesController
 {

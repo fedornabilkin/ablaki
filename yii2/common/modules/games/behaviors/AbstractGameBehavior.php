@@ -10,8 +10,10 @@ namespace common\modules\games\behaviors;
 
 
 use common\behaviors\AbstractBehavior;
-use common\modules\games\models\AbstractGame;
 
+/**
+ * @deprecated
+ */
 class AbstractGameBehavior extends AbstractBehavior
 {
 

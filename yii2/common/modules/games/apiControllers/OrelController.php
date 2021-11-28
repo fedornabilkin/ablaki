@@ -21,26 +21,25 @@ use common\modules\games\middleware\orel\SwitchCreatorMiddleware;
 use common\modules\games\models\GameOrel;
 use Yii;
 use yii\base\UserException;
+use yii\data\ActiveDataProvider;
 use yii\db\Exception;
 use yii\rest\ActiveController;
 
 class OrelController extends ActiveController
 {
+    /** @var GameOrel */
     public $modelClass = GameOrel::class;
 
-    public function behaviors()
+    public function behaviors(): array
     {
-        $parent = parent::behaviors();
-        $arr = [
+        return array_merge(parent::behaviors(), [
             'authenticator' => [
                 'class' => Auth::class,
             ],
-        ];
-
-        return array_merge($parent, $arr);
+        ]);
     }
 
-    public function actions()
+    public function actions(): array
     {
         $actions = parent::actions();
 
@@ -62,17 +61,49 @@ class OrelController extends ActiveController
             'checkAccess' => [$this, 'checkAccess'],
         ];
 
+        $actions = parent::actions();
+
+        $actions['my'] = $actions['index'];
+        $actions['history'] = $actions['index'];
+
+        $actions['my']['prepareDataProvider'] = function ($action) {
+            return new ActiveDataProvider([
+                'query' => $this->modelClass::find()
+                    ->with('user')
+                    ->free()
+                    ->my(Yii::$app->user->identity),
+            ]);
+        };
+
+        $actions['history']['prepareDataProvider'] = function ($action) {
+            return new ActiveDataProvider([
+                'query' => $this->modelClass::find()
+                    ->with('user')
+                    ->notFree()
+                    ->history(Yii::$app->user->identity),
+            ]);
+        };
+
+        $actions['index']['prepareDataProvider'] = function ($action) {
+            return new ActiveDataProvider([
+                'query' => $this->modelClass::find()
+                    ->with('user')
+                    ->free()
+                    ->notMy(Yii::$app->user->identity),
+            ]);
+        };
+
         unset($actions['view'], $actions['update']);
         return $actions;
     }
 
     /**
-     * @param $id
-     * @return array|bool
-     * @throws UserException
+     * @param int $id
+     * @return array|void
      * @throws Exception
+     * @throws UserException
      */
-    public function actionPlay($id)
+    public function actionPlay(int $id)
     {
         $model = $this->findModel($id);
         $model->setScenario($model::SCENARIO_PLAY);
@@ -99,8 +130,6 @@ class OrelController extends ActiveController
             $errors = $middleware->getErrors();
             throw new UserException(Yii::t('games', $errors[0]));
         }
-
-        return true;
     }
 
     /**

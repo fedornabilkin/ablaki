@@ -4,7 +4,6 @@ namespace common\modules\games\models;
 
 use common\models\user\Person;
 use common\modules\games\models\repo\Saper;
-use common\modules\games\traites\PersonTrait;
 use Yii;
 
 /**
@@ -13,8 +12,6 @@ use Yii;
  */
 class GameSaper extends Saper
 {
-    use PersonTrait;
-
     public $count = 1;
     public $col;
     public $row;
@@ -51,9 +48,8 @@ class GameSaper extends Saper
     /**
      * {@inheritdoc}
      */
-    public function rules()
+    public function rules(): array
     {
-        $parent = parent::rules();
         $arr = [
             [['count'], 'integer'],
 
@@ -63,7 +59,7 @@ class GameSaper extends Saper
 //            [['hod1', 'hod2', 'hod3', 'hod4', 'hod5', 'col', 'row'], 'validatePlay', 'on' => self::SCENARIO_PLAY],
         ];
 
-        return array_merge($parent, $arr);
+        return array_merge(parent::rules(), $arr);
     }
 
 //    public function validateStart($attribute)
@@ -78,6 +74,10 @@ class GameSaper extends Saper
 //        }
 //    }
 
+    /**
+     * @param $attribute
+     * @deprecated
+     */
     public function validatePlay($attribute): void
     {
         if ($this->checkHod() && $attribute === 'row') {
@@ -85,10 +85,13 @@ class GameSaper extends Saper
         }
     }
 
+    /**
+     * @deprecated
+     */
     public function checkComplete()
     {
-        $pole = 'pole'.$this->row;
-        $hod = 'hod'.$this->row;
+        $pole = 'pole' . $this->row;
+        $hod = 'hod' . $this->row;
 
         $this->$hod = $this->col;
         // если победил создатель
@@ -118,6 +121,7 @@ class GameSaper extends Saper
      * Проверяет возможность хода
      *
      * @return bool
+     * @deprecated
      */
     public function checkHod()
     {
