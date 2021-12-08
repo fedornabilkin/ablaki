@@ -112,7 +112,9 @@ class GameOrel extends Orel
             'username' => function (Orel $model) {
                 return $model->user->username;
             },
-            'user_gamer',
+            'user_gamer' => function (Orel $model) {
+                return $model->userGamer->username;
+            },
             'kon',
             'created_at',
             'updated_at',

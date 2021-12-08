@@ -104,9 +104,10 @@ return [
                 [
                     'class' => UrlRule::class,
                     'controller' => ['v1/user'],
-                    'only' => ['wall', 'data'],
+                    'only' => ['wall', 'data', 'profile'],
                     'extraPatterns' => [
                         'GET data' => 'data',
+                        'GET profile' => 'profile',
                         'GET wall/<login:\w+>' => 'wall',
                     ],
                 ],
