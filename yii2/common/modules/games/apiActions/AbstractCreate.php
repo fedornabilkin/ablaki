@@ -22,7 +22,7 @@ abstract class AbstractCreate extends Action
 
     abstract public function getMiddleware(): GameMiddleware;
 
-    public function loadModel()
+    public function loadModel(): bool
     {
         $this->model = new $this->modelClass();
 
@@ -30,17 +30,15 @@ abstract class AbstractCreate extends Action
         return $this->model->validate();
     }
 
-    public function getDataMiddleware()
+    public function getDataMiddleware(): DataMiddleware
     {
-        $data = new DataMiddleware([
+        return new DataMiddleware([
             'game' => $this->model,
-            'user' => \Yii::$app->user->identity->person,
+            'user' => Yii::$app->user->identity->person,
         ]);
-
-        return $data;
     }
 
-    public function checkMiddleware()
+    public function checkMiddleware(): void
     {
         $middleware = $this->getMiddleware();
 
@@ -48,7 +46,7 @@ abstract class AbstractCreate extends Action
             Yii::$app->getResponse()->setStatusCode(201);
         } else {
             $errors = $middleware->getErrors();
-            throw new UserException(\Yii::t('games', $errors[0]));
+            throw new UserException(Yii::t('games', $errors[0]));
         }
     }
 }

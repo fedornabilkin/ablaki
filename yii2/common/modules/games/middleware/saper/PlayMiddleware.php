@@ -24,8 +24,8 @@ class PlayMiddleware extends GameMiddleware
     public function check(): bool
     {
         $this->model = self::$data->game;
-        self::$data->historyType = self::$data->game::HISTORY_TYPE;
-        self::$data->commissionAmout = $this->model->getCommissionAmount($this->model->kon * 2);
+        self::$data->historyType = self::$data->game->getHistoryType();
+        self::$data->commissionAmount = $this->model->getCommissionAmount($this->model->kon * 2);
 
         $checkHod = $this->checkHod();
         $this->updateModel();
@@ -44,7 +44,7 @@ class PlayMiddleware extends GameMiddleware
     public function updateData()
     {
         if ($this->model->isWin()) {
-            self::$data->changingBalance = $this->model->kon - self::$data->commissionAmout;
+            self::$data->changingBalance = $this->model->kon - self::$data->commissionAmount;
             self::$data->historyComment = 'Victory in the game #' . $this->model->id;
             self::$data->changingRating = $this->model->normalizeRating(self::$data->user, $this->model->kon);
 

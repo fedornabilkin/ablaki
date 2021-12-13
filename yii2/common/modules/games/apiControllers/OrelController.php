@@ -61,8 +61,6 @@ class OrelController extends ActiveController
             'checkAccess' => [$this, 'checkAccess'],
         ];
 
-        $actions = parent::actions();
-
         $actions['my'] = $actions['index'];
         $actions['history'] = $actions['index'];
 

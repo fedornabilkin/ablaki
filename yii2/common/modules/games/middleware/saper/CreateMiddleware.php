@@ -9,12 +9,10 @@
 namespace common\modules\games\middleware\saper;
 
 use common\modules\games\middleware\AbstractCreateMiddleware;
-use common\modules\games\models\repo\Saper;
 
 class CreateMiddleware extends AbstractCreateMiddleware
 {
-
-    public function updateData()
+    public function updateData(): void
     {
         parent::updateData();
         self::$data->changingBalance = 0 - self::$data->game->kon * self::$data->game->count;
@@ -34,10 +32,5 @@ class CreateMiddleware extends AbstractCreateMiddleware
             'pole5' => self::$data->game->getRandomType(),
             'etap' => self::$data->game::GAME_SAPER_ETAP_NEW,
         ];
-    }
-
-    public function getTableName(): string
-    {
-        return Saper::tableName();
     }
 }

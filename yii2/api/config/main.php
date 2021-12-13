@@ -88,6 +88,7 @@ return [
                 [
                     'class' => UrlRule::class,
                     'controller' => ['v1/rating'],
+                    'pluralize' => false,
                     'only' => ['everyday'],
                     'extraPatterns' => [
                         'GET everyday' => 'everyday',
@@ -96,6 +97,7 @@ return [
                 [
                     'class' => UrlRule::class,
                     'controller' => ['v1/bonus'],
+                    'pluralize' => false,
                     'only' => ['everyday'],
                     'extraPatterns' => [
                         'GET everyday' => 'everyday',

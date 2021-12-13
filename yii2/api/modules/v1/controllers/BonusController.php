@@ -9,7 +9,6 @@ use yii\rest\Controller;
 
 class BonusController extends Controller
 {
-    /** @var int $credit */
     public $credit = 1;
 
     public function behaviors(): array
@@ -29,6 +28,7 @@ class BonusController extends Controller
         $todayBalance = HistoryBalance::find()
             ->where(['user_id' => $user->id])
             ->andWhere(['>=', 'created_at', $beginOfDay])
+            ->andWhere(['=', 'type', 'everyday'])
             ->one();
 
         if ($todayBalance) {

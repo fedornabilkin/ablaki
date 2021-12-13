@@ -10,9 +10,9 @@ namespace common\modules\games\apiActions\orel;
 
 use common\middleware\person\UpdatePersonMiddleware;
 use common\modules\games\apiActions\AbstractDelete;
-use common\modules\games\middleware\GameMiddleware;
 use common\modules\games\middleware\CheckFreeGameMiddleware;
 use common\modules\games\middleware\CheckMyGameMiddleware;
+use common\modules\games\middleware\GameMiddleware;
 use common\modules\games\middleware\orel\RemoveGameMiddleware;
 use yii\base\UserException;
 
@@ -22,7 +22,7 @@ class DeleteAction extends AbstractDelete
      * @param $id
      * @throws UserException
      */
-    public function run($id)
+    public function run($id): void
     {
         $this->loadModel($id);
         $this->checkMiddleware();

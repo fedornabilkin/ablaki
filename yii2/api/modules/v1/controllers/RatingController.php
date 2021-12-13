@@ -13,14 +13,11 @@ class RatingController extends Controller
 
     public function behaviors(): array
     {
-        $parent = parent::behaviors();
-        $arr = [
+        return array_merge(parent::behaviors(), [
             'authenticator' => [
                 'class' => Auth::class,
             ],
-        ];
-
-        return array_merge($parent, $arr);
+        ]);
     }
 
     public function actionEveryday()
@@ -31,10 +28,11 @@ class RatingController extends Controller
         $todayRating = HistoryRating::find()
             ->where(['user_id' => $user->id])
             ->andWhere(['>=', 'created_at', $beginOfDay])
+            ->andWhere(['=', 'type', 'everyday'])
             ->one();
 
         if ($todayRating) {
-            return ['message' => 'Рейтинг уже был обновлен сегодня'];
+            return ['message' => 'The rating has already been updated today'];
         }
 
         $userHistory = new HistoryRating();

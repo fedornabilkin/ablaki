@@ -12,10 +12,15 @@ use common\middleware\person\UpdatePersonMiddleware;
 use common\modules\games\apiActions\AbstractRemove;
 use common\modules\games\middleware\GameMiddleware;
 use common\modules\games\middleware\orel\RemoveAllGameMiddleware;
+use yii\base\UserException;
 
 class RemoveAction extends AbstractRemove
 {
-    public function run()
+    /**
+     * @return void
+     * @throws UserException
+     */
+    public function run(): void
     {
         $this->checkMiddleware();
     }

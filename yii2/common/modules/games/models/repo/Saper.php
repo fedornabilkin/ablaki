@@ -75,7 +75,7 @@ class Saper extends ActiveRecord
                 'time_start_at', 'time_over_at', 'created_at'
             ], 'integer'],
             [['kon'], 'required'],
-            [['kon'], 'number'],
+            [['kon'], 'number', 'min' => 0.01],
             [['user_id'], 'exist', 'skipOnError' => true, 'targetClass' => User::class, 'targetAttribute' => ['user_id' => 'id']],
         ];
     }

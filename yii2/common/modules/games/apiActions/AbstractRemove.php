@@ -18,16 +18,14 @@ abstract class AbstractRemove extends Action
 {
     abstract public function getMiddleware(): GameMiddleware;
 
-    public function getDataMiddleware()
+    public function getDataMiddleware(): DataMiddleware
     {
-        $data = new DataMiddleware([
+        return new DataMiddleware([
             'user' => Yii::$app->user->identity->person,
         ]);
-
-        return $data;
     }
 
-    public function checkMiddleware()
+    public function checkMiddleware(): void
     {
         $middleware = $this->getMiddleware();
 

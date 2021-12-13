@@ -23,11 +23,11 @@ class HistoryCommissionMiddleware extends AbstractHistoryMiddleware
 
     public function getHistoryValues(): array
     {
-        if(!self::$data->commissionAmout){
+        if (!self::$data->commissionAmount) {
             return [];
         }
         return [
-            'amount' => self::$data->commissionAmout,
+            'amount' => self::$data->commissionAmount,
             'type' => self::$data->historyType,
         ];
     }

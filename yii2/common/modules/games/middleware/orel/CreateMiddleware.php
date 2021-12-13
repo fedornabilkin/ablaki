@@ -9,12 +9,10 @@
 namespace common\modules\games\middleware\orel;
 
 use common\modules\games\middleware\AbstractCreateMiddleware;
-use common\modules\games\models\repo\Orel;
 
 class CreateMiddleware extends AbstractCreateMiddleware
 {
-
-    public function updateData()
+    public function updateData(): void
     {
         parent::updateData();
         self::$data->changingCredit = 0 - self::$data->game->kon * self::$data->game->count;
@@ -29,10 +27,5 @@ class CreateMiddleware extends AbstractCreateMiddleware
             'created_at' => time(),
             'type' => self::$data->game->getRandomType(),
         ];
-    }
-
-    public function getTableName(): string
-    {
-        return Orel::tableName();
     }
 }

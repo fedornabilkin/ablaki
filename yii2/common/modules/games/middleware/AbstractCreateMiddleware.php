@@ -13,7 +13,6 @@ use Yii;
 abstract class AbstractCreateMiddleware extends GameMiddleware
 {
     abstract public function getRow(): array;
-    abstract public function getTableName(): string;
 
     /**
      * @inheritDoc
@@ -28,13 +27,13 @@ abstract class AbstractCreateMiddleware extends GameMiddleware
         return parent::check();
     }
 
-    public function updateData()
+    public function updateData(): void
     {
-        self::$data->historyType = self::$data->game::HISTORY_TYPE;
+        self::$data->historyType = self::$data->game->getHistoryType();
         self::$data->historyComment = 'Create game ' . self::$data->game->count . 'x' . self::$data->game->kon;
     }
 
-    public function create()
+    public function create(): int
     {
         $rows = [];
 
@@ -45,10 +44,15 @@ abstract class AbstractCreateMiddleware extends GameMiddleware
         return $this->batch($rows);
     }
 
-    public function batch($rows)
+    public function batch($rows): int
     {
         return Yii::$app->db->createCommand()
             ->batchInsert($this->getTableName(), array_keys($rows[0]), $rows)
             ->execute();
+    }
+
+    protected function getTableName(): string
+    {
+        return self::$data->game::tableName();
     }
 }

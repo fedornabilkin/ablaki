@@ -29,7 +29,7 @@ class StartMiddleware extends GameMiddleware
     public function updateData()
     {
         self::$data->changingBalance = 0 - self::$data->game->kon * self::$data->game->count;
-        self::$data->historyType = self::$data->game::HISTORY_TYPE;
+        self::$data->historyType = self::$data->game->getHistoryType();
         self::$data->historyComment = 'Start game #' . self::$data->game->id;
     }
 

@@ -2,7 +2,6 @@
 
 namespace common\modules\games\models;
 
-use common\models\user\Person;
 use common\modules\games\models\repo\Orel;
 use Yii;
 
@@ -12,12 +11,10 @@ use Yii;
  */
 class GameOrel extends Orel
 {
-//    use PersonTrait;
-
     public $count = 1;
 
     const SCENARIO_PLAY = 'play';
-    const HISTORY_TYPE = 'game_orel';
+    protected const HISTORY_TYPE = 'game_orel';
 
     /**
      * @return array
@@ -72,9 +69,9 @@ class GameOrel extends Orel
         return random_int(1, 2);
     }
 
-    public function getCommissionAmount($amount): float
+    public function getCommissionAmount(): float
     {
-        return $amount * 0.05;
+        return $this->kon * 2 * 0.05;
     }
 
     /**
@@ -87,32 +84,25 @@ class GameOrel extends Orel
     }
 
     /**
-     * @param $person
-     * @param float $kon
-     * @return float|int
+     * @param float $rating
+     * @return float
      */
-    public function normalizeRating($person, float $kon = 0.0): float
+    public function normalizeRating(float $rating): float
     {
-        if (!($person instanceof Person)) {
-            return 0;
-        }
-
-        $rating = $person->rating;
-
         $kef = ($rating < 0.99) ? 1.9 : 0;
-        $kon = ($kon < 1) ? $this->kon : $kon;
 
-        return round(($kon / 50) / ($rating + $kef), 5);
+        return round(($this->kon / 50) / ($rating + $kef), 5);
     }
 
     public function fields(): array
     {
         return [
             'id',
+            'user_id',
             'username' => function (Orel $model) {
                 return $model->user->username;
             },
-            'user_gamer' => function (Orel $model) {
+            'username_gamer' => function (Orel $model) {
                 return $model->userGamer->username;
             },
             'kon',

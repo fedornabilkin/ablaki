@@ -11,6 +11,7 @@ namespace common\modules\games\middleware\orel;
 use common\middleware\person\UpdatePersonMiddleware;
 use common\modules\games\middleware\GameMiddleware;
 use common\modules\games\models\GameOrel;
+use yii\db\Exception;
 
 class PlayMiddleware extends GameMiddleware
 {
@@ -19,7 +20,7 @@ class PlayMiddleware extends GameMiddleware
 
     /**
      * @return bool
-     * @throws \yii\db\Exception
+     * @throws Exception
      */
     public function check(): bool
     {
@@ -34,13 +35,13 @@ class PlayMiddleware extends GameMiddleware
 
     public function updateData()
     {
-        self::$data->historyType = self::$data->game::HISTORY_TYPE;
-        self::$data->commissionAmout = $this->model->getCommissionAmount($this->model->kon * 2);
+        self::$data->historyType = self::$data->game->getHistoryType();
+        self::$data->commissionAmount = $this->model->getCommissionAmount();
 
         if ($this->model->isWin()) {
-            self::$data->changingCredit = $this->model->kon - self::$data->commissionAmout;
+            self::$data->changingCredit = $this->model->kon - self::$data->commissionAmount;
             self::$data->historyComment = 'Victory in the game #' . $this->model->id;
-            self::$data->changingRating = $this->model->normalizeRating(self::$data->user, $this->model->kon);
+            self::$data->changingRating = $this->model->normalizeRating(self::$data->user->rating);
         } else {
             self::$data->changingCredit = 0 - $this->model->kon;
             self::$data->historyComment = 'Defeat in the game #' . $this->model->id;

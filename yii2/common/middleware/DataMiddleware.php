@@ -30,14 +30,12 @@ class DataMiddleware extends BaseObject
     public $changingBonusCount = 0;
 
     /** @var float */
-    public $commissionAmout = 0.0;
+    public $commissionAmount = 0.0;
 
     /** @var string */
     public $historyType = 'other';
     /** @var string */
     public $historyComment = 'other';
-
-    const COMMISSION_CREDIT = 'credit';
 
     public function getUpdatePersonCounters(): array
     {
