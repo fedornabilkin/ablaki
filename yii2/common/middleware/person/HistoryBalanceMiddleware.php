@@ -9,7 +9,7 @@
 namespace common\middleware\person;
 
 use common\middleware\AbstractHistoryMiddleware;
-use common\models\HistoryBalance;
+use common\models\history\HistoryBalance;
 use yii\db\ActiveRecord;
 
 /**

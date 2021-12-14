@@ -3,7 +3,7 @@
 namespace api\modules\v1\controllers;
 
 use api\filters\Auth;
-use common\models\HistoryBalance;
+use common\models\history\HistoryBalance;
 use Yii;
 use yii\rest\Controller;
 

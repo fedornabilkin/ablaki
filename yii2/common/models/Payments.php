@@ -2,7 +2,11 @@
 
 namespace common\models;
 
+use common\models\user\User;
+use common\models\user\UserRelationInterface;
 use Yii;
+use yii\db\ActiveQuery;
+use yii\db\ActiveRecord;
 
 /**
  * This is the model class for table "payments".
@@ -20,7 +24,7 @@ use Yii;
  *
  * @property User $user
  */
-class Payments extends \yii\db\ActiveRecord
+class Payments extends ActiveRecord implements UserRelationInterface
 {
     /**
      * {@inheritdoc}
@@ -43,7 +47,7 @@ class Payments extends \yii\db\ActiveRecord
             [['paysystem'], 'string', 'max' => 255],
             [['type', 'buy_sell'], 'string', 'max' => 50],
             [['comment'], 'string', 'max' => 500],
-            [['user_id'], 'exist', 'skipOnError' => true, 'targetClass' => User::className(), 'targetAttribute' => ['user_id' => 'id']],
+            [['user_id'], 'exist', 'skipOnError' => true, 'targetClass' => User::class, 'targetAttribute' => ['user_id' => 'id']],
         ];
     }
 
@@ -67,10 +71,10 @@ class Payments extends \yii\db\ActiveRecord
     }
 
     /**
-     * @return \yii\db\ActiveQuery
+     * @return ActiveQuery
      */
-    public function getUser()
+    public function getUser(): ActiveQuery
     {
-        return $this->hasOne(User::className(), ['id' => 'user_id']);
+        return $this->hasOne(User::class, ['id' => 'user_id']);
     }
 }

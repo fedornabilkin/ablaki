@@ -1,8 +1,10 @@
 <?php
 
-use yii\behaviors\TimestampBehavior;
-use yii\helpers\Html;
+use backend\widgets\gridView\columns\UserColumn;
+use common\models\Todo;
 use yii\grid\GridView;
+use yii\helpers\Html;
+use yii\helpers\StringHelper;
 
 /* @var $this yii\web\View */
 /* @var $searchModel backend\models\TodoSearch */
@@ -25,15 +27,23 @@ $this->params['breadcrumbs'][] = $this->title;
         'columns' => [
             ['class' => 'yii\grid\SerialColumn'],
 
-            'id',
-            'user_id',
-            'title',
-            ['attribute' => 'user_id',
-                'value' => function ($model) {
-                    return $model->user->username;
+            [
+                'attribute' => 'user_id',
+                'class' => UserColumn::class,
+            ],
+            [
+                'attribute' => 'title',
+                'format' => 'raw',
+                'value' => static function (Todo $model) {
+                    return Html::a($model->title, ['view', 'id' => $model->id]);
                 }
             ],
-            'comment:ntext',
+            [
+                'attribute' => 'comment',
+                'value' => static function (Todo $model) {
+                    return StringHelper::truncate($model->comment, 100);
+                }
+            ],
             'status',
             [
                 'attribute' => 'created_at',
@@ -44,7 +54,7 @@ $this->params['breadcrumbs'][] = $this->title;
                 'format' => ['date', 'php:H:i d.m.y']
             ],
 
-            ['class' => 'yii\grid\ActionColumn'],
+//            ['class' => 'yii\grid\ActionColumn'],
         ],
     ]); ?>
 </div>

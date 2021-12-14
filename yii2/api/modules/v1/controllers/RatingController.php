@@ -3,7 +3,7 @@
 namespace api\modules\v1\controllers;
 
 use api\filters\Auth;
-use common\models\HistoryRating;
+use common\models\history\HistoryRating;
 use Yii;
 use yii\rest\Controller;
 

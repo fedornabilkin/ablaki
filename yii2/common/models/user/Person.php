@@ -23,7 +23,7 @@ use yii\db\ActiveRecord;
  *
  * @property User $user
  */
-class Person extends ActiveRecord
+class Person extends ActiveRecord implements UserRelationInterface
 {
     /**
      * {@inheritdoc}
@@ -31,6 +31,18 @@ class Person extends ActiveRecord
     public static function tableName()
     {
         return 'persone';
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function rules()
+    {
+        return [
+            [['user_id', 'refovod'], 'integer'],
+            [['balance', 'credit', 'rating'], 'number'],
+            [['user_id'], 'exist', 'skipOnError' => true, 'targetClass' => User::class, 'targetAttribute' => ['user_id' => 'id']],
+        ];
     }
 
     public function fields()
@@ -51,18 +63,6 @@ class Person extends ActiveRecord
     /**
      * {@inheritdoc}
      */
-    public function rules()
-    {
-        return [
-            [['user_id', 'refovod'], 'integer'],
-            [['balance', 'credit', 'rating'], 'number'],
-            [['user_id'], 'exist', 'skipOnError' => true, 'targetClass' => User::class, 'targetAttribute' => ['user_id' => 'id']],
-        ];
-    }
-
-    /**
-     * {@inheritdoc}
-     */
     public function attributeLabels()
     {
         return [
@@ -78,7 +78,7 @@ class Person extends ActiveRecord
     /**
      * @return ActiveQuery
      */
-    public function getUser()
+    public function getUser(): ActiveQuery
     {
         return $this->hasOne(User::class, ['id' => 'user_id'])->inverseOf('person');
     }

@@ -1,26 +1,31 @@
 <?php
 
-namespace common\models;
+namespace common\models\history;
 
 use common\models\user\User;
+use common\models\user\UserRelationInterface;
 use Yii;
 use yii\behaviors\TimestampBehavior;
+use yii\db\ActiveQuery;
+use yii\db\ActiveRecord;
 
 /**
- * This is the model class for table "history_rating".
+ * This is the model class for table "history_balance".
  *
  * @property int $id
  * @property int $user_id
- * @property double $rating
+ * @property double $balance
+ * @property double $credit
+ * @property double $balance_up
+ * @property double $credit_up
  * @property string $type
  * @property string $comment
  * @property int $created_at
  *
  * @property User $user
  */
-class HistoryRating extends \yii\db\ActiveRecord
+class HistoryBalance extends ActiveRecord implements UserRelationInterface
 {
-
     public function behaviors()
     {
         return array_merge_recursive(parent::behaviors(), [
@@ -30,13 +35,15 @@ class HistoryRating extends \yii\db\ActiveRecord
             ],
         ]);
     }
+
     /**
      * {@inheritdoc}
      */
     public static function tableName()
     {
-        return 'history_rating';
+        return 'history_balance';
     }
+
     /**
      * {@inheritdoc}
      */
@@ -44,8 +51,7 @@ class HistoryRating extends \yii\db\ActiveRecord
     {
         return [
             [['user_id', 'created_at'], 'integer'],
-            [['rating'], 'required'],
-            [['rating'], 'number'],
+            [['balance', 'credit', 'balance_up', 'credit_up'], 'number'],
             [['type'], 'string', 'max' => 50],
             [['comment'], 'string', 'max' => 255],
             [['user_id'], 'exist', 'skipOnError' => true, 'targetClass' => User::class, 'targetAttribute' => ['user_id' => 'id']],
@@ -60,7 +66,10 @@ class HistoryRating extends \yii\db\ActiveRecord
         return [
             'id' => Yii::t('app', 'ID'),
             'user_id' => Yii::t('app', 'User ID'),
-            'rating' => Yii::t('app', 'Rating'),
+            'balance' => Yii::t('app', 'Balance'),
+            'credit' => Yii::t('app', 'Credit'),
+            'balance_up' => Yii::t('app', 'Balance Up'),
+            'credit_up' => Yii::t('app', 'Credit Up'),
             'type' => Yii::t('app', 'Type'),
             'comment' => Yii::t('app', 'Comment'),
             'created_at' => Yii::t('app', 'Created At'),
@@ -68,9 +77,9 @@ class HistoryRating extends \yii\db\ActiveRecord
     }
 
     /**
-     * @return \yii\db\ActiveQuery
+     * @return ActiveQuery
      */
-    public function getUser()
+    public function getUser(): ActiveQuery
     {
         return $this->hasOne(User::class, ['id' => 'user_id']);
     }

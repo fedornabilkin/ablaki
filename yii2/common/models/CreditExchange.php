@@ -2,7 +2,11 @@
 
 namespace common\models;
 
+use common\models\user\User;
+use common\models\user\UserRelationInterface;
 use Yii;
+use yii\db\ActiveQuery;
+use yii\db\ActiveRecord;
 
 /**
  * This is the model class for table "credit_exchange".
@@ -19,7 +23,7 @@ use Yii;
  * @property User $userBuyer
  * @property User $user
  */
-class CreditExchange extends \yii\db\ActiveRecord
+class CreditExchange extends ActiveRecord implements UserRelationInterface
 {
     /**
      * {@inheritdoc}
@@ -39,8 +43,8 @@ class CreditExchange extends \yii\db\ActiveRecord
             [['credit', 'amount'], 'required'],
             [['credit', 'amount'], 'number'],
             [['type'], 'string', 'max' => 50],
-            [['user_buyer'], 'exist', 'skipOnError' => true, 'targetClass' => User::className(), 'targetAttribute' => ['user_buyer' => 'id']],
-            [['user_id'], 'exist', 'skipOnError' => true, 'targetClass' => User::className(), 'targetAttribute' => ['user_id' => 'id']],
+            [['user_buyer'], 'exist', 'skipOnError' => true, 'targetClass' => User::class, 'targetAttribute' => ['user_buyer' => 'id']],
+            [['user_id'], 'exist', 'skipOnError' => true, 'targetClass' => User::class, 'targetAttribute' => ['user_id' => 'id']],
         ];
     }
 
@@ -62,18 +66,18 @@ class CreditExchange extends \yii\db\ActiveRecord
     }
 
     /**
-     * @return \yii\db\ActiveQuery
+     * @return ActiveQuery
      */
-    public function getUserBuyer()
+    public function getUserBuyer(): ActiveQuery
     {
-        return $this->hasOne(User::className(), ['id' => 'user_buyer']);
+        return $this->hasOne(User::class, ['id' => 'user_buyer']);
     }
 
     /**
-     * @return \yii\db\ActiveQuery
+     * @return ActiveQuery
      */
-    public function getUser()
+    public function getUser(): ActiveQuery
     {
-        return $this->hasOne(User::className(), ['id' => 'user_id']);
+        return $this->hasOne(User::class, ['id' => 'user_id']);
     }
 }

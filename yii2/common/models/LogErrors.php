@@ -2,7 +2,11 @@
 
 namespace common\models;
 
+use common\models\user\User;
+use common\models\user\UserRelationInterface;
 use Yii;
+use yii\db\ActiveQuery;
+use yii\db\ActiveRecord;
 
 /**
  * This is the model class for table "log_errors".
@@ -15,7 +19,7 @@ use Yii;
  *
  * @property User $user
  */
-class LogErrors extends \yii\db\ActiveRecord
+class LogErrors extends ActiveRecord implements UserRelationInterface
 {
     /**
      * {@inheritdoc}
@@ -34,7 +38,7 @@ class LogErrors extends \yii\db\ActiveRecord
             [['user_id', 'created_at'], 'integer'],
             [['type'], 'string', 'max' => 50],
             [['comment'], 'string', 'max' => 1000],
-            [['user_id'], 'exist', 'skipOnError' => true, 'targetClass' => User::className(), 'targetAttribute' => ['user_id' => 'id']],
+            [['user_id'], 'exist', 'skipOnError' => true, 'targetClass' => User::class, 'targetAttribute' => ['user_id' => 'id']],
         ];
     }
 
@@ -53,10 +57,10 @@ class LogErrors extends \yii\db\ActiveRecord
     }
 
     /**
-     * @return \yii\db\ActiveQuery
+     * @return ActiveQuery
      */
-    public function getUser()
+    public function getUser(): ActiveQuery
     {
-        return $this->hasOne(User::className(), ['id' => 'user_id']);
+        return $this->hasOne(User::class, ['id' => 'user_id']);
     }
 }

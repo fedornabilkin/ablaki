@@ -3,13 +3,12 @@
 namespace frontend\controllers;
 
 use common\controllers\FrontendController;
-use Yii;
-use common\models\HistoryBalance;
+use common\models\history\HistoryBalance;
 use frontend\models\HistoryBalanceSearch;
+use Yii;
 use yii\filters\AccessControl;
-use yii\web\Controller;
-use yii\web\NotFoundHttpException;
 use yii\filters\VerbFilter;
+use yii\web\NotFoundHttpException;
 
 /**
  * BalanceController implements the CRUD actions for HistoryBalance model.

@@ -1,3 +1,8 @@
+<?php
+
+use mdm\admin\components\Helper;
+
+?>
 <aside class="main-sidebar">
 
     <section class="sidebar">
@@ -27,6 +32,7 @@
         <!-- /.search form -->
 
         <?php
+        // https://fontawesome.ru/all-icons/#chart
         $menuItems = [
             [
                 'label' => Yii::t('app', 'Admin'),
@@ -47,6 +53,15 @@
                     ['label' => Yii::t('app', 'Tasks'), 'icon' => 'tasks', 'url' => ['/todo/']],
                     ['label' => Yii::t('app', 'Redirect'), 'icon' => 'share', 'url' => ['/redirect/manager']],
                     ['label' => Yii::t('app', 'Catalog'), 'icon' => 'tree', 'url' => ['/binds/catalog']],
+                ],
+            ],
+            [
+                'label' => Yii::t('app', 'History'),
+                'icon' => 'bar-chart-o',
+                'url' => '#',
+                'items' => [
+                    ['label' => Yii::t('app', 'Balance'), 'icon' => 'bar-chart-o', 'url' => ['/history/balance']],
+                    ['label' => Yii::t('app', 'Rating'), 'icon' => 'line-chart', 'url' => ['/history/rating']],
                 ],
             ],
 
@@ -89,7 +104,7 @@
 
         ];
 
-        $menuItems = \mdm\admin\components\Helper::filter($menuItems);
+        $menuItems = Helper::filter($menuItems);
         ?>
 
         <!-- widget -->

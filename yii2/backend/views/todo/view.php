@@ -1,6 +1,8 @@
 <?php
 
+use common\models\Todo;
 use yii\helpers\Html;
+use yii\web\YiiAsset;
 use yii\widgets\DetailView;
 
 /* @var $this yii\web\View */
@@ -9,7 +11,7 @@ use yii\widgets\DetailView;
 $this->title = $model->title;
 $this->params['breadcrumbs'][] = ['label' => Yii::t('app', 'Todos'), 'url' => ['index']];
 $this->params['breadcrumbs'][] = $this->title;
-\yii\web\YiiAsset::register($this);
+YiiAsset::register($this);
 ?>
 <div class="todo-view">
 
@@ -30,12 +32,25 @@ $this->params['breadcrumbs'][] = $this->title;
         'model' => $model,
         'attributes' => [
             'id',
-            'user_id',
+            [
+                'attribute' => 'user_id',
+                'value' => function (Todo $model) {
+                    return $model->user->username;
+                }
+            ],
             'title',
             'comment:ntext',
             'status',
-            'updated_at',
-            'created_at',
+//            'updated_at',
+//            'created_at',
+            [
+                'attribute' => 'updated_at',
+                'format' => ['date', 'php:H:i d.m.y']
+            ],
+            [
+                'attribute' => 'created_at',
+                'format' => ['date', 'php:H:i d.m.y']
+            ],
         ],
     ]) ?>
 

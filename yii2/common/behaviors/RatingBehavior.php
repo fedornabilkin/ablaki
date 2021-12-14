@@ -9,8 +9,9 @@
 namespace common\behaviors;
 
 
-use common\models\HistoryRating;
+use common\models\history\HistoryRating;
 use common\models\user\Person;
+use Throwable;
 use yii\db\ActiveRecord;
 
 class RatingBehavior extends AbstractBehavior
@@ -47,7 +48,7 @@ class RatingBehavior extends AbstractBehavior
                 $this->saveHistory();
 
                 $transaction->commit();
-            } catch(\Throwable $e) {
+            } catch (Throwable $e) {
                 // todo log file or DB
                 $transaction->rollBack();
                 throw $e;

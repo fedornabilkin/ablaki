@@ -1,11 +1,12 @@
 <?php
 
-use common\models\HistoryBalance;
+use common\models\history\HistoryBalance;
+use console\migrations\AbstractMigration;
 
 /**
  * Class m180526_212922_move_history_balance
  */
-class m180526_212922_move_history_balance extends \console\migrations\AbstractMigration
+class m180526_212922_move_history_balance extends AbstractMigration
 {
     /**
      * {@inheritdoc}

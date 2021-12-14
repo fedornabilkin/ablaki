@@ -12,7 +12,6 @@ use common\models\Todo;
 use common\services\cookies\CookieService;
 use Yii;
 use yii\base\InvalidConfigException;
-use yii\db\ActiveQuery;
 
 /**
  * Class User
@@ -23,17 +22,11 @@ use yii\db\ActiveQuery;
  */
 class User extends \dektrium\user\models\User
 {
-    public $cookieParams;
+    use Relations;
 
+    public $cookieParams;
     private $person;
 
-    /**
-     * @return ActiveQuery
-     */
-    public function getPerson(): ActiveQuery
-    {
-        return $this->hasOne(Person::class, ['user_id' => 'id'])->inverseOf('user');
-    }
 
     /**
      * @param $insert
@@ -48,8 +41,8 @@ class User extends \dektrium\user\models\User
                 $this->person = Yii::createObject(Person::class);
             }
 
-            if (\Yii::$app->id === 'app-frontend') {
-                $this->cookieParams = \Yii::$app->params['cookies'];
+            if (Yii::$app->id === 'app-frontend') {
+                $this->cookieParams = Yii::$app->params['cookies'];
                 $this->setRefovod();
                 $this->setReferrer();
             }
@@ -81,14 +74,6 @@ class User extends \dektrium\user\models\User
             'name' => $this->cookieParams['referrer']['name'],
         ]);
         $this->person->referrer = $service->getValue();
-    }
-
-    /**
-     * @return ActiveQuery
-     */
-    public function getTodo(): ActiveQuery
-    {
-        return $this->hasMany(Todo::class, ['user_id' => 'id']);
     }
 
     public function fields()

@@ -10,13 +10,15 @@ namespace common\models;
 
 
 use common\singletones\Person;
+use yii\db\ActiveRecord;
 
-class AbstractModel extends \yii\db\ActiveRecord
+class AbstractModel extends ActiveRecord
 {
     /**
      * Возвращает модель персоны текущего пользователя
      *
-     * @return null|\yii\db\ActiveRecord
+     * @return null|ActiveRecord
+     * @deprecated
      */
     public function getPersonInstance()
     {

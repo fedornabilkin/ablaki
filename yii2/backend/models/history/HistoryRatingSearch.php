@@ -1,25 +1,25 @@
 <?php
 
-namespace frontend\models;
+namespace backend\models\history;
 
-use common\models\history\HistoryBalance;
+use common\models\history\HistoryRating;
 use yii\base\Model;
 use yii\data\ActiveDataProvider;
 
 /**
  * HistoryBalanceSearch represents the model behind the search form of `common\models\HistoryBalance`.
  */
-class HistoryBalanceSearch extends HistoryBalance
+class HistoryRatingSearch extends HistoryRating
 {
     /**
      * {@inheritdoc}
      */
-    public function rules()
+    public function rules(): array
     {
         return [
-            [['id', 'user_id', 'created_at'], 'integer'],
-            [['balance', 'credit', 'balance_up', 'credit_up'], 'number'],
-            [['type', 'comment'], 'safe'],
+            [['user_id', 'created_at'], 'integer'],
+            [['rating'], 'number'],
+            [['type', 'comment'], 'string'],
         ];
     }
 
@@ -41,7 +41,7 @@ class HistoryBalanceSearch extends HistoryBalance
      */
     public function search($params)
     {
-        $query = HistoryBalance::find();
+        $query = HistoryRating::find();
 
         // add conditions that should always apply here
 
@@ -59,19 +59,13 @@ class HistoryBalanceSearch extends HistoryBalance
 
         // grid filtering conditions
         $query->andFilterWhere([
-            'id' => $this->id,
             'user_id' => $this->user_id,
-            'balance' => $this->balance,
-            'credit' => $this->credit,
-            'balance_up' => $this->balance_up,
-            'credit_up' => $this->credit_up,
+            'rating' => $this->rating,
             'created_at' => $this->created_at,
         ]);
 
-        $query->andFilterWhere(['like', 'type', $this->type])
-            ->andFilterWhere(['like', 'comment', $this->comment]);
-
-        $query->orderBy(['id' => SORT_DESC]);
+        $query->andFilterWhere(['ilike', 'type', $this->type])
+            ->andFilterWhere(['ilike', 'comment', $this->comment]);
 
         return $dataProvider;
     }
