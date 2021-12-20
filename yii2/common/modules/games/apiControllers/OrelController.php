@@ -15,6 +15,7 @@ use common\modules\games\apiActions\orel\CreateAction;
 use common\modules\games\apiActions\orel\DeleteAction;
 use common\modules\games\apiActions\orel\RemoveAction;
 use common\modules\games\middleware\CheckFreeGameMiddleware;
+use common\modules\games\middleware\CheckNotMyGameMiddleware;
 use common\modules\games\middleware\GamerCheckCreditMiddleware;
 use common\modules\games\middleware\orel\PlayMiddleware;
 use common\modules\games\middleware\orel\SwitchCreatorMiddleware;
@@ -119,6 +120,7 @@ class OrelController extends ActiveController
         $middleware::$data = $data;
 
         $middleware
+            ->linkWith(new CheckNotMyGameMiddleware())
             ->linkWith(new CheckFreeGameMiddleware())
             ->linkWith(new PlayMiddleware())
             ->linkWith(new SwitchCreatorMiddleware())
@@ -128,6 +130,11 @@ class OrelController extends ActiveController
             $errors = $middleware->getErrors();
             throw new UserException(Yii::t('games', $errors[0]));
         }
+
+        return [
+            'gamer' => Yii::$app->user->identity,
+            'game' => $model,
+        ];
     }
 
     /**

@@ -18,7 +18,8 @@ class UserHelper extends AbstractHelper
      * @param float $rating
      * @return array
      */
-    public static function ratingStar($rating = 0.0) {
+    public static function ratingStar(float $rating = 0.0)
+    {
         $star['star_class'] = 'text-default';
         switch (true) {
             case $rating >= 500:
@@ -49,7 +50,8 @@ class UserHelper extends AbstractHelper
      * @param float $rating
      * @return float|int
      */
-    public static function ratingRound($rating = 0.0) {
+    public static function ratingRound(float $rating = 0.0): float
+    {
         switch (true) {
             case $rating >= 100:
                 $rating = round($rating);

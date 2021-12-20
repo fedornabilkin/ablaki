@@ -15,6 +15,7 @@ use common\modules\games\apiActions\saper\CreateAction;
 use common\modules\games\apiActions\saper\DeleteAction;
 use common\modules\games\apiActions\saper\RemoveAction;
 use common\modules\games\middleware\CheckFreeGameMiddleware;
+use common\modules\games\middleware\CheckNotMyGameMiddleware;
 use common\modules\games\middleware\GamerCheckBalanceMiddleware;
 use common\modules\games\middleware\saper\CheckMyStartedGameMiddleware;
 use common\modules\games\middleware\saper\PlayMiddleware;
@@ -83,6 +84,7 @@ class SaperController extends ActiveController
         $middleware::$data = $data;
 
         $middleware
+            ->linkWith(new CheckNotMyGameMiddleware())
             ->linkWith(new GamerCheckBalanceMiddleware())
             ->linkWith(new StartMiddleware())
             ->linkWith(new UpdatePersonMiddleware());

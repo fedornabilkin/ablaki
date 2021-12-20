@@ -28,7 +28,7 @@ class PlayMiddleware extends GameMiddleware
         $this->model->user_gamer = self::$data->user->user_id;
 
         $this->updateData();
-        $this->saveGame();
+        $this->model->save();
 
         return parent::check();
     }
@@ -48,10 +48,5 @@ class PlayMiddleware extends GameMiddleware
         }
 
         $this->insertNext(new UpdatePersonMiddleware());
-    }
-
-    public function saveGame()
-    {
-        $this->model->save();
     }
 }

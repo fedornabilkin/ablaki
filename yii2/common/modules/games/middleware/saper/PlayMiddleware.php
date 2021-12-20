@@ -25,7 +25,7 @@ class PlayMiddleware extends GameMiddleware
     {
         $this->model = self::$data->game;
         self::$data->historyType = self::$data->game->getHistoryType();
-        self::$data->commissionAmount = $this->model->getCommissionAmount($this->model->kon * 2);
+        self::$data->commissionAmount = $this->model->getCommissionAmount();
 
         $checkHod = $this->checkHod();
         $this->updateModel();

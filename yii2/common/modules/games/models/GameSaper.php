@@ -153,9 +153,9 @@ class GameSaper extends Saper
         return true;
     }
 
-    public function getCommissionAmount($amount)
+    public function getCommissionAmount(): float
     {
-        return $amount * 0.05;
+        return $this->kon * 2 * 0.05;
     }
 
     public function isComplete()

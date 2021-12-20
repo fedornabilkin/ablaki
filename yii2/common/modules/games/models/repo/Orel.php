@@ -9,6 +9,7 @@
 namespace common\modules\games\models\repo;
 
 use common\models\user\User;
+use common\models\user\UserRelationInterface;
 use yii\behaviors\TimestampBehavior;
 use yii\db\ActiveQuery;
 use yii\db\ActiveRecord;
@@ -28,7 +29,7 @@ use yii\db\ActiveRecord;
  * @property User $user
  * @property User $userGamer
  */
-class Orel extends ActiveRecord
+class Orel extends ActiveRecord implements UserRelationInterface
 {
 
     /**
@@ -68,7 +69,7 @@ class Orel extends ActiveRecord
     /**
      * @return ActiveQuery
      */
-    public function getUser()
+    public function getUser(): ActiveQuery
     {
         return $this->hasOne(User::class, ['id' => 'user_id']);
     }
@@ -76,7 +77,7 @@ class Orel extends ActiveRecord
     /**
      * @return ActiveQuery
      */
-    public function getUserGamer()
+    public function getUserGamer(): ActiveQuery
     {
         return $this->hasOne(User::class, ['id' => 'user_gamer']);
     }

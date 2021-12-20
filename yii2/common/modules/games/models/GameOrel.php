@@ -96,18 +96,26 @@ class GameOrel extends Orel
 
     public function fields(): array
     {
-        return [
+        $fields = [
             'id',
             'user_id',
-            'username' => function (Orel $model) {
+            'username' => static function (Orel $model) {
                 return $model->user->username;
             },
-            'username_gamer' => function (Orel $model) {
+            'username_gamer' => static function (Orel $model) {
                 return $model->userGamer->username;
             },
             'kon',
             'created_at',
             'updated_at',
         ];
+
+        if (isset($this->hod)) {
+            $fields['win'] = static function (self $model) {
+                return $model->isWin();
+            };
+        }
+
+        return $fields;
     }
 }
