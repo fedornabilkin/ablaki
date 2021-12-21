@@ -2,6 +2,7 @@
 
 namespace common\models\user;
 
+use common\helpers\App;
 use common\helpers\UserHelper;
 use Yii;
 use yii\db\ActiveQuery;
@@ -50,14 +51,15 @@ class Person extends ActiveRecord implements UserRelationInterface
     {
         $f = [
             'refovod',
-            'rating',
+            'rating' => static function (self $model) {
+                return UserHelper::ratingRound($model->rating);
+            },
         ];
 
-        if (!Yii::$app->user->getIsGuest()) {
+        // todo
+        if (!App::user()->getIsGuest() && App::user()->identity->getId() === $this->user_id) {
             $f[] = 'balance';
-            $f[] = static function (self $model) {
-                return UserHelper::ratingRound($model->rating);
-            };
+            $f[] = 'credit';
         }
 
         return $f;
@@ -89,7 +91,7 @@ class Person extends ActiveRecord implements UserRelationInterface
     /**
      * @return ActiveQuery
      */
-    public function getRefovodUser()
+    public function getRefovodUser(): ActiveQuery
     {
         return $this->hasOne(User::class, ['id' => 'refovod']);
     }

@@ -76,8 +76,11 @@ class User extends \dektrium\user\models\User
         $this->person->referrer = $service->getValue();
     }
 
-    public function fields()
+    public function fields(): array
     {
-        return ['username', 'person'];
+        return [
+            'username',
+            'person',
+        ];
     }
 }

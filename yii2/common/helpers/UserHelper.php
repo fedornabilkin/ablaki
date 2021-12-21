@@ -52,20 +52,15 @@ class UserHelper extends AbstractHelper
      */
     public static function ratingRound(float $rating = 0.0): float
     {
+        $rating = round($rating, 4);
+
         switch (true) {
             case $rating >= 100:
                 $rating = round($rating);
-                break;
             case $rating >= 50:
                 $rating = round($rating, 1);
-                break;
             case $rating >= 10:
                 $rating = round($rating, 2);
-                break;
-
-            default:
-                $rating = round($rating, 4);
-                break;
         }
         return $rating;
     }
