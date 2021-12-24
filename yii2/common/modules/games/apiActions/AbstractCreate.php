@@ -8,6 +8,7 @@
 
 namespace common\modules\games\apiActions;
 
+use common\helpers\App;
 use common\middleware\DataMiddleware;
 use common\modules\games\middleware\GameMiddleware;
 use Yii;
@@ -34,7 +35,7 @@ abstract class AbstractCreate extends Action
     {
         return new DataMiddleware([
             'game' => $this->model,
-            'user' => Yii::$app->user->identity->person,
+            'user' => App::user()->identity->person,
         ]);
     }
 
@@ -43,7 +44,7 @@ abstract class AbstractCreate extends Action
         $middleware = $this->getMiddleware();
 
         if ($middleware->check()) {
-            Yii::$app->getResponse()->setStatusCode(201);
+            App::response()->setStatusCode(201);
         } else {
             $errors = $middleware->getErrors();
             throw new UserException(Yii::t('games', $errors[0]));

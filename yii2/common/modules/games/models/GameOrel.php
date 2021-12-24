@@ -33,6 +33,7 @@ class GameOrel extends Orel
     {
         $arr = [
             ['count', 'integer', 'min' => 1, 'max' => 100],
+            ['hod', 'in', 'range' => [1, 2], 'on' => self::SCENARIO_PLAY],
             ['hod', 'integer', 'on' => self::SCENARIO_PLAY],
         ];
 
@@ -105,12 +106,15 @@ class GameOrel extends Orel
             'username_gamer' => static function (Orel $model) {
                 return $model->userGamer->username;
             },
+            'win' => static function (Orel $model) {
+                return null;
+            },
             'kon',
             'created_at',
             'updated_at',
         ];
 
-        if (isset($this->hod)) {
+        if (!empty($this->hod)) {
             $fields['win'] = static function (self $model) {
                 return $model->isWin();
             };

@@ -10,10 +10,12 @@ namespace common\helpers;
 
 use Yii;
 use yii\base\InvalidConfigException;
+use yii\web\Response;
 use yii\web\User;
 
 /**
  * @method static User user()
+ * @method static Response response()
  */
 class App
 {
