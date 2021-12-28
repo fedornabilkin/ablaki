@@ -9,6 +9,7 @@
 namespace common\modules\games\apiControllers;
 
 use api\filters\Auth;
+use common\helpers\App;
 use common\middleware\DataMiddleware;
 use common\middleware\HistoryCommissionMiddleware;
 use common\modules\games\apiActions\orel\CreateAction;
@@ -21,9 +22,12 @@ use common\modules\games\middleware\orel\PlayMiddleware;
 use common\modules\games\middleware\orel\SwitchCreatorMiddleware;
 use common\modules\games\models\GameOrel;
 use Yii;
+use yii\base\DynamicModel;
 use yii\base\UserException;
+use yii\data\ActiveDataFilter;
 use yii\data\ActiveDataProvider;
 use yii\db\Exception;
+use yii\db\Query;
 use yii\rest\ActiveController;
 
 class OrelController extends ActiveController
@@ -65,35 +69,58 @@ class OrelController extends ActiveController
         $actions['my'] = $actions['index'];
         $actions['history'] = $actions['index'];
 
-        $actions['my']['prepareDataProvider'] = function ($action) {
+        $actions['my']['dataFilter'] = $this->getFilter();
+        $actions['my']['prepareDataProvider'] = function ($action, $filter) {
+            $filter = $filter ?? [];
             return new ActiveDataProvider([
                 'query' => $this->modelClass::find()
                     ->with('user')
                     ->free()
-                    ->my(Yii::$app->user->identity),
+                    ->my(App::user()->identity)
+                    ->andFilterWhere($filter),
             ]);
         };
 
-        $actions['history']['prepareDataProvider'] = function ($action) {
+        $actions['history']['dataFilter'] = $this->getFilter();
+        $actions['history']['prepareDataProvider'] = function ($action, $filter) {
+            $filter = $filter ?? [];
             return new ActiveDataProvider([
                 'query' => $this->modelClass::find()
                     ->with('user')
                     ->notFree()
-                    ->history(Yii::$app->user->identity),
+                    ->history(App::user()->identity)
+                    ->andFilterWhere($filter),
             ]);
         };
 
-        $actions['index']['prepareDataProvider'] = function ($action) {
+        $actions['index']['dataFilter'] = $this->getFilter();
+        $actions['index']['prepareDataProvider'] = function ($action, $filter) {
+            $filter = $filter ?? [];
             return new ActiveDataProvider([
+                'pagination' => false,
                 'query' => $this->modelClass::find()
+                    ->limit(20)
+                    ->orderBy(['id' => SORT_ASC])
                     ->with('user')
                     ->free()
-                    ->notMy(Yii::$app->user->identity),
+                    ->notMy(App::user()->identity)
+                    ->andFilterWhere($filter),
             ]);
         };
 
         unset($actions['view'], $actions['update']);
         return $actions;
+    }
+
+    public function actionKonCount()
+    {
+        return (new Query())->select(['kon', 'COUNT(*) AS count'])
+            ->from($this->modelClass::tableName())
+            ->andWhere(['user_gamer' => 0])
+            ->andWhere(['!=', 'user_id', App::user()->getId()])
+            ->groupBy(['kon'])
+            ->orderBy(['kon' => SORT_ASC])
+            ->all();
     }
 
     /**
@@ -144,12 +171,26 @@ class OrelController extends ActiveController
      * @return GameOrel the loaded model
      * @throws UserException if the model cannot be found
      */
-    public function findModel($id)
+    private function findModel($id)
     {
         $model = call_user_func([$this->modelClass, 'findOne'], $id);
         if (!$model) {
             throw new UserException(Yii::t('games', 'The requested model does not exist.'));
         }
         return $model;
+    }
+
+    /**
+     * @return array
+     */
+    private function getFilter(): array
+    {
+        return [
+            'class' => ActiveDataFilter::class,
+            'searchModel' => function () {
+                return (new DynamicModel(['kon' => null]))
+                    ->addRule('kon', 'number');
+            },
+        ];
     }
 }

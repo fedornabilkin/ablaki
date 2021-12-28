@@ -82,6 +82,7 @@ return [
                         'GET remove' => 'remove',
                         'GET my' => 'my',
                         'GET history' => 'history',
+                        'GET kon-count' => 'kon-count',
                         'POST play/{id}' => 'play',
                     ],
                 ],
