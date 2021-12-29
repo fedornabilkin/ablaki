@@ -75,8 +75,7 @@ class OrelController extends ActiveController
             return new ActiveDataProvider([
                 'query' => $this->modelClass::find()
                     ->with('user')
-                    ->free()
-                    ->my(App::user()->identity)
+                    ->listMyGame(App::user()->identity)
                     ->andFilterWhere($filter),
             ]);
         };
@@ -86,9 +85,9 @@ class OrelController extends ActiveController
             $filter = $filter ?? [];
             return new ActiveDataProvider([
                 'query' => $this->modelClass::find()
-                    ->with('user')
-                    ->notFree()
-                    ->history(App::user()->identity)
+                    ->orderBy(['updated_at' => SORT_DESC])
+                    ->with(['user', 'userGamer'])
+                    ->listHistory(App::user()->identity)
                     ->andFilterWhere($filter),
             ]);
         };
@@ -101,9 +100,8 @@ class OrelController extends ActiveController
                 'query' => $this->modelClass::find()
                     ->limit(20)
                     ->orderBy(['id' => SORT_ASC])
-                    ->with('user')
-                    ->free()
-                    ->notMy(App::user()->identity)
+                    ->with('userGamer')
+                    ->listGame(App::user()->identity)
                     ->andFilterWhere($filter),
             ]);
         };
