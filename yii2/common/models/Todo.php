@@ -41,6 +41,7 @@ class Todo extends ActiveRecord implements UserRelationInterface
             BlameableBehavior::class => [
                 'class' => BlameableBehavior::class,
                 'createdByAttribute' => 'user_id',
+                'updatedByAttribute' => 'user_id',
             ]
         ]);
     }
