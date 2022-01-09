@@ -23,7 +23,7 @@ $config = [
         ],
         'redis' => [
             'class' => Cache::class,
-            'keyPrefix' => 'crm:cache',
+            'keyPrefix' => 'blk:cache',
             'redis' => [
                 'hostname' => Env::redisHost(),
                 'port' => Env::redisPort(),

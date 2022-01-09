@@ -1,5 +1,6 @@
 <?php
 
+use common\models\Fact;
 use yii\grid\GridView;
 use yii\helpers\Html;
 
@@ -24,18 +25,24 @@ $this->params['breadcrumbs'][] = $this->title;
         'columns' => [
             ['class' => 'yii\grid\SerialColumn'],
 
-            'title',
+            [
+                'attribute' => 'title',
+                'format' => 'raw',
+                'value' => static function (Fact $model) {
+                    return Html::a($model->title, ['view', 'id' => $model->id]);
+                }
+            ],
             'type',
             [
                 'attribute' => 'hide',
                 'format' => 'raw',
-                'filter' => ['Выкл', 'Вкл'],
+                'filter' => ['Вкл', 'Выкл',],
                 'value' => function ($model) {
-                    return $model->hide ? 'Вкл' : 'Выкл';
+                    return $model->hide ? 'Выкл' : 'Вкл';
                 },
             ],
 
-            ['class' => 'yii\grid\ActionColumn'],
+//            ['class' => 'yii\grid\ActionColumn'],
         ],
     ]); ?>
 </div>

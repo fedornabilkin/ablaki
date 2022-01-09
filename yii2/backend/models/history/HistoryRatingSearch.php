@@ -41,7 +41,8 @@ class HistoryRatingSearch extends HistoryRating
      */
     public function search($params)
     {
-        $query = HistoryRating::find();
+        $query = HistoryRating::find()
+            ->orderBy(['id' => SORT_DESC]);
 
         // add conditions that should always apply here
 

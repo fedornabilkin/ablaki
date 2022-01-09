@@ -41,7 +41,8 @@ class HistoryBalanceSearch extends HistoryBalance
      */
     public function search($params)
     {
-        $query = HistoryBalance::find();
+        $query = HistoryBalance::find()
+            ->orderBy(['id' => SORT_DESC]);
 
         // add conditions that should always apply here
 

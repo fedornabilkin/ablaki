@@ -40,6 +40,7 @@ use mdm\admin\components\Helper;
                 'items' => [
                     ['label' => Yii::t('app', 'Rbac'), 'icon' => 'user-secret', 'url' => ['/admin/assignment']],
                     ['label' => Yii::t('app', 'Users'), 'icon' => 'user', 'url' => ['/user/admin']],
+                    ['label' => Yii::t('app', 'Person'), 'icon' => 'users', 'url' => ['/person/']],
 
                     ['label' => Yii::t('app', 'Gii'), 'icon' => 'file-code-o', 'url' => ['/gii/']],
                     ['label' => Yii::t('app', 'Debug'), 'icon' => 'dashboard', 'url' => ['/debug/']],
@@ -50,7 +51,8 @@ use mdm\admin\components\Helper;
                 'icon' => 'user-secret',
                 'url' => '#',
                 'items' => [
-                    ['label' => Yii::t('app', 'Tasks'), 'icon' => 'tasks', 'url' => ['/todo/']],
+                    ['label' => Yii::t('app', 'Todo'), 'icon' => 'tasks', 'url' => ['/todo/']],
+                    ['label' => Yii::t('app', 'Fact'), 'icon' => 'user-secret', 'url' => ['/fact/']],
                     ['label' => Yii::t('app', 'Redirect'), 'icon' => 'share', 'url' => ['/redirect/manager']],
                     ['label' => Yii::t('app', 'Catalog'), 'icon' => 'tree', 'url' => ['/binds/catalog']],
                 ],
@@ -65,9 +67,6 @@ use mdm\admin\components\Helper;
                 ],
             ],
 
-
-            ['label' => Yii::t('app', 'Person'), 'icon' => 'users', 'url' => ['/person/']],
-            ['label' => Yii::t('app', 'Fact'), 'icon' => 'user-secret', 'url' => ['/fact/']],
 
             ['label' => 'Статьи', 'icon' => 'file-o', 'url' => ['/post']],
 

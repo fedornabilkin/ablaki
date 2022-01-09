@@ -1,4 +1,4 @@
-FROM php:7.3-fpm
+FROM php:7.3.2-fpm
 
 RUN apt-get update \
 && apt-get install -y libpq-dev libicu-dev libpng-dev libjpeg62-turbo-dev \

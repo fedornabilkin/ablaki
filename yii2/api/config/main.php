@@ -6,10 +6,13 @@ use yii\rest\UrlRule;
 
 $params = array_merge(
     require __DIR__ . '/../../common/config/params.php',
-    getLocalConfig(__DIR__ . '/../../common/config/params-local.php'),
-    require __DIR__ . '/params.php',
-    getLocalConfig(__DIR__ . '/params-local.php')
+    require __DIR__ . '/params.php'
 );
+
+$header_remove = 'header_remove';
+if (function_exists($header_remove)) {
+    $header_remove('X-Powered-By');
+}
 
 return [
     'id' => 'api',
@@ -26,7 +29,7 @@ return [
 //            ],
         ],
         'request' => [
-            'enableCsrfValidation' => false,
+//            'enableCsrfValidation' => false,
             'cookieValidationKey' => 'JDaZ5GOpnlg94q38dzWDLKjPR5rQXXlF',
             'parsers' => [
                 'application/json' => 'yii\web\JsonParser'
@@ -39,9 +42,9 @@ return [
             'enableAutoLogin' => true,
             'identityCookie' => ['name' => '_identity-api', 'httpOnly' => true],
         ],
-        'session' => [
-            'name' => 'api',
-        ],
+//        'session' => [
+//            'name' => 'api',
+//        ],
 //        'errorHandler' => [
 //            'class' => 'api\components\ErrorHandler',
 //        ],

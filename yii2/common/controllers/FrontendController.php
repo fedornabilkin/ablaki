@@ -11,9 +11,14 @@ namespace common\controllers;
 
 use common\services\cookies\CookieService;
 use common\singletones\Person;
+use HttpRequestException;
+use Yii;
 use yii\web\Controller;
 use yii\web\Response;
 
+/**
+ * @deprecated
+ */
 class FrontendController extends Controller
 {
     public $cookieParams;
@@ -24,11 +29,11 @@ class FrontendController extends Controller
     public function init()
     {
         parent::init();
-        $this->cookieParams = \Yii::$app->params['cookies'];
+        $this->cookieParams = Yii::$app->params['cookies'];
 
         new CookieService([
             'name' => $this->cookieParams['referrer']['name'],
-            'value' => \Yii::$app->request->referrer,
+            'value' => Yii::$app->request->referrer,
             'expire' => $this->cookieParams['referrer']['expire'],
         ]);
     }
@@ -36,16 +41,16 @@ class FrontendController extends Controller
     /**
      * @param array $params
      * @return array
-     * @throws \HttpRequestException
+     * @throws HttpRequestException
      */
     public function ajaxResponse($params = [])
     {
-        if (\Yii::$app->request->isAjax) {
-            \Yii::$app->response->format = Response::FORMAT_JSON;
+        if (Yii::$app->request->isAjax) {
+            Yii::$app->response->format = Response::FORMAT_JSON;
             return array_merge($this->ajaxParams, $params);
         }
 
-        throw new \HttpRequestException();
+        throw new HttpRequestException();
     }
 
     /**
@@ -54,7 +59,7 @@ class FrontendController extends Controller
      */
     protected function getQueryParams($params = [])
     {
-        return array_merge(\Yii::$app->request->queryParams, $params);
+        return array_merge(Yii::$app->request->queryParams, $params);
     }
 
     /**

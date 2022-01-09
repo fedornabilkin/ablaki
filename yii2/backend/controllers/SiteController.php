@@ -1,11 +1,14 @@
 <?php
 namespace backend\controllers;
 
-use Yii;
-use yii\web\Controller;
-use yii\filters\VerbFilter;
-use yii\filters\AccessControl;
 use common\models\LoginForm;
+use common\models\Todo;
+use common\models\user\Person;
+use Yii;
+use yii\data\ActiveDataProvider;
+use yii\filters\AccessControl;
+use yii\filters\VerbFilter;
+use yii\web\Controller;
 
 /**
  * Site controller
@@ -60,7 +63,18 @@ class SiteController extends Controller
      */
     public function actionIndex()
     {
-        return $this->render('index');
+        $todoProvider = new ActiveDataProvider([
+            'query' => Todo::find()->where(['status' => 0])->limit(5)->orderBy(['id' => SORT_ASC])
+        ]);
+
+        $personProvider = new ActiveDataProvider([
+            'query' => Person::find()->limit(5)->orderBy(['id' => SORT_DESC])
+        ]);
+
+        return $this->render('index', [
+            'todoProvider' => $todoProvider,
+            'personProvider' => $personProvider,
+        ]);
     }
 
     /**

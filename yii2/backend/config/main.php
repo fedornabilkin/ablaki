@@ -8,9 +8,7 @@ use mdm\admin\controllers\AssignmentController;
 
 $params = array_merge(
     require __DIR__ . '/../../common/config/params.php',
-    getLocalConfig(__DIR__ . '/../../common/config/params-local.php'),
-    require __DIR__ . '/params.php',
-    getLocalConfig(__DIR__ . '/params-local.php')
+    require __DIR__ . '/params.php'
 );
 
 return [
@@ -24,6 +22,8 @@ return [
     'modules' => [
         'user' => [
             'class' => 'dektrium\user\Module',
+//            'admins' => ['admin'],
+            'adminPermission' => 'p-admin',
             // following line will restrict access to profile, recovery, registration and settings controllers from backend
             'as backend' => BackendFilter::class,
         ],
@@ -93,7 +93,7 @@ return [
             'user/logout',
             'user/login',
 //            'debug/*',
-            'site/*',
+//            'site/*',
         ]
     ],
     'params' => $params,

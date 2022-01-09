@@ -4,7 +4,6 @@ use backend\widgets\gridView\columns\UserColumn;
 use common\models\Todo;
 use yii\grid\GridView;
 use yii\helpers\Html;
-use yii\helpers\StringHelper;
 
 /* @var $this yii\web\View */
 /* @var $searchModel backend\models\TodoSearch */
@@ -38,13 +37,20 @@ $this->params['breadcrumbs'][] = $this->title;
                     return Html::a($model->title, ['view', 'id' => $model->id]);
                 }
             ],
+//            [
+//                'attribute' => 'comment',
+//                'value' => static function (Todo $model) {
+//                    return StringHelper::truncate($model->comment, 100);
+//                }
+//            ],
             [
-                'attribute' => 'comment',
-                'value' => static function (Todo $model) {
-                    return StringHelper::truncate($model->comment, 100);
-                }
+                'attribute' => 'status',
+                'format' => 'raw',
+                'filter' => ['Ready', 'Ok'],
+                'value' => function (Todo $model) {
+                    return $model->status ? 'Ok' : 'Ready';
+                },
             ],
-            'status',
             [
                 'attribute' => 'created_at',
                 'format' => ['date', 'php:H:i d.m.y']

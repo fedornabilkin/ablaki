@@ -2,9 +2,9 @@
 
 namespace backend\models;
 
+use common\models\Todo;
 use yii\base\Model;
 use yii\data\ActiveDataProvider;
-use common\models\Todo;
 
 /**
  * TodoSearch represents the model behind the search form of `common\models\Todo`.
@@ -40,7 +40,8 @@ class TodoSearch extends Todo
      */
     public function search($params)
     {
-        $query = Todo::find();
+        $query = Todo::find()
+            ->orderBy(['status' => SORT_ASC, 'id' => SORT_ASC,]);
 
         // add conditions that should always apply here
 

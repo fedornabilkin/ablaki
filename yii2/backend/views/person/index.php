@@ -10,7 +10,7 @@ use yii\helpers\Html;
  * @var $dataProvider yii\data\ActiveDataProvider
  */
 
-$this->title = Yii::t('app', 'People');
+$this->title = Yii::t('app', 'Person');
 $this->params['breadcrumbs'][] = $this->title;
 ?>
 <div class="person-index">
@@ -26,7 +26,7 @@ $this->params['breadcrumbs'][] = $this->title;
             [
                 'attribute' => 'user_id',
                 'format' => 'raw',
-                'value' => function (Person $model) {
+                'value' => static function (Person $model) {
                     return Html::a($model->user->username, ['view', 'id' => $model->id]) . '</a><br>
                         <span class="text-success">' . $model->balance_out . '</span>
                         <span class="text-danger">' . $model->balance_in . '</span>';
@@ -37,7 +37,7 @@ $this->params['breadcrumbs'][] = $this->title;
             [
                 'attribute' => 'refovod',
                 'format' => 'raw',
-                'value' => function (Person $model) {
+                'value' => static function (Person $model) {
                     return Html::a($model->refovodUser->username, ['view', 'id' => $model->refovodUser->person->id]);
                 }
             ],
