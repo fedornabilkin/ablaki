@@ -64,11 +64,17 @@ class SiteController extends Controller
     public function actionIndex()
     {
         $todoProvider = new ActiveDataProvider([
-            'query' => Todo::find()->where(['status' => 0])->limit(5)->orderBy(['id' => SORT_ASC])
+            'query' => Todo::find()->where(['status' => 0])->orderBy(['id' => SORT_ASC]),
+            'pagination' => [
+                'pageSize' => 5,
+            ],
         ]);
 
         $personProvider = new ActiveDataProvider([
-            'query' => Person::find()->limit(5)->orderBy(['id' => SORT_DESC])
+            'query' => Person::find()->orderBy(['id' => SORT_DESC]),
+            'pagination' => [
+                'pageSize' => 5,
+            ],
         ]);
 
         return $this->render('index', [
