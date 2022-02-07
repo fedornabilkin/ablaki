@@ -8,17 +8,14 @@
 
 namespace common\middleware;
 
+use common\middleware\dto\Request;
 use common\models\user\Person;
-use common\modules\games\models\GameOrel;
-use common\modules\games\models\GameSaper;
 use yii\base\BaseObject;
 
 class DataMiddleware extends BaseObject
 {
     /** @var Person */
     public $user;
-    /** @var GameSaper|GameOrel */
-    public $game;
 
     /** @var float */
     public $changingBalance = 0.0;
@@ -36,6 +33,10 @@ class DataMiddleware extends BaseObject
     public $historyType = 'other';
     /** @var string */
     public $historyComment = 'other';
+    /**
+     * @var Request
+     */
+    protected $request;
 
     public function getUpdatePersonCounters(): array
     {
@@ -45,5 +46,32 @@ class DataMiddleware extends BaseObject
             'rating' => $this->changingRating,
             'bonus_count' => $this->changingBonusCount,
         ];
+    }
+
+    public function getNeedCredit(): int
+    {
+        return 0;
+    }
+
+    public function getNeedBalance(): int
+    {
+        return 0;
+    }
+
+    /**
+     * @param Request $request
+     * @return void
+     */
+    public function setRequest(Request $request): void
+    {
+        $this->request = $request;
+    }
+
+    /**
+     * @return Request
+     */
+    public function getRequest(): Request
+    {
+        return $this->request;
     }
 }

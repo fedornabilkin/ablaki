@@ -37,7 +37,7 @@ class SwitchCreatorMiddleware extends GameMiddleware
 
         self::$data->changingBalance = $this->model->kon * 2 - self::$data->commissionAmount;
         self::$data->historyComment = 'Victory in the game #' . $this->model->id;
-        self::$data->changingRating = $this->model->normalizeRating(self::$data->user, $this->model->kon);
+        self::$data->changingRating = $this->model->normalizeRating(self::$data->user->rating);
 
         $this->insertNext(new UpdatePersonMiddleware());
     }

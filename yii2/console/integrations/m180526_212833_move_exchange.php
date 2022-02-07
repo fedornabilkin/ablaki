@@ -1,12 +1,12 @@
 <?php
 
-use common\models\CreditExchange;
-use yii\db\Migration;
+use common\modules\exchange\models\CreditExchange;
+use console\migrations\AbstractMigration;
 
 /**
  * Class m180526_212833_move_exchange
  */
-class m180526_212833_move_exchange extends \console\migrations\AbstractMigration
+class m180526_212833_move_exchange extends AbstractMigration
 {
     /**
      * {@inheritdoc}
@@ -16,7 +16,7 @@ class m180526_212833_move_exchange extends \console\migrations\AbstractMigration
         $sql = "SELECT * FROM exchange ORDER BY id ASC;";
         $rows = $this->getRemoteRows($sql);
 
-        foreach ($rows as $row){
+        foreach ($rows as $row) {
 
             /** @var CreditExchange $model */
             $model = Yii::createObject(CreditExchange::class);

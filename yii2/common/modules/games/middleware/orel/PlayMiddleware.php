@@ -8,12 +8,12 @@
 
 namespace common\modules\games\middleware\orel;
 
+use common\middleware\AbstractMiddleware;
 use common\middleware\person\UpdatePersonMiddleware;
-use common\modules\games\middleware\GameMiddleware;
 use common\modules\games\models\GameOrel;
 use yii\db\Exception;
 
-class PlayMiddleware extends GameMiddleware
+class PlayMiddleware extends AbstractMiddleware
 {
     /** @var GameOrel */
     private $model;
@@ -35,7 +35,7 @@ class PlayMiddleware extends GameMiddleware
 
     public function updateData()
     {
-        self::$data->historyType = self::$data->game->getHistoryType();
+        self::$data->historyType = $this->model->getHistoryType();
         self::$data->commissionAmount = $this->model->getCommissionAmount();
 
         if ($this->model->isWin()) {

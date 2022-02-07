@@ -8,24 +8,24 @@
 
 namespace common\modules\games\middleware\orel;
 
-use common\modules\games\middleware\AbstractCreateMiddleware;
+use common\modules\games\middleware\GameCreateMiddleware;
+use common\modules\games\models\GameOrel;
 
-class CreateMiddleware extends AbstractCreateMiddleware
+class CreateMiddleware extends GameCreateMiddleware
 {
+    /** @var GameOrel */
+    protected $model;
+
     public function updateData(): void
     {
         parent::updateData();
-        self::$data->changingCredit = 0 - self::$data->game->kon * self::$data->game->count;
+        self::$data->changingCredit = 0 - self::$data->getKon() * $this->getCount();
     }
 
     public function getRow(): array
     {
-        return [
-            'kon' => self::$data->game->kon,
-            'user_id' => self::$data->user->user_id,
-            'user_gamer' => 0,
-            'created_at' => time(),
-            'type' => self::$data->game->getRandomType(),
-        ];
+        return array_merge(parent::getRow(), [
+            'type' => $this->model->getRandomType(),
+        ]);
     }
 }

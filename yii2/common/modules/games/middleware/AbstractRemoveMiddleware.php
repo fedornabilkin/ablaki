@@ -14,6 +14,9 @@ use yii\db\StaleObjectException;
 
 class AbstractRemoveMiddleware extends GameMiddleware
 {
+    /** @var GameDataMiddleware */
+    public static $data;
+
     /**
      * @return bool
      * @throws Throwable
@@ -43,7 +46,7 @@ class AbstractRemoveMiddleware extends GameMiddleware
     public function updateData(): void
     {
         self::$data->historyType = self::$data->game->getHistoryType();
-        self::$data->historyComment = 'Remove the game #' . self::$data->game->id;
+        self::$data->historyComment = 'Remove #' . self::$data->game->id;
     }
 
     /**

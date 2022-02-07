@@ -5,6 +5,8 @@ namespace common\modules\games\middleware;
 /**
  * Class GamerCheckBalanceMiddleware
  * @package common\modules\games\middleware
+ *
+ * @deprecated
  */
 class GamerCheckBalanceMiddleware extends GameMiddleware
 {

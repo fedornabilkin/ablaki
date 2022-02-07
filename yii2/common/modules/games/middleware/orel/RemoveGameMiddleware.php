@@ -18,6 +18,6 @@ class RemoveGameMiddleware extends AbstractRemoveMiddleware
     public function updateData(): void
     {
         parent::updateData();
-        self::$data->changingCredit = self::$data->game->kon;
+        self::$data->changingCredit = self::$data->getKon();
     }
 }

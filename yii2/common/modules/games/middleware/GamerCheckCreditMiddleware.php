@@ -11,6 +11,8 @@ namespace common\modules\games\middleware;
 /**
  * Class GamerCheckCreditMiddleware
  * @package common\modules\games\middleware
+ *
+ * @deprecated
  */
 class GamerCheckCreditMiddleware extends GameMiddleware
 {

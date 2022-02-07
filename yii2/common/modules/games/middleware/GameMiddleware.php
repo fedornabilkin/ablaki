@@ -10,6 +10,9 @@ namespace common\modules\games\middleware;
 
 use common\middleware\AbstractMiddleware;
 
+/**
+ * @deprecated
+ */
 class GameMiddleware extends AbstractMiddleware
 {
 

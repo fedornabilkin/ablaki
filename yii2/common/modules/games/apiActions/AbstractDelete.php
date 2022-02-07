@@ -8,7 +8,7 @@
 
 namespace common\modules\games\apiActions;
 
-use common\middleware\DataMiddleware;
+use common\modules\games\middleware\GameDataMiddleware;
 use common\modules\games\middleware\GameMiddleware;
 use Yii;
 use yii\base\Model;
@@ -27,14 +27,12 @@ abstract class AbstractDelete extends Action
         $this->model = $this->findModel($id);
     }
 
-    public function getDataMiddleware()
+    public function getDataMiddleware(): GameDataMiddleware
     {
-        $data = new DataMiddleware([
+        return new GameDataMiddleware([
             'game' => $this->model,
             'user' => Yii::$app->user->identity->person,
         ]);
-
-        return $data;
     }
 
     public function checkMiddleware()

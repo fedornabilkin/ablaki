@@ -10,13 +10,13 @@ namespace common\modules\games\apiControllers;
 
 use api\filters\Auth;
 use common\helpers\App;
-use common\middleware\DataMiddleware;
 use common\middleware\HistoryCommissionMiddleware;
 use common\modules\games\apiActions\orel\CreateAction;
 use common\modules\games\apiActions\orel\DeleteAction;
 use common\modules\games\apiActions\orel\RemoveAction;
 use common\modules\games\middleware\CheckFreeGameMiddleware;
 use common\modules\games\middleware\CheckNotMyGameMiddleware;
+use common\modules\games\middleware\GameDataMiddleware;
 use common\modules\games\middleware\GamerCheckCreditMiddleware;
 use common\modules\games\middleware\orel\PlayMiddleware;
 use common\modules\games\middleware\orel\SwitchCreatorMiddleware;
@@ -29,6 +29,7 @@ use yii\data\ActiveDataProvider;
 use yii\db\Exception;
 use yii\db\Query;
 use yii\rest\ActiveController;
+use yii\web\ForbiddenHttpException;
 
 class OrelController extends ActiveController
 {
@@ -42,6 +43,19 @@ class OrelController extends ActiveController
                 'class' => Auth::class,
             ],
         ]);
+    }
+
+    public function checkAccess($action, $model = null, $params = []): void
+    {
+        return;
+//        parent::checkAccess($action, $model, $params);
+
+
+        if ($action === 'delete' && $model->user_id !== App::user()->id) {
+            throw new ForbiddenHttpException(
+                Yii::t('game', sprintf('You can %s only the resources you have created.', $action)),
+            );
+        }
     }
 
     public function actions(): array
@@ -66,10 +80,10 @@ class OrelController extends ActiveController
             'checkAccess' => [$this, 'checkAccess'],
         ];
 
+        $actions['index']['dataFilter'] = $this->getFilter();
         $actions['my'] = $actions['index'];
         $actions['history'] = $actions['index'];
 
-        $actions['my']['dataFilter'] = $this->getFilter();
         $actions['my']['prepareDataProvider'] = function ($action, $filter) {
             $filter = $filter ?? [];
             return new ActiveDataProvider([
@@ -80,7 +94,6 @@ class OrelController extends ActiveController
             ]);
         };
 
-        $actions['history']['dataFilter'] = $this->getFilter();
         $actions['history']['prepareDataProvider'] = function ($action, $filter) {
             $filter = $filter ?? [];
             return new ActiveDataProvider([
@@ -92,7 +105,6 @@ class OrelController extends ActiveController
             ]);
         };
 
-        $actions['index']['dataFilter'] = $this->getFilter();
         $actions['index']['prepareDataProvider'] = function ($action, $filter) {
             $filter = $filter ?? [];
             return new ActiveDataProvider([
@@ -110,7 +122,7 @@ class OrelController extends ActiveController
         return $actions;
     }
 
-    public function actionKonCount()
+    public function actionKonCount(): array
     {
         return (new Query())->select(['kon', 'COUNT(*) AS count'])
             ->from($this->modelClass::tableName())
@@ -136,7 +148,7 @@ class OrelController extends ActiveController
             return $model->getErrors();
         }
 
-        $data = new DataMiddleware([
+        $data = new GameDataMiddleware([
             'game' => $model,
             'user' => Yii::$app->user->identity->person,
         ]);
