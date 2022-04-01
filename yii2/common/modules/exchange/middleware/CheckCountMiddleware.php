@@ -9,14 +9,13 @@
 namespace common\modules\exchange\middleware;
 
 use common\middleware\AbstractMiddleware;
-use yii\base\UserException;
 
 class CheckCountMiddleware extends AbstractMiddleware
 {
     public function check(): bool
     {
         if (0 < 1) {
-            throw new UserException();
+//            throw new UserException();
         }
 
         return parent::check();

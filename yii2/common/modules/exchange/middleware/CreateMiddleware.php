@@ -34,7 +34,7 @@ class CreateMiddleware extends AbstractCreateMiddleware
 //        self::$data->changingBalance = 0 - $this->request->amount * $this->getCount();
 
 
-        self::$data->historyType = self::$data->getHistoryType();
+//        self::$data->historyType = self::$data->getHistoryType();
 //        self::$data->historyComment = 'Create ' . $this->getCount() . 'x' . $this->request->amount;
     }
 
@@ -44,6 +44,7 @@ class CreateMiddleware extends AbstractCreateMiddleware
             'type' => $this->request->type,
             'amount' => $this->request->amount,
             'credit' => $this->request->credit,
+            'user_id' => self::$data->user->user->id,
         ];
     }
 
@@ -54,6 +55,6 @@ class CreateMiddleware extends AbstractCreateMiddleware
 
     protected function getTableName(): string
     {
-        return '';
+        return 'credit_exchange';
     }
 }

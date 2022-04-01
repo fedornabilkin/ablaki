@@ -27,6 +27,7 @@ class ExchangeService
 
         $mdlwr = $container->get(CheckCreditMiddleware::class);
         $mdlwr::$data = $container->get(ExchangeDataMiddleware::class, [$request]);
+        $mdlwr::$data->user = App::user()->identity->person;
 
         $mdlwr
             ->linkWith($container->get(CheckCountMiddleware::class))
