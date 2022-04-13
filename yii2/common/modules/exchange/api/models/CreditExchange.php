@@ -14,12 +14,28 @@ class CreditExchange extends \common\modules\exchange\models\CreditExchange
 {
     public $count = 1;
 
+    public const SCENARIO_CREATE = 'create';
+
+    public function scenarios(): array
+    {
+        $scenarios = parent::scenarios();
+        $scenarios[self::SCENARIO_CREATE] = ['count', 'countMin', 'type', 'credit', 'amount', 'created_at'];
+        return $scenarios;
+    }
+
     public function rules(): array
     {
         $rules = parent::rules();
 
-        $rules['countNumber'] = [['count'], 'number'];
-        $rules['countMin'] = [['count'], 'number', 'min' => 1];
+        $rules['countNumber'] = [['count'], 'number', 'on' => self::SCENARIO_CREATE];
+        $rules['countMin'] = [['count'], 'number', 'min' => 1, 'on' => self::SCENARIO_CREATE];
+        $rules[] = [['credit', 'amount'], 'required', 'on' => self::SCENARIO_CREATE];
+        $rules[] = [['credit', 'amount'], 'number', 'on' => self::SCENARIO_CREATE];
+        $rules[] = [['credit'], 'number', 'min' => 1, 'on' => self::SCENARIO_CREATE];
+        $rules[] = [['amount'], 'number', 'min' => 0.01, 'on' => self::SCENARIO_CREATE];
+
+        $rules['typeRequired'] = [['type'], 'required', 'on' => self::SCENARIO_CREATE];
+        $rules['typeRange'] = ['type', 'in', 'range' => $this->getAvailableTypes(), 'on' => self::SCENARIO_CREATE];
 
         return $rules;
     }

@@ -45,6 +45,7 @@ class CreateMiddleware extends AbstractCreateMiddleware
             'amount' => $this->request->amount,
             'credit' => $this->request->credit,
             'user_id' => self::$data->user->user->id,
+            'created_at' => time(),
         ];
     }
 

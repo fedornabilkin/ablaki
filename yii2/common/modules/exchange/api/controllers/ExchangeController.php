@@ -11,6 +11,7 @@ namespace common\modules\exchange\api\controllers;
 use api\filters\Auth;
 use common\helpers\App;
 use common\modules\exchange\api\actions\CreateAction;
+use common\modules\exchange\api\actions\UpdateAction;
 use common\modules\exchange\api\models\CreditExchange;
 use common\modules\exchange\service\ExchangeService;
 use Yii;
@@ -52,6 +53,8 @@ class ExchangeController extends ActiveController
     /** @var CreditExchange */
     public $modelClass = CreditExchange::class;
 
+    public $createScenario = CreditExchange::SCENARIO_CREATE;
+
     public function behaviors(): array
     {
         return array_merge(parent::behaviors(), [
@@ -71,11 +74,8 @@ class ExchangeController extends ActiveController
 //            'checkAccess' => [$this, 'checkAccess'],
 //        ];
 
-        $actions['create'] = [
-            'class' => CreateAction::class,
-            'modelClass' => $this->modelClass,
-            'checkAccess' => [$this, 'checkAccess'],
-        ];
+        $actions['create']['class'] = CreateAction::class;
+        $actions['update']['class'] = UpdateAction::class;
 
         $actions['index']['dataFilter'] = $this->getFilter();
 

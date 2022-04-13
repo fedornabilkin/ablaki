@@ -13,10 +13,13 @@ use common\modules\exchange\api\models\CreditExchange;
 use common\modules\exchange\api\requests\CreateRequest;
 use common\modules\exchange\service\ExchangeService;
 use Yii;
+use yii\base\Model;
 use yii\rest\Action;
 
 class CreateAction extends Action
 {
+    public $scenario = Model::SCENARIO_DEFAULT;
+
     public function run()
     {
         if ($this->checkAccess) {
@@ -24,9 +27,8 @@ class CreateAction extends Action
         }
 
         /* @var $model CreditExchange */
-        $model = new $this->modelClass([
-//            'scenario' => $this->scenario,
-        ]);
+        $model = new $this->modelClass();
+        $model->scenario = $this->scenario;
 
         $model->load(Yii::$app->getRequest()->getBodyParams(), '');
 

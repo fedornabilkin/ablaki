@@ -11,12 +11,16 @@ namespace common\modules\exchange\middleware;
 use common\middleware\DataMiddleware;
 use common\middleware\dto\Request;
 use common\modules\exchange\api\requests\CreateRequest;
+use common\modules\exchange\models\CreditExchange;
 
 /**
  *
  */
 class ExchangeDataMiddleware extends DataMiddleware
 {
+    /** @var CreditExchange */
+    public $model;
+
     /**
      * @var CreateRequest
      */
@@ -28,11 +32,17 @@ class ExchangeDataMiddleware extends DataMiddleware
         $this->request = $request;
     }
 
+    /**
+     * @return int
+     */
     public function getNeedCredit(): int
     {
         return (int)$this->request->credit * $this->request->count;
     }
 
+    /**
+     * @return int
+     */
     public function getNeedBalance(): int
     {
         return (int)$this->request->amount * $this->request->count;

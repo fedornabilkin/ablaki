@@ -67,7 +67,6 @@ return [
         'controller' => ['v1/exchange'],
         'pluralize' => false,
         'except' => ['view'],
-//        'only' => ['everyday'],
         'extraPatterns' => [
             'GET my' => 'my',
             'GET history' => 'history',

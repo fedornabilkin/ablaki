@@ -13,10 +13,14 @@ use common\middleware\person\CheckCreditMiddleware;
 use common\middleware\person\UpdatePersonMiddleware;
 use common\modules\exchange\api\requests\CreateRequest;
 use common\modules\exchange\middleware\CheckCountMiddleware;
+use common\modules\exchange\middleware\CheckFreeMiddleware;
 use common\modules\exchange\middleware\CreateMiddleware;
 use common\modules\exchange\middleware\ExchangeDataMiddleware;
+use common\modules\exchange\middleware\PlayMiddleware;
+use common\modules\exchange\middleware\SwitchCreatorMiddleware;
 use common\modules\exchange\models\CreditExchange;
 use Exception;
+use Yii;
 use yii\web\IdentityInterface;
 
 class ExchangeService
@@ -35,16 +39,36 @@ class ExchangeService
             ->linkWith($container->get(UpdatePersonMiddleware::class));
         // availableCount
         // create
-        // updatePerson
 
         if (!$mdlwr->check()) {
             throw new Exception();
         }
     }
 
-    public function confirm($request): void
+    public function confirm(CreditExchange $model): void
     {
+        $container = App::container();
 
+        // check
+        $mdlwr = $container->get(CheckFreeMiddleware::class);
+        /** @var ExchangeDataMiddleware data */
+        $mdlwr::$data = $container->get(ExchangeDataMiddleware::class);
+        $mdlwr::$data->user = App::user()->identity->person;
+        $mdlwr::$data->model = $model;
+
+        $mdlwr
+            ->linkWith($container->get(PlayMiddleware::class))
+            ->linkWith($container->get(SwitchCreatorMiddleware::class));
+        // update user client
+        // update user
+        // update model (confirm)
+        // history comission
+
+        if (!$mdlwr->check()) {
+            throw new Exception(
+                Yii::t('exchange', 'Error confirm')
+            );
+        }
     }
 
     public function remove($request): void
@@ -66,7 +90,7 @@ class ExchangeService
      * @param CreditExchange $model
      * @return int
      */
-    public function availableCount(IdentityInterface $identity, $model): int
+    public function availableCount(IdentityInterface $identity, CreditExchange $model): int
     {
         $count = $model::find()
             ->free()

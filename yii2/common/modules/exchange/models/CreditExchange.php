@@ -36,6 +36,8 @@ class CreditExchange extends ActiveRecord implements UserRelationInterface, Hist
         self::EX_TYPE_BUY => self::EX_TYPE_BUY,
     ];
 
+    protected $historyType = 'exchange';
+
     /**
      * {@inheritdoc}
      */
@@ -65,12 +67,6 @@ class CreditExchange extends ActiveRecord implements UserRelationInterface, Hist
     {
         return [
             [['user_id', 'user_buyer', 'updated_at', 'created_at'], 'integer'],
-            [['type', 'credit', 'amount'], 'required'],
-            [['credit', 'amount'], 'number'],
-            [['credit'], 'number', 'min' => 1],
-            [['amount'], 'number', 'min' => 0.01],
-//            [['type'], 'string', 'max' => 50],
-            ['type', 'in', 'range' => $this->getAvailableTypes()],
             [['user_buyer'], 'exist', 'skipOnError' => true, 'targetClass' => User::class, 'targetAttribute' => ['user_buyer' => 'id']],
             [['user_id'], 'exist', 'skipOnError' => true, 'targetClass' => User::class, 'targetAttribute' => ['user_id' => 'id']],
         ];
