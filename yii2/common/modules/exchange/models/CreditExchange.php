@@ -90,6 +90,22 @@ class CreditExchange extends ActiveRecord implements UserRelationInterface, Hist
     }
 
     /**
+     * @return bool
+     */
+    public function isSell(): bool
+    {
+        return trim($this->type) === self::EX_TYPE_SELL;
+    }
+
+    /**
+     * @return bool
+     */
+    public function isBuy(): bool
+    {
+        return trim($this->type) === self::EX_TYPE_BUY;
+    }
+
+    /**
      * @return ActiveQuery
      */
     public function getUserClient(): ActiveQuery

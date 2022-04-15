@@ -10,7 +10,6 @@ namespace common\modules\exchange\api\actions;
 
 use common\helpers\App;
 use common\modules\exchange\api\models\CreditExchange;
-use common\modules\exchange\api\requests\CreateRequest;
 use common\modules\exchange\service\ExchangeService;
 use Yii;
 use yii\base\Model;
@@ -32,8 +31,9 @@ class CreateAction extends Action
 
         $model->load(Yii::$app->getRequest()->getBodyParams(), '');
 
-        $request = new CreateRequest($model->amount, $model->credit, $model->type, $model->count);
-        (new ExchangeService())->create($request);
+        $service = App::container()->get(ExchangeService::class);
+        $service->create($model);
+
         App::response()->setStatusCode(201);
     }
 }

@@ -9,27 +9,23 @@
 namespace common\modules\exchange\middleware;
 
 use common\middleware\DataMiddleware;
-use common\middleware\dto\Request;
-use common\modules\exchange\api\requests\CreateRequest;
-use common\modules\exchange\models\CreditExchange;
+use common\modules\exchange\api\models\CreditExchange;
 
 /**
  *
  */
 class ExchangeDataMiddleware extends DataMiddleware
 {
-    /** @var CreditExchange */
-    public $model;
-
     /**
-     * @var CreateRequest
+     * @var CreditExchange
      */
-    protected $request;
+    protected $model;
 
-    public function __construct(Request $request, array $config = [])
+    public function __construct($user, CreditExchange $model, array $config = [])
     {
         parent::__construct($config);
-        $this->request = $request;
+        $this->model = $model;
+        $this->user = $user;
     }
 
     /**
@@ -37,7 +33,7 @@ class ExchangeDataMiddleware extends DataMiddleware
      */
     public function getNeedCredit(): int
     {
-        return (int)$this->request->credit * $this->request->count;
+        return (int)$this->model->credit * $this->model->count;
     }
 
     /**
@@ -45,6 +41,6 @@ class ExchangeDataMiddleware extends DataMiddleware
      */
     public function getNeedBalance(): int
     {
-        return (int)$this->request->amount * $this->request->count;
+        return (int)$this->model->amount * $this->model->count;
     }
 }

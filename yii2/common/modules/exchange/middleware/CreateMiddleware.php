@@ -9,17 +9,18 @@
 namespace common\modules\exchange\middleware;
 
 use common\middleware\AbstractCreateMiddleware;
-use common\modules\exchange\api\requests\CreateRequest;
+use common\modules\exchange\api\models\CreditExchange;
 use yii\base\UserException;
 
 class CreateMiddleware extends AbstractCreateMiddleware
 {
-    /** @var CreateRequest */
-    protected $request;
+    /** @var CreditExchange */
+    protected $model;
 
     public function check(): bool
     {
-        $this->request = self::$data->getRequest();
+        $this->model = self::$data->getModel();
+
         $this->updateData();
         if (!$this->create()) {
             throw new UserException();
@@ -28,22 +29,29 @@ class CreateMiddleware extends AbstractCreateMiddleware
         return parent::check();
     }
 
-    public function updateData()
+    public function updateData(): void
     {
-//        self::$data->changingCredit = 0 - $this->request->credit * $this->getCount();
-//        self::$data->changingBalance = 0 - $this->request->amount * $this->getCount();
+        $money = 0;
+        if ($this->model->isBuy()) {
+            self::$data->changingCredit = 0 - $this->model->credit * $this->getCount();
+            $money = $this->model->credit;
+        }
 
+        if ($this->model->isSell()) {
+            self::$data->changingBalance = 0 - $this->model->amount * $this->getCount();
+            $money = $this->model->amount;
+        }
 
-//        self::$data->historyType = self::$data->getHistoryType();
-//        self::$data->historyComment = 'Create ' . $this->getCount() . 'x' . $this->request->amount;
+        self::$data->historyComment = 'Create exchange ' . $this->getCount() . 'x' . $money;
+        self::$data->historyType = $this->model->getHistoryType();
     }
 
     public function getRow(): array
     {
         return [
-            'type' => $this->request->type,
-            'amount' => $this->request->amount,
-            'credit' => $this->request->credit,
+            'type' => $this->model->type,
+            'amount' => $this->model->amount,
+            'credit' => $this->model->credit,
             'user_id' => self::$data->user->user->id,
             'created_at' => time(),
         ];
@@ -51,11 +59,11 @@ class CreateMiddleware extends AbstractCreateMiddleware
 
     public function getCount(): int
     {
-        return $this->request->count;
+        return $this->model->count;
     }
 
     protected function getTableName(): string
     {
-        return 'credit_exchange';
+        return $this->model::tableName();
     }
 }

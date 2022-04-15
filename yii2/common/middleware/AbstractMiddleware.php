@@ -2,7 +2,6 @@
 
 namespace common\middleware;
 
-
 use Yii;
 use yii\db\Exception;
 

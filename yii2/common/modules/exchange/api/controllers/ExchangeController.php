@@ -11,6 +11,7 @@ namespace common\modules\exchange\api\controllers;
 use api\filters\Auth;
 use common\helpers\App;
 use common\modules\exchange\api\actions\CreateAction;
+use common\modules\exchange\api\actions\DeleteAction;
 use common\modules\exchange\api\actions\UpdateAction;
 use common\modules\exchange\api\models\CreditExchange;
 use common\modules\exchange\service\ExchangeService;
@@ -68,14 +69,9 @@ class ExchangeController extends ActiveController
     {
         $actions = parent::actions();
 
-//        $actions['delete'] = [
-//            'class' => DeleteAction::class,
-//            'modelClass' => $this->modelClass,
-//            'checkAccess' => [$this, 'checkAccess'],
-//        ];
-
         $actions['create']['class'] = CreateAction::class;
         $actions['update']['class'] = UpdateAction::class;
+        $actions['delete']['class'] = DeleteAction::class;
 
         $actions['index']['dataFilter'] = $this->getFilter();
 

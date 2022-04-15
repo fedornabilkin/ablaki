@@ -10,6 +10,9 @@ namespace common\modules\exchange\middleware;
 
 use common\middleware\AbstractMiddleware;
 
+/**
+ * @deprecated
+ */
 class CheckCountMiddleware extends AbstractMiddleware
 {
     public function check(): bool

@@ -19,30 +19,25 @@ class UpdatePersonMiddleware extends AbstractMiddleware
     {
         $this->consoleLog(self::class);
 
-        $this->execute();
+        $this->updatePerson();
+        $this->historyBalance();
+        $this->historyRating();
 
         return parent::check();
     }
 
-    public function execute()
-    {
-        $this->updatePerson();
-        $this->historyBalance();
-        $this->historyRating();
-    }
-
-    public function updatePerson()
+    public function updatePerson(): void
     {
         $person = self::$data->user;
         $person->updateCounters(self::$data->getUpdatePersonCounters());
     }
 
-    public function historyBalance()
+    public function historyBalance(): void
     {
         $this->insertNext(new HistoryBalanceMiddleware());
     }
 
-    public function historyRating()
+    public function historyRating(): void
     {
         $this->insertNext(new HistoryRatingMiddleware());
     }

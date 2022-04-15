@@ -18,6 +18,7 @@ class CheckFreeMiddleware extends AbstractMiddleware
     public function check(): bool
     {
         if (!$this->checkPosition()) {
+            // todo FreeException
             return $this->stopProcessing('No free position');
         }
 

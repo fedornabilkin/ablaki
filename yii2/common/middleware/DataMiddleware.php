@@ -8,9 +8,9 @@
 
 namespace common\middleware;
 
-use common\middleware\dto\Request;
 use common\models\user\Person;
 use yii\base\BaseObject;
+use yii\db\ActiveRecord;
 
 class DataMiddleware extends BaseObject
 {
@@ -34,9 +34,9 @@ class DataMiddleware extends BaseObject
     /** @var string */
     public $historyComment = 'other';
     /**
-     * @var Request
+     * @var ActiveRecord
      */
-    protected $request;
+    protected $model;
 
     public function getUpdatePersonCounters(): array
     {
@@ -59,19 +59,27 @@ class DataMiddleware extends BaseObject
     }
 
     /**
-     * @param Request $request
-     * @return void
+     * @return Person
      */
-    public function setRequest(Request $request): void
+    public function getUser(): Person
     {
-        $this->request = $request;
+        return $this->user;
     }
 
     /**
-     * @return Request
+     * @param ActiveRecord $model
+     * @return void
      */
-    public function getRequest(): Request
+    public function setModel(ActiveRecord $model): void
     {
-        return $this->request;
+        $this->model = $model;
+    }
+
+    /**
+     * @return ActiveRecord
+     */
+    public function getModel(): ActiveRecord
+    {
+        return $this->model;
     }
 }
