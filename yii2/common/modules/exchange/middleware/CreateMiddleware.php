@@ -42,7 +42,7 @@ class CreateMiddleware extends AbstractCreateMiddleware
             $money = $this->model->amount;
         }
 
-        self::$data->historyComment = 'Create exchange ' . $this->getCount() . 'x' . $money;
+        self::$data->historyComment = 'Create ' . $this->getCount() . 'x' . $money;
         self::$data->historyType = $this->model->getHistoryType();
     }
 

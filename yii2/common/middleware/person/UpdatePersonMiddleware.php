@@ -28,8 +28,10 @@ class UpdatePersonMiddleware extends AbstractMiddleware
 
     public function updatePerson(): void
     {
-        $person = self::$data->user;
-        $person->updateCounters(self::$data->getUpdatePersonCounters());
+        if (self::$data->needUpdatePersonCounters()) {
+            $person = self::$data->user;
+            $person->updateCounters(self::$data->getUpdatePersonCounters());
+        }
     }
 
     public function historyBalance(): void

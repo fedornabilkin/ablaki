@@ -9,11 +9,18 @@
 namespace common\modules\exchange\middleware;
 
 use common\middleware\AbstractMiddleware;
+use common\middleware\HistoryCommissionMiddleware;
 use common\middleware\person\UpdatePersonMiddleware;
+use common\modules\exchange\api\models\CreditExchange;
 use yii\db\Exception;
 
 class SwitchCreatorMiddleware extends AbstractMiddleware
 {
+    /**
+     * @var CreditExchange
+     */
+    private $model;
+
     /**
      * @return bool
      * @throws Exception
@@ -22,13 +29,28 @@ class SwitchCreatorMiddleware extends AbstractMiddleware
     {
         $this->model = self::$data->model;
 
-        self::$data->user = $this->model->user->person; // Далее работаем с персоной создателя игры
+        self::$data->setUser($this->model->user->person); // Далее работаем с персоной создателя игры
 
-//        self::$data->changingBalance = $this->model->kon * 2 - self::$data->commissionAmount;
-        self::$data->historyComment = 'Confirm exchange position #' . $this->model->id;
-//        self::$data->changingRating = $this->model->normalizeRating(self::$data->user->rating);
+        self::$data->historyComment = 'Satisfy #' . $this->model->id;
 
-        $this->insertNext(new UpdatePersonMiddleware());
+        self::$data->changingCredit = 0;
+        self::$data->changingBalance = 0;
+
+        if ($this->model->isSell()) {
+//            self::$data->historyType .= '_cr';
+            self::$data->commissionAmount = $this->model->credit * 0.05;
+            self::$data->changingCredit = $this->model->credit - self::$data->commissionAmount;
+        }
+
+        if ($this->model->isBuy()) {
+//            self::$data->historyType .= '_kg';
+            self::$data->commissionAmount = $this->model->amount * 0.05;
+            self::$data->changingBalance = $this->model->amount - self::$data->commissionAmount;
+        }
+
+        $next = new UpdatePersonMiddleware();
+        $next->insertNext(new HistoryCommissionMiddleware());
+        $this->insertNext($next);
 
         return parent::check();
     }

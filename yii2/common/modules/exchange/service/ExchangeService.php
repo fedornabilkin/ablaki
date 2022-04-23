@@ -21,6 +21,7 @@ use common\modules\exchange\middleware\CreateMiddleware;
 use common\modules\exchange\middleware\DeleteMiddleware;
 use common\modules\exchange\middleware\ExchangeDataMiddleware;
 use common\modules\exchange\middleware\PlayMiddleware;
+use common\modules\exchange\middleware\RemoveAllMiddleware;
 use common\modules\exchange\middleware\SwitchCreatorMiddleware;
 use Exception;
 use Yii;
@@ -33,9 +34,10 @@ class ExchangeService
     /**
      * @param CreditExchange $model
      * @return void
+     * @throws CountException
      * @throws InvalidConfigException
-     * @throws \yii\db\Exception
      * @throws NotInstantiableException
+     * @throws \yii\db\Exception
      */
     public function create(CreditExchange $model): void
     {
@@ -82,10 +84,6 @@ class ExchangeService
             ->linkWith($container->get($this->getChecker($model, false)))
             ->linkWith($container->get(PlayMiddleware::class))
             ->linkWith($container->get(SwitchCreatorMiddleware::class));
-        // update user client
-        // update user
-        // update model (confirm)
-        // history comission
 
         if (!$mdlwr->check()) {
             throw new Exception(
@@ -115,8 +113,18 @@ class ExchangeService
 
     public function remove(): void
     {
-        // remove
-        // update balance
+        $container = App::container();
+
+        $mdlwr = $container->get(RemoveAllMiddleware::class);
+        $mdlwr::$data = $container->get(ExchangeDataMiddleware::class, [App::user()->identity->person, new CreditExchange()]);
+
+        $mdlwr->linkWith($container->get(UpdatePersonMiddleware::class));
+
+        if (!$mdlwr->check()) {
+            throw new Exception(
+                Yii::t('exchange', 'Error remove')
+            );
+        }
     }
 
     /**

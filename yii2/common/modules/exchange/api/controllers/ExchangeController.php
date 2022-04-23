@@ -12,6 +12,7 @@ use api\filters\Auth;
 use common\helpers\App;
 use common\modules\exchange\api\actions\CreateAction;
 use common\modules\exchange\api\actions\DeleteAction;
+use common\modules\exchange\api\actions\RemoveAction;
 use common\modules\exchange\api\actions\UpdateAction;
 use common\modules\exchange\api\models\CreditExchange;
 use common\modules\exchange\service\ExchangeService;
@@ -59,7 +60,7 @@ class ExchangeController extends ActiveController
     public function behaviors(): array
     {
         return array_merge(parent::behaviors(), [
-            'authenticator' => [
+            Auth::class => [
                 'class' => Auth::class,
             ],
         ]);
@@ -72,6 +73,9 @@ class ExchangeController extends ActiveController
         $actions['create']['class'] = CreateAction::class;
         $actions['update']['class'] = UpdateAction::class;
         $actions['delete']['class'] = DeleteAction::class;
+
+        $actions['remove']['class'] = RemoveAction::class;
+        $actions['remove']['modelClass'] = $this->modelClass;
 
         $actions['index']['dataFilter'] = $this->getFilter();
 

@@ -41,12 +41,22 @@ class CreditExchange extends ActiveRecord implements UserRelationInterface, Hist
     /**
      * {@inheritdoc}
      */
-    public static function tableName()
+    public static function tableName(): string
     {
         return 'credit_exchange';
     }
 
-    public static function find(): ActiveQuery
+    public static function balanceFieldName(): string
+    {
+        return 'amount';
+    }
+
+    public static function creditFieldName(): string
+    {
+        return 'credit';
+    }
+
+    public static function find(): CreditExchangeQuery
     {
         return new CreditExchangeQuery(static::class);
     }

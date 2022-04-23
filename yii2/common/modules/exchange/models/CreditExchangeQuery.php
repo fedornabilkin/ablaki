@@ -38,12 +38,12 @@ class CreditExchangeQuery extends ActiveQuery
 
     public function onlySell(): self
     {
-        return $this->withType(CreditExchange::EX_TYPE_SELL);
+        return $this->withType($this->modelClass::EX_TYPE_SELL);
     }
 
     public function onlyBuy(): self
     {
-        return $this->withType(CreditExchange::EX_TYPE_BUY);
+        return $this->withType($this->modelClass::EX_TYPE_BUY);
     }
 
     public function withType(string $type): self

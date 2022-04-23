@@ -38,6 +38,16 @@ class DataMiddleware extends BaseObject
      */
     protected $model;
 
+    public function needUpdatePersonCounters(): bool
+    {
+        foreach ($this->getUpdatePersonCounters() as $cnt) {
+            if ($cnt > 0) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     public function getUpdatePersonCounters(): array
     {
         return [
@@ -56,6 +66,14 @@ class DataMiddleware extends BaseObject
     public function getNeedBalance(): int
     {
         return 0;
+    }
+
+    /**
+     * @param Person $user
+     */
+    public function setUser(Person $user): void
+    {
+        $this->user = $user;
     }
 
     /**

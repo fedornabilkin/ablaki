@@ -8,7 +8,6 @@
 
 namespace common\middleware;
 
-use common\middleware\AbstractMiddleware;
 use yii\db\ActiveRecord;
 
 /**
@@ -17,39 +16,23 @@ use yii\db\ActiveRecord;
  */
 abstract class AbstractHistoryMiddleware extends AbstractMiddleware
 {
-    protected $values = [];
-
     /**
      * @inheritDoc
      */
     public function check(): bool
     {
-        $this->execute();
+        $values = $this->getHistoryValues();
+        if ($values) {
+            $model = $this->getHistoryModel();
+            $model->attributes = $values;
+
+            $model->save();
+        }
 
         return parent::check();
     }
 
-    public function execute()
-    {
-        $this->setValues();
-        if ($this->values) {
-            $this->saveHistory();
-        }
-    }
-
-    public function setValues()
-    {
-        $this->values = $this->getHistoryValues();
-    }
-
-    protected function saveHistory()
-    {
-        $model = $this->getHistoryModel();
-        $model->attributes = $this->values;
-
-        $model->save();
-    }
-
     abstract public function getHistoryModel(): ActiveRecord;
+
     abstract public function getHistoryValues(): array;
 }

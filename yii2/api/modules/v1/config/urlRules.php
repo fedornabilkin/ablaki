@@ -68,6 +68,7 @@ return [
         'pluralize' => false,
         'except' => ['view'],
         'extraPatterns' => [
+            'GET remove' => 'remove',
             'GET my' => 'my',
             'GET history' => 'history',
             'GET available-count' => 'available-count',
