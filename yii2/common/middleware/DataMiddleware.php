@@ -41,7 +41,7 @@ class DataMiddleware extends BaseObject
     public function needUpdatePersonCounters(): bool
     {
         foreach ($this->getUpdatePersonCounters() as $cnt) {
-            if ($cnt > 0) {
+            if ($cnt !== 0) {
                 return true;
             }
         }

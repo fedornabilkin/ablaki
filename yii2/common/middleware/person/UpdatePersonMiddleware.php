@@ -17,11 +17,10 @@ class UpdatePersonMiddleware extends AbstractMiddleware
      */
     public function check(): bool
     {
-        $this->consoleLog(self::class);
-
         $this->updatePerson();
-        $this->historyBalance();
-        $this->historyRating();
+
+        $this->insertNext(new HistoryBalanceMiddleware());
+        $this->insertNext(new HistoryRatingMiddleware());
 
         return parent::check();
     }
@@ -32,15 +31,5 @@ class UpdatePersonMiddleware extends AbstractMiddleware
             $person = self::$data->user;
             $person->updateCounters(self::$data->getUpdatePersonCounters());
         }
-    }
-
-    public function historyBalance(): void
-    {
-        $this->insertNext(new HistoryBalanceMiddleware());
-    }
-
-    public function historyRating(): void
-    {
-        $this->insertNext(new HistoryRatingMiddleware());
     }
 }
