@@ -26,6 +26,11 @@ use yii\db\ActiveRecord;
  */
 class HistoryBalance extends ActiveRecord implements UserRelationInterface
 {
+    public static function find(): HistoryBalanceQuery
+    {
+        return new HistoryBalanceQuery(static::class);
+    }
+
     public function behaviors()
     {
         return array_merge_recursive(parent::behaviors(), [
