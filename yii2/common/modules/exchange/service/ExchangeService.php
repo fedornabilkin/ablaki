@@ -15,6 +15,7 @@ use common\middleware\person\CheckCreditMiddleware;
 use common\middleware\person\UpdatePersonMiddleware;
 use common\modules\exchange\api\models\CreditExchange;
 use common\modules\exchange\exception\CountException;
+use common\modules\exchange\middleware\CheckCountMiddleware;
 use common\modules\exchange\middleware\CheckFreeMiddleware;
 use common\modules\exchange\middleware\CheckMyMiddleware;
 use common\modules\exchange\middleware\CreateMiddleware;
@@ -46,19 +47,15 @@ class ExchangeService
         $mdlwr = $container->get($this->getChecker($model));
         $mdlwr::$data = $container->get(ExchangeDataMiddleware::class, [App::user()->identity->person, $model]);
 
-        // todo косячно выглядит, надо бы в миддлварь всунуть
         $availableCnt = $this->availableCount(App::user()->identity, $model);
-        if ($model->isBuy() && $availableCnt < $model->count) {
-            $model->count = $availableCnt;
-            if ($model->count < 1) {
-                throw new CountException();
-            }
-        }
+        $mdlwr::$data->setAvailableCount($availableCnt);
 
         $mdlwr
+            ->linkWith($container->get(CheckCountMiddleware::class))
             ->linkWith($container->get(CreateMiddleware::class))
             ->linkWith($container->get(UpdatePersonMiddleware::class));
 
+        // todo transaction
         if (!$mdlwr->check()) {
             throw new Exception(
                 Yii::t('exchange', 'Error create')
@@ -85,6 +82,7 @@ class ExchangeService
             ->linkWith($container->get(PlayMiddleware::class))
             ->linkWith($container->get(SwitchCreatorMiddleware::class));
 
+        // todo transaction
         if (!$mdlwr->check()) {
             throw new Exception(
                 Yii::t('exchange', 'Error confirm')
@@ -104,6 +102,7 @@ class ExchangeService
             ->linkWith($container->get(DeleteMiddleware::class))
             ->linkWith($container->get(UpdatePersonMiddleware::class));
 
+        // todo transaction
         if (!$mdlwr->check()) {
             throw new Exception(
                 Yii::t('exchange', 'Error delete')
@@ -120,6 +119,7 @@ class ExchangeService
 
         $mdlwr->linkWith($container->get(UpdatePersonMiddleware::class));
 
+        // todo transaction
         if (!$mdlwr->check()) {
             throw new Exception(
                 Yii::t('exchange', 'Error remove')

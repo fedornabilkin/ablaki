@@ -21,6 +21,8 @@ class ExchangeDataMiddleware extends DataMiddleware
      */
     protected $model;
 
+    private $availableCount;
+
     public function __construct($user, CreditExchange $model, array $config = [])
     {
         parent::__construct($config);
@@ -42,5 +44,21 @@ class ExchangeDataMiddleware extends DataMiddleware
     public function getNeedBalance(): int
     {
         return (int)$this->model->amount * $this->model->count;
+    }
+
+    /**
+     * @return mixed
+     */
+    public function getAvailableCount()
+    {
+        return $this->availableCount;
+    }
+
+    /**
+     * @param mixed $availableCount
+     */
+    public function setAvailableCount($availableCount): void
+    {
+        $this->availableCount = $availableCount;
     }
 }

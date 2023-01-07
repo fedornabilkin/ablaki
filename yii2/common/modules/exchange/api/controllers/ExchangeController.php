@@ -89,7 +89,7 @@ class ExchangeController extends ActiveController
                 'query' => $this->modelClass::find()
                     ->select('*, (1000 * amount / credit) AS price')
                     ->orderBy(['price' => $sortPrice])
-                    ->with(['user', 'userClient'])
+                    ->with(['user', 'userBuyer'])
                     ->list(App::user()->identity)
                     ->andFilterWhere($filter),
             ]);
@@ -100,7 +100,7 @@ class ExchangeController extends ActiveController
             return new ActiveDataProvider([
                 'query' => $this->modelClass::find()
                     ->orderBy(['updated_at' => SORT_DESC])
-                    ->with(['user', 'userClient'])
+                    ->with(['user', 'userBuyer'])
                     ->listHistory(App::user()->identity)
                     ->andFilterWhere($filter),
             ]);
@@ -112,7 +112,7 @@ class ExchangeController extends ActiveController
                 'query' => $this->modelClass::find()
                     ->select('*, (1000 * amount / credit) AS price')
                     ->orderBy(['price' => SORT_ASC])
-                    ->with(['user', 'userClient'])
+                    ->with(['user', 'userBuyer'])
                     ->listMy(App::user()->identity)
                     ->andFilterWhere($filter),
             ]);
@@ -126,7 +126,7 @@ class ExchangeController extends ActiveController
     public function actionAvailableCount(): int
     {
         return (new ExchangeService())
-            ->availableCount(App::user()->identity, $this->modelClass);
+            ->availableCount(App::user()->identity, (new $this->modelClass));
     }
 
     public function checkAccess($action, $model = null, $params = []): void
