@@ -14,7 +14,7 @@ class BonusController extends Controller
     public function behaviors(): array
     {
         return array_merge(parent::behaviors(), [
-            'authenticator' => [
+            Auth::class => [
                 'class' => Auth::class,
             ],
         ]);

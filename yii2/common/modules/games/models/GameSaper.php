@@ -2,6 +2,7 @@
 
 namespace common\modules\games\models;
 
+use common\models\history\HistorySaveInterface;
 use common\models\user\Person;
 use common\modules\games\models\repo\Saper;
 use Yii;
@@ -10,7 +11,7 @@ use Yii;
  * Class GameSaper
  * @package common\modules\games\models
  */
-class GameSaper extends Saper
+class GameSaper extends Saper implements HistorySaveInterface
 {
     public $count = 1;
     public $col;
@@ -35,6 +36,7 @@ class GameSaper extends Saper
         return $scenarios;
     }
 
+    // todo use HistoryTypeTrait
     public function getHistoryType(): string
     {
         return self::HISTORY_TYPE;
@@ -173,18 +175,11 @@ class GameSaper extends Saper
      * @param float $kon
      * @return float|int
      */
-    public function normalizeRating($person, float $kon)
+    public function normalizeRating(float $rating): float
     {
-        if(!($person instanceof Person)){
-            return 0;
-        }
-
-        $rating = $person->rating;
-
         $kef = ($rating < 0.99) ? 1.9 : 0;
-        $kon = ($kon < 0.01) ? $this->kon : $kon;
 
-        return round(($kon / 2) / ($rating + $kef), 5);
+        return round(($this->kon / 2) / ($rating + $kef), 5);
     }
 
     /**

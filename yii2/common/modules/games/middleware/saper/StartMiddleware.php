@@ -8,16 +8,24 @@
 
 namespace common\modules\games\middleware\saper;
 
-use common\modules\games\middleware\GameMiddleware;
+use common\middleware\AbstractMiddleware;
+use common\modules\games\middleware\GameDataMiddleware;
+use common\modules\games\models\GameSaper;
 
-class StartMiddleware extends GameMiddleware
+class StartMiddleware extends AbstractMiddleware
 {
+    /** @var GameDataMiddleware */
+    public static $data;
+    /** @var GameSaper */
+    private $model;
 
     /**
      * @inheritDoc
      */
     public function check(): bool
     {
+        $this->model = self::$data->game;
+
         $this->updateData();
         if (!$this->start()) {
             return $this->stopProcessing('Error start game');
@@ -28,16 +36,16 @@ class StartMiddleware extends GameMiddleware
 
     public function updateData()
     {
-        self::$data->changingBalance = 0 - self::$data->game->kon * self::$data->game->count;
-        self::$data->historyType = self::$data->game->getHistoryType();
-        self::$data->historyComment = 'Start game #' . self::$data->game->id;
+        self::$data->changingBalance = 0 - self::$data->getKon() * self::$data->getCount();
+        self::$data->historyType = $this->model->getHistoryType();
+        self::$data->historyComment = 'Start game #' . $this->model->id;
     }
 
     public function start()
     {
-        self::$data->game->user_gamer = self::$data->user->user_id;
-        self::$data->game->time_start_at = time();
+        $this->model->user_gamer = self::$data->user->user_id;
+        $this->model->time_start_at = time();
 
-        return self::$data->game->save();
+        return $this->model->save();
     }
 }

@@ -67,7 +67,7 @@ use mdm\admin\components\Helper;
                 ],
             ],
 
-
+            ['label' => Yii::t('app', 'Exchange'), 'icon' => 'refresh', 'url' => ['/exchange/']],
             ['label' => 'Статьи', 'icon' => 'file-o', 'url' => ['/post']],
 
             ['label' => 'Other', 'options' => ['class' => 'header']],

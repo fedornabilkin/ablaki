@@ -12,6 +12,9 @@ namespace common\models;
 use common\singletones\Person;
 use yii\db\ActiveRecord;
 
+/**
+ * @deprecated
+ */
 class AbstractModel extends ActiveRecord
 {
     /**

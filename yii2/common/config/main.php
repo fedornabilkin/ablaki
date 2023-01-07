@@ -2,6 +2,7 @@
 
 use common\helpers\Env;
 use common\models\user\User;
+use common\modules\exchange\Module;
 use yii\redis\Cache;
 
 $config = [
@@ -49,6 +50,9 @@ $config = [
             'modelMap' => [
                 'User' => User::class,
             ],
+        ],
+        'exchange' => [
+            'class' => Module::class,
         ],
     ],
 ];

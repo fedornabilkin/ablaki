@@ -9,13 +9,13 @@
 namespace common\modules\games\apiControllers;
 
 use api\filters\Auth;
-use common\middleware\DataMiddleware;
 use common\middleware\person\UpdatePersonMiddleware;
 use common\modules\games\apiActions\saper\CreateAction;
 use common\modules\games\apiActions\saper\DeleteAction;
 use common\modules\games\apiActions\saper\RemoveAction;
 use common\modules\games\middleware\CheckFreeGameMiddleware;
 use common\modules\games\middleware\CheckNotMyGameMiddleware;
+use common\modules\games\middleware\GameDataMiddleware;
 use common\modules\games\middleware\GamerCheckBalanceMiddleware;
 use common\modules\games\middleware\saper\CheckMyStartedGameMiddleware;
 use common\modules\games\middleware\saper\PlayMiddleware;
@@ -36,7 +36,7 @@ class SaperController extends ActiveController
     public function behaviors(): array
     {
         return array_merge(parent::behaviors(), [
-            'authenticator' => [
+            Auth::class => [
                 'class' => Auth::class,
             ],
         ]);
@@ -75,7 +75,7 @@ class SaperController extends ActiveController
     {
         $model = $this->findModel($id);
 
-        $data = new DataMiddleware([
+        $data = new GameDataMiddleware([
             'game' => $model,
             'user' => Yii::$app->user->identity->person,
         ]);
@@ -109,7 +109,7 @@ class SaperController extends ActiveController
             return $model->getErrors();
         }
 
-        $data = new DataMiddleware([
+        $data = new GameDataMiddleware([
             'game' => $model,
             'user' => Yii::$app->user->identity->person,
         ]);

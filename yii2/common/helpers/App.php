@@ -10,12 +10,15 @@ namespace common\helpers;
 
 use Yii;
 use yii\base\InvalidConfigException;
+use yii\di\Container;
 use yii\web\Response;
+use yii\web\UrlManager;
 use yii\web\User;
 
 /**
  * @method static User user()
  * @method static Response response()
+ * @method static UrlManager urlManager()
  */
 class App
 {
@@ -34,5 +37,13 @@ class App
     public static function getComponent($componentName)
     {
         return Yii::$app->get($componentName);
+    }
+
+    /**
+     * @return Container
+     */
+    public static function container(): Container
+    {
+        return Yii::$container;
     }
 }

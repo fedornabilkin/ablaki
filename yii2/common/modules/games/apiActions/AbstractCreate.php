@@ -9,7 +9,7 @@
 namespace common\modules\games\apiActions;
 
 use common\helpers\App;
-use common\middleware\DataMiddleware;
+use common\modules\games\middleware\GameDataMiddleware;
 use common\modules\games\middleware\GameMiddleware;
 use Yii;
 use yii\base\Model;
@@ -31,9 +31,9 @@ abstract class AbstractCreate extends Action
         return $this->model->validate();
     }
 
-    public function getDataMiddleware(): DataMiddleware
+    public function getDataMiddleware(): GameDataMiddleware
     {
-        return new DataMiddleware([
+        return new GameDataMiddleware([
             'game' => $this->model,
             'user' => App::user()->identity->person,
         ]);

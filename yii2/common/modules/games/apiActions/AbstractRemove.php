@@ -9,7 +9,7 @@
 namespace common\modules\games\apiActions;
 
 use common\helpers\App;
-use common\middleware\DataMiddleware;
+use common\modules\games\middleware\GameDataMiddleware;
 use common\modules\games\middleware\GameMiddleware;
 use Yii;
 use yii\base\UserException;
@@ -19,9 +19,9 @@ abstract class AbstractRemove extends Action
 {
     abstract public function getMiddleware(): GameMiddleware;
 
-    public function getDataMiddleware(): DataMiddleware
+    public function getDataMiddleware(): GameDataMiddleware
     {
-        return new DataMiddleware([
+        return new GameDataMiddleware([
             'user' => App::user()->identity->person,
         ]);
     }

@@ -2,7 +2,6 @@
 
 use api\models\UserIdentity;
 use api\modules\v1\Module;
-use yii\rest\UrlRule;
 
 $params = array_merge(
     require __DIR__ . '/../../common/config/params.php',
@@ -17,7 +16,7 @@ if (function_exists($header_remove)) {
 return [
     'id' => 'api',
     'basePath' => dirname(__DIR__),
-    'bootstrap' => ['log'],
+    'bootstrap' => ['log', 'v1'],
     'controllerNamespace' => 'api\controllers',
     'components' => [
         'response' => [
@@ -64,59 +63,6 @@ return [
                 'login' => 'site/login',
                 'logout' => 'site/logout',
                 'registration' => 'site/registration',
-                [
-                    'class' => UrlRule::class,
-                    'controller' => 'v1/saper',
-                    'pluralize' => false,
-                    'except' => ['view'],
-                    'extraPatterns' => [
-                        'GET remove' => 'remove',
-                        'GET start/{id}' => 'start',
-                        'POST play/{id}' => 'play',
-                        'POST double/{id}' => 'double',
-                    ],
-                ],
-                [
-                    'class' => UrlRule::class,
-                    'controller' => ['v1/orel'],
-                    'pluralize' => false,
-                    'except' => ['view'],
-                    'extraPatterns' => [
-                        'GET remove' => 'remove',
-                        'GET my' => 'my',
-                        'GET history' => 'history',
-                        'GET kon-count' => 'kon-count',
-                        'POST play/{id}' => 'play',
-                    ],
-                ],
-                [
-                    'class' => UrlRule::class,
-                    'controller' => ['v1/rating'],
-                    'pluralize' => false,
-                    'only' => ['everyday'],
-                    'extraPatterns' => [
-                        'GET everyday' => 'everyday',
-                    ],
-                ],
-                [
-                    'class' => UrlRule::class,
-                    'controller' => ['v1/bonus'],
-                    'pluralize' => false,
-                    'only' => ['everyday'],
-                    'extraPatterns' => [
-                        'GET everyday' => 'everyday',
-                    ],
-                ],
-                [
-                    'class' => UrlRule::class,
-                    'controller' => ['v1/user'],
-                    'only' => ['wall', 'data', 'profile'],
-                    'extraPatterns' => [
-                        'GET data' => 'data',
-                        'GET profile' => 'profile',
-                        'GET wall/<login:\w+>' => 'wall',
-                    ],
-                ],
             ],
         ],
     ],

@@ -2,7 +2,6 @@
 
 namespace common\middleware;
 
-
 use Yii;
 use yii\db\Exception;
 
@@ -93,7 +92,7 @@ abstract class AbstractMiddleware
     {
         self::$errors[] = $error;
         $this->consoleLog([
-            'user' => self::$data->user->getAttributes(),
+            'user' => self::$data->user ? self::$data->user->getAttributes() : [],
             'errors' => self::$errors,
         ]);
     }

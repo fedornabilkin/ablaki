@@ -22,7 +22,7 @@ class SiteController extends Controller
     public function behaviors()
     {
         $behaviors = parent::behaviors();
-        $behaviors['authenticator'] = [
+        $behaviors[Auth::class] = [
             'class' => Auth::class,
             'except' => ['login'],
             'only' => ['logout'],

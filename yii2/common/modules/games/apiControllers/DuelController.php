@@ -19,13 +19,11 @@ class DuelController extends ActiveController
 
     public function behaviors(): array
     {
-        $arr = [
-            'authenticator' => [
+        return array_merge(parent::behaviors(), [
+            Auth::class => [
                 'class' => Auth::class,
             ],
-        ];
-
-        return array_merge(parent::behaviors(), $arr);
+        ]);
     }
 
     public function actions()

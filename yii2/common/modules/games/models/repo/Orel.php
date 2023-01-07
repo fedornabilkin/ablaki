@@ -43,10 +43,8 @@ class Orel extends ActiveRecord implements UserRelationInterface
     public function behaviors()
     {
         return array_merge(parent::behaviors(), [
-            'TimestampBehavior' => [
+            TimestampBehavior::class => [
                 'class' => TimestampBehavior::class,
-                'createdAtAttribute' => 'created_at',
-                'updatedAtAttribute' => 'updated_at',
             ],
         ]);
     }
@@ -63,7 +61,7 @@ class Orel extends ActiveRecord implements UserRelationInterface
 
     public static function find()
     {
-        return new OrelQuery(get_called_class());
+        return new OrelQuery(static::class);
     }
 
     /**
