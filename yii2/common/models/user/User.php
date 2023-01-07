@@ -27,7 +27,6 @@ class User extends \dektrium\user\models\User
     public $cookieParams;
     private $person;
 
-
     /**
      * @param $insert
      * @param $changedAttributes
@@ -74,13 +73,5 @@ class User extends \dektrium\user\models\User
             'name' => $this->cookieParams['referrer']['name'],
         ]);
         $this->person->referrer = $service->getValue();
-    }
-
-    public function fields(): array
-    {
-        return [
-            'username',
-            'person',
-        ];
     }
 }

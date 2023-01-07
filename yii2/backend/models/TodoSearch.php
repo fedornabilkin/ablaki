@@ -7,7 +7,7 @@ use yii\base\Model;
 use yii\data\ActiveDataProvider;
 
 /**
- * TodoSearch represents the model behind the search form of `common\models\Todo`.
+ * TodoSearch represents the model behind the search form of `common\models\Todo1`.
  */
 class TodoSearch extends Todo
 {

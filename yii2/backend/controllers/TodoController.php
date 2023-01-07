@@ -10,7 +10,7 @@ use yii\web\Controller;
 use yii\web\NotFoundHttpException;
 
 /**
- * TodoController implements the CRUD actions for Todo model.
+ * TodoController implements the CRUD actions for Tod-o model.
  */
 class TodoController extends Controller
 {
@@ -30,7 +30,7 @@ class TodoController extends Controller
     }
 
     /**
-     * Lists all Todo models.
+     * Lists all Tod-o models.
      * @return mixed
      */
     public function actionIndex()
@@ -44,7 +44,7 @@ class TodoController extends Controller
     }
 
     /**
-     * Displays a single Todo model.
+     * Displays a single Tod-o model.
      * @param integer $id
      * @return mixed
      * @throws NotFoundHttpException if the model cannot be found
@@ -57,7 +57,7 @@ class TodoController extends Controller
     }
 
     /**
-     * Creates a new Todo model.
+     * Creates a new Tod-o model.
      * If creation is successful, the browser will be redirected to the 'view' page.
      * @return mixed
      */
@@ -75,7 +75,7 @@ class TodoController extends Controller
     }
 
     /**
-     * Updates an existing Todo model.
+     * Updates an existing Tod-o model.
      * If update is successful, the browser will be redirected to the 'view' page.
      * @param integer $id
      * @return mixed
@@ -95,7 +95,7 @@ class TodoController extends Controller
     }
 
     /**
-     * Deletes an existing Todo model.
+     * Deletes an existing Tod-o model.
      * If deletion is successful, the browser will be redirected to the 'index' page.
      * @param integer $id
      * @return mixed
@@ -109,10 +109,10 @@ class TodoController extends Controller
     }
 
     /**
-     * Finds the Todo model based on its primary key value.
+     * Finds the Tod-o model based on its primary key value.
      * If the model is not found, a 404 HTTP exception will be thrown.
      * @param integer $id
-     * @return Todo the loaded model
+     * @return Tod-o the loaded model
      * @throws NotFoundHttpException if the model cannot be found
      */
     protected function findModel($id)
