@@ -2,7 +2,6 @@
 
 namespace common\modules\games\models;
 
-use common\models\history\HistorySaveInterface;
 use common\models\user\Person;
 use common\modules\games\models\repo\Saper;
 use Yii;
@@ -11,7 +10,7 @@ use Yii;
  * Class GameSaper
  * @package common\modules\games\models
  */
-class GameSaper extends Saper implements HistorySaveInterface
+class GameSaper extends Saper
 {
     public $count = 1;
     public $col;
@@ -20,8 +19,6 @@ class GameSaper extends Saper implements HistorySaveInterface
     const GAME_SAPER_ETAP_NEW = 5;
     const GAME_SAPER_ETAP_WIN = 0;
     const GAME_SAPER_ETAP_LOSE = 10;
-
-    const HISTORY_TYPE = 'game_saper';
 
     const SCENARIO_CREATE = 'create';
     const SCENARIO_PLAY = 'play';
@@ -34,12 +31,6 @@ class GameSaper extends Saper implements HistorySaveInterface
         $scenarios[self::SCENARIO_PLAY] = ['hod1', 'hod2', 'hod3', 'hod4', 'hod5', 'col', 'row'];
         $scenarios[self::SCENARIO_DOUBLE] = ['kon_double'];
         return $scenarios;
-    }
-
-    // todo use HistoryTypeTrait
-    public function getHistoryType(): string
-    {
-        return self::HISTORY_TYPE;
     }
 
     public function getRandomType(): int

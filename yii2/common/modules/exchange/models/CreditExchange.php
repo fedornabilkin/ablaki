@@ -4,6 +4,7 @@ namespace common\modules\exchange\models;
 
 use common\models\history\HistorySaveInterface;
 use common\models\history\HistoryTypeTrait;
+use common\models\user\BuyerRelationInterface;
 use common\models\user\User;
 use common\models\user\UserRelationInterface;
 use Yii;
@@ -21,10 +22,10 @@ use yii\db\ActiveRecord;
  * @property int $updated_at
  * @property int $created_at
  *
- * @property User $userClient
+ * @property User $userBuyer
  * @property User $user
  */
-class CreditExchange extends ActiveRecord implements UserRelationInterface, HistorySaveInterface
+class CreditExchange extends ActiveRecord implements UserRelationInterface, BuyerRelationInterface, HistorySaveInterface
 {
     use HistoryTypeTrait;
 
@@ -118,7 +119,7 @@ class CreditExchange extends ActiveRecord implements UserRelationInterface, Hist
     /**
      * @return ActiveQuery
      */
-    public function getUserClient(): ActiveQuery
+    public function getUserBuyer(): ActiveQuery
     {
         return $this->hasOne(User::class, ['id' => 'user_buyer']);
     }
@@ -131,7 +132,10 @@ class CreditExchange extends ActiveRecord implements UserRelationInterface, Hist
         return $this->hasOne(User::class, ['id' => 'user_id']);
     }
 
-    public function getAvailableTypes(): array
+    /**
+     * @return string[]
+     */
+    public function availableTypes(): array
     {
         return self::EX_TYPE_AVAILABLE;
     }

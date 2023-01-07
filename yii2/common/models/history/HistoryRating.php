@@ -27,7 +27,7 @@ class HistoryRating extends ActiveRecord implements UserRelationInterface
     public function behaviors()
     {
         return array_merge_recursive(parent::behaviors(), [
-            'TimestampBehavior' => [
+            TimestampBehavior::class => [
                 'class' => TimestampBehavior::class,
                 'updatedAtAttribute' => 'created_at',
             ],

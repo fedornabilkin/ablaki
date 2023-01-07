@@ -8,6 +8,8 @@
 
 namespace common\modules\games\models\repo;
 
+use common\models\history\HistorySaveInterface;
+use common\models\history\HistoryTypeTrait;
 use common\models\user\User;
 use common\models\user\UserRelationInterface;
 use yii\behaviors\TimestampBehavior;
@@ -29,8 +31,11 @@ use yii\db\ActiveRecord;
  * @property User $user
  * @property User $userGamer
  */
-class Orel extends ActiveRecord implements UserRelationInterface
+class Orel extends ActiveRecord implements UserRelationInterface, HistorySaveInterface
 {
+    use HistoryTypeTrait;
+
+    protected $historyType = 'game_orel';
 
     /**
      * @return string

@@ -1,12 +1,15 @@
 <?php
 
+use backend\models\history\HistoryBalanceSearch;
+use backend\widgets\gridView\columns\CreatedAtColumn;
+use backend\widgets\gridView\columns\HistoryCommentColumn;
 use backend\widgets\gridView\columns\UserColumn;
 use common\services\history\HistoryService;
 use yii\grid\GridView;
 use yii\helpers\Html;
 
 /* @var $this yii\web\View */
-/* @var $searchModel backend\history\HistoryBalanceSearch */
+/* @var $searchModel HistoryBalanceSearch */
 /* @var $dataProvider yii\data\ActiveDataProvider */
 
 $this->title = Yii::t('app', 'History Balances');
@@ -58,10 +61,13 @@ $this->params['breadcrumbs'][] = $this->title;
 //                    ]
 //                ),
 //            ],
-            'comment',
+            [
+                'attribute' => 'comment',
+                'class' => HistoryCommentColumn::class
+            ],
             [
                 'attribute' => 'created_at',
-                'format' => ['date', 'php:H:i d.m.y']
+                'class' => CreatedAtColumn::class
             ],
 
         ],

@@ -8,7 +8,6 @@
 
 namespace backend\widgets\gridView\columns;
 
-use common\models\user\UserRelationInterface;
 use yii\grid\DataColumn;
 
 abstract class AbstractColumn extends DataColumn
@@ -18,5 +17,5 @@ abstract class AbstractColumn extends DataColumn
         $this->content = [$this, 'makeCellContent'];
     }
 
-    abstract protected function makeCellContent(UserRelationInterface $model): string;
+    abstract protected function makeCellContent($model): string;
 }

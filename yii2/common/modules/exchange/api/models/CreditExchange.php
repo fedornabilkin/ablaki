@@ -35,7 +35,7 @@ class CreditExchange extends \common\modules\exchange\models\CreditExchange
         $rules[] = [['amount'], 'number', 'min' => 0.01, 'on' => self::SCENARIO_CREATE];
 
         $rules['typeRequired'] = [['type'], 'required', 'on' => self::SCENARIO_CREATE];
-        $rules['typeRange'] = ['type', 'in', 'range' => $this->getAvailableTypes(), 'on' => self::SCENARIO_CREATE];
+        $rules['typeRange'] = ['type', 'in', 'range' => $this->availableTypes(), 'on' => self::SCENARIO_CREATE];
 
         return $rules;
     }

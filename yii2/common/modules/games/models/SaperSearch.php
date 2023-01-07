@@ -12,6 +12,9 @@ namespace common\modules\games\models;
 use yii\base\Model;
 use yii\data\ActiveDataProvider;
 
+/**
+ * @deprecated
+ */
 class SaperSearch extends GameSaper
 {
     public $status;
@@ -19,7 +22,7 @@ class SaperSearch extends GameSaper
     /**
      * @inheritdoc
      */
-    public function rules()
+    public function rules(): array
     {
         return [
             [['user_id', 'user_gamer'], 'integer'],

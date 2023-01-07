@@ -42,7 +42,7 @@ class PersonSearch extends Person
     public function search($params)
     {
         $query = Person::find()
-            ->with('user')
+            ->with('user', 'refovodUser')
             ->orderBy(['id' => SORT_DESC]);
 
         // add conditions that should always apply here

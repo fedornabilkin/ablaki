@@ -31,7 +31,7 @@ class CreditExchangeSearch extends CreditExchange
     public function search($params)
     {
         $query = CreditExchange::find()
-            ->with('user')
+            ->with('user', 'userBuyer')
             ->orderBy(['id' => SORT_DESC]);
 
         // add conditions that should always apply here
