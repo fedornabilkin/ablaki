@@ -2,8 +2,6 @@
 
 namespace common\models\user;
 
-use common\helpers\App;
-use common\helpers\UserHelper;
 use Yii;
 use yii\db\ActiveQuery;
 use yii\db\ActiveRecord;
@@ -45,24 +43,6 @@ class Person extends ActiveRecord implements UserRelationInterface
             [['balance', 'credit', 'rating'], 'number'],
             [['user_id'], 'exist', 'skipOnError' => true, 'targetClass' => User::class, 'targetAttribute' => ['user_id' => 'id']],
         ];
-    }
-
-    public function fields()
-    {
-        $f = [
-            'refovod',
-            'rating' => static function (self $model) {
-                return UserHelper::ratingRound($model->rating);
-            },
-        ];
-
-        // todo
-        if (!App::user()->getIsGuest() && App::user()->identity->getId() === $this->user_id) {
-            $f[] = 'balance';
-            $f[] = 'credit';
-        }
-
-        return $f;
     }
 
     /**

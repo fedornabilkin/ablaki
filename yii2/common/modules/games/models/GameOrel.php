@@ -14,7 +14,6 @@ class GameOrel extends Orel
     public $count = 1;
 
     const SCENARIO_PLAY = 'play';
-    protected const HISTORY_TYPE = 'game_orel';
 
     /**
      * @return array
@@ -55,11 +54,6 @@ class GameOrel extends Orel
             'updated_at' => Yii::t('games', 'Updated At'),
             'created_at' => Yii::t('games', 'Created At'),
         ];
-    }
-
-    public function getHistoryType(): string
-    {
-        return self::HISTORY_TYPE;
     }
 
     /**

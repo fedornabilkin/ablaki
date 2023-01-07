@@ -1,5 +1,7 @@
 <?php
 
+use backend\widgets\gridView\columns\CreatedAtColumn;
+use backend\widgets\gridView\columns\HistoryCommentColumn;
 use backend\widgets\gridView\columns\UserColumn;
 use common\services\history\HistoryService;
 use yii\grid\GridView;
@@ -31,10 +33,13 @@ $this->params['breadcrumbs'][] = $this->title;
                 'attribute' => 'type',
                 'filter' => HistoryService::getTypes(),
             ],
-            'comment',
+            [
+                'attribute' => 'comment',
+                'class' => HistoryCommentColumn::class
+            ],
             [
                 'attribute' => 'created_at',
-                'format' => ['date', 'php:H:i d.m.y']
+                'class' => CreatedAtColumn::class
             ],
 
         ],

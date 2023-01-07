@@ -35,7 +35,8 @@ use mdm\admin\components\Helper;
         // https://fontawesome.ru/all-icons/#chart
         $menuItems = [
             [
-                'label' => Yii::t('app', 'Admin'),
+                'label' => Yii::t('app', 'Users'),
+                'icon' => 'users',
                 'url' => '#',
                 'items' => [
                     ['label' => Yii::t('app', 'Rbac'), 'icon' => 'user-secret', 'url' => ['/admin/assignment']],
@@ -53,6 +54,7 @@ use mdm\admin\components\Helper;
                 'items' => [
                     ['label' => Yii::t('app', 'Todo'), 'icon' => 'tasks', 'url' => ['/todo/']],
                     ['label' => Yii::t('app', 'Fact'), 'icon' => 'user-secret', 'url' => ['/fact/']],
+                    ['label' => Yii::t('app', 'Wiki'), 'icon' => 'file-o', 'url' => ['/wiki']],
                     ['label' => Yii::t('app', 'Redirect'), 'icon' => 'share', 'url' => ['/redirect/manager']],
                     ['label' => Yii::t('app', 'Catalog'), 'icon' => 'tree', 'url' => ['/binds/catalog']],
                 ],
@@ -67,8 +69,7 @@ use mdm\admin\components\Helper;
                 ],
             ],
 
-            ['label' => Yii::t('app', 'Exchange'), 'icon' => 'refresh', 'url' => ['/exchange/']],
-            ['label' => 'Статьи', 'icon' => 'file-o', 'url' => ['/post']],
+            ['label' => Yii::t('app', 'Exchange'), 'icon' => 'refresh', 'url' => ['/exchange/credit']],
 
             ['label' => 'Other', 'options' => ['class' => 'header']],
 

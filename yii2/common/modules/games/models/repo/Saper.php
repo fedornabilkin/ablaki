@@ -8,7 +8,10 @@
 
 namespace common\modules\games\models\repo;
 
+use common\models\history\HistorySaveInterface;
+use common\models\history\HistoryTypeTrait;
 use common\models\user\User;
+use common\models\user\UserRelationInterface;
 use yii\behaviors\TimestampBehavior;
 use yii\db\ActiveQuery;
 use yii\db\ActiveRecord;
@@ -39,8 +42,11 @@ use yii\db\ActiveRecord;
  * @property User $userGamer
  * @property User $user
  */
-class Saper extends ActiveRecord
+class Saper extends ActiveRecord implements UserRelationInterface, HistorySaveInterface
 {
+    use HistoryTypeTrait;
+
+    protected $historyType = 'game_saper';
 
     /**
      * @inheritdoc
@@ -83,7 +89,7 @@ class Saper extends ActiveRecord
     /**
      * @return ActiveQuery
      */
-    public function getUser()
+    public function getUser(): ActiveQuery
     {
         return $this->hasOne(User::class, ['id' => 'user_id']);
     }
@@ -91,7 +97,7 @@ class Saper extends ActiveRecord
     /**
      * @return ActiveQuery
      */
-    public function getUserGamer()
+    public function getUserGamer(): ActiveQuery
     {
         return $this->hasOne(User::class, ['id' => 'user_gamer']);
     }

@@ -57,6 +57,7 @@ class Todo extends ActiveRecord implements UserRelationInterface
             [['title', 'comment'], 'required'],
             [['comment'], 'string'],
             [['title'], 'string', 'max' => 50],
+            [['updated_at', 'created_at'], 'safe'],
         ];
     }
 

@@ -16,6 +16,7 @@ class HistoryService
     public const HT_OREL = 'game_orel';
     public const HT_SAPER = 'game_saper';
     public const HT_DUEL = 'game_duel';
+    public const HT_EXCHANGE = 'exchange';
 
     public static function getTypes(): array
     {
@@ -24,6 +25,7 @@ class HistoryService
             self::HT_OREL => Yii::t('app', self::HT_OREL),
             self::HT_SAPER => Yii::t('app', self::HT_SAPER),
             self::HT_DUEL => Yii::t('app', self::HT_DUEL),
+            self::HT_EXCHANGE => Yii::t('app', self::HT_EXCHANGE),
         ];
     }
 }

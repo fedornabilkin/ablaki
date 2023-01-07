@@ -6,6 +6,9 @@
  * Time: 16:00
  */
 
+use backend\widgets\gridView\columns\BuyerColumn;
+use backend\widgets\gridView\columns\CreatedAtColumn;
+use backend\widgets\gridView\columns\UpdatedAtColumn;
 use backend\widgets\gridView\columns\UserColumn;
 use yii\grid\GridView;
 use yii\helpers\Html;
@@ -31,20 +34,23 @@ $this->params['breadcrumbs'][] = $this->title;
                 'attribute' => 'user_id',
                 'class' => UserColumn::class,
             ],
-            'user_buyer',
+            [
+                'attribute' => 'user_buyer',
+                'class' => BuyerColumn::class,
+            ],
             'credit',
             'amount',
             [
                 'attribute' => 'type',
-                'filter' => $searchModel->getAvailableTypes(),
+                'filter' => $searchModel->availableTypes(),
             ],
             [
                 'attribute' => 'created_at',
-                'format' => ['date', 'php:H:i d.m.y']
+                'class' => CreatedAtColumn::class
             ],
             [
                 'attribute' => 'updated_at',
-                'format' => ['date', 'php:H:i d.m.y']
+                'class' => UpdatedAtColumn::class
             ],
         ],
     ]); ?>

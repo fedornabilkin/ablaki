@@ -3,8 +3,8 @@
 namespace api\modules\v1\controllers;
 
 use api\filters\Auth;
+use api\modules\v1\models\User;
 use common\helpers\App;
-use common\models\user\User;
 use yii\rest\Controller;
 
 class UserController extends Controller
@@ -22,27 +22,26 @@ class UserController extends Controller
 
     public function actionWall($login)
     {
-        $user = User::find()
+        return User::find()
             ->where(['username' => $login])
             ->with(['person'])
             ->one();
-
-//        if (!$user) {
-//            throw new NotFoundHttpException(Yii::t('app', 'The requested user does not exist.'));
-//        }
-
-        return $user;
     }
 
+    /**
+     * Для ограничения отображения полей получаем данные пользователя через модель для v1
+     * @return User|null
+     */
     public function actionProfile()
     {
-        return App::user()->identity;
+        return User::findOne(App::user()->identity->getId());
     }
 
     public function actionData()
     {
         return [
             'user' => 'admin',
+            'fieldName' => 'fieldValue',
         ];
     }
 }

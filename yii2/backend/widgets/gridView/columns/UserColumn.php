@@ -14,7 +14,12 @@ use yii\helpers\Html;
 class UserColumn extends AbstractColumn
 {
 
-    protected function makeCellContent(UserRelationInterface $model): string
+    protected function makeCellContent($model): string
+    {
+        return $this->getValue($model);
+    }
+
+    public function getValue(UserRelationInterface $model): string
     {
         return Html::a($model->user->username, ['/person/view', 'id' => $model->user->person->id]);
     }

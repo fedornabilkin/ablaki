@@ -9,7 +9,7 @@
 namespace common\helpers;
 
 
-class UserHelper extends AbstractHelper
+class UserHelper
 {
 
     /**
