@@ -1,13 +1,212 @@
 {
   "_type": "export",
   "__export_format": 4,
-  "__export_date": "2022-04-23T17:48:55.267Z",
-  "__export_source": "insomnia.desktop.app:v2022.2.1",
+  "__export_date": "2023-01-07T20:07:08.628Z",
+  "__export_source": "insomnia.desktop.app:v2022.7.0",
   "resources": [
+    {
+      "_id": "req_04bbc73cb95a4e358832173cc146356f",
+      "parentId": "fld_419561c07ede4c069745d1966e25507f",
+      "modified": 1673119641079,
+      "created": 1673117537317,
+      "url": "{{ baseUrl }}/v1/history/balance",
+      "name": "Balance",
+      "description": "",
+      "method": "GET",
+      "body": {},
+      "parameters": [
+        {
+          "id": "pair_2f40f8886ccf4b8c893c646164654071",
+          "name": "filter[type]",
+          "value": "game_orel",
+          "description": ""
+        },
+        {
+          "id": "pair_ff1e45aada0446c9923c52dc0cf6dcef",
+          "name": "filter[type]",
+          "value": "exchange",
+          "description": ""
+        }
+      ],
+      "headers": [
+        {
+          "id": "pair_e0de857d4f38438b83dc04466072975b",
+          "name": "Content-Type",
+          "value": "application/json",
+          "description": ""
+        }
+      ],
+      "authentication": {
+        "type": "bearer",
+        "token": "{{ _.bearer }}",
+        "disabled": false
+      },
+      "metaSortKey": -1625275602087.75,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "fld_419561c07ede4c069745d1966e25507f",
+      "parentId": "wrk_26ad32cf982e470088560000269f804b",
+      "modified": 1673117508644,
+      "created": 1673117508644,
+      "name": "History",
+      "description": "",
+      "environment": {},
+      "environmentPropertyOrder": null,
+      "metaSortKey": -1673117508644,
+      "_type": "request_group"
+    },
+    {
+      "_id": "wrk_26ad32cf982e470088560000269f804b",
+      "parentId": null,
+      "modified": 1601809328638,
+      "created": 1601809328638,
+      "name": "Ablaki",
+      "description": "",
+      "scope": "collection",
+      "_type": "workspace"
+    },
+    {
+      "_id": "req_7dbba771a4db4f92a9635fcd0cb0e655",
+      "parentId": "fld_419561c07ede4c069745d1966e25507f",
+      "modified": 1673121309330,
+      "created": 1673120281248,
+      "url": "{{ baseUrl }}/v1/history/balance-type",
+      "name": "Balance-type",
+      "description": "",
+      "method": "GET",
+      "body": {},
+      "parameters": [
+        {
+          "id": "pair_067045465f684d22a2f4f81e35b4f447",
+          "name": "fields",
+          "value": "type",
+          "description": ""
+        }
+      ],
+      "headers": [
+        {
+          "id": "pair_e0de857d4f38438b83dc04466072975b",
+          "name": "Content-Type",
+          "value": "application/json",
+          "description": ""
+        }
+      ],
+      "authentication": {
+        "type": "bearer",
+        "token": "{{ _.bearer }}",
+        "disabled": false
+      },
+      "metaSortKey": -1624096392144.3125,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_9a7d263d7c3c4bd7884a99210307df27",
+      "parentId": "fld_419561c07ede4c069745d1966e25507f",
+      "modified": 1673120134038,
+      "created": 1673117751550,
+      "url": "{{ baseUrl }}/v1/history/rating",
+      "name": "Rating",
+      "description": "",
+      "method": "GET",
+      "body": {},
+      "parameters": [
+        {
+          "id": "pair_8cf51e289e644218a8cc99e5c98ccc25",
+          "name": "filter[type]",
+          "value": "everyday",
+          "description": "",
+          "disabled": true
+        },
+        {
+          "id": "pair_d52a96da38fa495d823ee672aa9b8fd8",
+          "name": "filter[type]",
+          "value": "game_orel",
+          "description": ""
+        }
+      ],
+      "headers": [
+        {
+          "id": "pair_e0de857d4f38438b83dc04466072975b",
+          "name": "Content-Type",
+          "value": "application/json",
+          "description": ""
+        }
+      ],
+      "authentication": {
+        "type": "bearer",
+        "token": "{{ _.bearer }}"
+      },
+      "metaSortKey": -1622917182200.875,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_7eae3741ad844d49882c03c567e0a8aa",
+      "parentId": "fld_419561c07ede4c069745d1966e25507f",
+      "modified": 1673121214123,
+      "created": 1673120844096,
+      "url": "{{ baseUrl }}/v1/history/rating-type",
+      "name": "Rating-type",
+      "description": "",
+      "method": "GET",
+      "body": {},
+      "parameters": [
+        {
+          "id": "pair_4e3fc98c169f44899d0648a41fc0014d",
+          "name": "fields",
+          "value": "type",
+          "description": "",
+          "disabled": false
+        }
+      ],
+      "headers": [
+        {
+          "id": "pair_e0de857d4f38438b83dc04466072975b",
+          "name": "Content-Type",
+          "value": "application/json",
+          "description": ""
+        }
+      ],
+      "authentication": {
+        "type": "bearer",
+        "token": "{{ _.bearer }}",
+        "disabled": false
+      },
+      "metaSortKey": -1622917182150.875,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
     {
       "_id": "req_bea7bc2bfe5c4953a189aa8d3ef8708a",
       "parentId": "fld_9374b381a71a43c18b99db4946915820",
-      "modified": 1650049560128,
+      "modified": 1673119001623,
       "created": 1641741605897,
       "url": "{{ _.baseUrl }}/v1/exchange",
       "name": "create",
@@ -15,7 +214,7 @@
       "method": "POST",
       "body": {
         "mimeType": "application/json",
-        "text": "{\n\t\"amount\": 0.03,\n\t\"credit\": 50,\n\t\"count\": 3,\n\t\"type\": \"buy\"\n}"
+        "text": "{\n\t\"amount\": 0.03,\n\t\"credit\": 50,\n\t\"count\": 2,\n\t\"type\": \"buy\"\n}"
       },
       "parameters": [],
       "headers": [
@@ -52,16 +251,6 @@
       "_type": "request_group"
     },
     {
-      "_id": "wrk_26ad32cf982e470088560000269f804b",
-      "parentId": null,
-      "modified": 1601809328638,
-      "created": 1601809328638,
-      "name": "Ablaki",
-      "description": "",
-      "scope": "collection",
-      "_type": "workspace"
-    },
-    {
       "_id": "req_c91528e8fc0743f4bb794df46fd9ec15",
       "parentId": "fld_9374b381a71a43c18b99db4946915820",
       "modified": 1650483630652,
@@ -90,7 +279,7 @@
     {
       "_id": "req_0e887a9e743c402dab868402f0f544d0",
       "parentId": "fld_9374b381a71a43c18b99db4946915820",
-      "modified": 1650483183695,
+      "modified": 1673113491652,
       "created": 1641741473416,
       "url": "{{ _.baseUrl }}/v1/exchange",
       "name": "sell",
@@ -116,7 +305,8 @@
           "id": "pair_5bc302e3e7624ccfb0d3430923bef4af",
           "name": "filter[type]",
           "value": "sell",
-          "description": ""
+          "description": "",
+          "disabled": false
         }
       ],
       "headers": [
@@ -383,9 +573,9 @@
     {
       "_id": "req_efcf20374c52454b9915ef30a0ac6325",
       "parentId": "fld_9374b381a71a43c18b99db4946915820",
-      "modified": 1650486699282,
+      "modified": 1673113679387,
       "created": 1641845209523,
-      "url": "",
+      "url": "{{ _.baseUrl }}/v1/exchange/available-count",
       "name": "available-count",
       "description": "",
       "method": "GET",
@@ -676,7 +866,7 @@
     {
       "_id": "req_3a77daafcd644c1d8eaada150d998a4c",
       "parentId": "fld_b672b5272bca4b6293cb368b43ce9caa",
-      "modified": 1641740725739,
+      "modified": 1673113229653,
       "created": 1638906723352,
       "url": "{{ baseUrl }}/v1/users/wall/rsmirnov",
       "name": "Wall",
@@ -1224,16 +1414,16 @@
       "_type": "request"
     },
     {
-      "_id": "env_7d714cd1d0c1b0498bb2766360c26d592104dc6a",
+      "_id": "env_2ede78e98fc82b6d58681fe0dfde59dbf1ecf50b",
       "parentId": "wrk_26ad32cf982e470088560000269f804b",
-      "modified": 1650736021141,
+      "modified": 1673121889462,
       "created": 1601809328720,
       "name": "Base Environment",
       "data": {
         "bearer": "{% response 'body', 'req_f20fac44345e49e5b8f7f5fdeedc6863', 'b64::JC50b2tlbg==::46b', 'never', 60 %}",
         "user": {
           "login": "admin",
-          "password": "12345"
+          "password": "123456"
         }
       },
       "dataPropertyOrder": {
@@ -1254,7 +1444,7 @@
     {
       "_id": "jar_7d714cd1d0c1b0498bb2766360c26d592104dc6a",
       "parentId": "wrk_26ad32cf982e470088560000269f804b",
-      "modified": 1650735963719,
+      "modified": 1673121534086,
       "created": 1601809328721,
       "name": "Default Jar",
       "cookies": [
@@ -1267,7 +1457,7 @@
           "hostOnly": true,
           "creation": "2020-10-04T14:00:01.465Z",
           "lastAccessed": "2020-10-04T14:00:01.465Z",
-          "id": "7145564766332995"
+          "id": "8317877135221743"
         },
         {
           "key": "_csrf",
@@ -1278,18 +1468,18 @@
           "hostOnly": true,
           "creation": "2021-12-08T18:53:31.693Z",
           "lastAccessed": "2022-04-13T17:32:50.342Z",
-          "id": "16863127815378887"
+          "id": "5596542533813817"
         },
         {
           "key": "_csrf",
-          "value": "41a5a891c9cbf8aec353a62a4890c8d7a92a1fd2afc07220e788c88f7ad97a6ca%3A2%3A%7Bi%3A0%3Bs%3A5%3A%22_csrf%22%3Bi%3A1%3Bs%3A32%3A%22LqlZbEEFD87_jMBr4KWAaEc1dWSYfIqs%22%3B%7D",
+          "value": "deb3c2f44364f4f5e53d2072fe854c65e3bfb71b750a105dc16bd7baa2481d92a%3A2%3A%7Bi%3A0%3Bs%3A5%3A%22_csrf%22%3Bi%3A1%3Bs%3A32%3A%22XYLrUmz8_JZ8URNAJEMSL2YvhIe6MQrD%22%3B%7D",
           "domain": "localhost",
           "path": "/",
           "httpOnly": true,
           "hostOnly": true,
           "creation": "2022-01-09T09:00:45.721Z",
-          "lastAccessed": "2022-04-23T17:46:03.717Z",
-          "id": "28127692163942064"
+          "lastAccessed": "2023-01-07T19:58:54.086Z",
+          "id": "45161106072452917"
         }
       ],
       "_type": "cookie_jar"
@@ -1306,8 +1496,8 @@
     },
     {
       "_id": "env_1550578ff6804994973946d30606a31b",
-      "parentId": "env_7d714cd1d0c1b0498bb2766360c26d592104dc6a",
-      "modified": 1650736015608,
+      "parentId": "env_2ede78e98fc82b6d58681fe0dfde59dbf1ecf50b",
+      "modified": 1673121868847,
       "created": 1601809343415,
       "name": "local",
       "data": {
@@ -1325,7 +1515,7 @@
     },
     {
       "_id": "env_2910d378277a4ebb9ef9acccd2071db3",
-      "parentId": "env_7d714cd1d0c1b0498bb2766360c26d592104dc6a",
+      "parentId": "env_2ede78e98fc82b6d58681fe0dfde59dbf1ecf50b",
       "modified": 1650735874028,
       "created": 1638989468653,
       "name": "test",

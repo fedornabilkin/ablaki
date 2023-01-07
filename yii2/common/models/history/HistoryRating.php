@@ -23,6 +23,10 @@ use yii\db\ActiveRecord;
  */
 class HistoryRating extends ActiveRecord implements UserRelationInterface
 {
+    public static function find(): HistoryRatingQuery
+    {
+        return new HistoryRatingQuery(static::class);
+    }
 
     public function behaviors()
     {

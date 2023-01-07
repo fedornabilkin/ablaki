@@ -21,6 +21,18 @@ return [
     ],
     [
         'class' => UrlRule::class,
+        'controller' => ['v1/history'],
+        'only' => ['balance', 'balance-type', 'rating', 'rating-type'],
+        'pluralize' => false,
+        'extraPatterns' => [
+            'GET balance' => 'balance',
+            'GET balance-type' => 'balance-type',
+            'GET rating' => 'rating',
+            'GET rating-type' => 'rating-type',
+        ],
+    ],
+    [
+        'class' => UrlRule::class,
         'controller' => ['v1/rating'],
         'pluralize' => false,
         'only' => ['everyday'],
