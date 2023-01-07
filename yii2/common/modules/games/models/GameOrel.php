@@ -2,17 +2,7 @@
 
 namespace common\modules\games\models;
 
-use common\behaviors\BalanceBehavior;
-use common\behaviors\RatingBehavior;
-use common\models\user\Person;
-use common\models\user\User;
-use common\modules\games\behaviors\orel\GamerBalanceBehavior;
-use common\modules\games\behaviors\orel\GamerRatingBehavior;
-use common\modules\games\behaviors\orel\OrelBehavior;
-use common\modules\games\behaviors\orel\UserBalanceBehavior;
-use common\modules\games\behaviors\orel\UserRatingBehavior;
 use common\modules\games\models\repo\Orel;
-use common\modules\games\traites\PersonTrait;
 use Yii;
 
 /**
@@ -21,17 +11,15 @@ use Yii;
  */
 class GameOrel extends Orel
 {
-    use PersonTrait;
-
     public $count = 1;
 
     const SCENARIO_PLAY = 'play';
-    const HISTORY_TYPE = 'game_orel';
+    protected const HISTORY_TYPE = 'game_orel';
 
     /**
      * @return array
      */
-    public function scenarios()
+    public function scenarios(): array
     {
         $scenarios = parent::scenarios();
         $scenarios[self::SCENARIO_PLAY] = ['hod'];
@@ -41,15 +29,15 @@ class GameOrel extends Orel
     /**
      * {@inheritdoc}
      */
-    public function rules()
+    public function rules(): array
     {
-        $parent = parent::rules();
         $arr = [
             ['count', 'integer', 'min' => 1, 'max' => 100],
+            ['hod', 'in', 'range' => [1, 2], 'on' => self::SCENARIO_PLAY],
             ['hod', 'integer', 'on' => self::SCENARIO_PLAY],
         ];
 
-        return array_merge($parent, $arr);
+        return array_merge(parent::rules(), $arr);
     }
 
     /**
@@ -69,7 +57,7 @@ class GameOrel extends Orel
         ];
     }
 
-    public function getHistoryType()
+    public function getHistoryType(): string
     {
         return self::HISTORY_TYPE;
     }
@@ -77,40 +65,61 @@ class GameOrel extends Orel
     /**
      * @return int
      */
-    public function getRandomType()
+    public function getRandomType(): int
     {
-        return rand(1,2);
+        return random_int(1, 2);
     }
 
-    public function getCommissionAmount($amount)
+    public function getCommissionAmount(): float
     {
-        return $amount * 0.05;
+        return $this->kon * 2 * 0.05;
     }
 
     /**
      * Если игрок победил = true
      * @return bool
      */
-    public function isWin()
+    public function isWin(): bool
     {
-        return $this->type === intval($this->hod);
+        return $this->type === (int)$this->hod;
     }
 
     /**
-     * @param $person
-     * @param float $kon
-     * @return float|int
+     * @param float $rating
+     * @return float
      */
-    public function normalizeRating($person, $kon = 0.0) {
-        if(!($person instanceof Person)){
-            return 0;
+    public function normalizeRating(float $rating): float
+    {
+        $kef = ($rating < 0.99) ? 1.9 : 0;
+
+        return round(($this->kon / 50) / ($rating + $kef), 5);
+    }
+
+    public function fields(): array
+    {
+        $fields = [
+            'id',
+            'user_id',
+            'username' => static function (Orel $model) {
+                return $model->user->username;
+            },
+            'username_gamer' => static function (Orel $model) {
+                return $model->userGamer->username;
+            },
+            'win' => static function (Orel $model) {
+                return null;
+            },
+            'kon',
+            'created_at',
+            'updated_at',
+        ];
+
+        if (!empty($this->hod)) {
+            $fields['win'] = static function (self $model) {
+                return $model->isWin();
+            };
         }
 
-        $rating = $person->rating;
-
-        $kef = ($rating < 0.99) ? 1.9 : 0;
-        $kon = ($kon < 1) ? $this->kon : $kon;
-
-        return round(($kon / 50) / ($rating + $kef), 5);
+        return $fields;
     }
 }

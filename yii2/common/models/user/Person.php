@@ -2,7 +2,11 @@
 
 namespace common\models\user;
 
+use common\helpers\App;
+use common\helpers\UserHelper;
 use Yii;
+use yii\db\ActiveQuery;
+use yii\db\ActiveRecord;
 
 /**
  * This is the model class for table "persone".
@@ -21,7 +25,7 @@ use Yii;
  *
  * @property User $user
  */
-class Person extends \yii\db\ActiveRecord
+class Person extends ActiveRecord implements UserRelationInterface
 {
     /**
      * {@inheritdoc}
@@ -29,17 +33,6 @@ class Person extends \yii\db\ActiveRecord
     public static function tableName()
     {
         return 'persone';
-    }
-
-    public function fields()
-    {
-        return [
-            'balance',
-            'credit',
-            'balance',
-            'refovod',
-            'rating',
-        ];
     }
 
     /**
@@ -52,6 +45,24 @@ class Person extends \yii\db\ActiveRecord
             [['balance', 'credit', 'rating'], 'number'],
             [['user_id'], 'exist', 'skipOnError' => true, 'targetClass' => User::class, 'targetAttribute' => ['user_id' => 'id']],
         ];
+    }
+
+    public function fields()
+    {
+        $f = [
+            'refovod',
+            'rating' => static function (self $model) {
+                return UserHelper::ratingRound($model->rating);
+            },
+        ];
+
+        // todo
+        if (!App::user()->getIsGuest() && App::user()->identity->getId() === $this->user_id) {
+            $f[] = 'balance';
+            $f[] = 'credit';
+        }
+
+        return $f;
     }
 
     /**
@@ -70,17 +81,17 @@ class Person extends \yii\db\ActiveRecord
     }
 
     /**
-     * @return \yii\db\ActiveQuery
+     * @return ActiveQuery
      */
-    public function getUser()
+    public function getUser(): ActiveQuery
     {
         return $this->hasOne(User::class, ['id' => 'user_id'])->inverseOf('person');
     }
 
     /**
-     * @return \yii\db\ActiveQuery
+     * @return ActiveQuery
      */
-    public function getRefovodUser()
+    public function getRefovodUser(): ActiveQuery
     {
         return $this->hasOne(User::class, ['id' => 'refovod']);
     }

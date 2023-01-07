@@ -1,11 +1,12 @@
 <?php
 
-use common\models\HistoryRating;
+use common\models\history\HistoryRating;
+use console\migrations\AbstractMigration;
 
 /**
  * Class m180526_212930_move_history_rating
  */
-class m180526_212930_move_history_rating extends \console\migrations\AbstractMigration
+class m180526_212930_move_history_rating extends AbstractMigration
 {
     /**
      * {@inheritdoc}
@@ -15,7 +16,7 @@ class m180526_212930_move_history_rating extends \console\migrations\AbstractMig
         $sql = "SELECT * FROM history_rating ORDER BY id ASC;";
         $rows = $this->getRemoteRows($sql);
 
-        foreach ($rows as $row){
+        foreach ($rows as $row) {
 
             /** @var HistoryRating $model */
             $model = Yii::createObject(HistoryRating::class);

@@ -3,8 +3,12 @@
 namespace common\models;
 
 use common\models\user\User;
+use common\models\user\UserRelationInterface;
 use Yii;
+use yii\behaviors\BlameableBehavior;
 use yii\behaviors\TimestampBehavior;
+use yii\db\ActiveQuery;
+use yii\db\ActiveRecord;
 
 
 /**
@@ -18,29 +22,27 @@ use yii\behaviors\TimestampBehavior;
  * @property int $updated_at
  * @property int $created_at
  */
-class Todo extends \yii\db\ActiveRecord
+class Todo extends ActiveRecord implements UserRelationInterface
 {
-    /**
-     * @var int|string
-     */
-
     /**
      * {@inheritdoc}
      */
-    public static function tableName()
+    public static function tableName(): string
     {
         return 'todo';
     }
 
-    /**
-     * @return array
-     */
-    public function behaviors()
+    public function behaviors(): array
     {
         return array_merge_recursive(parent::behaviors(), [
             TimestampBehavior::class => [
                 'class' => TimestampBehavior::class,
             ],
+            BlameableBehavior::class => [
+                'class' => BlameableBehavior::class,
+                'createdByAttribute' => 'user_id',
+                'updatedByAttribute' => 'user_id',
+            ]
         ]);
     }
 
@@ -59,6 +61,24 @@ class Todo extends \yii\db\ActiveRecord
         ];
     }
 
+//    public function beforeSave($insert): bool
+//    {
+//        $parent = parent::beforeSave($insert);
+//        if ($insert) {
+//            $this->user_id = Yii::$app->user->id;
+//            return $parent;
+//        }
+//        return $parent;
+//    }
+
+    /**
+     * @return ActiveQuery
+     */
+    public function getUser(): ActiveQuery
+    {
+        return $this->hasOne(User::class, ['id' => 'user_id']);
+    }
+
     /**
      * {@inheritdoc}
      */
@@ -73,26 +93,5 @@ class Todo extends \yii\db\ActiveRecord
             'updated_at' => Yii::t('app', 'Updated At'),
             'created_at' => Yii::t('app', 'Created At'),
         ];
-    }
-
-    /**
-     * @param bool $insert
-     * @return bool
-     */
-    public function beforeSave($insert)
-    {
-        if ($insert) {
-            $this->user_id = Yii::$app->user->id;
-        }
-
-        return parent::beforeSave($insert);
-    }
-
-    /**
-     * @return \yii\db\ActiveQuery
-     */
-    public function getUser()
-    {
-        return $this->hasOne(User::class, ['id' => 'user_id']);
     }
 }

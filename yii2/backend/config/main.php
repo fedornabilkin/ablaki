@@ -1,9 +1,14 @@
 <?php
+
+use dektrium\user\filters\BackendFilter;
+use dektrium\user\models\User;
+use kartik\tree\Module;
+use mdm\admin\components\AccessControl;
+use mdm\admin\controllers\AssignmentController;
+
 $params = array_merge(
     require __DIR__ . '/../../common/config/params.php',
-    require __DIR__ . '/../../common/config/params-local.php',
-    require __DIR__ . '/params.php',
-    require __DIR__ . '/params-local.php'
+    require __DIR__ . '/params.php'
 );
 
 return [
@@ -13,21 +18,23 @@ return [
 
     'basePath' => dirname(__DIR__),
     'controllerNamespace' => 'backend\controllers',
-    'bootstrap' => ['log', 'admin'],
+    'bootstrap' => ['log', 'admin', 'exchange'],
     'modules' => [
         'user' => [
             'class' => 'dektrium\user\Module',
+//            'admins' => ['admin'],
+            'adminPermission' => 'p-admin',
             // following line will restrict access to profile, recovery, registration and settings controllers from backend
-            'as backend' => 'dektrium\user\filters\BackendFilter',
+            'as backend' => BackendFilter::class,
         ],
         'admin' => [
-            'class' => 'mdm\admin\Module',
+            'class' => \mdm\admin\Module::class,
             'layout' => 'left-menu',
             'defaultRoute' => 'assignment',
             'controllerMap' => [
                 'assignment' => [
-                    'class' => 'mdm\admin\controllers\AssignmentController',
-                    'userClassName' => 'dektrium\user\models\User',
+                    'class' => AssignmentController::class,
+                    'userClassName' => User::class,
                     'idField' => 'id',
                 ],
             ],
@@ -40,7 +47,7 @@ return [
             'class' => fedornabilkin\binds\Module::class,
         ],
         'treemanager' => [
-            'class' => 'kartik\tree\Module',
+            'class' => Module::class,
             'dataStructure' => [
                 'keyAttribute' => 'id',
             ],
@@ -49,6 +56,7 @@ return [
     'components' => [
         'request' => [
             'csrfParam' => '_csrf-backend',
+            'cookieValidationKey' => 'zrBj4r-V6wTo1eEnPlGYqOdvhXAhGQJW',
         ],
         'user' => [
             'identityClass' => \common\models\user\User::class,
@@ -78,14 +86,14 @@ return [
 
     ],
     'as access' => [
-        'class' => 'mdm\admin\components\AccessControl',
+        'class' => AccessControl::class,
         'allowActions' => [
             'user/security/logout',
             'user/security/login',
             'user/logout',
             'user/login',
 //            'debug/*',
-            'site/*',
+//            'site/*',
         ]
     ],
     'params' => $params,

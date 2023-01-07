@@ -1,30 +1,25 @@
 <?php
 
-use yii\web\Response;
+use api\models\UserIdentity;
+use api\modules\v1\Module;
 
 $params = array_merge(
     require __DIR__ . '/../../common/config/params.php',
-    require __DIR__ . '/../../common/config/params-local.php',
-    require __DIR__ . '/params.php',
-    require __DIR__ . '/params-local.php'
+    require __DIR__ . '/params.php'
 );
+
+$header_remove = 'header_remove';
+if (function_exists($header_remove)) {
+    $header_remove('X-Powered-By');
+}
 
 return [
     'id' => 'api',
     'basePath' => dirname(__DIR__),
-    'bootstrap' => ['log'],
+    'bootstrap' => ['log', 'v1'],
     'controllerNamespace' => 'api\controllers',
     'components' => [
         'response' => [
-            'on beforeSend' => function ($event) {
-                $event->sender->headers->add('Access-Control-Allow-Origin', '*');
-                $event->sender->headers->add('Access-Control-Allow-Methods', 'GET, POST, HEAD, OPTIONS');
-                $event->sender->headers->add('Access-Control-Allow-Headers', 'Content-Type, session-token, Authorization');
-                $event->sender->headers->add('Access-Control-Expose-Headers', 'Content-Type, session-token');
-                if (Yii::$app->request->isOptions) {
-                    $event->sender->statusCode = 200;
-                }
-            },
             'format' => yii\web\Response::FORMAT_JSON,
             /** https://www.yiiframework.com/doc/guide/2.0/ru/rest-response-formatting */
 //            'formatters' => [
@@ -33,21 +28,22 @@ return [
 //            ],
         ],
         'request' => [
-            'enableCsrfValidation' => false,
+//            'enableCsrfValidation' => false,
+            'cookieValidationKey' => 'JDaZ5GOpnlg94q38dzWDLKjPR5rQXXlF',
             'parsers' => [
                 'application/json' => 'yii\web\JsonParser'
             ]
         ],
         'user' => [
-            'identityClass' => \api\models\UserIdentity::class,
+            'identityClass' => UserIdentity::class,
             'enableSession' => false,
             'loginUrl' => null,
             'enableAutoLogin' => true,
             'identityCookie' => ['name' => '_identity-api', 'httpOnly' => true],
         ],
-        'session' => [
-            'name' => 'api',
-        ],
+//        'session' => [
+//            'name' => 'api',
+//        ],
 //        'errorHandler' => [
 //            'class' => 'api\components\ErrorHandler',
 //        ],
@@ -66,33 +62,14 @@ return [
             'rules' => [
                 'login' => 'site/login',
                 'logout' => 'site/logout',
-                [
-                    'class' => 'yii\rest\UrlRule',
-                    'controller' => 'v1/saper',
-                    'except' => ['view'],
-                    'extraPatterns' => [
-                        'GET remove' => 'remove',
-                        'GET start/{id}' => 'start',
-                        'POST play/{id}' => 'play',
-                        'POST double/{id}' => 'double',
-                    ],
-                ],
-                [
-                    'class' => 'yii\rest\UrlRule',
-                    'controller' => ['v1/orel'],
-                    'except' => ['view'],
-                    'extraPatterns' => [
-                        'GET remove' => 'remove',
-                        'POST play/{id}' => 'play',
-                    ],
-                ],
+                'registration' => 'site/registration',
             ],
         ],
     ],
 
     'modules' => [
         'v1' => [
-            'class' => \api\modules\v1\Module::class,
+            'class' => Module::class,
         ],
     ],
 

@@ -11,6 +11,7 @@ namespace common\modules\games\behaviors\orel;
 
 use common\behaviors\BalanceBehavior;
 use common\modules\games\models\GameOrel;
+use Yii;
 
 /**
  * Class GamerBalanceBehavior
@@ -18,6 +19,7 @@ use common\modules\games\models\GameOrel;
  * Изменение баланса игрока
  *
  * @package common\modules\games\behaviors
+ * @deprecated
  */
 class GamerBalanceBehavior extends BalanceBehavior
 {
@@ -38,10 +40,10 @@ class GamerBalanceBehavior extends BalanceBehavior
         if($model->isWin()){
             $this->commission = $this->setCommission($model->changeCredit * 2);
             $param = $model->changeCredit - $this->commission;
-            $this->historyValues['comment'] = \Yii::t('games', 'Victory in the game #{attr}', ['attr' => $model->id]);
+            $this->historyValues['comment'] = Yii::t('games', 'Victory in the game #{attr}', ['attr' => $model->id]);
 
         }else{
-            $this->historyValues['comment'] = \Yii::t('games', 'Defeat in the game #{attr}', ['attr' => $model->id]);
+            $this->historyValues['comment'] = Yii::t('games', 'Defeat in the game #{attr}', ['attr' => $model->id]);
         }
 
 

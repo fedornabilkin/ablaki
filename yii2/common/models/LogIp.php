@@ -2,7 +2,11 @@
 
 namespace common\models;
 
+use common\models\user\User;
+use common\models\user\UserRelationInterface;
 use Yii;
+use yii\db\ActiveQuery;
+use yii\db\ActiveRecord;
 
 /**
  * This is the model class for table "log_ip".
@@ -16,7 +20,7 @@ use Yii;
  *
  * @property User $user
  */
-class LogIp extends \yii\db\ActiveRecord
+class LogIp extends ActiveRecord implements UserRelationInterface
 {
     /**
      * {@inheritdoc}
@@ -35,7 +39,7 @@ class LogIp extends \yii\db\ActiveRecord
             [['user_id', 'created_at'], 'integer'],
             [['ip'], 'string', 'max' => 15],
             [['agent', 'comment'], 'string', 'max' => 255],
-            [['user_id'], 'exist', 'skipOnError' => true, 'targetClass' => User::className(), 'targetAttribute' => ['user_id' => 'id']],
+            [['user_id'], 'exist', 'skipOnError' => true, 'targetClass' => User::class, 'targetAttribute' => ['user_id' => 'id']],
         ];
     }
 
@@ -55,10 +59,10 @@ class LogIp extends \yii\db\ActiveRecord
     }
 
     /**
-     * @return \yii\db\ActiveQuery
+     * @return ActiveQuery
      */
-    public function getUser()
+    public function getUser(): ActiveQuery
     {
-        return $this->hasOne(User::className(), ['id' => 'user_id']);
+        return $this->hasOne(User::class, ['id' => 'user_id']);
     }
 }

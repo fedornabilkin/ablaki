@@ -8,12 +8,12 @@
 
 namespace common\modules\games\middleware\saper;
 
+use common\middleware\AbstractMiddleware;
 use common\middleware\HistoryCommissionMiddleware;
 use common\middleware\person\UpdatePersonMiddleware;
-use common\modules\games\middleware\GameMiddleware;
 use common\modules\games\models\GameSaper;
 
-class PlayMiddleware extends GameMiddleware
+class PlayMiddleware extends AbstractMiddleware
 {
     /** @var GameSaper */
     private $model;
@@ -24,13 +24,13 @@ class PlayMiddleware extends GameMiddleware
     public function check(): bool
     {
         $this->model = self::$data->game;
-        self::$data->historyType = self::$data->game::HISTORY_TYPE;
-        self::$data->commissionAmout = $this->model->getCommissionAmount($this->model->kon * 2);
 
-        $checkHod = $this->checkHod();
+        self::$data->historyType = $this->model->getHistoryType();
+        self::$data->commissionAmount = $this->model->getCommissionAmount();
+
         $this->updateModel();
 
-        if (!$checkHod) {
+        if (!$this->checkHod()) {
             $next = new SwitchCreatorMiddleware();
             $next->insertNext(new HistoryCommissionMiddleware());
             $this->insertNext($next);
@@ -44,9 +44,9 @@ class PlayMiddleware extends GameMiddleware
     public function updateData()
     {
         if ($this->model->isWin()) {
-            self::$data->changingBalance = $this->model->kon - self::$data->commissionAmout;
+            self::$data->changingBalance = $this->model->kon - self::$data->commissionAmount;
             self::$data->historyComment = 'Victory in the game #' . $this->model->id;
-            self::$data->changingRating = $this->model->normalizeRating(self::$data->user, $this->model->kon);
+            self::$data->changingRating = $this->model->normalizeRating(self::$data->user->rating);
 
             $next = new UpdatePersonMiddleware();
             $next->insertNext(new HistoryCommissionMiddleware());

@@ -2,7 +2,6 @@
 
 namespace common\modules\games\models;
 
-use yii\base\Model;
 use yii\data\ActiveDataProvider;
 
 /**
@@ -13,20 +12,13 @@ class OrelSearch extends GameOrel
     public $status;
 
     /** {@inheritdoc} */
-    public function rules()
+    public function rules(): array
     {
         return [
-            [['id', 'user_id', 'user_gamer', 'type'], 'integer'],
-//            [['kon'], 'number'],
-            [['status'], 'safe'],
+//            [['id', 'user_id', 'user_gamer', 'type'], 'integer'],
+            [['kon'], 'number'],
+//            [['status'], 'safe'],
         ];
-    }
-
-    /** {@inheritdoc} */
-    public function scenarios()
-    {
-        // bypass scenarios() implementation in the parent class
-        return Model::scenarios();
     }
 
     /**
@@ -38,7 +30,7 @@ class OrelSearch extends GameOrel
      */
     public function search($params)
     {
-        $userId =  is_object($this->personInstance) ? $this->personInstance->user->id : null;
+//        $userId =  is_object($this->personInstance) ? $this->personInstance->user->id : null;
 
         $query = self::find()
             ->with('user')
@@ -59,26 +51,7 @@ class OrelSearch extends GameOrel
 //            return $dataProvider;
 //        }
 
-        $query->orderBy(['id' => SORT_ASC]);
-
-        // grid filtering conditions
-        if($this->status == 'last'){
-            $query->andFilterWhere(['>', 'user_gamer',  0]);
-            $query->orderBy(['updated_at' => SORT_DESC]);
-        }
-        if($this->status == 'open' && is_object($this->personInstance)){
-            $query->andFilterWhere(['user_gamer' => 0]);
-            $query->andFilterWhere(['!=', 'user_id', $userId]);
-        }
-        if($this->status == 'history' && is_object($this->personInstance)){
-            // я играл или мои игры кто-то играл
-            $query->andFilterWhere(['user_gamer' => $userId]);
-            $query->orFilterWhere([
-                'and', ['=', 'user_id', $userId], ['>', 'user_gamer', 0],
-            ]);
-
-            $query->orderBy(['updated_at' => SORT_DESC]);
-        }
+//        $query->orderBy(['id' => SORT_ASC]);
 
         $query->andFilterWhere(['kon' => $this->kon]);
         $query->andFilterWhere(['user_id' => $this->user_id]);

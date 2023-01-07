@@ -8,11 +8,13 @@
 
 namespace common\modules\games\middleware;
 
+use yii\db\Exception;
+
 class CheckMyGameMiddleware extends GameMiddleware
 {
     /**
      * @return bool
-     * @throws \yii\db\Exception
+     * @throws Exception
      */
     public function check(): bool
     {

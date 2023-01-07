@@ -11,11 +11,13 @@ namespace common\modules\games\behaviors\orel;
 
 use common\modules\games\behaviors\AbstractGameBehavior;
 use common\modules\games\models\GameOrel;
+use Yii;
 use yii\db\ActiveRecord;
 
 /**
  * Class OrelBehavior
  * @package common\modules\games\behaviors
+ * @deprecated
  */
 class OrelBehavior extends AbstractGameBehavior
 {
@@ -35,7 +37,7 @@ class OrelBehavior extends AbstractGameBehavior
         $model = $this->owner;
 
         if($this->userCredit < $model->changeCredit){
-            $model->addError('user_gamer', \Yii::t('games', 'Insufficient funds'));
+            $model->addError('user_gamer', Yii::t('games', 'Insufficient funds'));
         }
     }
 
@@ -44,7 +46,7 @@ class OrelBehavior extends AbstractGameBehavior
         /** @var GameOrel $model */
         $model = $this->owner;
 
-        $text = ($model->isWin()) ? 'Win': 'Lose';
-        $model->addError($model->scenario, \Yii::t('games', $text));
+        $text = ($model->isWin()) ? 'Win' : 'Lose';
+        $model->addError($model->scenario, Yii::t('games', $text));
     }
 }

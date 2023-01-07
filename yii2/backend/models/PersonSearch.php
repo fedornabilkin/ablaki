@@ -2,9 +2,9 @@
 
 namespace backend\models;
 
+use common\models\user\Person;
 use yii\base\Model;
 use yii\data\ActiveDataProvider;
-use common\models\user\Person;
 
 /**
  * PersonSearch represents the model behind the search form of `common\models\user\Person`.
@@ -14,10 +14,10 @@ class PersonSearch extends Person
     /**
      * {@inheritdoc}
      */
-    public function rules()
+    public function rules(): array
     {
         return [
-            [[ 'id', 'user_id', 'refovod', 'bonus_count', 'autoriz'], 'integer'],
+            [['id', 'user_id', 'refovod', 'bonus_count', 'autoriz'], 'integer'],
             [['balance', 'balance_in', 'balance_out', 'credit', 'rating'], 'number'],
             [['referrer'], 'safe'],
         ];
@@ -41,7 +41,9 @@ class PersonSearch extends Person
      */
     public function search($params)
     {
-        $query = Person::find();
+        $query = Person::find()
+            ->with('user')
+            ->orderBy(['id' => SORT_DESC]);
 
         // add conditions that should always apply here
 

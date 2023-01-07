@@ -12,6 +12,9 @@ namespace common\modules\games\controllers;
 use common\actions\TestAction;
 use common\controllers\FrontendController;
 
+/**
+ * @deprecated
+ */
 class AbstractGamesController extends FrontendController
 {
     protected $model;

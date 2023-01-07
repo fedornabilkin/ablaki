@@ -18,6 +18,6 @@ class RemoveGameMiddleware extends AbstractRemoveMiddleware
     public function updateData(): void
     {
         parent::updateData();
-        self::$data->changingBalance = self::$data->game->kon;
+        self::$data->changingBalance = self::$data->getKon();
     }
 }

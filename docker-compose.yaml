@@ -1,53 +1,77 @@
 version: "3"
 volumes:
   postgresdata:
+  redisData:
 services:
   nginx:
     image: nginx:1.15
+    restart: unless-stopped
     volumes:
-      - ./docker/nginx/site.conf:/etc/nginx/conf.d/site.conf
+      - ./docker/nginx/conf.d/:/etc/nginx/conf.d/
       - ./docker/nginx/add/:/etc/nginx/add/
       - ./yii2/:/web/yii2/
-      - ./frontend/:/web/frontend/
     ports:
-      - ${port_service_nginx}:80
+      - ${PORT_NGINX_API}:80
+      - ${PORT_NGINX_FRONT}:88
+      - ${PORT_NGINX_ADMIN}:8080
     links:
       - php
-      - vuejs
 
   php:
+    restart: unless-stopped
     build:
       context: docker/php
       dockerfile: Dockerfile
+    env_file:
+      - .env
     volumes:
       - ./yii2/:/web/yii2/
-    ports:
-      - 9000
+      - ./.env:/etc/environment
+      - ./docker/php/entrypoint.sh:/entrypoint.sh
+    entrypoint: /entrypoint.sh
 
   composer:
-    image: composer:1.8
+    build:
+      context: docker/composer
+      dockerfile: Dockerfile
     volumes:
       - ./yii2/:/web/yii2/
-      - ./docker/composer/docker-entrypoint.sh:/docker-entrypoint.sh
-    entrypoint: /docker-entrypoint.sh
+      - ./docker/composer/entrypoint.sh:/entrypoint.sh
+    entrypoint: /entrypoint.sh
 
   postgres:
     image: postgres:11
+    restart: unless-stopped
     ports:
-      - ${port_service_db}:5432
+      - ${PG_DB_PORT}:5432
     volumes:
       - postgresdata:/data/postgres
     environment:
       PGDATA: /data/postgres
-      POSTGRES_PASSWORD: ${pg_db_password}
-      POSTGRES_USER: ${pg_db_user}
-      POSTGRES_DB: ${pg_db_name}
+      POSTGRES_PASSWORD: ${PG_DB_PASSWORD}
+      POSTGRES_USER: ${PG_DB_USER}
+      POSTGRES_DB: ${PG_DB_NAME}
 
-  vuejs:
-    build:
-      context: docker/vuejs
-      dockerfile: Dockerfile
-    volumes:
-      - ./frontend/:/web/frontend/
-      - ./docker/vuejs/docker-entrypoint.sh:/docker-entrypoint.sh
-    entrypoint: /docker-entrypoint.sh
+#  mailcatcher:
+#    image: dockage/mailcatcher:0.6.5
+#    ports:
+#      - ${BLK_MAILCATCHER_PORT}:1080
+
+#  redis:
+#    image: redis:5.0.6-alpine
+#    restart: unless-stopped
+#    command: ["sh", "-c", "exec redis-server --requirepass \"${BLK_REDIS_PASSWORD}\""]
+#    entrypoint: redis-server /usr/local/etc/redis/redis.conf --appendonly yes
+#    ports:
+#      - ${BLK_REDIS_PORT}:6379
+#    volumes:
+#      - ./docker/redis/redis.conf:/usr/local/etc/redis/redis.conf
+#      - redisData:/data
+
+networks:
+  default:
+    driver: bridge
+    ipam:
+      driver: default
+      config:
+        - subnet: 192.168.22.0/24

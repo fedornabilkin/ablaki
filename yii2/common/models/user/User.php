@@ -11,22 +11,28 @@ namespace common\models\user;
 use common\models\Todo;
 use common\services\cookies\CookieService;
 use Yii;
+use yii\base\InvalidConfigException;
 
+/**
+ * Class User
+ * @package common\models\user
+ *
+ * @property Person $person
+ * @property Todo $todo
+ */
 class User extends \dektrium\user\models\User
 {
-    private $person;
+    use Relations;
 
     public $cookieParams;
+    private $person;
+
 
     /**
-     * @return \yii\db\ActiveQuery
+     * @param $insert
+     * @param $changedAttributes
+     * @throws InvalidConfigException
      */
-    public function getPerson()
-    {
-        return $this->hasOne(Person::class, ['user_id' => 'id'])->inverseOf('user');
-    }
-
-    /** @inheritdoc */
     public function afterSave($insert, $changedAttributes)
     {
         parent::afterSave($insert, $changedAttributes);
@@ -35,8 +41,8 @@ class User extends \dektrium\user\models\User
                 $this->person = Yii::createObject(Person::class);
             }
 
-            if (\Yii::$app->id == 'app-frontend') {
-                $this->cookieParams = \Yii::$app->params['cookies'];
+            if (Yii::$app->id === 'app-frontend') {
+                $this->cookieParams = Yii::$app->params['cookies'];
                 $this->setRefovod();
                 $this->setReferrer();
             }
@@ -49,7 +55,7 @@ class User extends \dektrium\user\models\User
      * Устанавливает рефовода
      * @inheritdoc
      */
-    public function setRefovod()
+    public function setRefovod(): void
     {
         $service = new CookieService([
             'name' => $this->cookieParams['refovod']['name'],
@@ -62,7 +68,7 @@ class User extends \dektrium\user\models\User
      * Устанавливает реферрер
      * @inheritdoc
      */
-    public function setReferrer()
+    public function setReferrer(): void
     {
         $service = new CookieService([
             'name' => $this->cookieParams['referrer']['name'],
@@ -70,12 +76,11 @@ class User extends \dektrium\user\models\User
         $this->person->referrer = $service->getValue();
     }
 
-    /**
-     * @return \yii\db\ActiveQuery
-     */
-    public function getTodo()
+    public function fields(): array
     {
-        return $this->hasMany(Todo::class, ['user_id' => 'id']);
+        return [
+            'username',
+            'person',
+        ];
     }
-
 }

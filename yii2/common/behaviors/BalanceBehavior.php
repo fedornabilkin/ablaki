@@ -10,8 +10,9 @@ namespace common\behaviors;
 
 
 use common\models\Commission;
-use common\models\HistoryBalance;
+use common\models\history\HistoryBalance;
 use common\models\user\Person;
+use Throwable;
 use yii\db\ActiveRecord;
 
 class BalanceBehavior extends AbstractBehavior
@@ -59,7 +60,7 @@ class BalanceBehavior extends AbstractBehavior
                 $this->saveCommission();
 
                 $transaction->commit();
-            } catch(\Throwable $e) {
+            } catch (Throwable $e) {
                 // todo log file or DB
                 $transaction->rollBack();
                 throw $e;

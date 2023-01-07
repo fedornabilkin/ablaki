@@ -9,18 +9,17 @@
 namespace common\modules\games\apiControllers;
 
 use api\filters\Auth;
-use common\middleware\DataMiddleware;
-use common\middleware\HistoryCommissionMiddleware;
 use common\middleware\person\UpdatePersonMiddleware;
 use common\modules\games\apiActions\saper\CreateAction;
 use common\modules\games\apiActions\saper\DeleteAction;
 use common\modules\games\apiActions\saper\RemoveAction;
 use common\modules\games\middleware\CheckFreeGameMiddleware;
+use common\modules\games\middleware\CheckNotMyGameMiddleware;
+use common\modules\games\middleware\GameDataMiddleware;
 use common\modules\games\middleware\GamerCheckBalanceMiddleware;
 use common\modules\games\middleware\saper\CheckMyStartedGameMiddleware;
 use common\modules\games\middleware\saper\PlayMiddleware;
 use common\modules\games\middleware\saper\StartMiddleware;
-use common\modules\games\middleware\saper\SwitchCreatorMiddleware;
 use common\modules\games\middleware\saper\ValidateHodMiddleware;
 use common\modules\games\models\GameSaper;
 use Yii;
@@ -31,19 +30,22 @@ class SaperController extends ActiveController
 {
     public $modelClass = GameSaper::class;
 
-    public function behaviors()
+    /**
+     * @return array
+     */
+    public function behaviors(): array
     {
-        $parent = parent::behaviors();
-        $arr = [
-            'authenticator' => [
+        return array_merge(parent::behaviors(), [
+            Auth::class => [
                 'class' => Auth::class,
             ],
-        ];
-
-        return array_merge($parent, $arr);
+        ]);
     }
 
-    public function actions()
+    /**
+     * @return array
+     */
+    public function actions(): array
     {
         $actions = parent::actions();
 
@@ -73,15 +75,16 @@ class SaperController extends ActiveController
     {
         $model = $this->findModel($id);
 
-        $data = new DataMiddleware([
+        $data = new GameDataMiddleware([
             'game' => $model,
-            'user' => \Yii::$app->user->identity->person,
+            'user' => Yii::$app->user->identity->person,
         ]);
 
         $middleware = new CheckFreeGameMiddleware();
         $middleware::$data = $data;
 
         $middleware
+            ->linkWith(new CheckNotMyGameMiddleware())
             ->linkWith(new GamerCheckBalanceMiddleware())
             ->linkWith(new StartMiddleware())
             ->linkWith(new UpdatePersonMiddleware());
@@ -91,7 +94,7 @@ class SaperController extends ActiveController
             Yii::$app->getResponse()->setStatusCode(201);
         } else {
             $errors = $middleware->getErrors();
-            throw new UserException(\Yii::t('games', $errors[0]));
+            throw new UserException(Yii::t('games', $errors[0]));
         }
 
         return true;
@@ -106,9 +109,9 @@ class SaperController extends ActiveController
             return $model->getErrors();
         }
 
-        $data = new DataMiddleware([
+        $data = new GameDataMiddleware([
             'game' => $model,
-            'user' => \Yii::$app->user->identity->person,
+            'user' => Yii::$app->user->identity->person,
         ]);
 
         $middleware = new GamerCheckBalanceMiddleware();
@@ -124,7 +127,7 @@ class SaperController extends ActiveController
             Yii::$app->getResponse()->setStatusCode(201);
         } else {
             $errors = $middleware->getErrors();
-            throw new UserException(\Yii::t('games', $errors[0]));
+            throw new UserException(Yii::t('games', $errors[0]));
         }
 
         return true;

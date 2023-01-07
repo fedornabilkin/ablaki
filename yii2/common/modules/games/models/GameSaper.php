@@ -2,22 +2,17 @@
 
 namespace common\modules\games\models;
 
+use common\models\history\HistorySaveInterface;
 use common\models\user\Person;
-use common\models\user\User;
 use common\modules\games\models\repo\Saper;
-use common\modules\games\traites\PersonTrait;
-use phpDocumentor\Reflection\Types\Self_;
 use Yii;
-use yii\behaviors\TimestampBehavior;
 
 /**
  * Class GameSaper
  * @package common\modules\games\models
  */
-class GameSaper extends Saper
+class GameSaper extends Saper implements HistorySaveInterface
 {
-    use PersonTrait;
-
     public $count = 1;
     public $col;
     public $row;
@@ -41,22 +36,22 @@ class GameSaper extends Saper
         return $scenarios;
     }
 
-    public function getHistoryType()
+    // todo use HistoryTypeTrait
+    public function getHistoryType(): string
     {
         return self::HISTORY_TYPE;
     }
 
-    public function getRandomType()
+    public function getRandomType(): int
     {
-        return rand(1,7);
+        return random_int(1, 7);
     }
 
     /**
      * {@inheritdoc}
      */
-    public function rules()
+    public function rules(): array
     {
-        $parent = parent::rules();
         $arr = [
             [['count'], 'integer'],
 
@@ -66,7 +61,7 @@ class GameSaper extends Saper
 //            [['hod1', 'hod2', 'hod3', 'hod4', 'hod5', 'col', 'row'], 'validatePlay', 'on' => self::SCENARIO_PLAY],
         ];
 
-        return array_merge($parent, $arr);
+        return array_merge(parent::rules(), $arr);
     }
 
 //    public function validateStart($attribute)
@@ -81,17 +76,24 @@ class GameSaper extends Saper
 //        }
 //    }
 
-    public function validatePlay($attribute)
+    /**
+     * @param $attribute
+     * @deprecated
+     */
+    public function validatePlay($attribute): void
     {
-        if($this->checkHod() && $attribute == 'row'){
+        if ($this->checkHod() && $attribute === 'row') {
             $this->checkComplete();
         }
     }
 
+    /**
+     * @deprecated
+     */
     public function checkComplete()
     {
-        $pole = 'pole'.$this->row;
-        $hod = 'hod'.$this->row;
+        $pole = 'pole' . $this->row;
+        $hod = 'hod' . $this->row;
 
         $this->$hod = $this->col;
         // если победил создатель
@@ -121,6 +123,7 @@ class GameSaper extends Saper
      * Проверяет возможность хода
      *
      * @return bool
+     * @deprecated
      */
     public function checkHod()
     {
@@ -152,9 +155,9 @@ class GameSaper extends Saper
         return true;
     }
 
-    public function getCommissionAmount($amount)
+    public function getCommissionAmount(): float
     {
-        return $amount * 0.05;
+        return $this->kon * 2 * 0.05;
     }
 
     public function isComplete()
@@ -172,18 +175,11 @@ class GameSaper extends Saper
      * @param float $kon
      * @return float|int
      */
-    public function normalizeRating($person, float $kon)
+    public function normalizeRating(float $rating): float
     {
-        if(!($person instanceof Person)){
-            return 0;
-        }
-
-        $rating = $person->rating;
-
         $kef = ($rating < 0.99) ? 1.9 : 0;
-        $kon = ($kon < 0.01) ? $this->kon : $kon;
 
-        return round(($kon / 2) / ($rating + $kef), 5);
+        return round(($this->kon / 2) / ($rating + $kef), 5);
     }
 
     /**
@@ -214,7 +210,7 @@ class GameSaper extends Saper
         ];
     }
 
-    public function fields()
+    public function fields(): array
     {
         return [
             'id',

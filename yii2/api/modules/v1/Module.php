@@ -8,7 +8,14 @@
 
 namespace api\modules\v1;
 
+use common\helpers\App;
+
 class Module extends \yii\base\Module
 {
+    public function init()
+    {
+        parent::init();
 
+        App::urlManager()->addRules(require __DIR__ . '/config/urlRules.php');
+    }
 }

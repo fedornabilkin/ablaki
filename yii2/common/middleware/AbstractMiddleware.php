@@ -2,6 +2,8 @@
 
 namespace common\middleware;
 
+use Yii;
+use yii\db\Exception;
 
 /**
  * Class AbstractMiddleware
@@ -31,14 +33,13 @@ abstract class AbstractMiddleware
 
     /**
      * @return bool
-     * @throws \yii\db\Exception
+     * @throws Exception
      */
     public function check(): bool
     {
         $this->consoleLog(static::class);
 
         if (!$this->next) {
-            self::$data->getTransaction()->commit();
             return true;
         }
 
@@ -83,7 +84,6 @@ abstract class AbstractMiddleware
      */
     protected function stopProcessing($message)
     {
-        self::$data->getTransaction()->rollBack();
         $this->setError($message);
         return false;
     }
@@ -92,7 +92,7 @@ abstract class AbstractMiddleware
     {
         self::$errors[] = $error;
         $this->consoleLog([
-            'user' => self::$data->user->getAttributes(),
+            'user' => self::$data->user ? self::$data->user->getAttributes() : [],
             'errors' => self::$errors,
         ]);
     }
@@ -107,6 +107,6 @@ abstract class AbstractMiddleware
      */
     protected function consoleLog($text)
     {
-        \Yii::debug($text, 'Middleware');
+        Yii::debug($text, 'Middleware');
     }
 }

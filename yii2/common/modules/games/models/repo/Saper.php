@@ -10,6 +10,7 @@ namespace common\modules\games\models\repo;
 
 use common\models\user\User;
 use yii\behaviors\TimestampBehavior;
+use yii\db\ActiveQuery;
 use yii\db\ActiveRecord;
 
 /**
@@ -74,13 +75,13 @@ class Saper extends ActiveRecord
                 'time_start_at', 'time_over_at', 'created_at'
             ], 'integer'],
             [['kon'], 'required'],
-            [['kon'], 'number'],
+            [['kon'], 'number', 'min' => 0.01],
             [['user_id'], 'exist', 'skipOnError' => true, 'targetClass' => User::class, 'targetAttribute' => ['user_id' => 'id']],
         ];
     }
 
     /**
-     * @return \yii\db\ActiveQuery
+     * @return ActiveQuery
      */
     public function getUser()
     {
@@ -88,7 +89,7 @@ class Saper extends ActiveRecord
     }
 
     /**
-     * @return \yii\db\ActiveQuery
+     * @return ActiveQuery
      */
     public function getUserGamer()
     {

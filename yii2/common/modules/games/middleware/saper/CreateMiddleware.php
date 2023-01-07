@@ -8,36 +8,29 @@
 
 namespace common\modules\games\middleware\saper;
 
-use common\modules\games\middleware\AbstractCreateMiddleware;
-use common\modules\games\models\repo\Saper;
+use common\modules\games\middleware\GameCreateMiddleware;
+use common\modules\games\models\GameSaper;
 
-class CreateMiddleware extends AbstractCreateMiddleware
+class CreateMiddleware extends GameCreateMiddleware
 {
+    /** @var GameSaper */
+    protected $model;
 
-    public function updateData()
+    public function updateData(): void
     {
         parent::updateData();
-        self::$data->changingBalance = 0 - self::$data->game->kon * self::$data->game->count;
+        self::$data->changingBalance = 0 - self::$data->getKon() * $this->getCount();
     }
 
     public function getRow(): array
     {
-        return [
-            'kon' => self::$data->game->kon,
-            'user_id' => self::$data->user->user_id,
-            'user_gamer' => 0,
-            'created_at' => time(),
-            'pole1' => self::$data->game->getRandomType(),
-            'pole2' => self::$data->game->getRandomType(),
-            'pole3' => self::$data->game->getRandomType(),
-            'pole4' => self::$data->game->getRandomType(),
-            'pole5' => self::$data->game->getRandomType(),
-            'etap' => self::$data->game::GAME_SAPER_ETAP_NEW,
-        ];
-    }
-
-    public function getTableName(): string
-    {
-        return Saper::tableName();
+        return array_merge(parent::getRow(), [
+            'pole1' => $this->model->getRandomType(),
+            'pole2' => $this->model->getRandomType(),
+            'pole3' => $this->model->getRandomType(),
+            'pole4' => $this->model->getRandomType(),
+            'pole5' => $this->model->getRandomType(),
+            'etap' => $this->model::GAME_SAPER_ETAP_NEW,
+        ]);
     }
 }

@@ -8,7 +8,8 @@
 
 namespace common\modules\games\apiActions;
 
-use common\middleware\DataMiddleware;
+use common\helpers\App;
+use common\modules\games\middleware\GameDataMiddleware;
 use common\modules\games\middleware\GameMiddleware;
 use Yii;
 use yii\base\Model;
@@ -22,7 +23,7 @@ abstract class AbstractCreate extends Action
 
     abstract public function getMiddleware(): GameMiddleware;
 
-    public function loadModel()
+    public function loadModel(): bool
     {
         $this->model = new $this->modelClass();
 
@@ -30,25 +31,23 @@ abstract class AbstractCreate extends Action
         return $this->model->validate();
     }
 
-    public function getDataMiddleware()
+    public function getDataMiddleware(): GameDataMiddleware
     {
-        $data = new DataMiddleware([
+        return new GameDataMiddleware([
             'game' => $this->model,
-            'user' => \Yii::$app->user->identity->person,
+            'user' => App::user()->identity->person,
         ]);
-
-        return $data;
     }
 
-    public function checkMiddleware()
+    public function checkMiddleware(): void
     {
         $middleware = $this->getMiddleware();
 
         if ($middleware->check()) {
-            Yii::$app->getResponse()->setStatusCode(201);
+            App::response()->setStatusCode(201);
         } else {
             $errors = $middleware->getErrors();
-            throw new UserException(\Yii::t('games', $errors[0]));
+            throw new UserException(Yii::t('games', $errors[0]));
         }
     }
 }

@@ -1,3 +1,8 @@
+<?php
+
+use mdm\admin\components\Helper;
+
+?>
 <aside class="main-sidebar">
 
     <section class="sidebar">
@@ -27,6 +32,7 @@
         <!-- /.search form -->
 
         <?php
+        // https://fontawesome.ru/all-icons/#chart
         $menuItems = [
             [
                 'label' => Yii::t('app', 'Admin'),
@@ -34,6 +40,7 @@
                 'items' => [
                     ['label' => Yii::t('app', 'Rbac'), 'icon' => 'user-secret', 'url' => ['/admin/assignment']],
                     ['label' => Yii::t('app', 'Users'), 'icon' => 'user', 'url' => ['/user/admin']],
+                    ['label' => Yii::t('app', 'Person'), 'icon' => 'users', 'url' => ['/person/']],
 
                     ['label' => Yii::t('app', 'Gii'), 'icon' => 'file-code-o', 'url' => ['/gii/']],
                     ['label' => Yii::t('app', 'Debug'), 'icon' => 'dashboard', 'url' => ['/debug/']],
@@ -44,16 +51,23 @@
                 'icon' => 'user-secret',
                 'url' => '#',
                 'items' => [
-                    ['label' => Yii::t('app', 'Tasks'), 'icon' => 'tasks', 'url' => ['/todo/']],
+                    ['label' => Yii::t('app', 'Todo'), 'icon' => 'tasks', 'url' => ['/todo/']],
+                    ['label' => Yii::t('app', 'Fact'), 'icon' => 'user-secret', 'url' => ['/fact/']],
                     ['label' => Yii::t('app', 'Redirect'), 'icon' => 'share', 'url' => ['/redirect/manager']],
                     ['label' => Yii::t('app', 'Catalog'), 'icon' => 'tree', 'url' => ['/binds/catalog']],
                 ],
             ],
+            [
+                'label' => Yii::t('app', 'History'),
+                'icon' => 'bar-chart-o',
+                'url' => '#',
+                'items' => [
+                    ['label' => Yii::t('app', 'Balance'), 'icon' => 'bar-chart-o', 'url' => ['/history/balance']],
+                    ['label' => Yii::t('app', 'Rating'), 'icon' => 'line-chart', 'url' => ['/history/rating']],
+                ],
+            ],
 
-
-            ['label' => Yii::t('app', 'Person'), 'icon' => 'users', 'url' => ['/person/']],
-            ['label' => Yii::t('app', 'Fact'), 'icon' => 'user-secret', 'url' => ['/fact/']],
-
+            ['label' => Yii::t('app', 'Exchange'), 'icon' => 'refresh', 'url' => ['/exchange/']],
             ['label' => 'Статьи', 'icon' => 'file-o', 'url' => ['/post']],
 
             ['label' => 'Other', 'options' => ['class' => 'header']],
@@ -89,7 +103,7 @@
 
         ];
 
-        $menuItems = \mdm\admin\components\Helper::filter($menuItems);
+        $menuItems = Helper::filter($menuItems);
         ?>
 
         <!-- widget -->

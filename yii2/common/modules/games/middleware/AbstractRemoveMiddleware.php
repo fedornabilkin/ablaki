@@ -8,13 +8,20 @@
 
 namespace common\modules\games\middleware;
 
+use Throwable;
+use yii\db\Exception;
+use yii\db\StaleObjectException;
+
 class AbstractRemoveMiddleware extends GameMiddleware
 {
+    /** @var GameDataMiddleware */
+    public static $data;
+
     /**
      * @return bool
-     * @throws \Throwable
-     * @throws \yii\db\Exception
-     * @throws \yii\db\StaleObjectException
+     * @throws Throwable
+     * @throws Exception
+     * @throws StaleObjectException
      */
     public function check(): bool
     {
@@ -24,8 +31,8 @@ class AbstractRemoveMiddleware extends GameMiddleware
     }
 
     /**
-     * @throws \Throwable
-     * @throws \yii\db\StaleObjectException
+     * @throws Throwable
+     * @throws StaleObjectException
      */
     public function execute(): void
     {
@@ -38,14 +45,14 @@ class AbstractRemoveMiddleware extends GameMiddleware
      */
     public function updateData(): void
     {
-        self::$data->historyType = self::$data->game::HISTORY_TYPE;
-        self::$data->historyComment = 'Remove the game #' . self::$data->game->id;
+        self::$data->historyType = self::$data->game->getHistoryType();
+        self::$data->historyComment = 'Remove #' . self::$data->game->id;
     }
 
     /**
      * @return bool
-     * @throws \Throwable
-     * @throws \yii\db\StaleObjectException
+     * @throws Throwable
+     * @throws StaleObjectException
      */
     protected function remove(): bool
     {

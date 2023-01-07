@@ -9,17 +9,13 @@
 namespace common\middleware;
 
 use common\models\user\Person;
-use common\modules\games\models\GameOrel;
-use common\modules\games\models\GameSaper;
 use yii\base\BaseObject;
-use yii\db\Transaction;
+use yii\db\ActiveRecord;
 
 class DataMiddleware extends BaseObject
 {
     /** @var Person */
     public $user;
-    /** @var GameSaper|GameOrel */
-    public $game;
 
     /** @var float */
     public $changingBalance = 0.0;
@@ -31,35 +27,28 @@ class DataMiddleware extends BaseObject
     public $changingBonusCount = 0;
 
     /** @var float */
-    public $commissionAmout = 0.0;
+    public $commissionAmount = 0.0;
 
     /** @var string */
     public $historyType = 'other';
     /** @var string */
     public $historyComment = 'other';
-    /** @var Transaction */
-    private $transaction;
-
-    const COMMISSION_CREDIT = 'credit';
-
-    public function init()
-    {
-        parent::init();
-
-        if (!$this->transaction) {
-            $this->transaction = $this->user::getDb()->beginTransaction();
-        }
-    }
-
     /**
-     * @return Transaction
+     * @var ActiveRecord
      */
-    public function getTransaction()
+    protected $model;
+
+    public function needUpdatePersonCounters(): bool
     {
-        return $this->transaction;
+        foreach ($this->getUpdatePersonCounters() as $cnt) {
+            if ($cnt !== 0) {
+                return true;
+            }
+        }
+        return false;
     }
 
-    public function getUpdatePersonCounters()
+    public function getUpdatePersonCounters(): array
     {
         return [
             'balance' => $this->changingBalance,
@@ -67,5 +56,48 @@ class DataMiddleware extends BaseObject
             'rating' => $this->changingRating,
             'bonus_count' => $this->changingBonusCount,
         ];
+    }
+
+    public function getNeedCredit(): int
+    {
+        return 0;
+    }
+
+    public function getNeedBalance(): int
+    {
+        return 0;
+    }
+
+    /**
+     * @param Person $user
+     */
+    public function setUser(Person $user): void
+    {
+        $this->user = $user;
+    }
+
+    /**
+     * @return Person
+     */
+    public function getUser(): Person
+    {
+        return $this->user;
+    }
+
+    /**
+     * @param ActiveRecord $model
+     * @return void
+     */
+    public function setModel(ActiveRecord $model): void
+    {
+        $this->model = $model;
+    }
+
+    /**
+     * @return ActiveRecord
+     */
+    public function getModel(): ActiveRecord
+    {
+        return $this->model;
     }
 }

@@ -11,6 +11,7 @@ namespace common\modules\games\middleware\saper;
 use common\middleware\person\UpdatePersonMiddleware;
 use common\modules\games\middleware\GameMiddleware;
 use common\modules\games\models\GameSaper;
+use yii\db\Exception;
 
 class SwitchCreatorMiddleware extends GameMiddleware
 {
@@ -19,7 +20,7 @@ class SwitchCreatorMiddleware extends GameMiddleware
 
     /**
      * @return bool
-     * @throws \yii\db\Exception
+     * @throws Exception
      */
     public function check(): bool
     {
@@ -34,9 +35,9 @@ class SwitchCreatorMiddleware extends GameMiddleware
     {
         self::$data->user = $this->model->user->person; // Далее работаем с персоной создателя игры
 
-        self::$data->changingBalance = $this->model->kon * 2 - self::$data->commissionAmout;
+        self::$data->changingBalance = $this->model->kon * 2 - self::$data->commissionAmount;
         self::$data->historyComment = 'Victory in the game #' . $this->model->id;
-        self::$data->changingRating = $this->model->normalizeRating(self::$data->user, $this->model->kon);
+        self::$data->changingRating = $this->model->normalizeRating(self::$data->user->rating);
 
         $this->insertNext(new UpdatePersonMiddleware());
     }

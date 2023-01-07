@@ -2,7 +2,11 @@
 
 namespace common\models;
 
+use common\models\user\User;
+use common\models\user\UserRelationInterface;
 use Yii;
+use yii\db\ActiveQuery;
+use yii\db\ActiveRecord;
 
 /**
  * This is the model class for table "credit_transfer".
@@ -18,7 +22,7 @@ use Yii;
  * @property User $recepient0
  * @property User $user
  */
-class CreditTransfer extends \yii\db\ActiveRecord
+class CreditTransfer extends ActiveRecord implements UserRelationInterface
 {
     /**
      * {@inheritdoc}
@@ -38,8 +42,8 @@ class CreditTransfer extends \yii\db\ActiveRecord
             [['amount'], 'required'],
             [['amount'], 'number'],
             [['password'], 'string', 'max' => 60],
-            [['recepient'], 'exist', 'skipOnError' => true, 'targetClass' => User::className(), 'targetAttribute' => ['recepient' => 'id']],
-            [['user_id'], 'exist', 'skipOnError' => true, 'targetClass' => User::className(), 'targetAttribute' => ['user_id' => 'id']],
+            [['recepient'], 'exist', 'skipOnError' => true, 'targetClass' => User::class, 'targetAttribute' => ['recepient' => 'id']],
+            [['user_id'], 'exist', 'skipOnError' => true, 'targetClass' => User::class, 'targetAttribute' => ['user_id' => 'id']],
         ];
     }
 
@@ -60,18 +64,18 @@ class CreditTransfer extends \yii\db\ActiveRecord
     }
 
     /**
-     * @return \yii\db\ActiveQuery
+     * @return ActiveQuery
      */
-    public function getRecepient0()
+    public function getRecepient(): ActiveQuery
     {
-        return $this->hasOne(User::className(), ['id' => 'recepient']);
+        return $this->hasOne(User::class, ['id' => 'recepient']);
     }
 
     /**
-     * @return \yii\db\ActiveQuery
+     * @return ActiveQuery
      */
-    public function getUser()
+    public function getUser(): ActiveQuery
     {
-        return $this->hasOne(User::className(), ['id' => 'user_id']);
+        return $this->hasOne(User::class, ['id' => 'user_id']);
     }
 }

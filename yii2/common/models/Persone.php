@@ -4,6 +4,8 @@ namespace common\models;
 
 use common\models\user\User;
 use Yii;
+use yii\db\ActiveQuery;
+use yii\db\ActiveRecord;
 
 /**
  * This is the model class for table "persone".
@@ -21,8 +23,10 @@ use Yii;
  * @property int $autoriz
  *
  * @property User $user
+ *
+ * @deprecated
  */
-class Persone extends \yii\db\ActiveRecord
+class Persone extends ActiveRecord
 {
     /**
      * @inheritdoc
@@ -67,7 +71,7 @@ class Persone extends \yii\db\ActiveRecord
     }
 
     /**
-     * @return \yii\db\ActiveQuery
+     * @return ActiveQuery
      */
     public function getUser()
     {

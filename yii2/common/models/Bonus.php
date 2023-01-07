@@ -3,7 +3,10 @@
 namespace common\models;
 
 use common\models\user\User;
+use common\models\user\UserRelationInterface;
 use Yii;
+use yii\db\ActiveQuery;
+use yii\db\ActiveRecord;
 
 /**
  * This is the model class for table "bonus".
@@ -17,7 +20,7 @@ use Yii;
  *
  * @property User $user
  */
-class Bonus extends \yii\db\ActiveRecord
+class Bonus extends ActiveRecord implements UserRelationInterface
 {
     /**
      * {@inheritdoc}
@@ -56,9 +59,9 @@ class Bonus extends \yii\db\ActiveRecord
     }
 
     /**
-     * @return \yii\db\ActiveQuery
+     * @return ActiveQuery
      */
-    public function getUser()
+    public function getUser(): ActiveQuery
     {
         return $this->hasOne(User::class, ['id' => 'user_id']);
     }

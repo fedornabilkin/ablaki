@@ -16,6 +16,11 @@ use yii\widgets\ActiveForm;
 
     <?= $form->field($model, 'comment')->textarea(['rows' => 6]) ?>
 
+    <?= $form->field($model, 'status')
+        ->checkbox([
+            'checked ' => (bool)$model->status,
+        ]); ?>
+
     <div class="form-group">
         <?= Html::submitButton(Yii::t('app', 'Save'), ['class' => 'btn btn-success']) ?>
     </div>

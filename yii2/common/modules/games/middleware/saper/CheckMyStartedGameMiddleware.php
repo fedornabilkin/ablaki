@@ -8,9 +8,9 @@
 
 namespace common\modules\games\middleware\saper;
 
-use common\modules\games\middleware\GameMiddleware;
+use common\middleware\AbstractMiddleware;
 
-class CheckMyStartedGameMiddleware extends GameMiddleware
+class CheckMyStartedGameMiddleware extends AbstractMiddleware
 {
     /**
      * @inheritDoc

@@ -9,7 +9,9 @@
 namespace common\modules\games\models\repo;
 
 use common\models\user\User;
+use common\models\user\UserRelationInterface;
 use yii\behaviors\TimestampBehavior;
+use yii\db\ActiveQuery;
 use yii\db\ActiveRecord;
 
 /**
@@ -24,9 +26,10 @@ use yii\db\ActiveRecord;
  * @property int $updated_at
  * @property int $created_at
  *
+ * @property User $user
  * @property User $userGamer
  */
-class Orel extends ActiveRecord
+class Orel extends ActiveRecord implements UserRelationInterface
 {
 
     /**
@@ -40,10 +43,8 @@ class Orel extends ActiveRecord
     public function behaviors()
     {
         return array_merge(parent::behaviors(), [
-            'TimestampBehavior' => [
+            TimestampBehavior::class => [
                 'class' => TimestampBehavior::class,
-                'createdAtAttribute' => 'created_at',
-                'updatedAtAttribute' => 'updated_at',
             ],
         ]);
     }
@@ -58,18 +59,23 @@ class Orel extends ActiveRecord
         ];
     }
 
+    public static function find()
+    {
+        return new OrelQuery(static::class);
+    }
+
     /**
-     * @return \yii\db\ActiveQuery
+     * @return ActiveQuery
      */
-    public function getUser()
+    public function getUser(): ActiveQuery
     {
         return $this->hasOne(User::class, ['id' => 'user_id']);
     }
 
     /**
-     * @return \yii\db\ActiveQuery
+     * @return ActiveQuery
      */
-    public function getUserGamer()
+    public function getUserGamer(): ActiveQuery
     {
         return $this->hasOne(User::class, ['id' => 'user_gamer']);
     }

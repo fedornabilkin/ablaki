@@ -34,6 +34,7 @@ return [
         'setWritable' => [
             'api/runtime',
             'api/web/assets',
+            'api/web/.gitkeep',
             'backend/runtime',
             'backend/web/assets',
             'frontend/runtime',
@@ -41,12 +42,9 @@ return [
         ],
         'setExecutable' => [
             'yii',
-            'yii_test',
         ],
         'setCookieValidationKey' => [
-            'api/config/main-local.php',
-            'backend/config/main-local.php',
-            'frontend/config/main-local.php',
+
         ],
     ],
     'Production' => [
@@ -54,6 +52,7 @@ return [
         'setWritable' => [
             'api/runtime',
             'api/web/assets',
+            'api/web/.gitkeep',
             'backend/runtime',
             'backend/web/assets',
             'frontend/runtime',
@@ -63,9 +62,7 @@ return [
             'yii',
         ],
         'setCookieValidationKey' => [
-            'api/config/main-local.php',
-            'backend/config/main-local.php',
-            'frontend/config/main-local.php',
+
         ],
     ],
 ];

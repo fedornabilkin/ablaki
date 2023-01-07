@@ -11,6 +11,9 @@ namespace common\singletones;
 
 use Yii;
 
+/**
+ * @deprecated
+ */
 class Person
 {
     private static $instance;

@@ -1,5 +1,4 @@
 # yii console commands
-/yii
 /yii_test
 /yii_test.bat
 
@@ -25,7 +24,6 @@ Thumbs.db
 
 # composer itself is not needed
 composer.phar
-composer.lock
 
 # Mac DS_Store Files
 .DS_Store
@@ -39,3 +37,5 @@ phpunit.phar
 /.vagrant
 
 /db.sql.gz
+
+
