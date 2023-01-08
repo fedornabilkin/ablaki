@@ -1,11 +1,12 @@
 <?php
 
-use common\models\CreditTransfer;
+use common\modules\exchange\models\CreditTransfer;
+use console\migrations\AbstractMigration;
 
 /**
  * Class m180526_213027_move_transfer
  */
-class m180526_213027_move_transfer extends \console\migrations\AbstractMigration
+class m180526_213027_move_transfer extends AbstractMigration
 {
     /**
      * {@inheritdoc}
@@ -22,7 +23,7 @@ class m180526_213027_move_transfer extends \console\migrations\AbstractMigration
 
             $model->id = $row['id'];
             $model->user_id = $row['user'];
-            $model->recepient = $row['recepient'];
+            $model->user_buyer = $row['recepient'];
             $model->amount = $row['amount'];
             $model->password = $row['hash'];
             $model->updated_at = $row['recep_time'];

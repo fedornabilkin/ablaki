@@ -2,6 +2,7 @@
 
 namespace common\models\history;
 
+use common\models\core\ModelQueryTrait;
 use common\models\user\User;
 use common\models\user\UserRelationInterface;
 use Yii;
@@ -26,10 +27,7 @@ use yii\db\ActiveRecord;
  */
 class HistoryBalance extends ActiveRecord implements UserRelationInterface
 {
-    public static function find(): HistoryBalanceQuery
-    {
-        return new HistoryBalanceQuery(static::class);
-    }
+    use ModelQueryTrait;
 
     public function behaviors()
     {

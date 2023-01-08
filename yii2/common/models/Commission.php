@@ -4,6 +4,7 @@ namespace common\models;
 
 use Yii;
 use yii\behaviors\TimestampBehavior;
+use yii\db\ActiveRecord;
 
 /**
  * This is the model class for table "comission".
@@ -13,7 +14,7 @@ use yii\behaviors\TimestampBehavior;
  * @property double $amount
  * @property int $created_at
  */
-class Commission extends AbstractModel
+class Commission extends ActiveRecord
 {
     /**
      * {@inheritdoc}
@@ -26,7 +27,7 @@ class Commission extends AbstractModel
     public function behaviors()
     {
         return array_merge_recursive(parent::behaviors(), [
-            'TimestampBehavior' => [
+            TimestampBehavior::class => [
                 'class' => TimestampBehavior::class,
                 'updatedAtAttribute' => 'created_at',
             ],

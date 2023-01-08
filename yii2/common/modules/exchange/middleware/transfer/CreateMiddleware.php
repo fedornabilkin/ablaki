@@ -6,15 +6,16 @@
  * Time: 22:33
  */
 
-namespace common\modules\exchange\middleware;
+namespace common\modules\exchange\middleware\transfer;
 
 use common\middleware\AbstractCreateMiddleware;
-use common\modules\exchange\api\models\CreditExchange;
+use common\modules\exchange\models\CreditTransfer;
+use Yii;
 use yii\base\UserException;
 
 class CreateMiddleware extends AbstractCreateMiddleware
 {
-    /** @var CreditExchange */
+    /** @var CreditTransfer */
     protected $model;
 
     public function check(): bool
@@ -31,35 +32,29 @@ class CreateMiddleware extends AbstractCreateMiddleware
 
     public function updateData(): void
     {
-        $money = 0;
-        if ($this->model->isBuy()) {
-            self::$data->changingCredit = 0 - $this->model->credit * $this->getCount();
-            $money = $this->model->credit;
-        }
-
-        if ($this->model->isSell()) {
-            self::$data->changingBalance = 0 - $this->model->amount * $this->getCount();
-            $money = $this->model->amount;
-        }
-
-        self::$data->historyComment = 'Create ' . $this->getCount() . 'x' . $money;
+        self::$data->changingCredit = 0 - $this->amount() * $this->count();
+        self::$data->historyComment = 'Create ' . $this->count() . 'x' . $this->amount();
         self::$data->historyType = $this->model->getHistoryType();
     }
 
     public function getRow(): array
     {
         return [
-            'type' => $this->model->type,
             'amount' => $this->model->amount,
-            'credit' => $this->model->credit,
             'user_id' => self::$data->user->user->id,
+            'password' => Yii::$app->security->generateRandomString(8),
             'created_at' => time(),
         ];
     }
 
-    public function getCount(): int
+    public function count(): int
     {
         return $this->model->count;
+    }
+
+    public function amount(): int
+    {
+        return $this->model->amount;
     }
 
     protected function getTableName(): string

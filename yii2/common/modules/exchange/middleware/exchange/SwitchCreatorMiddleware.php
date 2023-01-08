@@ -6,7 +6,7 @@
  * Time: 23:05
  */
 
-namespace common\modules\exchange\middleware;
+namespace common\modules\exchange\middleware\exchange;
 
 use common\middleware\AbstractMiddleware;
 use common\middleware\HistoryCommissionMiddleware;

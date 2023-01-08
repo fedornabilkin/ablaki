@@ -16,7 +16,7 @@ if (function_exists($header_remove)) {
 return [
     'id' => 'api',
     'basePath' => dirname(__DIR__),
-    'bootstrap' => ['log', 'v1'],
+    'bootstrap' => ['log', 'v1', 'exchange', 'games'],
     'controllerNamespace' => 'api\controllers',
     'components' => [
         'response' => [

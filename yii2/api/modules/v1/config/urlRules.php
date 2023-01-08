@@ -49,43 +49,6 @@ return [
             'GET everyday' => 'everyday',
         ],
     ],
-    [
-        'class' => UrlRule::class,
-        'controller' => 'v1/saper',
-        'pluralize' => false,
-        'except' => ['view'],
-        'extraPatterns' => [
-            'GET remove' => 'remove',
-            'GET start/{id}' => 'start',
-            'POST play/{id}' => 'play',
-            'POST double/{id}' => 'double',
-        ],
-    ],
-    [
-        'class' => UrlRule::class,
-        'controller' => ['v1/orel'],
-        'pluralize' => false,
-        'except' => ['view'],
-        'extraPatterns' => [
-            'GET remove' => 'remove',
-            'GET my' => 'my',
-            'GET history' => 'history',
-            'GET kon-count' => 'kon-count',
-            'POST play/{id}' => 'play',
-        ],
-    ],
-    [
-        'class' => UrlRule::class,
-        'controller' => ['v1/exchange'],
-        'pluralize' => false,
-        'except' => ['view'],
-        'extraPatterns' => [
-            'GET remove' => 'remove',
-            'GET my' => 'my',
-            'GET history' => 'history',
-            'GET available-count' => 'available-count',
-        ],
-    ],
 //    [
 //        'class' => UrlRule::class,
 //        'controller' => 'v1/catalog',

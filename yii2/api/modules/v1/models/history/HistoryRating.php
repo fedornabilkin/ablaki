@@ -12,7 +12,7 @@ class HistoryRating extends \common\models\history\HistoryRating
 {
     public function fields(): array
     {
-        $f = [
+        return [
             'id',
             'user_id',
             'rating',
@@ -24,7 +24,5 @@ class HistoryRating extends \common\models\history\HistoryRating
             },
             'created_at',
         ];
-
-        return $f;
     }
 }

@@ -34,7 +34,7 @@ class GameCreateMiddleware extends AbstractCreateMiddleware
     public function updateData(): void
     {
         self::$data->historyType = $this->model->getHistoryType();
-        self::$data->historyComment = 'Create game ' . $this->getCount() . 'x' . self::$data->getKon();
+        self::$data->historyComment = 'Create game ' . $this->count() . 'x' . self::$data->getKon();
     }
 
     public function getRow(): array
@@ -47,7 +47,7 @@ class GameCreateMiddleware extends AbstractCreateMiddleware
         ];
     }
 
-    public function getCount(): int
+    public function count(): int
     {
         return self::$data->getCount();
     }

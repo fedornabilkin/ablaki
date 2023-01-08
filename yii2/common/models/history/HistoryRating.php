@@ -2,6 +2,7 @@
 
 namespace common\models\history;
 
+use common\models\core\ModelQueryTrait;
 use common\models\user\User;
 use common\models\user\UserRelationInterface;
 use Yii;
@@ -23,10 +24,7 @@ use yii\db\ActiveRecord;
  */
 class HistoryRating extends ActiveRecord implements UserRelationInterface
 {
-    public static function find(): HistoryRatingQuery
-    {
-        return new HistoryRatingQuery(static::class);
-    }
+    use ModelQueryTrait;
 
     public function behaviors()
     {
@@ -37,6 +35,7 @@ class HistoryRating extends ActiveRecord implements UserRelationInterface
             ],
         ]);
     }
+
     /**
      * {@inheritdoc}
      */
@@ -44,6 +43,7 @@ class HistoryRating extends ActiveRecord implements UserRelationInterface
     {
         return 'history_rating';
     }
+
     /**
      * {@inheritdoc}
      */

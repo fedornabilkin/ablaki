@@ -15,7 +15,7 @@ abstract class AbstractCreateMiddleware extends AbstractMiddleware
 
     abstract public function getRow(): array;
 
-    abstract public function getCount(): int;
+    abstract public function count(): int;
 
     abstract protected function getTableName(): string;
 
@@ -23,7 +23,7 @@ abstract class AbstractCreateMiddleware extends AbstractMiddleware
     {
         $rows = [];
 
-        for ($i = 1; $i <= $this->getCount(); $i++) {
+        for ($i = 1; $i <= $this->count(); $i++) {
             $rows[] = $this->getRow();
         }
 
