@@ -1,10 +1,15 @@
 <?php
 
-namespace common\models;
+namespace common\modules\exchange\models;
 
+use common\models\core\ModelQueryTrait;
+use common\models\history\HistorySaveInterface;
+use common\models\history\HistoryTypeTrait;
+use common\models\user\BuyerRelationInterface;
 use common\models\user\User;
 use common\models\user\UserRelationInterface;
 use Yii;
+use yii\behaviors\TimestampBehavior;
 use yii\db\ActiveQuery;
 use yii\db\ActiveRecord;
 
@@ -13,17 +18,22 @@ use yii\db\ActiveRecord;
  *
  * @property int $id
  * @property int $user_id
- * @property int $recepient
+ * @property int $user_buyer
  * @property double $amount
  * @property string $password
  * @property int $updated_at
  * @property int $created_at
  *
- * @property User $recepient0
+ * @property User $userBuyer
  * @property User $user
  */
-class CreditTransfer extends ActiveRecord implements UserRelationInterface
+class CreditTransfer extends ActiveRecord implements UserRelationInterface, BuyerRelationInterface, HistorySaveInterface
 {
+    use ModelQueryTrait;
+    use HistoryTypeTrait;
+
+    public $historyType = 'transfer';
+
     /**
      * {@inheritdoc}
      */
@@ -32,17 +42,26 @@ class CreditTransfer extends ActiveRecord implements UserRelationInterface
         return 'credit_transfer';
     }
 
+    public function behaviors()
+    {
+        return array_merge_recursive(parent::behaviors(), [
+            TimestampBehavior::class => [
+                'class' => TimestampBehavior::class,
+            ],
+        ]);
+    }
+
     /**
      * {@inheritdoc}
      */
     public function rules()
     {
         return [
-            [['user_id', 'recepient', 'updated_at', 'created_at'], 'integer'],
+            [['user_id', 'user_buyer', 'updated_at', 'created_at'], 'integer'],
             [['amount'], 'required'],
             [['amount'], 'number'],
             [['password'], 'string', 'max' => 60],
-            [['recepient'], 'exist', 'skipOnError' => true, 'targetClass' => User::class, 'targetAttribute' => ['recepient' => 'id']],
+            [['user_buyer'], 'exist', 'skipOnError' => true, 'targetClass' => User::class, 'targetAttribute' => ['user_id' => 'id']],
             [['user_id'], 'exist', 'skipOnError' => true, 'targetClass' => User::class, 'targetAttribute' => ['user_id' => 'id']],
         ];
     }
@@ -55,7 +74,7 @@ class CreditTransfer extends ActiveRecord implements UserRelationInterface
         return [
             'id' => Yii::t('app', 'ID'),
             'user_id' => Yii::t('app', 'User ID'),
-            'recepient' => Yii::t('app', 'Recepient'),
+            'user_buyer' => Yii::t('app', 'User Buyer'),
             'amount' => Yii::t('app', 'Amount'),
             'password' => Yii::t('app', 'Password'),
             'updated_at' => Yii::t('app', 'Updated At'),
@@ -66,9 +85,9 @@ class CreditTransfer extends ActiveRecord implements UserRelationInterface
     /**
      * @return ActiveQuery
      */
-    public function getRecepient(): ActiveQuery
+    public function getUserBuyer(): ActiveQuery
     {
-        return $this->hasOne(User::class, ['id' => 'recepient']);
+        return $this->hasOne(User::class, ['id' => 'user_buyer']);
     }
 
     /**

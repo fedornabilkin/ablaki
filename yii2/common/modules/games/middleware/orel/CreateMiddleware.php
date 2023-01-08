@@ -19,7 +19,7 @@ class CreateMiddleware extends GameCreateMiddleware
     public function updateData(): void
     {
         parent::updateData();
-        self::$data->changingCredit = 0 - self::$data->getKon() * $this->getCount();
+        self::$data->changingCredit = 0 - self::$data->getKon() * $this->count();
     }
 
     public function getRow(): array

@@ -8,9 +8,9 @@
 
 namespace api\modules\v1\controllers;
 
-use api\filters\Auth;
 use api\modules\v1\models\history\HistoryBalance;
 use api\modules\v1\models\history\HistoryRating;
+use api\modules\v1\traites\AuthTrait;
 use common\helpers\App;
 use yii\base\DynamicModel;
 use yii\data\ActiveDataFilter;
@@ -19,17 +19,9 @@ use yii\rest\ActiveController;
 
 class HistoryController extends ActiveController
 {
+    use AuthTrait;
+
     public $modelClass = HistoryBalance::class;
-
-    public function behaviors(): array
-    {
-        return array_merge(parent::behaviors(), [
-            Auth::class => [
-                'class' => Auth::class,
-            ],
-        ]);
-    }
-
 
     public function actions(): array
     {
@@ -38,21 +30,21 @@ class HistoryController extends ActiveController
         $actions['index']['dataFilter'] = $this->getFilter();
 
         $actions['balance'] = $actions['index'];
+        $actions['balance']['modelClass'] = HistoryBalance::class;
         $actions['rating'] = $actions['index'];
-        $this->modelClass = HistoryBalance::class;
+        $actions['rating']['modelClass'] = HistoryRating::class;
 
         $actions['balance']['prepareDataProvider'] = function ($action, $filter) {
             $filter = $filter ?? [];
             return new ActiveDataProvider([
                 'query' => $this->modelClass::find()
-                    ->orderBy(['created_at' => SORT_DESC])
+                    ->orderBy(['id' => SORT_DESC])
                     ->with(['user'])
                     ->my(App::user()->identity)
                     ->andFilterWhere($filter),
             ]);
         };
 
-        $this->modelClass = HistoryRating::class;
         $actions['rating']['prepareDataProvider'] = $actions['balance']['prepareDataProvider'];
 
 

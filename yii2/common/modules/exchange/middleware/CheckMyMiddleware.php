@@ -32,7 +32,7 @@ class CheckMyMiddleware extends AbstractMiddleware
         $this->model = self::$data->getModel();
         $this->user = self::$data->getUser();
 
-        if (!$this->checkGame()) {
+        if (!$this->checkMy()) {
             throw new MyException();
         }
 
@@ -42,7 +42,7 @@ class CheckMyMiddleware extends AbstractMiddleware
     /**
      * @return bool
      */
-    protected function checkGame(): bool
+    protected function checkMy(): bool
     {
         return $this->model->user_id === $this->user->user_id;
     }

@@ -2,6 +2,7 @@
 
 namespace common\modules\exchange\models;
 
+use common\models\core\ModelQueryTrait;
 use common\models\history\HistorySaveInterface;
 use common\models\history\HistoryTypeTrait;
 use common\models\user\BuyerRelationInterface;
@@ -27,6 +28,7 @@ use yii\db\ActiveRecord;
  */
 class CreditExchange extends ActiveRecord implements UserRelationInterface, BuyerRelationInterface, HistorySaveInterface
 {
+    use ModelQueryTrait;
     use HistoryTypeTrait;
 
     public const EX_TYPE_SELL = 'sell';
@@ -55,11 +57,6 @@ class CreditExchange extends ActiveRecord implements UserRelationInterface, Buye
     public static function creditFieldName(): string
     {
         return 'credit';
-    }
-
-    public static function find(): CreditExchangeQuery
-    {
-        return new CreditExchangeQuery(static::class);
     }
 
     public function behaviors(): array

@@ -68,8 +68,16 @@ use mdm\admin\components\Helper;
                     ['label' => Yii::t('app', 'Rating'), 'icon' => 'line-chart', 'url' => ['/history/rating']],
                 ],
             ],
+            [
+                'label' => Yii::t('app', 'Credit'),
+                'icon' => 'credit-card',
+                'url' => '#',
+                'items' => [
+                    ['label' => Yii::t('app', 'Exchange'), 'icon' => 'exchange', 'url' => ['/exchange/credit']],
+                    ['label' => Yii::t('app', 'Transfer'), 'icon' => 'long-arrow-right', 'url' => ['/exchange/transfer']],
+                ],
+            ],
 
-            ['label' => Yii::t('app', 'Exchange'), 'icon' => 'refresh', 'url' => ['/exchange/credit']],
 
             ['label' => 'Other', 'options' => ['class' => 'header']],
 

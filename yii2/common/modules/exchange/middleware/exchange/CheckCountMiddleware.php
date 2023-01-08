@@ -6,7 +6,7 @@
  * Time: 22:37
  */
 
-namespace common\modules\exchange\middleware;
+namespace common\modules\exchange\middleware\exchange;
 
 use common\middleware\AbstractMiddleware;
 use common\modules\exchange\api\models\CreditExchange;

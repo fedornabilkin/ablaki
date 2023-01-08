@@ -15,14 +15,14 @@ class m180526_160807_create_credit_transfer_table extends AbstractMigration
         $this->createTable('{{%credit_transfer}}', [
             'id' => $this->primaryKey(),
             'user_id' => $this->bigInteger(),
-            'recepient' => $this->bigInteger(),
+            'user_buyer' => $this->bigInteger(),
             'amount' => $this->integer()->notNull()->unsigned(),
             'password' => $this->char(60),
             'updated_at' => $this->integer()->defaultValue(0)->unsigned(),
             'created_at' => $this->integer()->defaultValue(0)->unsigned(),
         ], $this->tableOptions);
 
-        $this->createIndex('{{%idx-credit_transfer-recepient}}','{{%credit_transfer}}','recepient');
+        $this->createIndex('{{%idx-credit_transfer-user_buyer}}', '{{%credit_transfer}}', 'user_buyer');
 
         $this->addForeignKey('fki-credit_transfer-user_id-user-id',
             '{{%credit_transfer}}',
@@ -42,7 +42,7 @@ class m180526_160807_create_credit_transfer_table extends AbstractMigration
     {
         $this->dropForeignKey('fki-credit_transfer-user_id-user-id', '{{%credit_transfer}}');
 
-        $this->dropIndex('{{%idx-credit_transfer-recepient}}','{{%credit_transfer}}');
+        $this->dropIndex('{{%idx-credit_transfer-user_buyer}}', '{{%credit_transfer}}');
 
         $this->dropTable('{{%credit_transfer}}');
     }

@@ -12,7 +12,7 @@ class HistoryBalance extends \common\models\history\HistoryBalance
 {
     public function fields(): array
     {
-        $f = [
+        return [
             'id',
             'user_id',
             'balance',
@@ -26,7 +26,5 @@ class HistoryBalance extends \common\models\history\HistoryBalance
             },
             'created_at',
         ];
-
-        return $f;
     }
 }

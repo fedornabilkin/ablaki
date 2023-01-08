@@ -8,12 +8,8 @@
 
 namespace common\modules\exchange\api\controllers;
 
-use api\filters\Auth;
 use common\helpers\App;
-use common\modules\exchange\api\actions\CreateAction;
-use common\modules\exchange\api\actions\DeleteAction;
-use common\modules\exchange\api\actions\RemoveAction;
-use common\modules\exchange\api\actions\UpdateAction;
+use common\modules\exchange\api\actions\exchange\{CreateAction, DeleteAction, RemoveAction, UpdateAction};
 use common\modules\exchange\api\models\CreditExchange;
 use common\modules\exchange\service\ExchangeService;
 use Yii;
@@ -57,15 +53,6 @@ class ExchangeController extends ActiveController
 
     public $createScenario = CreditExchange::SCENARIO_CREATE;
 
-    public function behaviors(): array
-    {
-        return array_merge(parent::behaviors(), [
-            Auth::class => [
-                'class' => Auth::class,
-            ],
-        ]);
-    }
-
     public function actions(): array
     {
         $actions = parent::actions();
@@ -73,9 +60,7 @@ class ExchangeController extends ActiveController
         $actions['create']['class'] = CreateAction::class;
         $actions['update']['class'] = UpdateAction::class;
         $actions['delete']['class'] = DeleteAction::class;
-
         $actions['remove']['class'] = RemoveAction::class;
-        $actions['remove']['modelClass'] = $this->modelClass;
 
         $actions['index']['dataFilter'] = $this->getFilter();
 
@@ -84,7 +69,7 @@ class ExchangeController extends ActiveController
 
         $actions['index']['prepareDataProvider'] = function ($action, $filter) {
             $filter = $filter ?? [];
-            $sortPrice = $filter['type'] === CreditExchange::EX_TYPE_SELL ? SORT_DESC : SORT_ASC;
+            $sortPrice = $filter['type'] === $this->modelClass::EX_TYPE_SELL ? SORT_DESC : SORT_ASC;
             return new ActiveDataProvider([
                 'query' => $this->modelClass::find()
                     ->select('*, (1000 * amount / credit) AS price')
