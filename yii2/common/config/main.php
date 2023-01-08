@@ -2,7 +2,7 @@
 
 use common\helpers\Env;
 use common\models\user\User;
-use common\modules\exchange\Module;
+use common\modules\games\Module;
 use yii\redis\Cache;
 
 $config = [
@@ -52,6 +52,9 @@ $config = [
             ],
         ],
         'exchange' => [
+            'class' => \common\modules\exchange\Module::class,
+        ],
+        'games' => [
             'class' => Module::class,
         ],
     ],

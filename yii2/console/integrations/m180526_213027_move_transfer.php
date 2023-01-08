@@ -1,6 +1,5 @@
 <?php
 
-use common\models\credit\;
 use common\modules\exchange\models\CreditTransfer;
 use console\migrations\AbstractMigration;
 
@@ -19,7 +18,7 @@ class m180526_213027_move_transfer extends AbstractMigration
 
         foreach ($rows as $row){
 
-            /** @var \common\modules\exchange\models\CreditTransfer $model */
+            /** @var CreditTransfer $model */
             $model = Yii::createObject(CreditTransfer::class);
 
             $model->id = $row['id'];
