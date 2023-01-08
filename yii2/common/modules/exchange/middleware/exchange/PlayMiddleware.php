@@ -6,7 +6,7 @@
  * Time: 22:22
  */
 
-namespace common\modules\exchange\middleware;
+namespace common\modules\exchange\middleware\exchange;
 
 use common\middleware\AbstractMiddleware;
 use common\middleware\person\UpdatePersonMiddleware;
@@ -50,6 +50,5 @@ class PlayMiddleware extends AbstractMiddleware
         }
 
         $this->insertNext(new UpdatePersonMiddleware());
-
     }
 }

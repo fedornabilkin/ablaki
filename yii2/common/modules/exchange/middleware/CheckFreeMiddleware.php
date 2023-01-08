@@ -9,17 +9,20 @@
 namespace common\modules\exchange\middleware;
 
 use common\middleware\AbstractMiddleware;
+use common\modules\exchange\exception\FreeException;
+use yii\db\Exception;
 
 class CheckFreeMiddleware extends AbstractMiddleware
 {
     /**
-     * @inheritDoc
+     * @return bool
+     * @throws FreeException
+     * @throws Exception
      */
     public function check(): bool
     {
         if (!$this->checkPosition()) {
-            // todo FreeException
-            return $this->stopProcessing('No free position');
+            throw new FreeException();
         }
 
         return parent::check();

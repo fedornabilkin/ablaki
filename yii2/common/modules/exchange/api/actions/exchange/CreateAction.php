@@ -6,7 +6,7 @@
  * Time: 22:42
  */
 
-namespace common\modules\exchange\api\actions;
+namespace common\modules\exchange\api\actions\exchange;
 
 use common\helpers\App;
 use common\modules\exchange\api\models\CreditExchange;

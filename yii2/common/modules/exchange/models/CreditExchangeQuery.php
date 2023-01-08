@@ -31,8 +31,8 @@ class CreditExchangeQuery extends ActiveQuery
         return $this->notFree()
             ->andWhere([
                 'or',
-                "{$this->getUserFieldName()}={$identity->getId()}",
-                "{$this->getClientFieldName()}={$identity->getId()}"
+                "{$this->userFieldName()}={$identity->getId()}",
+                "{$this->buyerFieldName()}={$identity->getId()}"
             ]);
     }
 
@@ -53,28 +53,28 @@ class CreditExchangeQuery extends ActiveQuery
 
     public function free(): self
     {
-        return $this->andWhere(['or', ['<', $this->getClientFieldName(), 1], [$this->getClientFieldName() => null]]);
+        return $this->andWhere(['or', ['<', $this->buyerFieldName(), 1], [$this->buyerFieldName() => null]]);
     }
 
     public function notFree(): self
     {
-        return $this->andWhere(['>', $this->getClientFieldName(), 0]);
+        return $this->andWhere(['>', $this->buyerFieldName(), 0]);
     }
 
     public function my(IdentityInterface $identity): self
     {
-        return $this->andWhere([$this->getUserFieldName() => $identity->getId()]);
+        return $this->andWhere([$this->userFieldName() => $identity->getId()]);
     }
 
     public function notMy(IdentityInterface $identity): self
     {
-        return $this->andWhere(['!=', $this->getUserFieldName(), $identity->getId()]);
+        return $this->andWhere(['!=', $this->userFieldName(), $identity->getId()]);
     }
 
     /**
      * @return string
      */
-    public function getUserFieldName(): string
+    public function userFieldName(): string
     {
         return $this->userFieldName;
     }
@@ -82,7 +82,7 @@ class CreditExchangeQuery extends ActiveQuery
     /**
      * @return string
      */
-    private function getClientFieldName(): string
+    private function buyerFieldName(): string
     {
         return $this->clientFieldName;
     }

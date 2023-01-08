@@ -9,6 +9,7 @@ use yii\db\ActiveQuery;
 use yii\db\ActiveRecord;
 
 /**
+ * @deprecated
  * This is the model class for table "bonus".
  *
  * @property int $id

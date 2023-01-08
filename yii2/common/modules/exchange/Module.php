@@ -2,6 +2,7 @@
 
 namespace common\modules\exchange;
 
+use common\helpers\App;
 use Yii;
 use yii\i18n\PhpMessageSource;
 
@@ -18,5 +19,7 @@ class Module extends \yii\base\Module
                 'basePath' => __DIR__ . '/messages',
             ];
         }
+
+        App::urlManager()->addRules(require __DIR__ . '/config/urlRules.php');
     }
 }

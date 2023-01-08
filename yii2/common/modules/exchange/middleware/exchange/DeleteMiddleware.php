@@ -6,9 +6,10 @@
  * Time: 23:12
  */
 
-namespace common\modules\exchange\middleware;
+namespace common\modules\exchange\middleware\exchange;
 
 use common\middleware\AbstractMiddleware;
+use common\middleware\person\UpdatePersonMiddleware;
 use common\modules\exchange\api\models\CreditExchange;
 use Throwable;
 use yii\db\Exception;
@@ -32,7 +33,7 @@ class DeleteMiddleware extends AbstractMiddleware
         $this->model = self::$data->getModel();
 
         $this->updateData();
-        $this->remove();
+        $this->model->delete();
 
         return parent::check();
     }
@@ -52,15 +53,7 @@ class DeleteMiddleware extends AbstractMiddleware
 
         self::$data->historyType = $this->model->getHistoryType();
         self::$data->historyComment = 'Delete #' . $this->model->id;
-    }
 
-    /**
-     * @return bool
-     * @throws Throwable
-     * @throws StaleObjectException
-     */
-    protected function remove(): bool
-    {
-        return $this->model->delete();
+        $this->insertNext(new UpdatePersonMiddleware());
     }
 }
