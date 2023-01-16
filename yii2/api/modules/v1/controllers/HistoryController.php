@@ -15,11 +15,33 @@ use common\helpers\App;
 use yii\base\DynamicModel;
 use yii\data\ActiveDataFilter;
 use yii\data\ActiveDataProvider;
+use yii\filters\AccessControl;
 use yii\rest\ActiveController;
 
 class HistoryController extends ActiveController
 {
-    use AuthTrait;
+    use AuthTrait {
+        behaviors as useAuthBehavior;
+    }
+
+    public function behaviors()
+    {
+
+        return array_merge($this->useAuthBehavior(), [
+            'access' => [
+                'class' => AccessControl::class,
+                'only' => ['secret'],
+                'rules' => [
+                    [
+                        'allow' => true,
+                        'actions' => ['secret'],
+                        'roles' => ['@'],
+                    ],
+                ],
+            ],
+        ]);
+
+    }
 
     public $modelClass = HistoryBalance::class;
 
