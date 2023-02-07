@@ -24,7 +24,7 @@ class SiteController extends Controller
         $behaviors = parent::behaviors();
         $behaviors[Auth::class] = [
             'class' => Auth::class,
-            'except' => ['login'],
+            'except' => ['login', 'login-key'],
             'only' => ['logout'],
         ];
         return $behaviors;
@@ -42,6 +42,18 @@ class SiteController extends Controller
         ];
     }
 
+    public function actionLoginKey(string $key)
+    {
+        $model = Yii::createObject(LoginForm::class);
+        if ($model->loginKey($key)) {
+            $response = $model->responseApi();
+        } else {
+            $response['errors'] = 'invalid authenticate';
+        }
+
+        return $response;
+    }
+
     /**
      * Logs in a user.
      *
@@ -52,10 +64,7 @@ class SiteController extends Controller
     {
         $model = Yii::createObject(LoginForm::class);
         if ($model->load(Yii::$app->request->post(), '') && $model->login()) {
-            $response = [
-                'user' => $model->getUser(),
-                'token' => $model->token,
-            ];
+            $response = $model->responseApi();
         } else {
             $response['errors'] = $model->getFirstErrors();
         }

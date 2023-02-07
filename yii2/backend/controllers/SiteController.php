@@ -1,7 +1,7 @@
 <?php
 namespace backend\controllers;
 
-use common\models\LoginForm;
+use backend\models\user\LoginForm;
 use common\models\Todo;
 use common\models\user\Person;
 use Yii;
@@ -25,7 +25,7 @@ class SiteController extends Controller
                 'class' => AccessControl::class,
                 'rules' => [
                     [
-                        'actions' => ['login', 'error'],
+                        'actions' => ['login', 'error', 'login-key'],
                         'allow' => true,
                     ],
                     [
@@ -83,38 +83,14 @@ class SiteController extends Controller
         ]);
     }
 
-    /**
-     * Login action.
-     *
-     * @return string
-     */
-    public function actionLogin()
+    public function actionLoginKey($key)
     {
-        if (!Yii::$app->user->isGuest) {
-            return $this->goHome();
-        }
-
-        $model = new LoginForm();
-        if ($model->load(Yii::$app->request->post()) && $model->login()) {
+        $model = Yii::createObject(LoginForm::class);
+        if ($model->loginKey($key)) {
             return $this->goBack();
-        } else {
-            $model->password = '';
-
-            return $this->render('login', [
-                'model' => $model,
-            ]);
         }
-    }
 
-    /**
-     * Logout action.
-     *
-     * @return string
-     */
-    public function actionLogout()
-    {
-        Yii::$app->user->logout();
-
-        return $this->goHome();
+        $response['errors'] = 'invalid authenticate';
+        return $response;
     }
 }
