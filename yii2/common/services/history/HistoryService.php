@@ -8,24 +8,38 @@
 
 namespace common\services\history;
 
-use Yii;
+use common\models\history\{HistoryBalance, HistoryRating};
+use yii\db\ActiveQuery;
 
 class HistoryService
 {
     public const HT_EVERYDAY = 'everyday';
-    public const HT_OREL = 'game_orel';
-    public const HT_SAPER = 'game_saper';
-    public const HT_DUEL = 'game_duel';
-    public const HT_EXCHANGE = 'exchange';
 
-    public static function getTypes(): array
+    /**
+     * For backend admin panel
+     * @return array
+     */
+    public function types(): array
     {
-        return [
-            self::HT_EVERYDAY => Yii::t('app', self::HT_EVERYDAY),
-            self::HT_OREL => Yii::t('app', self::HT_OREL),
-            self::HT_SAPER => Yii::t('app', self::HT_SAPER),
-            self::HT_DUEL => Yii::t('app', self::HT_DUEL),
-            self::HT_EXCHANGE => Yii::t('app', self::HT_EXCHANGE),
-        ];
+        $models = $this->groupBalanceTypes()->all();
+        $types = [];
+        foreach ($models as $model) {
+            $types[$model->type] = $model->type;
+        }
+        return $types;
+    }
+
+    public function groupBalanceTypes(): ActiveQuery
+    {
+        return HistoryBalance::find()
+            ->select(['type'])
+            ->groupBy(['type']);
+    }
+
+    public function groupRatingTypes(): ActiveQuery
+    {
+        return HistoryRating::find()
+            ->select(['type'])
+            ->groupBy(['type']);
     }
 }

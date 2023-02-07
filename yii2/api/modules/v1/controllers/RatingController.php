@@ -2,7 +2,7 @@
 
 namespace api\modules\v1\controllers;
 
-use api\filters\Auth;
+use api\modules\v1\traites\AuthTrait;
 use common\models\history\HistoryRating;
 use Yii;
 use yii\rest\Controller;
@@ -11,14 +11,7 @@ class RatingController extends Controller
 {
     public $rating = 0.01;
 
-    public function behaviors(): array
-    {
-        return array_merge(parent::behaviors(), [
-            Auth::class => [
-                'class' => Auth::class,
-            ],
-        ]);
-    }
+    use AuthTrait;
 
     public function actionEveryday()
     {

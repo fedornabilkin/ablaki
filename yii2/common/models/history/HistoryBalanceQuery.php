@@ -17,4 +17,14 @@ class HistoryBalanceQuery extends ActiveQuery
     {
         return $this->andWhere(['user_id' => $identity->getId()]);
     }
+
+    public function byEveryday(): self
+    {
+        return $this->byType('everyday');
+    }
+
+    public function byType(string $type): self
+    {
+        return $this->andWhere(['type' => $type]);
+    }
 }

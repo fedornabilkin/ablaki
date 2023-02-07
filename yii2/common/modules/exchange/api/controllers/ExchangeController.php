@@ -114,6 +114,11 @@ class ExchangeController extends ActiveController
             ->availableCount(App::user()->identity, (new $this->modelClass));
     }
 
+    public function actionStatistic()
+    {
+        return [];
+    }
+
     public function checkAccess($action, $model = null, $params = []): void
     {
         parent::checkAccess($action, $model, $params);

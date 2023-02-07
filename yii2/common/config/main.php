@@ -19,6 +19,13 @@ $config = [
             'password' => getenv('PG_DB_PASSWORD'),
 //            'charset' => 'utf8',
         ],
+//        'db' => [
+//            'class' => 'yii\db\Connection',
+//            'dsn' => 'mysql:host=' . getenv('MYSQL_DB_HOST') . ';dbname=' . getenv('MYSQL_DB_NAME'),
+//            'username' => getenv('MYSQL_DB_USER'),
+//            'password' => getenv('MYSQL_DB_PASSWORD'),
+//            'charset' => 'utf8',
+//        ],
         'cache' => [
             'class' => 'yii\caching\FileCache',
         ],

@@ -22,7 +22,7 @@ return [
     [
         'class' => UrlRule::class,
         'controller' => ['v1/history'],
-        'only' => ['balance', 'balance-type', 'rating', 'rating-type'],
+        'only' => ['index', 'create', 'balance', 'balance-type', 'rating', 'rating-type'],
         'pluralize' => false,
         'extraPatterns' => [
             'GET balance' => 'balance',
