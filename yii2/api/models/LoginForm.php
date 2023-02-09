@@ -26,7 +26,7 @@ class LoginForm extends \dektrium\user\models\LoginForm
 //        var_dump($userModel);exit;
         $this->user = $userModel::find()->where(['auth_key' => $key])->one();
 
-        if ($this->user) {
+        if ($this->user && $this->user->auth_key !== '') {
             $isLogged = Yii::$app->getUser()->login($this->user);
 
             if ($isLogged) {
