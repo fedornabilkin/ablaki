@@ -27,6 +27,7 @@ class LoginForm extends \dektrium\user\models\LoginForm
                 $this->user->auth_key = Yii::$app->security->generateRandomString();
                 $this->user->save();
             }
+            Yii::$app->getUser()->login($this->user);
 
             return $isLogged;
         }
