@@ -5,6 +5,7 @@ use backend\models\user\LoginForm;
 use common\models\Todo;
 use common\models\user\Person;
 use Yii;
+use yii\base\Exception;
 use yii\data\ActiveDataProvider;
 use yii\filters\AccessControl;
 use yii\filters\VerbFilter;
@@ -90,7 +91,6 @@ class SiteController extends Controller
             return $this->goBack();
         }
 
-        $response['errors'] = 'invalid authenticate';
-        return $response;
+        throw new Exception('Not logged', 101);
     }
 }
