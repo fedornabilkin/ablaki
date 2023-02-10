@@ -73,7 +73,7 @@ class PersonSearch extends Person
             'autoriz' => $this->autoriz,
         ]);
 
-        $query->andFilterWhere(['ilike', 'referrer', $this->referrer]);
+        $query->andFilterWhere(['like', 'referrer', $this->referrer]);
 
         return $dataProvider;
     }

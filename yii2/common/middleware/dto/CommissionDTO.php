@@ -7,7 +7,9 @@
  */
 
 namespace common\middleware\dto;
-
+/**
+ * @deprecated
+ */
 class CommissionDTO
 {
     /**

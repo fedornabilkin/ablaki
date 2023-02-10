@@ -4,9 +4,11 @@ namespace backend\controllers;
 use backend\models\user\LoginForm;
 use common\models\Todo;
 use common\models\user\Person;
+use DateTimeImmutable;
 use Yii;
 use yii\base\Exception;
 use yii\data\ActiveDataProvider;
+use yii\db\Query;
 use yii\filters\AccessControl;
 use yii\filters\VerbFilter;
 use yii\web\Controller;
@@ -64,6 +66,9 @@ class SiteController extends Controller
      */
     public function actionIndex()
     {
+        $dt = new DateTimeImmutable('today');
+        $todayStamp = $dt->getTimestamp();
+
         $todoProvider = new ActiveDataProvider([
             'query' => Todo::find()->where(['status' => 0])->orderBy(['id' => SORT_ASC]),
             'pagination' => [
@@ -78,9 +83,34 @@ class SiteController extends Controller
             ],
         ]);
 
+        $commission['game_orel'] = (new Query())
+            ->from('comission')
+            ->select('SUM(amount) AS amount')
+            ->groupBy('type')
+            ->where(['>', 'created_at', $todayStamp])
+            ->andWhere(['type' => 'game_orel'])
+            ->one();
+
+        $commission['game_saper'] = (new Query())
+            ->from('comission')
+            ->select('SUM(amount) AS amount')
+            ->groupBy('type')
+            ->where(['>', 'created_at', $todayStamp])
+            ->andWhere(['type' => 'game_saper'])
+            ->one();
+
+        $commission['game_duel'] = (new Query())
+            ->from('comission')
+            ->select('SUM(amount) AS amount')
+            ->groupBy('type')
+            ->where(['>', 'created_at', $todayStamp])
+            ->andWhere(['type' => 'game_duel'])
+            ->one();
+
         return $this->render('index', [
             'todoProvider' => $todoProvider,
             'personProvider' => $personProvider,
+            'commission' => $commission,
         ]);
     }
 

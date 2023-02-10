@@ -24,7 +24,8 @@ class HistoryService
         $models = $this->groupBalanceTypes()->all();
         $types = [];
         foreach ($models as $model) {
-            $types[$model->type] = $model->type;
+            $type = trim($model->type);
+            $types[$type] = $type;
         }
         return $types;
     }

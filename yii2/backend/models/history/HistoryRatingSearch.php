@@ -63,11 +63,11 @@ class HistoryRatingSearch extends HistoryRating
         $query->andFilterWhere([
             'user_id' => $this->user_id,
             'rating' => $this->rating,
+            'type' => $this->type,
             'created_at' => $this->created_at,
         ]);
 
-        $query->andFilterWhere(['ilike', 'type', $this->type])
-            ->andFilterWhere(['ilike', 'comment', $this->comment]);
+        $query->andFilterWhere(['like', 'comment', $this->comment]);
 
         return $dataProvider;
     }
