@@ -19,13 +19,6 @@ $config = [
             'password' => getenv('PG_DB_PASSWORD'),
 //            'charset' => 'utf8',
         ],
-        'db1' => [
-            'class' => 'yii\db\Connection',
-            'dsn' => 'mysql:host=' . getenv('MYSQL_DB_HOST') . ';dbname=' . getenv('MYSQL_DB_NAME'),
-            'username' => getenv('MYSQL_DB_USER'),
-            'password' => getenv('MYSQL_DB_PASSWORD'),
-            'charset' => 'utf8',
-        ],
         'cache' => [
             'class' => 'yii\caching\FileCache',
         ],
@@ -66,6 +59,16 @@ $config = [
         ],
     ],
 ];
+
+if (getenv('MYSQL_DB_HOST') !== '' && getenv('MYSQL_DB_NAME') !== '') {
+    $config['components']['db'] = [
+        'class' => 'yii\db\Connection',
+        'dsn' => 'mysql:host=' . getenv('MYSQL_DB_HOST') . ';dbname=' . getenv('MYSQL_DB_NAME'),
+        'username' => getenv('MYSQL_DB_USER'),
+        'password' => getenv('MYSQL_DB_PASSWORD'),
+        'charset' => 'utf8',
+    ];
+}
 
 foreach (glob(__DIR__ . '/components/*.php') as $file) {
     $componentName = str_replace('.php', '', basename($file));
