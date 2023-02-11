@@ -12,17 +12,18 @@ class HistoryRating extends \common\models\history\HistoryRating
 {
     public function fields(): array
     {
-        return [
+        $parents = parent::fields();
+
+        $fields = [
             'id',
             'user_id',
             'rating',
-            'type' => static function (self $model) {
-                return trim($model->type);
-            },
-            'comment' => static function (self $model) {
-                return trim($model->comment);
-            },
             'created_at',
         ];
+
+        $fields['type'] = $parents['type'];
+        $fields['comment'] = $parents['comment'];
+
+        return $fields;
     }
 }

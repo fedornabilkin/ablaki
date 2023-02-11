@@ -74,4 +74,9 @@ class User extends \dektrium\user\models\User
         ]);
         $this->person->referrer = $service->getValue();
     }
+
+    public static function findIdentityByAccessToken($token, $type = null)
+    {
+        return static::findOne(['auth_key' => $token]);
+    }
 }

@@ -12,14 +12,37 @@ use api\modules\v1\models\history\HistoryBalance;
 use api\modules\v1\models\history\HistoryRating;
 use api\modules\v1\traites\AuthTrait;
 use common\helpers\App;
+use common\services\history\HistoryService;
 use yii\base\DynamicModel;
 use yii\data\ActiveDataFilter;
 use yii\data\ActiveDataProvider;
+use yii\filters\AccessControl;
 use yii\rest\ActiveController;
 
 class HistoryController extends ActiveController
 {
-    use AuthTrait;
+    use AuthTrait {
+        behaviors as useAuthBehavior;
+    }
+
+    public function behaviors()
+    {
+
+        return array_merge($this->useAuthBehavior(), [
+            'access' => [
+                'class' => AccessControl::class,
+                'only' => ['secret'],
+                'rules' => [
+                    [
+                        'allow' => true,
+                        'actions' => ['secret'],
+                        'roles' => ['@'],
+                    ],
+                ],
+            ],
+        ]);
+
+    }
 
     public $modelClass = HistoryBalance::class;
 
@@ -27,12 +50,24 @@ class HistoryController extends ActiveController
     {
         $actions = parent::actions();
 
-        $actions['index']['dataFilter'] = $this->getFilter();
+        $actions['index']['dataFilter'] = $this->filter();
 
         $actions['balance'] = $actions['index'];
         $actions['balance']['modelClass'] = HistoryBalance::class;
         $actions['rating'] = $actions['index'];
         $actions['rating']['modelClass'] = HistoryRating::class;
+
+        $actions['index']['prepareDataProvider'] = function ($action, $filter) {
+            $filter = $filter ?? [];
+            return new ActiveDataProvider([
+                'query' => $this->modelClass::find()
+                    ->select(['type', 'credit_up', 'created_at'])
+                    ->orderBy(['id' => SORT_DESC])
+                    ->byEveryday()
+                    ->with(['user'])
+                    ->andFilterWhere($filter),
+            ]);
+        };
 
         $actions['balance']['prepareDataProvider'] = function ($action, $filter) {
             $filter = $filter ?? [];
@@ -47,34 +82,28 @@ class HistoryController extends ActiveController
 
         $actions['rating']['prepareDataProvider'] = $actions['balance']['prepareDataProvider'];
 
-
-        unset($actions['index'], $actions['create'], $actions['update'], $actions['view'], $actions['delete']);
+        unset($actions['create'], $actions['update'], $actions['view'], $actions['delete']);
 
         return $actions;
     }
 
     public function actionBalanceType()
     {
-        return HistoryBalance::find()
-            ->select(['type'])
+        return (new HistoryService())
+            ->groupBalanceTypes()
             ->my(App::user()->identity)
-            ->groupBy(['type'])
             ->all();
     }
 
     public function actionRatingType()
     {
-        return HistoryRating::find()
-            ->select(['type'])
-            ->my(App::user()->identity)
-            ->groupBy(['type'])
-            ->all();
+        return (new HistoryService())->groupRatingTypes()->all();
     }
 
     /**
      * @return array
      */
-    private function getFilter(): array
+    private function filter(): array
     {
         return [
             'class' => ActiveDataFilter::class,

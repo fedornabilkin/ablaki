@@ -67,10 +67,10 @@ class HistoryBalanceSearch extends HistoryBalance
             'balance_up' => $this->balance_up,
             'credit_up' => $this->credit_up,
             'created_at' => $this->created_at,
+            'type' => $this->type,
         ]);
 
-        $query->andFilterWhere(['ilike', 'type', $this->type])
-            ->andFilterWhere(['ilike', 'comment', $this->comment]);
+        $query->andFilterWhere(['like', 'comment', $this->comment]);
 
         return $dataProvider;
     }

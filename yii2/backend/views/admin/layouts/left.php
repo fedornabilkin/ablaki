@@ -66,6 +66,7 @@ use mdm\admin\components\Helper;
                 'items' => [
                     ['label' => Yii::t('app', 'Balance'), 'icon' => 'bar-chart-o', 'url' => ['/history/balance']],
                     ['label' => Yii::t('app', 'Rating'), 'icon' => 'line-chart', 'url' => ['/history/rating']],
+                    ['label' => Yii::t('app', 'Commission'), 'icon' => 'percent', 'url' => ['/commission/index']],
                 ],
             ],
             [

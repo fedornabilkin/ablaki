@@ -79,6 +79,18 @@ class HistoryBalance extends ActiveRecord implements UserRelationInterface
         ];
     }
 
+    public function fields(): array
+    {
+        return [
+            'type' => static function (self $model) {
+                return trim($model->type);
+            },
+            'comment' => static function (self $model) {
+                return trim($model->comment);
+            },
+        ];
+    }
+
     /**
      * @return ActiveQuery
      */

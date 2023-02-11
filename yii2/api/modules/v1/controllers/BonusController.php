@@ -2,22 +2,26 @@
 
 namespace api\modules\v1\controllers;
 
-use api\filters\Auth;
-use common\models\history\HistoryBalance;
+use api\modules\v1\models\history\HistoryBalance;
+use api\modules\v1\traites\AuthTrait;
 use Yii;
-use yii\rest\Controller;
+use yii\rest\ActiveController;
 
-class BonusController extends Controller
+class BonusController extends ActiveController
 {
+    use AuthTrait;
+
+    public $modelClass = HistoryBalance::class;
+
     public $credit = 1;
 
-    public function behaviors(): array
+    public function actions()
     {
-        return array_merge(parent::behaviors(), [
-            Auth::class => [
-                'class' => Auth::class,
-            ],
-        ]);
+        $actions = parent::actions();
+
+        unset($actions['view'], $actions['update'], $actions['delete'], $actions['create'], $actions['index']);
+
+        return $actions;
     }
 
     public function actionEveryday()

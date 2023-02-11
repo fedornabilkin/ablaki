@@ -3,13 +3,13 @@
 use backend\widgets\gridView\columns\CreatedAtColumn;
 use backend\widgets\gridView\columns\HistoryCommentColumn;
 use backend\widgets\gridView\columns\UserColumn;
-use common\services\history\HistoryService;
 use yii\grid\GridView;
 use yii\helpers\Html;
 
 /* @var $this yii\web\View */
 /* @var $searchModel backend\models\history\HistoryRatingSearch */
 /* @var $dataProvider yii\data\ActiveDataProvider */
+/* @var $historyTypes array */
 
 $this->title = Yii::t('app', 'History Ratings');
 $this->params['breadcrumbs'][] = $this->title;
@@ -31,7 +31,7 @@ $this->params['breadcrumbs'][] = $this->title;
             'rating',
             [
                 'attribute' => 'type',
-                'filter' => HistoryService::getTypes(),
+                'filter' => $historyTypes,
             ],
             [
                 'attribute' => 'comment',

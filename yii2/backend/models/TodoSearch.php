@@ -41,6 +41,7 @@ class TodoSearch extends Todo
     public function search($params)
     {
         $query = Todo::find()
+            ->with(['user', 'user.person'])
             ->orderBy(['status' => SORT_ASC, 'id' => SORT_ASC,]);
 
         // add conditions that should always apply here
@@ -65,8 +66,8 @@ class TodoSearch extends Todo
             'created_at' => $this->created_at,
         ]);
 
-        $query->andFilterWhere(['ilike', 'title', $this->title])
-            ->andFilterWhere(['ilike', 'comment', $this->comment]);
+        $query->andFilterWhere(['like', 'title', $this->title])
+            ->andFilterWhere(['like', 'comment', $this->comment]);
 
         return $dataProvider;
     }

@@ -74,7 +74,9 @@ return [
         'urlManager' => [
             'enablePrettyUrl' => true,
             'showScriptName' => false,
-            'rules' => [],
+            'rules' => [
+                'login-key/<key:[\w\-]+>' => 'site/login-key',
+            ],
         ],
         'view' => [
             'theme' => [
@@ -92,6 +94,7 @@ return [
             'user/security/login',
             'user/logout',
             'user/login',
+            'site/login-key',
 //            'debug/*',
 //            'site/*',
         ]

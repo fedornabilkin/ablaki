@@ -1,6 +1,6 @@
 <?php
 
-use api\models\UserIdentity;
+use api\modules\v1\models\User;
 use api\modules\v1\Module;
 
 $params = array_merge(
@@ -13,7 +13,7 @@ if (function_exists($header_remove)) {
     $header_remove('X-Powered-By');
 }
 
-return [
+$cfg = [
     'id' => 'api',
     'basePath' => dirname(__DIR__),
     'bootstrap' => ['log', 'v1', 'exchange', 'games'],
@@ -35,7 +35,7 @@ return [
             ]
         ],
         'user' => [
-            'identityClass' => UserIdentity::class,
+            'identityClass' => User::class,
             'enableSession' => false,
             'loginUrl' => null,
             'enableAutoLogin' => true,
@@ -61,6 +61,7 @@ return [
             'showScriptName' => false,
             'rules' => [
                 'login' => 'site/login',
+                'login-key/<key:[\w\-]+>' => 'site/login-key',
                 'logout' => 'site/logout',
                 'registration' => 'site/registration',
             ],
@@ -75,3 +76,7 @@ return [
 
     'params' => $params,
 ];
+
+$cfg['modules']['user']['modelMap']['User'] = User::class;
+
+return $cfg;

@@ -1,5 +1,6 @@
 <?php
 
+// todo remove this function
 function getLocalConfig(string $path): array
 {
     if (file_exists($path)) {

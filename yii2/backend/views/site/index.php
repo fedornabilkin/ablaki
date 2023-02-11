@@ -4,6 +4,7 @@
  * @var $this yii\web\View
  * @var $todoProvider ActiveDataProvider
  * @var $personProvider ActiveDataProvider
+ * @var $commission array
  */
 
 use yii\data\ActiveDataProvider;
@@ -45,10 +46,15 @@ $this->title = Yii::$app->name;
                 <p><?= Html::a(Yii::t('app', 'View all'), ['/person'], ['class' => 'btn btn-default']) ?></p>
             </div>
             <div class="col-lg-4">
-                <h2>Commission</h2>
+                <h2><?= Yii::t('app', 'Commission') ?></h2>
 
-                <p>Today</p>
-                <p>Yesterday</p>
+                <?php
+                //                    var_dump($commission);
+                ?>
+                <p>game_saper: <?= $commission['game_saper']['amount'] ?> Kg</p>
+                <p>game_orel: <?= $commission['game_orel']['amount'] ?> Cr</p>
+                <p>game_duel: <?= $commission['game_duel']['amount'] ?> Cr</p>
+
 
             </div>
         </div>

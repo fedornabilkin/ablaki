@@ -1,3 +1,4 @@
+https://github.com/shieldfy/API-Security-Checklist/blob/master/README-ru.md
 
 #### Выкатываем миграции по очереди
 ```

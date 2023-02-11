@@ -2,14 +2,11 @@
 
 namespace backend\models;
 
-use common\models\Fact as FactModel;
+use common\models\Commission;
 use yii\base\Model;
 use yii\data\ActiveDataProvider;
 
-/**
- * Fact represents the model behind the search form of `common\models\Fact`.
- */
-class FactSearch extends FactModel
+class CommissionSearch extends Commission
 {
     /**
      * {@inheritdoc}
@@ -17,8 +14,9 @@ class FactSearch extends FactModel
     public function rules()
     {
         return [
-            [['hide'], 'integer'],
-            [['title', 'type'], 'safe'],
+            [['created_at'], 'integer'],
+            [['type'], 'string'],
+            [['amount'], 'double'],
         ];
     }
 
@@ -27,7 +25,6 @@ class FactSearch extends FactModel
      */
     public function scenarios()
     {
-        // bypass scenarios() implementation in the parent class
         return Model::scenarios();
     }
 
@@ -40,9 +37,8 @@ class FactSearch extends FactModel
      */
     public function search($params)
     {
-        $query = FactModel::find();
-
-        // add conditions that should always apply here
+        $query = Commission::find()
+            ->orderBy(['id' => SORT_DESC,]);
 
         $dataProvider = new ActiveDataProvider([
             'query' => $query,
@@ -51,18 +47,15 @@ class FactSearch extends FactModel
         $this->load($params);
 
         if (!$this->validate()) {
-            // uncomment the following line if you do not want to return any records when validation fails
-            // $query->where('0=1');
             return $dataProvider;
         }
 
         // grid filtering conditions
         $query->andFilterWhere([
-            'hide' => $this->hide,
             'type' => $this->type,
+            'amount' => $this->amount,
+            'created_at' => $this->created_at,
         ]);
-
-        $query->andFilterWhere(['like', 'type', $this->type]);
 
         return $dataProvider;
     }

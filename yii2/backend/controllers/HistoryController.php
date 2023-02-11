@@ -4,6 +4,7 @@ namespace backend\controllers;
 
 use backend\models\history\HistoryBalanceSearch;
 use backend\models\history\HistoryRatingSearch;
+use common\services\history\HistoryService;
 use Yii;
 use yii\filters\VerbFilter;
 use yii\web\Controller;
@@ -40,6 +41,7 @@ class HistoryController extends Controller
         return $this->render('balance', [
             'searchModel' => $searchModel,
             'dataProvider' => $searchModel->search(Yii::$app->request->queryParams),
+            'historyTypes' => (new HistoryService())->types(),
         ]);
     }
 
@@ -50,6 +52,7 @@ class HistoryController extends Controller
         return $this->render('rating', [
             'searchModel' => $searchModel,
             'dataProvider' => $searchModel->search(Yii::$app->request->queryParams),
+            'historyTypes' => (new HistoryService())->types(),
         ]);
     }
 }

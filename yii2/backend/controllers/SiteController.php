@@ -1,11 +1,14 @@
 <?php
 namespace backend\controllers;
 
-use common\models\LoginForm;
+use backend\models\user\LoginForm;
 use common\models\Todo;
 use common\models\user\Person;
+use DateTimeImmutable;
 use Yii;
+use yii\base\Exception;
 use yii\data\ActiveDataProvider;
+use yii\db\Query;
 use yii\filters\AccessControl;
 use yii\filters\VerbFilter;
 use yii\web\Controller;
@@ -25,7 +28,7 @@ class SiteController extends Controller
                 'class' => AccessControl::class,
                 'rules' => [
                     [
-                        'actions' => ['login', 'error'],
+                        'actions' => ['login', 'error', 'login-key'],
                         'allow' => true,
                     ],
                     [
@@ -63,6 +66,9 @@ class SiteController extends Controller
      */
     public function actionIndex()
     {
+        $dt = new DateTimeImmutable('today');
+        $todayStamp = $dt->getTimestamp();
+
         $todoProvider = new ActiveDataProvider([
             'query' => Todo::find()->where(['status' => 0])->orderBy(['id' => SORT_ASC]),
             'pagination' => [
@@ -77,44 +83,44 @@ class SiteController extends Controller
             ],
         ]);
 
+        $commission['game_orel'] = (new Query())
+            ->from('comission')
+            ->select('SUM(amount) AS amount')
+            ->groupBy('type')
+            ->where(['>', 'created_at', $todayStamp])
+            ->andWhere(['type' => 'game_orel'])
+            ->one();
+
+        $commission['game_saper'] = (new Query())
+            ->from('comission')
+            ->select('SUM(amount) AS amount')
+            ->groupBy('type')
+            ->where(['>', 'created_at', $todayStamp])
+            ->andWhere(['type' => 'game_saper'])
+            ->one();
+
+        $commission['game_duel'] = (new Query())
+            ->from('comission')
+            ->select('SUM(amount) AS amount')
+            ->groupBy('type')
+            ->where(['>', 'created_at', $todayStamp])
+            ->andWhere(['type' => 'game_duel'])
+            ->one();
+
         return $this->render('index', [
             'todoProvider' => $todoProvider,
             'personProvider' => $personProvider,
+            'commission' => $commission,
         ]);
     }
 
-    /**
-     * Login action.
-     *
-     * @return string
-     */
-    public function actionLogin()
+    public function actionLoginKey($key)
     {
-        if (!Yii::$app->user->isGuest) {
-            return $this->goHome();
-        }
-
-        $model = new LoginForm();
-        if ($model->load(Yii::$app->request->post()) && $model->login()) {
+        $model = Yii::createObject(LoginForm::class);
+        if ($model->loginKey($key)) {
             return $this->goBack();
-        } else {
-            $model->password = '';
-
-            return $this->render('login', [
-                'model' => $model,
-            ]);
         }
-    }
 
-    /**
-     * Logout action.
-     *
-     * @return string
-     */
-    public function actionLogout()
-    {
-        Yii::$app->user->logout();
-
-        return $this->goHome();
+        throw new Exception('Not logged', 101);
     }
 }
