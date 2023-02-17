@@ -12,6 +12,9 @@ namespace common\utilities\widgets\gridview;
 use yii\helpers\Html;
 use yii\helpers\Url;
 
+/**
+ * @deprecated
+ */
 class UserColumn extends AbstractColumn
 {
 

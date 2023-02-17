@@ -1,28 +1,28 @@
 <?php
 
-use common\models\Todo;
+use common\modules\forum\models\ForumTheme;
 use yii\helpers\Html;
 use yii\web\YiiAsset;
 use yii\widgets\DetailView;
 
-/* @var $this yii\web\View */
-/* @var $model common\models\Todo */
+/** @var yii\web\View $this */
+/** @var common\modules\forum\models\ForumTheme $model */
 
 $this->title = $model->title;
-$this->params['breadcrumbs'][] = ['label' => Yii::t('app', 'Todos'), 'url' => ['index']];
+$this->params['breadcrumbs'][] = ['label' => Yii::t('forum', 'Forum Themes'), 'url' => ['index']];
 $this->params['breadcrumbs'][] = $this->title;
 YiiAsset::register($this);
 ?>
-<div class="todo-view">
+<div class="forum-theme-view">
 
     <h1><?= Html::encode($this->title) ?></h1>
 
     <p>
-        <?= Html::a(Yii::t('app', 'Update'), ['update', 'id' => $model->id], ['class' => 'btn btn-primary']) ?>
-        <?= Html::a(Yii::t('app', 'Delete'), ['delete', 'id' => $model->id], [
+        <?= Html::a(Yii::t('forum', 'Update'), ['update', 'id' => $model->id], ['class' => 'btn btn-primary']) ?>
+        <?= Html::a(Yii::t('forum', 'Delete'), ['delete', 'id' => $model->id], [
             'class' => 'btn btn-danger',
             'data' => [
-                'confirm' => Yii::t('app', 'Are you sure you want to delete this item?'),
+                'confirm' => Yii::t('forum', 'Are you sure you want to delete this item?'),
                 'method' => 'post',
             ],
         ]) ?>
@@ -34,17 +34,14 @@ YiiAsset::register($this);
             'id',
             [
                 'attribute' => 'user_id',
-                'value' => static function (Todo $model) {
+                'value' => static function (ForumTheme $model) {
                     return $model->user->username;
                 }
             ],
             'title',
-            'comment:ntext',
-            'status',
-//            'updated_at',
-//            'created_at',
+            'view',
             [
-                'attribute' => 'updated_at',
+                'attribute' => 'last_post',
                 'format' => ['date', 'php:H:i d.m.y']
             ],
             [

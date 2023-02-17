@@ -24,7 +24,7 @@ class Commission extends ActiveRecord
         return 'comission';
     }
 
-    public function behaviors()
+    public function behaviors(): array
     {
         return array_merge_recursive(parent::behaviors(), [
             TimestampBehavior::class => [
@@ -37,7 +37,7 @@ class Commission extends ActiveRecord
     /**
      * {@inheritdoc}
      */
-    public function rules()
+    public function rules(): array
     {
         return [
             [['amount'], 'required'],
