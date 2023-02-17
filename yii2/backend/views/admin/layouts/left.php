@@ -78,6 +78,15 @@ use mdm\admin\components\Helper;
                     ['label' => Yii::t('app', 'Transfer'), 'icon' => 'long-arrow-right', 'url' => ['/exchange/transfer']],
                 ],
             ],
+            [
+                'label' => Yii::t('app', 'Forum'),
+                'icon' => 'comment-o',
+                'url' => '#',
+                'items' => [
+                    ['label' => Yii::t('app', 'Theme'), 'icon' => 'commenting-o', 'url' => ['/forum/theme']],
+                    ['label' => Yii::t('app', 'Comment'), 'icon' => 'comments-o', 'url' => ['/forum/comment']],
+                ],
+            ],
 
 
             ['label' => 'Other', 'options' => ['class' => 'header']],

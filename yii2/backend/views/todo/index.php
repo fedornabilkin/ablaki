@@ -1,5 +1,7 @@
 <?php
 
+use backend\widgets\gridView\columns\CreatedAtColumn;
+use backend\widgets\gridView\columns\UpdatedAtColumn;
 use backend\widgets\gridView\columns\UserColumn;
 use common\models\Todo;
 use yii\grid\GridView;
@@ -53,11 +55,11 @@ $this->params['breadcrumbs'][] = $this->title;
             ],
             [
                 'attribute' => 'created_at',
-                'format' => ['date', 'php:H:i d.m.y']
+                'class' => CreatedAtColumn::class
             ],
             [
                 'attribute' => 'updated_at',
-                'format' => ['date', 'php:H:i d.m.y']
+                'class' => UpdatedAtColumn::class
             ],
 
 //            ['class' => 'yii\grid\ActionColumn'],

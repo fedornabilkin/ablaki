@@ -4,6 +4,7 @@ namespace backend\controllers;
 use backend\models\user\LoginForm;
 use common\models\Todo;
 use common\models\user\Person;
+use common\modules\forum\models\ForumTheme;
 use DateTimeImmutable;
 use Yii;
 use yii\base\Exception;
@@ -83,6 +84,13 @@ class SiteController extends Controller
             ],
         ]);
 
+        $themeProvider = new ActiveDataProvider([
+            'query' => ForumTheme::find()->orderBy(['id' => SORT_DESC]),
+            'pagination' => [
+                'pageSize' => 5,
+            ],
+        ]);
+
         $commission['game_orel'] = (new Query())
             ->from('comission')
             ->select('SUM(amount) AS amount')
@@ -111,6 +119,7 @@ class SiteController extends Controller
             'todoProvider' => $todoProvider,
             'personProvider' => $personProvider,
             'commission' => $commission,
+            'themeProvider' => $themeProvider,
         ]);
     }
 

@@ -1,12 +1,14 @@
 <?php
 
-namespace backend\models;
+namespace common\modules\forum\models;
 
-use common\models\Commission;
 use yii\base\Model;
 use yii\data\ActiveDataProvider;
 
-class CommissionSearch extends Commission
+/**
+ * CommentSearch represents the model behind the search form of `common\modules\forum\models\ForumComment`.
+ */
+class CommentSearch extends ForumComment
 {
     /**
      * {@inheritdoc}
@@ -14,9 +16,8 @@ class CommissionSearch extends Commission
     public function rules()
     {
         return [
-            [['created_at'], 'integer'],
-            [['type'], 'string'],
-            [['amount'], 'double'],
+            [['id', 'user_id', 'theme_id', 'active', 'created_at'], 'integer'],
+            [['comment'], 'safe'],
         ];
     }
 
@@ -25,6 +26,7 @@ class CommissionSearch extends Commission
      */
     public function scenarios()
     {
+        // bypass scenarios() implementation in the parent class
         return Model::scenarios();
     }
 
@@ -37,7 +39,10 @@ class CommissionSearch extends Commission
      */
     public function search($params)
     {
-        $query = Commission::find();
+        $query = ForumComment::find()
+            ->with(['user', 'theme']);
+
+        // add conditions that should always apply here
 
         $dataProvider = new ActiveDataProvider([
             'query' => $query,
@@ -49,15 +54,21 @@ class CommissionSearch extends Commission
         $this->load($params);
 
         if (!$this->validate()) {
+            // uncomment the following line if you do not want to return any records when validation fails
+            // $query->where('0=1');
             return $dataProvider;
         }
 
         // grid filtering conditions
         $query->andFilterWhere([
-            'type' => $this->type,
-            'amount' => $this->amount,
+            'id' => $this->id,
+            'user_id' => $this->user_id,
+            'theme_id' => $this->theme_id,
+            'active' => $this->active,
             'created_at' => $this->created_at,
         ]);
+
+        $query->andFilterWhere(['like', 'comment', $this->comment]);
 
         return $dataProvider;
     }
