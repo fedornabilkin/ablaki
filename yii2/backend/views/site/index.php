@@ -5,6 +5,7 @@
  * @var $todoProvider ActiveDataProvider
  * @var $personProvider ActiveDataProvider
  * @var $themeProvider ActiveDataProvider
+ * @var $userCleanProvider ActiveDataProvider
  * @var $commission array
  */
 
@@ -50,11 +51,13 @@ $this->title = Yii::$app->name;
                 <h2><?= Yii::t('app', 'Commission') ?></h2>
 
                 <?php
-                //                    var_dump($commission);
+                //                                    var_dump($commission);
                 ?>
-                <p>game_saper: <?= $commission['game_saper']['amount'] ?> Kg</p>
-                <p>game_orel: <?= $commission['game_orel']['amount'] ?> Cr</p>
-                <p>game_duel: <?= $commission['game_duel']['amount'] ?> Cr</p>
+                <?php foreach ($commission as $row): ?>
+
+                    <p><?= $row['type'] . ': (' . $row['count'] . ') ' . round($row['amount'], 3) ?></p>
+
+                <?php endforeach; ?>
 
                 <p><?= Html::a(Yii::t('app', 'View all'), ['/comission/'], ['class' => 'btn btn-default']) ?></p>
             </div>
@@ -72,6 +75,16 @@ $this->title = Yii::$app->name;
                 <?php endforeach; ?>
 
                 <p><?= Html::a(Yii::t('app', 'View all'), ['/forum/theme/'], ['class' => 'btn btn-default']) ?></p>
+            </div>
+
+            <div class="col-lg-4">
+                <h2><?= Yii::t('app', 'User Clean'); ?></h2>
+
+                <?php foreach ($userCleanProvider->models as $model): ?>
+
+                    <p><?= Html::a($model->username, ['/person/view', 'id' => $model->person->id]) ?></p>
+
+                <?php endforeach; ?>
             </div>
         </div>
 

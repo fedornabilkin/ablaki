@@ -18,7 +18,7 @@ class HistoryRatingSearch extends HistoryRating
     {
         return [
             [['user_id', 'created_at'], 'integer'],
-            [['rating'], 'number'],
+            [['rating', 'rating_up'], 'number'],
             [['type', 'comment'], 'string'],
         ];
     }
@@ -63,6 +63,7 @@ class HistoryRatingSearch extends HistoryRating
         $query->andFilterWhere([
             'user_id' => $this->user_id,
             'rating' => $this->rating,
+            'rating_up' => $this->rating_up,
             'type' => $this->type,
             'created_at' => $this->created_at,
         ]);

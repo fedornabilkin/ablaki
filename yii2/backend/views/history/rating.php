@@ -29,6 +29,7 @@ $this->params['breadcrumbs'][] = $this->title;
                 'class' => UserColumn::class,
             ],
             'rating',
+            'rating_up',
             [
                 'attribute' => 'type',
                 'filter' => $historyTypes,

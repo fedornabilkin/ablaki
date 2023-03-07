@@ -11,6 +11,7 @@ namespace common\helpers;
 use Yii;
 use yii\base\InvalidConfigException;
 use yii\di\Container;
+use yii\web\Request;
 use yii\web\Response;
 use yii\web\UrlManager;
 use yii\web\User;
@@ -19,6 +20,7 @@ use yii\web\User;
  * @method static User user()
  * @method static Response response()
  * @method static UrlManager urlManager()
+ * @method static Request|\yii\console\Request request()
  */
 class App
 {

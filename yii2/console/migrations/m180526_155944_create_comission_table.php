@@ -19,7 +19,8 @@ class m180526_155944_create_comission_table extends AbstractMigration
             'created_at' => $this->integer()->defaultValue(0)->unsigned(),
         ], $this->tableOptions);
 
-        $this->createIndex('{{%idx-comission-type}}','{{%comission}}','type');
+        $this->createIndex('{{%idx-comission-type}}', '{{%comission}}', 'type');
+        $this->createIndex('{{%idx-comission-created_at}}', '{{%comission}}', 'created_at');
 
 
     }
@@ -30,7 +31,8 @@ class m180526_155944_create_comission_table extends AbstractMigration
     public function safeDown()
     {
 
-        $this->dropIndex('{{%idx-comission-type}}','{{%comission}}');
+        $this->dropIndex('{{%idx-comission-type}}', '{{%comission}}');
+        $this->dropIndex('{{%idx-comission-created_at}}', '{{%comission}}');
 
         $this->dropTable('{{%comission}}');
     }

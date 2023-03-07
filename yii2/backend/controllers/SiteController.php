@@ -4,11 +4,13 @@ namespace backend\controllers;
 use backend\models\user\LoginForm;
 use common\models\Todo;
 use common\models\user\Person;
+use common\models\user\User;
 use common\modules\forum\models\ForumTheme;
 use DateTimeImmutable;
 use Yii;
 use yii\base\Exception;
 use yii\data\ActiveDataProvider;
+use yii\db\ActiveQuery;
 use yii\db\Query;
 use yii\filters\AccessControl;
 use yii\filters\VerbFilter;
@@ -70,6 +72,28 @@ class SiteController extends Controller
         $dt = new DateTimeImmutable('today');
         $todayStamp = $dt->getTimestamp();
 
+
+        $dt = new DateTimeImmutable('today');
+        $threeDay = $dt->modify('-3 day');
+        $year2017 = new DateTimeImmutable('2017-01-01');
+        $ts = $threeDay->getTimestamp();
+        $tsOld = $year2017->getTimestamp();
+
+        $userCleanProvider = new ActiveDataProvider([
+            'query' => User::find()
+                ->joinWith(['person' => function (ActiveQuery $query) {
+                    return $query
+                        ->andWhere(['<', 'rating', 0.01]);
+                }])
+                ->andWhere(['<', 'created_at', $ts])
+                ->andWhere(['>', 'created_at', $tsOld])
+                ->orderBy(['id' => SORT_ASC]),
+            'pagination' => [
+                'pageSize' => 15,
+            ],
+        ]);
+
+
         $todoProvider = new ActiveDataProvider([
             'query' => Todo::find()->where(['status' => 0])->orderBy(['id' => SORT_ASC]),
             'pagination' => [
@@ -91,35 +115,19 @@ class SiteController extends Controller
             ],
         ]);
 
-        $commission['game_orel'] = (new Query())
+        $commission = (new Query())
             ->from('comission')
-            ->select('SUM(amount) AS amount')
+            ->select(['type', 'SUM(amount) AS amount', 'count(*) AS count'])
             ->groupBy('type')
             ->where(['>', 'created_at', $todayStamp])
-            ->andWhere(['type' => 'game_orel'])
-            ->one();
-
-        $commission['game_saper'] = (new Query())
-            ->from('comission')
-            ->select('SUM(amount) AS amount')
-            ->groupBy('type')
-            ->where(['>', 'created_at', $todayStamp])
-            ->andWhere(['type' => 'game_saper'])
-            ->one();
-
-        $commission['game_duel'] = (new Query())
-            ->from('comission')
-            ->select('SUM(amount) AS amount')
-            ->groupBy('type')
-            ->where(['>', 'created_at', $todayStamp])
-            ->andWhere(['type' => 'game_duel'])
-            ->one();
+            ->all();
 
         return $this->render('index', [
             'todoProvider' => $todoProvider,
             'personProvider' => $personProvider,
             'commission' => $commission,
             'themeProvider' => $themeProvider,
+            'userCleanProvider' => $userCleanProvider,
         ]);
     }
 

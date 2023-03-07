@@ -16,6 +16,7 @@ class m180526_160250_create_history_rating_table extends AbstractMigration
             'id' => $this->primaryKey(),
             'user_id' => $this->bigInteger(),
             'rating' => $this->double()->notNull(),
+            'rating_up' => $this->double()->notNull(),
             'type' => $this->char(50),
             'comment' => $this->char(255),
             'created_at' => $this->integer()->defaultValue(0)->unsigned(),

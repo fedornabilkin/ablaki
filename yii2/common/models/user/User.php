@@ -24,6 +24,8 @@ class User extends \dektrium\user\models\User
 {
     use Relations;
 
+//    public $mail_approve;
+
     public $cookieParams;
     private $person;
 

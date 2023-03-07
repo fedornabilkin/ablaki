@@ -78,7 +78,8 @@ class RatingBehavior extends AbstractBehavior
     {
         return [
             'user_id' => $this->person->user_id,
-            'rating' => $this->changingRating,
+            'rating' => $this->person->rating,
+            'rating_up' => $this->changingRating,
             'type' => 'other',
         ];
     }

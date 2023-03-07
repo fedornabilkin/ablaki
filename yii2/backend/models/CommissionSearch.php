@@ -11,7 +11,7 @@ class CommissionSearch extends Commission
     /**
      * {@inheritdoc}
      */
-    public function rules()
+    public function rules(): array
     {
         return [
             [['created_at'], 'integer'],

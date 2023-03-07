@@ -20,15 +20,5 @@ return [
             'namespace' => 'common\fixtures',
           ],
     ],
-    'components' => [
-        'log' => [
-            'targets' => [
-                [
-                    'class' => 'yii\log\FileTarget',
-                    'levels' => ['error', 'warning'],
-                ],
-            ],
-        ],
-    ],
     'params' => $params,
 ];

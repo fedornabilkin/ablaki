@@ -51,8 +51,8 @@ class HistoryRating extends ActiveRecord implements UserRelationInterface
     {
         return [
             [['user_id', 'created_at'], 'integer'],
-            [['rating'], 'required'],
-            [['rating'], 'number'],
+            [['rating', 'rating_up'], 'required'],
+            [['rating', 'rating_up'], 'number'],
             [['type'], 'string', 'max' => 50],
             [['comment'], 'string', 'max' => 255],
             [['user_id'], 'exist', 'skipOnError' => true, 'targetClass' => User::class, 'targetAttribute' => ['user_id' => 'id']],
@@ -68,6 +68,7 @@ class HistoryRating extends ActiveRecord implements UserRelationInterface
             'id' => Yii::t('app', 'ID'),
             'user_id' => Yii::t('app', 'User ID'),
             'rating' => Yii::t('app', 'Rating'),
+            'rating_up' => Yii::t('app', 'Rating Up'),
             'type' => Yii::t('app', 'Type'),
             'comment' => Yii::t('app', 'Comment'),
             'created_at' => Yii::t('app', 'Created At'),

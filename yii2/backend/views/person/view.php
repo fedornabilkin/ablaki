@@ -23,7 +23,7 @@ YiiAsset::register($this);
             'id',
             [
                 'attribute' => 'username',
-                'value' => function (Person $model) {
+                'value' => static function (Person $model) {
                     return $model->user->username;
                 }
             ],
@@ -32,7 +32,7 @@ YiiAsset::register($this);
             [
                 'attribute' => 'refovod',
                 'format' => 'raw',
-                'value' => function (Person $model) {
+                'value' => static function (Person $model) {
                     return Html::a($model->refovodUser->username, ['view', 'id' => $model->refovodUser->person->id]);
                 }
             ],
@@ -51,4 +51,28 @@ YiiAsset::register($this);
         ],
     ]) ?>
 
+</div>
+
+<div class="row">
+    <div class="col-sx-12 col-sm-4">
+        History
+    </div>
+    <div class="col-sx-12 col-sm-4">
+        Game
+    </div>
+    <div class="col-sx-12 col-sm-4">
+        Exchange, transfer
+    </div>
+    <div class="col-sx-12 col-sm-4">
+        Adwert
+    </div>
+    <div class="col-sx-12 col-sm-4">
+        Forum
+    </div>
+    <div class="col-sx-12 col-sm-4">
+        Wiki
+    </div>
+    <div class="col-sx-12 col-sm-4">
+        Auth
+    </div>
 </div>

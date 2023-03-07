@@ -13,7 +13,7 @@ $params = array_merge(
 
 return [
     'id' => 'app-backend',
-    'name' => 'admin.ablaki.ru',
+    'name' => 'Штаб',
     'language' => 'ru-RU',
 
     'basePath' => dirname(__DIR__),

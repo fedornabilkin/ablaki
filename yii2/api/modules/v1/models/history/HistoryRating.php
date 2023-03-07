@@ -18,6 +18,7 @@ class HistoryRating extends \common\models\history\HistoryRating
             'id',
             'user_id',
             'rating',
+            'rating_up',
             'created_at',
         ];
 

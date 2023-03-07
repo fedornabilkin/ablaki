@@ -6,12 +6,20 @@
  * Time: 16:57
  */
 
+use common\components\logger\FileTarget;
+
 return [
     'traceLevel' => YII_DEBUG ? 3 : 0,
     'targets' => [
         [
-            'class' => 'yii\log\FileTarget',
+            'class' => FileTarget::class,
+            'maxLogFiles' => 5,
             'levels' => ['error', 'warning'],
+            'logFile' => '@runtime/logs/app.log',
+            'logVars' => [],
+            'prefix' => function () {
+                return '[app]';
+            },
         ],
     ],
 ];

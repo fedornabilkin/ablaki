@@ -34,7 +34,8 @@ class HistoryRatingMiddleware extends AbstractHistoryMiddleware
 
         return [
             'user_id' => self::$data->user->user_id,
-            'rating' => self::$data->changingRating,
+            'rating' => self::$data->user->rating,
+            'rating_up' => self::$data->changingRating,
             'type' => self::$data->historyType,
             'comment' => self::$data->historyComment,
         ];

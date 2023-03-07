@@ -30,7 +30,8 @@ class RatingController extends Controller
 
         $userHistory = new HistoryRating();
         $userHistory->user_id = $user->id;
-        $userHistory->rating = $this->rating;
+        $userHistory->rating = $user->person->rating;
+        $userHistory->rating_up = $this->rating;
         $userHistory->type = 'everyday';
         $userHistory->comment = 'everyday';
         $userHistory->save();
