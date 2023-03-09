@@ -74,7 +74,7 @@ class UserClearService
         // проверить наличие записей в историях и пр.
         $historyBalance = HistoryBalance::find()
             ->where(['in', 'user_id', $log['ids']])
-            ->andWhere('>', 'created_at', $minCreatedAt)
+            ->andWhere(['>', 'created_at', $minCreatedAt])
             ->all();
 
         if ($historyBalance) {
