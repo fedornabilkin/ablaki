@@ -1,0 +1,1 @@
+@daily /usr/local/bin/php /web/yii2/yii cron/user-clear

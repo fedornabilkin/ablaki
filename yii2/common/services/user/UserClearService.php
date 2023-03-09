@@ -10,9 +10,6 @@ namespace common\services\user;
 
 use common\models\history\HistoryBalance;
 use common\models\user\User;
-use common\modules\games\models\GameDuel;
-use common\modules\games\models\repo\Orel;
-use common\modules\games\models\repo\Saper;
 use DateTimeImmutable;
 use Yii;
 use yii\db\ActiveQuery;
@@ -59,39 +56,41 @@ class UserClearService
                 ['<', 'confirmed_at', 1],
                 ['is', 'confirmed_at', new Expression('null')]
             ])
-            ->orderBy(['id' => SORT_ASC])
-            ->limit(50)
+            ->orderBy(['id' => SORT_DESC])
+            ->limit(100)
             ->all();
 
         $log['ids'] = [];
+        $minCreatedAt = 0;
+        /** @var User $user */
         foreach ($users as $user) {
             $log['ids'][] = $user->id;
             $log['username'][] = $user->username;
+            $minCreatedAt = $minCreatedAt > $user->created_at ? $user->created_at : $minCreatedAt;
         }
 
         $log['count'] = count($log['ids']);
 
         // проверить наличие записей в историях и пр.
-        $restrict['saper'] = Saper::find()->where(['in', 'user_id', $log['ids']])->all();
-        $restrict['orel'] = Orel::find()->where(['in', 'user_id', $log['ids']])->all();
-        $restrict['duel'] = GameDuel::find()->where(['in', 'user_id', $log['ids']])->all();
-        $restrict['history_balance'] = HistoryBalance::find()->where(['in', 'user_id', $log['ids']])->all();
-//        $restrict['forum_theme'] = ForumTheme::find()->where(['in', 'user_id', $log['ids']])->all();
-//        $restrict['forum_comment'] = ForumComment::find()->where(['in', 'user_id', $log['ids']])->all();
-//        $restrict['exchange'] = CreditExchange::find()->where(['in', 'user_id', $log['ids']])->all();
+        $historyBalance = HistoryBalance::find()
+            ->where(['in', 'user_id', $log['ids']])
+            ->andWhere('>', 'created_at', $minCreatedAt)
+            ->all();
 
-        foreach ($restrict as $index => $item) {
-            if ($item) {
-                $restrictIds = [];
-                foreach ($item as $model) {
-                    $restrictIds[] = $model->user_id;
+        if ($historyBalance) {
+            $restrictIds = [];
+            foreach ($historyBalance as $model) {
+                if (in_array($model->user_id, $restrictIds)) {
+                    continue;
                 }
-                $log['ids'] = array_diff($log['ids'], $restrictIds);
-                $log['restrict'][$index] = $restrictIds;
+                $restrictIds[] = $model->user_id;
             }
+            $log['ids'] = array_diff($log['ids'], $restrictIds);
+            $log['restrict'] = $restrictIds;
         }
 
-        Yii::warning($restrict);
+        // для restrict юзеров устанавливать флаг или тайм, чтобы не забирать их в выборку на следующий день
+
         Yii::warning($log);
     }
 }

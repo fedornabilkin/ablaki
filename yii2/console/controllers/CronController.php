@@ -13,7 +13,7 @@ use Yii;
 use yii\console\Controller;
 use yii\console\ExitCode;
 
-class TestController extends Controller
+class CronController extends Controller
 {
     public function actionIndex()
     {
