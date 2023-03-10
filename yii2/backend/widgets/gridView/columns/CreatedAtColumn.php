@@ -13,6 +13,6 @@ class CreatedAtColumn extends AbstractColumn
 
     protected function makeCellContent($model): string
     {
-        return date('H:i:s d.m.y', $model->created_at);
+        return date('H:i:s d.m.y', $model->created_at + 10800);
     }
 }

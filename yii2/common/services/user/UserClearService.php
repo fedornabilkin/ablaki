@@ -11,9 +11,11 @@ namespace common\services\user;
 use common\models\history\HistoryBalance;
 use common\models\user\User;
 use DateTimeImmutable;
+use Exception;
+use Throwable;
 use Yii;
 use yii\db\ActiveQuery;
-use yii\db\Expression;
+use yii\db\StaleObjectException;
 
 class UserClearService
 {
@@ -31,34 +33,7 @@ class UserClearService
      */
     public function clear(): void
     {
-        $dt = new DateTimeImmutable('today');
-        $threeDay = $dt->modify('-3 day');
-        $ts = $threeDay->getTimestamp();
-
-        $year2017 = new DateTimeImmutable('2017-01-01');
-        $tsOld = $year2017->getTimestamp();
-
-        $users = User::find()
-            ->joinWith(['person' => function (ActiveQuery $query) {
-                return $query
-                    ->andWhere(['<', 'rating', 0.01]);
-            }])
-            ->where(['<', 'created_at', $ts])
-            ->andWhere(['>', 'created_at', $tsOld])
-            ->andWhere(['=', 'mail_approve', 0]) // условие для старой БД
-            ->andWhere([
-                'or',
-                ['<', 'last_login_at', 1],
-                ['is', 'last_login_at', new Expression('null')]
-            ])
-            ->andWhere([
-                'or',
-                ['<', 'confirmed_at', 1],
-                ['is', 'confirmed_at', new Expression('null')]
-            ])
-            ->orderBy(['id' => SORT_DESC])
-            ->limit(100)
-            ->all();
+        $users = $this->clearQuery()->orderBy(['id' => SORT_DESC])->limit(100)->all();
 
         $log['ids'] = [];
         $minCreatedAt = 0;
@@ -71,26 +46,78 @@ class UserClearService
 
         $log['count'] = count($log['ids']);
 
-        // проверить наличие записей в историях и пр.
-        $historyBalance = HistoryBalance::find()
-            ->where(['in', 'user_id', $log['ids']])
-            ->andWhere(['>', 'created_at', $minCreatedAt])
-            ->all();
-
-        if ($historyBalance) {
-            $restrictIds = [];
-            foreach ($historyBalance as $model) {
-                if (in_array($model->user_id, $restrictIds)) {
-                    continue;
-                }
-                $restrictIds[] = $model->user_id;
-            }
-            $log['ids'] = array_diff($log['ids'], $restrictIds);
-            $log['restrict'] = $restrictIds;
-        }
-
-        // для restrict юзеров устанавливать флаг или тайм, чтобы не забирать их в выборку на следующий день
+        // проверить наличие ограничений на удаление
+        $restrictIds = $this->clearRestrictIds($minCreatedAt, ...$log['ids']);
+        $log['ids'] = array_diff($log['ids'], $restrictIds);
+        $log['restrict'] = $restrictIds;
 
         Yii::warning($log);
+
+        /** @var User $clearUser */
+        foreach ($users as $clearUser) {
+            try {
+                if (!in_array($clearUser->id, $restrictIds)) {
+                    $this->removeUser($clearUser);
+                } else {
+                    // для restrict юзеров устанавливать флаг или тайм, чтобы не забирать их в выборку на следующий день
+                    $this->lastCleaningUpdate($clearUser);
+                }
+            } catch (Exception $e) {
+                Yii::error([$clearUser->id, $e]);
+            }
+        }
+    }
+
+    public function clearQuery(): ActiveQuery
+    {
+        $dt = new DateTimeImmutable('today');
+        $threeDay = $dt->modify('-3 day');
+        $ts = $threeDay->getTimestamp();
+
+        $year2017 = new DateTimeImmutable('2017-01-01');
+        $tsOld = $year2017->getTimestamp();
+
+        return User::find()
+            ->joinWith(['person' => function (ActiveQuery $query) {
+                return $query->noRating()->noCleaning();
+            }])
+            ->where(['<', 'created_at', $ts])
+            ->andWhere(['>', 'created_at', $tsOld])
+            // условие для старой БД
+            ->andWhere(['=', 'mail_approve', 0]);
+    }
+
+    public function clearRestrictIds(int $minTime, ...$ids): array
+    {
+        $historyBalance = HistoryBalance::find()
+            ->where(['in', 'user_id', $ids])
+            ->andWhere(['>', 'created_at', $minTime])
+            ->all();
+
+        $restrictIds = [];
+        foreach ($historyBalance as $model) {
+            if (in_array($model->user_id, $restrictIds)) {
+                continue;
+            }
+            $restrictIds[] = $model->user_id;
+        }
+
+        return $restrictIds;
+    }
+
+    /**
+     * @param User $model
+     * @return false|int
+     * @throws Throwable
+     * @throws StaleObjectException
+     */
+    public function removeUser(User $model)
+    {
+        return $model->delete();
+    }
+
+    public function lastCleaningUpdate(User $model): bool
+    {
+        return $model->person->setLastCleaning()->save();
     }
 }

@@ -17,7 +17,13 @@ trait AuthTrait
         return array_merge(parent::behaviors(), [
             Auth::class => [
                 'class' => Auth::class,
+                'except' => $this->authExceptAction(),
             ],
         ]);
+    }
+
+    public function authExceptAction(): array
+    {
+        return [];
     }
 }

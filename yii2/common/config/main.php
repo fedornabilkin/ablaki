@@ -17,6 +17,7 @@ $config = [
             'dsn' => 'pgsql:host=' . getenv('PG_DB_HOST') . ';dbname=' . getenv('PG_DB_NAME'),
             'username' => getenv('PG_DB_USER'),
             'password' => getenv('PG_DB_PASSWORD'),
+            'enableSchemaCache' => true,
 //            'charset' => 'utf8',
         ],
         'cache' => [
@@ -70,6 +71,7 @@ if (getenv('MYSQL_DB_HOST') && getenv('MYSQL_DB_NAME')) {
         'username' => getenv('MYSQL_DB_USER'),
         'password' => getenv('MYSQL_DB_PASSWORD'),
         'charset' => 'utf8',
+        'enableSchemaCache' => true,
     ];
 }
 

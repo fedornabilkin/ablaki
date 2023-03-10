@@ -2,22 +2,18 @@
 
 namespace api\modules\v1\controllers;
 
-use api\filters\Auth;
 use api\modules\v1\models\User;
+use api\modules\v1\traites\AuthTrait;
 use common\helpers\App;
 use yii\rest\Controller;
 
 class UserController extends Controller
 {
+    use AuthTrait;
 
-    public function behaviors(): array
+    public function authExceptAction(): array
     {
-        return array_merge(parent::behaviors(), [
-            Auth::class => [
-                'class' => Auth::class,
-                'except' => ['wall']
-            ],
-        ]);
+        return ['wall'];
     }
 
     public function actionWall($login)

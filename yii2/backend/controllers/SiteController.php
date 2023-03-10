@@ -4,13 +4,12 @@ namespace backend\controllers;
 use backend\models\user\LoginForm;
 use common\models\Todo;
 use common\models\user\Person;
-use common\models\user\User;
 use common\modules\forum\models\ForumTheme;
+use common\services\user\UserClearService;
 use DateTimeImmutable;
 use Yii;
 use yii\base\Exception;
 use yii\data\ActiveDataProvider;
-use yii\db\ActiveQuery;
 use yii\db\Query;
 use yii\filters\AccessControl;
 use yii\filters\VerbFilter;
@@ -72,22 +71,8 @@ class SiteController extends Controller
         $dt = new DateTimeImmutable('today');
         $todayStamp = $dt->getTimestamp();
 
-
-        $dt = new DateTimeImmutable('today');
-        $threeDay = $dt->modify('-3 day');
-        $year2017 = new DateTimeImmutable('2017-01-01');
-        $ts = $threeDay->getTimestamp();
-        $tsOld = $year2017->getTimestamp();
-
         $userCleanProvider = new ActiveDataProvider([
-            'query' => User::find()
-                ->joinWith(['person' => function (ActiveQuery $query) {
-                    return $query
-                        ->andWhere(['<', 'rating', 0.01]);
-                }])
-                ->andWhere(['<', 'created_at', $ts])
-                ->andWhere(['>', 'created_at', $tsOld])
-                ->orderBy(['id' => SORT_ASC]),
+            'query' => (new UserClearService())->clearQuery()->orderBy(['id' => SORT_DESC]),
             'pagination' => [
                 'pageSize' => 15,
             ],

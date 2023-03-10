@@ -1,5 +1,6 @@
 <?php
 
+use backend\widgets\gridView\columns\CreatedAtColumn;
 use yii\grid\GridView;
 use yii\helpers\Html;
 
@@ -27,7 +28,7 @@ $this->params['breadcrumbs'][] = $this->title;
             ],
             [
                 'attribute' => 'created_at',
-                'format' => ['date', 'php:H:i d.m.y']
+                'class' => CreatedAtColumn::class
             ],
 
 //            ['class' => 'yii\grid\ActionColumn'],

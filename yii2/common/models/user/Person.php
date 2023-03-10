@@ -2,6 +2,7 @@
 
 namespace common\models\user;
 
+use common\models\core\ModelQueryTrait;
 use Yii;
 use yii\db\ActiveQuery;
 use yii\db\ActiveRecord;
@@ -20,11 +21,15 @@ use yii\db\ActiveRecord;
  * @property string $referrer
  * @property int $bonus_count
  * @property int $autoriz
+ * @property int $last_cleaning_at
  *
  * @property User $user
+ * @property User $refovodUser
  */
 class Person extends ActiveRecord implements UserRelationInterface
 {
+    use ModelQueryTrait;
+
     /**
      * {@inheritdoc}
      */
@@ -58,6 +63,12 @@ class Person extends ActiveRecord implements UserRelationInterface
             'refovod' => Yii::t('app', 'Refovod'),
             'rating' => Yii::t('app', 'Rating'),
         ];
+    }
+
+    public function setLastCleaning(): self
+    {
+        $this->last_cleaning_at = time();
+        return $this;
     }
 
     /**

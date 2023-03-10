@@ -8,6 +8,7 @@
 
 namespace common\models\user;
 
+use common\models\core\ModelQueryTrait;
 use common\models\Todo;
 use common\services\cookies\CookieService;
 use Yii;
@@ -22,9 +23,8 @@ use yii\base\InvalidConfigException;
  */
 class User extends \dektrium\user\models\User
 {
-    use Relations;
-
-//    public $mail_approve;
+    use UserRelations;
+    use ModelQueryTrait;
 
     public $cookieParams;
     private $person;
@@ -50,6 +50,15 @@ class User extends \dektrium\user\models\User
 
             $this->person->link('user', $this);
         }
+    }
+
+    public function beforeDelete()
+    {
+        if (!parent::beforeDelete()) {
+            return false;
+        }
+
+        return $this->person->rating < 1;
     }
 
     /**

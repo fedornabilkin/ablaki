@@ -15,14 +15,14 @@ use yii\db\ActiveQuery;
  * @property Person $person
  * @property Todo $todo
  */
-trait Relations
+trait UserRelations
 {
     /**
      * @return ActiveQuery
      */
     public function getPerson(): ActiveQuery
     {
-        /** @var $this User */
+        /** @var User $this */
         return $this->hasOne(Person::class, ['user_id' => 'id'])->inverseOf('user');
     }
 
@@ -31,7 +31,7 @@ trait Relations
      */
     public function getTodo(): ActiveQuery
     {
-        /** @var $this User */
+        /** @var User $this */
         return $this->hasMany(Todo::class, ['user_id' => 'id']);
     }
 }
