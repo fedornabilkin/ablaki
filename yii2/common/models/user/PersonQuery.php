@@ -26,4 +26,9 @@ class PersonQuery extends ActiveQuery
     {
         return $this->andWhere(['<', 'rating', 0.01]);
     }
+
+    public function noRefovod(): self
+    {
+        return $this->andWhere(['<', 'refovod', 1]);
+    }
 }

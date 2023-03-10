@@ -33,7 +33,7 @@ class UserClearService
      */
     public function clear(): void
     {
-        $users = $this->clearQuery()->orderBy(['id' => SORT_DESC])->limit(100)->all();
+        $users = $this->clearQuery()->orderBy(['id' => SORT_DESC])->limit(500)->all();
 
         $log['ids'] = [];
         $minCreatedAt = 0;
@@ -79,7 +79,7 @@ class UserClearService
 
         return User::find()
             ->joinWith(['person' => function (ActiveQuery $query) {
-                return $query->noRating()->noCleaning();
+                return $query->noRating()->noRefovod()->noCleaning();
             }])
             ->where(['<', 'created_at', $ts])
             ->andWhere(['>', 'created_at', $tsOld])
