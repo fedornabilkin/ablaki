@@ -121,7 +121,9 @@ class UserClearService
     {
         return Person::find()
             ->where(['in', 'refovod', $ids])
-            ->andWhere(['>', 'created_at', $minTime]);
+            ->joinWith(['user' => function (ActiveQuery $query) use ($minTime) {
+                return $query->andWhere(['>', 'created_at', $minTime]);
+            }]);
     }
 
     /**
