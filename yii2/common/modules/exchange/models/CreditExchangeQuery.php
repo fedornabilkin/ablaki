@@ -2,6 +2,7 @@
 
 namespace common\modules\exchange\models;
 
+use common\models\core\UserFieldQueryTrait;
 use yii\db\ActiveQuery;
 use yii\web\IdentityInterface;
 
@@ -10,9 +11,7 @@ use yii\web\IdentityInterface;
  */
 class CreditExchangeQuery extends ActiveQuery
 {
-    protected $userFieldName = 'user_id';
-
-    protected $clientFieldName = 'user_buyer';
+    use UserFieldQueryTrait;
 
     public function list(IdentityInterface $identity): self
     {
@@ -69,21 +68,5 @@ class CreditExchangeQuery extends ActiveQuery
     public function notMy(IdentityInterface $identity): self
     {
         return $this->andWhere(['!=', $this->userFieldName(), $identity->getId()]);
-    }
-
-    /**
-     * @return string
-     */
-    public function userFieldName(): string
-    {
-        return $this->userFieldName;
-    }
-
-    /**
-     * @return string
-     */
-    private function buyerFieldName(): string
-    {
-        return $this->clientFieldName;
     }
 }

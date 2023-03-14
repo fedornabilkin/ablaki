@@ -144,7 +144,9 @@ class ExchangeService
     {
         $count = $model::find()
             ->free()
-            ->my($identity)->count();
+            ->onlyBuy()
+            ->my($identity)
+            ->count();
 
         $cnt = $identity->person->rating / 10 - $count;
         return round(max($cnt, 0));
