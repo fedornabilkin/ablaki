@@ -9,6 +9,7 @@
 namespace common\services\user;
 
 use common\models\history\HistoryBalance;
+use common\models\user\Person;
 use common\models\user\User;
 use DateTimeImmutable;
 use Exception;
@@ -78,7 +79,7 @@ class UserClearService
         $tsOld = $year2017->getTimestamp();
 
         return User::find()
-            ->joinWith(['person' => function (ActiveQuery $query) {
+            ->joinWith(['person' => static function (ActiveQuery $query) {
                 return $query->noRating()->noRefovod()->noCleaning();
             }])
             ->where(['<', 'created_at', $ts])
@@ -89,20 +90,38 @@ class UserClearService
 
     public function clearRestrictIds(int $minTime, ...$ids): array
     {
-        $historyBalance = HistoryBalance::find()
-            ->where(['in', 'user_id', $ids])
-            ->andWhere(['>', 'created_at', $minTime])
-            ->all();
+        $restrict['history_balance'] = $this->restrictHistoryBalanceQuery($minTime, ...$ids)->all();
+        $restrict['refovod'] = $this->restrictRefovodQuery($minTime, ...$ids)->all();
 
-        $restrictIds = [];
-        foreach ($historyBalance as $model) {
-            if (in_array($model->user_id, $restrictIds)) {
-                continue;
+        $restrictIds = $log = [];
+        foreach ($restrict as $type => $models) {
+            $log[$type] = 0;
+            foreach ($models as $model) {
+                if (in_array($model->user_id, $restrictIds)) {
+                    continue;
+                }
+                $log[$type]++;
+                $restrictIds[] = $model->user_id;
             }
-            $restrictIds[] = $model->user_id;
         }
 
+        Yii::warning($log);
+
         return $restrictIds;
+    }
+
+    public function restrictHistoryBalanceQuery(int $minTime, ...$ids): ActiveQuery
+    {
+        return HistoryBalance::find()
+            ->where(['in', 'user_id', $ids])
+            ->andWhere(['>', 'created_at', $minTime]);
+    }
+
+    public function restrictRefovodQuery(int $minTime, ...$ids): ActiveQuery
+    {
+        return Person::find()
+            ->where(['in', 'refovod', $ids])
+            ->andWhere(['>', 'created_at', $minTime]);
     }
 
     /**
