@@ -10,11 +10,11 @@ namespace common\modules\games\middleware;
 
 use common\middleware\AbstractCreateMiddleware;
 
+/**
+ * @property GameDataMiddleware $data
+ */
 class GameCreateMiddleware extends AbstractCreateMiddleware
 {
-    /** @var GameDataMiddleware */
-    public static $data;
-
     protected $model;
 
     /**

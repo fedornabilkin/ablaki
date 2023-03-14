@@ -8,17 +8,18 @@
 
 namespace common\modules\games\apiActions\saper;
 
+use common\middleware\AbstractMiddleware;
+use common\middleware\person\CheckBalanceMiddleware;
 use common\middleware\person\UpdatePersonMiddleware;
 use common\modules\games\apiActions\AbstractCreate;
-use common\modules\games\middleware\GameMiddleware;
-use common\modules\games\middleware\GamerCheckBalanceMiddleware;
 use common\modules\games\middleware\saper\CreateMiddleware;
+use yii\base\UserException;
 
 class CreateAction extends AbstractCreate
 {
     /**
      * @return array|bool
-     * @throws \yii\base\UserException
+     * @throws UserException
      */
     public function run()
     {
@@ -31,9 +32,9 @@ class CreateAction extends AbstractCreate
         return true;
     }
 
-    public function getMiddleware(): GameMiddleware
+    public function getMiddleware(): AbstractMiddleware
     {
-        $middleware = new GamerCheckBalanceMiddleware();
+        $middleware = new CheckBalanceMiddleware();
         $middleware::$data = $this->getDataMiddleware();
 
         $middleware

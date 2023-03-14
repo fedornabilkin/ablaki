@@ -8,12 +8,11 @@
 
 namespace common\modules\games\apiActions\orel;
 
+use common\middleware\AbstractMiddleware;
+use common\middleware\person\CheckCreditMiddleware;
 use common\middleware\person\UpdatePersonMiddleware;
 use common\modules\games\apiActions\AbstractCreate;
-use common\modules\games\middleware\GameMiddleware;
-use common\modules\games\middleware\GamerCheckCreditMiddleware;
 use common\modules\games\middleware\orel\CreateMiddleware;
-use common\modules\games\models\GameOrel;
 use yii\base\UserException;
 
 class CreateAction extends AbstractCreate
@@ -33,9 +32,9 @@ class CreateAction extends AbstractCreate
         return true;
     }
 
-    public function getMiddleware(): GameMiddleware
+    public function getMiddleware(): AbstractMiddleware
     {
-        $middleware = new GamerCheckCreditMiddleware();
+        $middleware = new CheckCreditMiddleware();
         $middleware::$data = $this->getDataMiddleware();
 
         $middleware

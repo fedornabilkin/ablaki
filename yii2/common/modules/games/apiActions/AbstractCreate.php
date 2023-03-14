@@ -9,8 +9,8 @@
 namespace common\modules\games\apiActions;
 
 use common\helpers\App;
+use common\middleware\AbstractMiddleware;
 use common\modules\games\middleware\GameDataMiddleware;
-use common\modules\games\middleware\GameMiddleware;
 use Yii;
 use yii\base\Model;
 use yii\base\UserException;
@@ -21,7 +21,7 @@ abstract class AbstractCreate extends Action
     /** @var Model */
     protected $model;
 
-    abstract public function getMiddleware(): GameMiddleware;
+    abstract public function getMiddleware(): AbstractMiddleware;
 
     public function loadModel(): bool
     {

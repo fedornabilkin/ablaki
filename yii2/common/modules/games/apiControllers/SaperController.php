@@ -9,6 +9,7 @@
 namespace common\modules\games\apiControllers;
 
 use api\filters\Auth;
+use common\middleware\person\CheckBalanceMiddleware;
 use common\middleware\person\UpdatePersonMiddleware;
 use common\modules\games\apiActions\saper\CreateAction;
 use common\modules\games\apiActions\saper\DeleteAction;
@@ -16,7 +17,6 @@ use common\modules\games\apiActions\saper\RemoveAction;
 use common\modules\games\middleware\CheckFreeGameMiddleware;
 use common\modules\games\middleware\CheckNotMyGameMiddleware;
 use common\modules\games\middleware\GameDataMiddleware;
-use common\modules\games\middleware\GamerCheckBalanceMiddleware;
 use common\modules\games\middleware\saper\CheckMyStartedGameMiddleware;
 use common\modules\games\middleware\saper\PlayMiddleware;
 use common\modules\games\middleware\saper\StartMiddleware;
@@ -85,7 +85,7 @@ class SaperController extends ActiveController
 
         $middleware
             ->linkWith(new CheckNotMyGameMiddleware())
-            ->linkWith(new GamerCheckBalanceMiddleware())
+            ->linkWith(new CheckBalanceMiddleware())
             ->linkWith(new StartMiddleware())
             ->linkWith(new UpdatePersonMiddleware());
 
@@ -114,7 +114,7 @@ class SaperController extends ActiveController
             'user' => Yii::$app->user->identity->person,
         ]);
 
-        $middleware = new GamerCheckBalanceMiddleware();
+        $middleware = new CheckBalanceMiddleware();
         $middleware::$data = $data;
 
         $middleware
