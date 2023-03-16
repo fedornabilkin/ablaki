@@ -19,6 +19,7 @@ class HistoryBalance extends \common\models\history\HistoryBalance
             'user_id',
             'balance',
             'balance_up',
+            'credit',
             'credit_up',
             'created_at',
         ];

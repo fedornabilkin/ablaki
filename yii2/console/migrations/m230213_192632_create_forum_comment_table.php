@@ -29,7 +29,7 @@ class m230213_192632_create_forum_comment_table extends AbstractMigration
             'user_id',
             '{{%user}}',
             'id',
-            'CASCADE',
+            'RESTRICT',
             'RESTRICT'
         );
 

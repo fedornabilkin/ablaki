@@ -8,15 +8,12 @@
 
 namespace common\models\history;
 
+use common\models\core\UserQueryTrait;
 use yii\db\ActiveQuery;
-use yii\web\IdentityInterface;
 
 class HistoryBalanceQuery extends ActiveQuery
 {
-    public function my(IdentityInterface $identity): self
-    {
-        return $this->andWhere(['user_id' => $identity->getId()]);
-    }
+    use UserQueryTrait;
 
     public function byEveryday(): self
     {

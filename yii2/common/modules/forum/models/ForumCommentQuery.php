@@ -2,16 +2,16 @@
 /**
  * Created by PhpStorm.
  * User: fedornabilkin
- * Date: 07.01.2023
- * Time: 22:30
+ * Date: 16.03.2023
+ * Time: 20:21
  */
 
-namespace common\models\history;
+namespace common\modules\forum\models;
 
 use common\models\core\UserQueryTrait;
 use yii\db\ActiveQuery;
 
-class HistoryRatingQuery extends ActiveQuery
+class ForumCommentQuery extends ActiveQuery
 {
     use UserQueryTrait;
 }

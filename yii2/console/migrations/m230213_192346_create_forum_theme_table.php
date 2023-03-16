@@ -28,7 +28,7 @@ class m230213_192346_create_forum_theme_table extends AbstractMigration
             'user_id',
             '{{%user}}',
             'id',
-            'CASCADE',
+            'RESTRICT',
             'RESTRICT'
         );
     }

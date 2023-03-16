@@ -8,18 +8,19 @@
 
 namespace api\modules\v1\models\forum;
 
+use api\modules\v1\models\User;
 use common\modules\forum\models\ForumComment;
+use yii\db\ActiveQuery;
 
 class Comment extends ForumComment
 {
-    public function fields()
+    public function extraFields(): array
     {
-        $fields = parent::fields();
+        return ['theme', 'user'];
+    }
 
-        $fields['comment'] = static function ($model) {
-            return trim($model->comment);
-        };
-
-        return $fields;
+    public function getUser(): ActiveQuery
+    {
+        return $this->hasOne(User::class, ['id' => 'user_id']);
     }
 }

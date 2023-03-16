@@ -15,6 +15,6 @@ trait HistoryTypeTrait
 {
     public function getHistoryType(): string
     {
-        return $this->historyType;
+        return $this->historyType ?? static::class;
     }
 }

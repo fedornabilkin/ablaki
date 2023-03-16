@@ -53,9 +53,7 @@ class HistoryController extends ActiveController
         $actions['index']['dataFilter'] = $this->filter();
 
         $actions['balance'] = $actions['index'];
-        $actions['balance']['modelClass'] = HistoryBalance::class;
         $actions['rating'] = $actions['index'];
-        $actions['rating']['modelClass'] = HistoryRating::class;
 
         $actions['index']['prepareDataProvider'] = function ($action, $filter) {
             $filter = $filter ?? [];
@@ -69,6 +67,7 @@ class HistoryController extends ActiveController
             ]);
         };
 
+        $actions['balance']['modelClass'] = HistoryBalance::class;
         $actions['balance']['prepareDataProvider'] = function ($action, $filter) {
             $filter = $filter ?? [];
             return new ActiveDataProvider([
@@ -80,6 +79,7 @@ class HistoryController extends ActiveController
             ]);
         };
 
+        $this->modelClass = HistoryRating::class;
         $actions['rating']['prepareDataProvider'] = $actions['balance']['prepareDataProvider'];
 
         unset($actions['create'], $actions['update'], $actions['view'], $actions['delete']);

@@ -2,6 +2,7 @@
 
 namespace common\modules\forum\models;
 
+use common\models\core\ModelQueryTrait;
 use common\models\user\User;
 use common\models\user\UserRelationInterface;
 use Yii;
@@ -25,6 +26,8 @@ use yii\db\ActiveRecord;
  */
 class ForumComment extends ActiveRecord implements UserRelationInterface
 {
+    use ModelQueryTrait;
+
     /**
      * {@inheritdoc}
      */
@@ -54,7 +57,8 @@ class ForumComment extends ActiveRecord implements UserRelationInterface
     public function rules()
     {
         return [
-            [['user_id', 'theme_id', 'active', 'created_at'], 'default', 'value' => null],
+            [['user_id', 'theme_id', 'created_at'], 'default', 'value' => null],
+            [['active'], 'default', 'value' => 1],
             [['user_id', 'theme_id', 'active', 'created_at'], 'integer'],
             [['comment'], 'required'],
             [['comment'], 'string', 'max' => 3000],
@@ -76,6 +80,17 @@ class ForumComment extends ActiveRecord implements UserRelationInterface
             'active' => Yii::t('forum', 'Active'),
             'created_at' => Yii::t('forum', 'Created At'),
         ];
+    }
+
+    public function fields(): array
+    {
+        $fields = parent::fields();
+
+        $fields['comment'] = static function ($model) {
+            return trim($model->comment);
+        };
+
+        return $fields;
     }
 
     /**

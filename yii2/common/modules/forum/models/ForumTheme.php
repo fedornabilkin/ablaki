@@ -2,6 +2,7 @@
 
 namespace common\modules\forum\models;
 
+use common\models\core\ModelQueryTrait;
 use common\models\user\User;
 use common\models\user\UserRelationInterface;
 use Yii;
@@ -25,6 +26,8 @@ use yii\db\ActiveRecord;
  */
 class ForumTheme extends ActiveRecord implements UserRelationInterface
 {
+    use ModelQueryTrait;
+
     /**
      * {@inheritdoc}
      */
@@ -75,6 +78,17 @@ class ForumTheme extends ActiveRecord implements UserRelationInterface
             'last_post' => Yii::t('forum', 'Last Post'),
             'created_at' => Yii::t('forum', 'Created At'),
         ];
+    }
+
+    public function fields(): array
+    {
+        $fields = parent::fields();
+
+        $fields['title'] = static function ($model) {
+            return trim($model->title);
+        };
+
+        return $fields;
     }
 
     /**

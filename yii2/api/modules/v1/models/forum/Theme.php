@@ -12,5 +12,8 @@ use common\modules\forum\models\ForumTheme;
 
 class Theme extends ForumTheme
 {
-
+    public function extraFields(): array
+    {
+        return ['comments'];
+    }
 }
