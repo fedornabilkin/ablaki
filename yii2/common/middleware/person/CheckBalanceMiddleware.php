@@ -10,9 +10,15 @@ namespace common\middleware\person;
 
 use common\exceptions\person\BalanceException;
 use common\middleware\AbstractMiddleware;
+use yii\db\Exception;
 
 class CheckBalanceMiddleware extends AbstractMiddleware
 {
+    /**
+     * @return bool
+     * @throws BalanceException
+     * @throws Exception
+     */
     public function check(): bool
     {
         if (self::$data->user->balance < self::$data->getNeedBalance()) {

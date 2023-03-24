@@ -63,7 +63,7 @@ abstract class AbstractDataMiddleware extends BaseObject
         return 0;
     }
 
-    public function getNeedBalance(): int
+    public function getNeedBalance(): float
     {
         return 0;
     }

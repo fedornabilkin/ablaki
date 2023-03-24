@@ -35,15 +35,15 @@ class ExchangeDataMiddleware extends AbstractDataMiddleware
      */
     public function getNeedCredit(): int
     {
-        return (int)$this->model->credit * $this->model->count;
+        return (int)($this->model->credit * $this->model->count);
     }
 
     /**
-     * @return int
+     * @return float
      */
-    public function getNeedBalance(): int
+    public function getNeedBalance(): float
     {
-        return (int)$this->model->amount * $this->model->count;
+        return (float)($this->model->amount * $this->model->count);
     }
 
     /**
