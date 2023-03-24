@@ -29,11 +29,11 @@ class GameDataMiddleware extends DataMiddleware
 
     public function getNeedCredit(): int
     {
-        return (int)$this->getKon() * $this->getCount();
+        return (int)($this->getKon() * $this->getCount());
     }
 
-    public function getNeedBalance(): int
+    public function getNeedBalance(): float
     {
-        return (int)$this->getKon() * $this->getCount();
+        return (float)($this->getKon() * $this->getCount());
     }
 }

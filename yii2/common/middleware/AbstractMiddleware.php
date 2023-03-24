@@ -107,6 +107,6 @@ abstract class AbstractMiddleware
      */
     protected function consoleLog($text)
     {
-        Yii::debug($text, 'Middleware');
+        Yii::info($text, 'Middleware');
     }
 }
