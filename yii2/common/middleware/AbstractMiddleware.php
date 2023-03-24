@@ -11,7 +11,7 @@ use yii\db\Exception;
  */
 abstract class AbstractMiddleware
 {
-    /** @var DataMiddleware */
+    /** @var AbstractDataMiddleware */
     public static $data;
 
     /** @var AbstractMiddleware */
@@ -107,6 +107,6 @@ abstract class AbstractMiddleware
      */
     protected function consoleLog($text)
     {
-        Yii::debug($text, 'Middleware');
+        Yii::info($text, 'Middleware');
     }
 }

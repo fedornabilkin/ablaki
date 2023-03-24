@@ -8,11 +8,11 @@
 
 namespace common\modules\games\middleware;
 
-use common\middleware\DataMiddleware;
+use common\middleware\AbstractDataMiddleware;
 use common\modules\games\models\GameOrel;
 use common\modules\games\models\GameSaper;
 
-class GameDataMiddleware extends DataMiddleware
+class GameDataMiddleware extends AbstractDataMiddleware
 {
     /** @var GameSaper|GameOrel */
     public $game;

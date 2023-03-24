@@ -9,6 +9,7 @@
 namespace console\migrations;
 
 
+use Yii;
 use yii\db\Connection;
 use yii\db\Migration;
 
@@ -23,7 +24,7 @@ class AbstractMigration extends Migration
     public function __construct(array $config = [])
     {
         parent::__construct($config);
-        $this->remote_db = \Yii::$app->params['remote_db'];
+        $this->remote_db = Yii::$app->params['remote_db'];
     }
 
     public function init()

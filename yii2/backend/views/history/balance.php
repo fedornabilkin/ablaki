@@ -23,7 +23,7 @@ $this->params['breadcrumbs'][] = $this->title;
         'dataProvider' => $dataProvider,
         'filterModel' => $searchModel,
         'columns' => [
-            ['class' => 'yii\grid\SerialColumn'],
+            'id',
 
             [
                 'attribute' => 'user_id',
@@ -32,7 +32,7 @@ $this->params['breadcrumbs'][] = $this->title;
             [
                 'attribute' => 'balance',
                 'format' => 'raw',
-                'value' => function ($model) {
+                'value' => static function ($model) {
                     return $model->balance . '<br>
                         <span class="text-success">' . $model->credit . '</span>';
                 }
@@ -40,7 +40,7 @@ $this->params['breadcrumbs'][] = $this->title;
             [
                 'attribute' => 'balance_up',
                 'format' => 'raw',
-                'value' => function ($model) {
+                'value' => static function ($model) {
                     return Html::tag('span', $model->balance_up . '<br>'
                         . $model->credit_up, [
                         'class' => ($model->credit_up >= 0) ? 'text-success' : 'text-danger']);

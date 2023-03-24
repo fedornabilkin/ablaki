@@ -14,6 +14,7 @@ abstract class AbstractColumn extends DataColumn
 {
     public function init(): void
     {
+        parent::init();
         $this->content = [$this, 'makeCellContent'];
     }
 

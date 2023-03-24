@@ -12,7 +12,7 @@ use common\models\user\Person;
 use yii\base\BaseObject;
 use yii\db\ActiveRecord;
 
-class DataMiddleware extends BaseObject
+abstract class AbstractDataMiddleware extends BaseObject
 {
     /** @var Person */
     public $user;

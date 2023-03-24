@@ -61,6 +61,9 @@ $config = [
         'forum' => [
             'class' => Module::class
         ],
+        'craft' => [
+            'class' => \common\modules\craft\Module::class,
+        ],
     ],
 ];
 
