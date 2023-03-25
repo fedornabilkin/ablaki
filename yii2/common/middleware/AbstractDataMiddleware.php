@@ -14,7 +14,10 @@ use yii\db\ActiveRecord;
 
 abstract class AbstractDataMiddleware extends BaseObject
 {
-    /** @var Person */
+    /**
+     * @deprecated
+     * @var Person
+     */
     public $user;
 
     /** @var float */
@@ -37,6 +40,9 @@ abstract class AbstractDataMiddleware extends BaseObject
      * @var ActiveRecord
      */
     protected $model;
+
+    /** @var Person */
+    protected $person;
 
     public function needUpdatePersonCounters(): bool
     {
@@ -68,8 +74,14 @@ abstract class AbstractDataMiddleware extends BaseObject
         return 0;
     }
 
+    public function getNeedRating(): int
+    {
+        return 0;
+    }
+
     /**
      * @param Person $user
+     * @deprecated
      */
     public function setUser(Person $user): void
     {
@@ -78,10 +90,27 @@ abstract class AbstractDataMiddleware extends BaseObject
 
     /**
      * @return Person
+     * @deprecated
      */
     public function getUser(): Person
     {
         return $this->user;
+    }
+
+    /**
+     * @return Person
+     */
+    public function getPerson(): Person
+    {
+        return $this->person;
+    }
+
+    /**
+     * @param Person $person
+     */
+    public function setPerson(Person $person): void
+    {
+        $this->person = $person;
     }
 
     /**

@@ -8,18 +8,17 @@
 
 namespace common\modules\craft\middleware\inventory;
 
-use common\middleware\AbstractMiddleware;
 use common\modules\craft\models\CraftInventory;
 
 /**
- * @property InventoryDataMiddleware $data
+ * @property InventoryDataMiddleware $dataInventory
  */
-class CreateSlotMiddleware extends AbstractMiddleware
+class CreateSlotMiddleware extends AbstractInventoryMiddleware
 {
     public function check(): bool
     {
-        $item = self::$data->getItem();
-        $userId = self::$data->user->user_id;
+        $item = self::$dataInventory->getItem();
+        $userId = self::$dataInventory->user->user_id;
 
         $slotNumber = CraftInventory::find()
             ->andWhere(['user_id' => $userId])
@@ -32,7 +31,7 @@ class CreateSlotMiddleware extends AbstractMiddleware
         ]);
         $slot->save();
 
-        self::$data->addInventorySlots($slot);
+        self::$dataInventory->addInventorySlots($slot);
 
         return parent::check();
     }

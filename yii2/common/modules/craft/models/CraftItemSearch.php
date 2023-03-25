@@ -70,11 +70,11 @@ class CraftItemSearch extends CraftItem
             'active' => $this->active,
         ]);
 
-        $query->andFilterWhere(['like', 'name', $this->name])
-            ->andFilterWhere(['like', 'description', $this->description]);
+        $query->andFilterWhere(['ilike', 'craft_item.name', $this->name])
+            ->andFilterWhere(['ilike', 'craft_item.description', $this->description]);
 
         $query->joinWith(['category' => function ($q) {
-            return $q->andFilterWhere(['like', 'craft_category.name', $this->categoryName]);
+            return $q->andFilterWhere(['ilike', 'craft_category.name', $this->categoryName]);
         }]);
 
         return $dataProvider;

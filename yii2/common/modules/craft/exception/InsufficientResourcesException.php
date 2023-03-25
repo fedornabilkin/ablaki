@@ -10,11 +10,12 @@ namespace common\modules\craft\exception;
 
 use Exception;
 use Throwable;
+use Yii;
 
-class AssignItemException extends Exception
+class InsufficientResourcesException extends Exception
 {
     public function __construct($message = "", $code = 0, Throwable $previous = null)
     {
-        parent::__construct($message, 503, $previous);
+        parent::__construct(Yii::t('craft', 'Insufficient resources'), 503, $previous);
     }
 }

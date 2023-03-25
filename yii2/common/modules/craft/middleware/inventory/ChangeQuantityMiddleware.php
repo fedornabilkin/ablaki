@@ -8,21 +8,19 @@
 
 namespace common\modules\craft\middleware\inventory;
 
-use common\middleware\AbstractMiddleware;
-use common\modules\craft\models\CraftInventory;
 use common\modules\craft\models\CraftItem;
 
 /**
- * @property InventoryDataMiddleware $data
+ * @property InventoryDataMiddleware $dataInventory
  */
-class ChangeQuantityMiddleware extends AbstractMiddleware
+class ChangeQuantityMiddleware extends AbstractInventoryMiddleware
 {
     /** @var CraftItem */
     protected $item;
 
     public function check(): bool
     {
-        $this->item = self::$data->getItem();
+        $this->item = self::$dataInventory->getItem();
 
         $this->dispense();
 
@@ -34,13 +32,23 @@ class ChangeQuantityMiddleware extends AbstractMiddleware
      */
     private function dispense(): void
     {
-        foreach (self::$data->getInventorySlots() as $slot) {
+        foreach (self::$dataInventory->getInventorySlots() as $slot) {
 
-            $available = $this->available($slot);
+            $quantity = $this->item->getQuantity();
+            $available = $slot->slotAvailable($quantity);
+            $stock = $slot->slotStock(abs($quantity));
 
-            if ($available > 0) {
+            // добавляем предметы в слот и уменьшаем количество в предмете
+            if ($quantity > 0 && $available > 0) {
                 $slot->changeItemQuantity($available);
-                $this->item->setQuantity($this->item->getQuantity() - $available);
+                $this->item->setQuantity($quantity - $available);
+                $slot->save();
+            }
+
+            // убираем предметы из слота и увеличиваем отрицательное значение в предмете
+            if ($quantity < 0 && $stock > 0) {
+                $slot->changeItemQuantity(0 - $stock);
+                $this->item->setQuantity($quantity + $stock);
                 $slot->save();
             }
 
@@ -51,8 +59,4 @@ class ChangeQuantityMiddleware extends AbstractMiddleware
         }
     }
 
-    public function available(CraftInventory $slot): int
-    {
-        return min($this->item->getQuantity(), $slot->slotMaxLimit() - $slot->item_quantity);
-    }
 }

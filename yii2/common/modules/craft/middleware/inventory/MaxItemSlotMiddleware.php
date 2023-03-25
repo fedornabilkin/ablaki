@@ -8,10 +8,9 @@
 
 namespace common\modules\craft\middleware\inventory;
 
-use common\middleware\AbstractMiddleware;
 use common\modules\craft\exception\MaxItemSlotException;
 
-class MaxItemSlotMiddleware extends AbstractMiddleware
+class MaxItemSlotMiddleware extends AbstractInventoryMiddleware
 {
     public function check(): bool
     {

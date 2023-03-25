@@ -7,6 +7,7 @@ use common\models\user\User;
 use common\models\user\UserQuery;
 use common\models\user\UserRelationInterface;
 use Yii;
+use yii\behaviors\TimestampBehavior;
 use yii\db\ActiveQuery;
 use yii\db\ActiveRecord;
 
@@ -33,6 +34,16 @@ class CraftHistory extends ActiveRecord implements UserRelationInterface
     public static function tableName()
     {
         return 'craft_history';
+    }
+
+    public function behaviors(): array
+    {
+        return array_merge_recursive(parent::behaviors(), [
+            TimestampBehavior::class => [
+                'class' => TimestampBehavior::class,
+                'updatedAtAttribute' => 'created_at',
+            ],
+        ]);
     }
 
     /**

@@ -21,6 +21,7 @@ use yii\db\ActiveRecord;
  * @property CraftCategory $category
  * @property CraftHistory[] $histories
  * @property CraftRecipeItem[] $recipeItems
+ * @property CraftRecipeItem[] $recipeItemsIndexItemId
  * @property CraftRecipeTool[] $recipeTools
  * @property CraftItem $item
  * @property CraftItem[] $itemsSource
@@ -98,13 +99,16 @@ class CraftRecipe extends ActiveRecord implements ModelNameInterface
     }
 
     /**
-     * Gets query for [[CraftRecipeItems]].
-     *
-     * @return ActiveQuery|CraftRecipeItemQuery
+     * @return ActiveQuery
      */
     public function getRecipeItems()
     {
         return $this->hasMany(CraftRecipeItem::class, ['recipe_id' => 'id']);
+    }
+
+    public function getRecipeItemsIndexItemId()
+    {
+        return $this->hasMany(CraftRecipeItem::class, ['recipe_id' => 'id'])->indexBy('item_id');
     }
 
     /**
@@ -134,7 +138,8 @@ class CraftRecipe extends ActiveRecord implements ModelNameInterface
      */
     public function getItemsSource()
     {
-        return $this->hasMany(CraftItem::class, ['id' => 'item_id'])->viaTable('craft_recipe_item', ['recipe_id' => 'id']);
+        return $this->hasMany(CraftItem::class, ['id' => 'item_id'])
+            ->viaTable('craft_recipe_item', ['recipe_id' => 'id']);
     }
 
     /**
@@ -144,6 +149,7 @@ class CraftRecipe extends ActiveRecord implements ModelNameInterface
      */
     public function getItemsTool()
     {
-        return $this->hasMany(CraftItem::class, ['id' => 'item_id'])->viaTable('craft_recipe_tool', ['recipe_id' => 'id']);
+        return $this->hasMany(CraftItem::class, ['id' => 'item_id'])
+            ->viaTable('craft_recipe_tool', ['recipe_id' => 'id']);
     }
 }

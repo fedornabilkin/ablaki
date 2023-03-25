@@ -71,6 +71,32 @@ class CraftInventory extends ActiveRecord implements UserRelationInterface, Craf
         return self::SLOT_MAX_LIMIT;
     }
 
+    /**
+     * Доступное количество, которое поместится в слот
+     * Если передать параметр и он меньше доступного места, то вернется количество из параметра
+     * @param int $quantity
+     * @return bool
+     */
+    public function slotAvailable(int $quantity = 1000): int
+    {
+        return min($quantity, $this->slotMaxLimit() - $this->item_quantity);
+    }
+
+    /**
+     * Возвращает количество, которое можно забрать из слота
+     * @param int $quantity
+     * @return int
+     */
+    public function slotStock(int $quantity): int
+    {
+        return min($quantity, $this->item_quantity);
+    }
+
+    public function getQuantity(): int
+    {
+        return $this->item_quantity;
+    }
+
     public function changeItemQuantity($quantity): void
     {
         $increment = $quantity >= 0;
@@ -80,7 +106,7 @@ class CraftInventory extends ActiveRecord implements UserRelationInterface, Craf
             $this->item_quantity += $quantity;
         } else {
             $this->item_quantity -= $quantity;
-            if ($this->item_quantity < 0) {
+            if ($this->item_quantity <= 0) {
                 $this->item_quantity = 0;
                 $this->item_id = null;
             }

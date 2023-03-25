@@ -8,10 +8,9 @@
 
 namespace common\modules\craft\middleware\inventory;
 
-use common\middleware\AbstractMiddleware;
 use common\modules\craft\exception\FreeSlotException;
 
-class CheckFreeSlotMiddleware extends AbstractMiddleware
+class CheckFreeSlotMiddleware extends AbstractInventoryMiddleware
 {
 
     public function check(): bool

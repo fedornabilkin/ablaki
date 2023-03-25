@@ -5,6 +5,8 @@ namespace common\modules\craft\controllers;
 use common\helpers\App;
 use common\modules\craft\models\CraftInventorySearch;
 use common\modules\craft\models\CraftItem;
+use common\modules\craft\models\CraftRecipe;
+use common\modules\craft\service\CraftService;
 use common\modules\craft\service\InventoryService;
 use yii\web\Controller;
 
@@ -29,10 +31,19 @@ class InventoryController extends Controller
         ]);
     }
 
+    public function actionCraft()
+    {
+        $recipe = CraftRecipe::findOne(3);
+
+        (new CraftService())->craftItem(App::user()->identity->person, $recipe);
+
+        return $this->redirect(['/craft/inventory']);
+    }
+
     public function actionAddItem()
     {
-        $item = CraftItem::findOne(4);
-        $item->setQuantity(3);
+        $item = CraftItem::findOne(5);
+        $item->setQuantity(-2);
 
         (new InventoryService())->addItem(App::user()->identity->person, $item);
 
