@@ -91,7 +91,7 @@ class SaperController extends ActiveController
 
 
         if ($middleware->check()) {
-            Yii::$app->getResponse()->setStatusCode(201);
+            Yii::$app->getResponse()->setStatusCode(204);
         } else {
             $errors = $middleware->getErrors();
             throw new UserException(Yii::t('games', $errors[0]));
@@ -124,7 +124,7 @@ class SaperController extends ActiveController
 
 
         if ($middleware->check()) {
-            Yii::$app->getResponse()->setStatusCode(201);
+            Yii::$app->getResponse()->setStatusCode(204);
         } else {
             $errors = $middleware->getErrors();
             throw new UserException(Yii::t('games', $errors[0]));

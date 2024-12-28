@@ -28,7 +28,7 @@ class PlayMiddleware extends AbstractMiddleware
         self::$data->historyType = $this->model->getHistoryType();
         self::$data->commissionAmount = $this->model->getCommissionAmount();
 
-        $this->updateModel();
+        $this->model->etap--; // изменяем этап игры
 
         if (!$this->checkHod()) {
             $next = new SwitchCreatorMiddleware();
@@ -37,6 +37,8 @@ class PlayMiddleware extends AbstractMiddleware
         } else {
             $this->updateData();
         }
+
+        $this->updateModel();
 
         return parent::check();
     }
@@ -58,8 +60,6 @@ class PlayMiddleware extends AbstractMiddleware
     {
         $hod = 'hod' . $this->model->row;
         $this->model->$hod = $this->model->col;
-
-        $this->model->etap--; // изменяем этап игры
         $this->model->save();
     }
 
