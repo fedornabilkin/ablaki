@@ -68,6 +68,12 @@ migration-down: # down one last migration
 migration-redo: # revert one last migration (down and up)
 	docker-compose run --rm -v "$(PWD)/yii2:/web/yii2" php php yii migrate/redo $(M_CNT) --interactive=0
 
+# cache
+cache-flush-all:
+	docker-compose run --rm -v "$(PWD)/yii2:/web/yii2" php php yii cache/flush-all
+cache-flush-schema:
+	docker-compose run --rm -v "$(PWD)/yii2:/web/yii2" php php yii cache/flush-schema
+
 # tests
 codecept: # start tests
 	docker-compose run --rm -v "$(PWD)/yii2:/web/yii2" php vendor/bin/codecept run

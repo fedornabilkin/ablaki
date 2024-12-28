@@ -14,8 +14,6 @@ use common\modules\games\models\GameSaper;
 
 class StartMiddleware extends AbstractMiddleware
 {
-    /** @var GameDataMiddleware */
-    public static $data;
     /** @var GameSaper */
     private $model;
 

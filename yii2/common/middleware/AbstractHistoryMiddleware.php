@@ -24,7 +24,7 @@ abstract class AbstractHistoryMiddleware extends AbstractMiddleware
         $values = $this->getHistoryValues();
         if ($values) {
             $model = $this->getHistoryModel();
-            $model->attributes = $values;
+            $model->setAttributes($values);
 
             $model->save();
         }

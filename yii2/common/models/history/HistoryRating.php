@@ -16,6 +16,7 @@ use yii\db\ActiveRecord;
  * @property int $id
  * @property int $user_id
  * @property double $rating
+ * @property double $rating_up
  * @property string $type
  * @property string $comment
  * @property int $created_at
