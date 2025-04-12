@@ -6,15 +6,16 @@
  * Time: 20:34
  */
 
-namespace common\exceptions\person;
+namespace common\modules\games\exception;
 
 use Throwable;
 use yii\web\HttpException;
 
-class BalanceException extends HttpException
+class MainException extends HttpException
 {
     public function __construct($message = '', $code = 0, Throwable $previous = null)
     {
-        parent::__construct(400, 'Insufficient funds', 102, $previous);
+        $message = $message ?: '';
+        parent::__construct(400, $message, 401, $previous);
     }
 }

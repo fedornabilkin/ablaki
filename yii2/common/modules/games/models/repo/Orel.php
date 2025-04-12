@@ -64,11 +64,6 @@ class Orel extends ActiveRecord implements UserRelationInterface, HistorySaveInt
         ];
     }
 
-    public static function find()
-    {
-        return new OrelQuery(static::class);
-    }
-
     /**
      * @return ActiveQuery
      */

@@ -6,12 +6,12 @@
  * Time: 0:20
  */
 
-namespace common\modules\games\models\repo;
+namespace common\modules\games\models;
 
 use yii\db\ActiveQuery;
 use yii\web\IdentityInterface;
 
-class OrelQuery extends ActiveQuery
+class GameOrelQuery extends ActiveQuery
 {
     public function listGame(IdentityInterface $identity): self
     {

@@ -2,6 +2,7 @@
 
 namespace common\modules\games\models;
 
+use common\models\core\ModelQueryTrait;
 use common\modules\games\models\repo\Orel;
 use Yii;
 
@@ -11,6 +12,8 @@ use Yii;
  */
 class GameOrel extends Orel
 {
+    use ModelQueryTrait;
+
     public $count = 1;
 
     const SCENARIO_PLAY = 'play';

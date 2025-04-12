@@ -2,6 +2,7 @@
 
 namespace common\modules\games\models;
 
+use common\models\core\ModelQueryTrait;
 use common\models\user\Person;
 use common\modules\games\models\repo\Saper;
 use Yii;
@@ -12,6 +13,9 @@ use Yii;
  */
 class GameSaper extends Saper
 {
+
+    use ModelQueryTrait;
+
     public $count = 1;
     public $col;
     public $row;
@@ -66,6 +70,7 @@ class GameSaper extends Saper
 //            }
 //        }
 //    }
+
 
     /**
      * @param $attribute
@@ -207,6 +212,12 @@ class GameSaper extends Saper
             'id',
             'user_id',
             'user_gamer',
+            'username' => static function (Saper $model) {
+                return $model->user->username;
+            },
+            'username_gamer' => static function (Saper $model) {
+                return $model->userGamer->username;
+            },
             'kon',
             'created_at',
         ];
