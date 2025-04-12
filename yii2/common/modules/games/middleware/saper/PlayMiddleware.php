@@ -46,7 +46,7 @@ class PlayMiddleware extends AbstractMiddleware
     public function updateData()
     {
         if ($this->model->isWin()) {
-            self::$data->changingBalance = $this->model->kon - self::$data->commissionAmount;
+            self::$data->changingBalance = $this->model->kon * 2 - self::$data->commissionAmount;
             self::$data->historyComment = 'Victory in the game #' . $this->model->id;
             self::$data->changingRating = $this->model->normalizeRating(self::$data->user->rating);
 
