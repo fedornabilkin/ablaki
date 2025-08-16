@@ -25,7 +25,7 @@ class RatingController extends Controller
             ->one();
 
         if ($todayRating) {
-            return ['message' => 'The rating has already been updated today'];
+            return ['message' => Yii::t('app','The rating has already been updated today')];
         }
 
         $userHistory = new HistoryRating();

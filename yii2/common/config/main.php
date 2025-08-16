@@ -6,6 +6,7 @@ use common\modules\forum\Module;
 use yii\redis\Cache;
 
 $config = [
+    'language' => 'ru-RU',
     'aliases' => [
         '@bower' => '@vendor/bower-asset',
         '@npm' => '@vendor/npm-asset',

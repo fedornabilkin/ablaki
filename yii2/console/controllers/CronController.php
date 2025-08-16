@@ -19,7 +19,7 @@ class CronController extends Controller
     {
         Yii::error('run console action' . json_encode($this->request));
 
-        return 0;
+        return ExitCode::OK;
     }
 
     public function actionUserClear(): int

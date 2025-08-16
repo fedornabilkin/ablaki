@@ -157,12 +157,10 @@ class SaperController extends ActiveController
             'user' => Yii::$app->user->identity->person,
         ]);
 
-//        $middleware = new CheckBalanceMiddleware();
         $middleware = new CheckMyStartedGameMiddleware();
         $middleware::$data = $data;
 
         $middleware
-//            ->linkWith(new CheckMyStartedGameMiddleware())
             ->linkWith(new ValidateHodMiddleware())
             ->linkWith(new PlayMiddleware());
 

@@ -12,10 +12,11 @@ return [
     [
         'class' => UrlRule::class,
         'controller' => ['v1/user'],
-        'only' => ['wall', 'data', 'profile'],
+        'only' => ['wall', 'data', 'profile', 'last'],
         'extraPatterns' => [
             'GET data' => 'data',
             'GET profile' => 'profile',
+            'GET last' => 'last',
             'GET wall/<login:\w+>' => 'wall',
         ],
     ],

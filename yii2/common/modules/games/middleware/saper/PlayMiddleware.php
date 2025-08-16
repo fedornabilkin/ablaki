@@ -17,6 +17,7 @@ class PlayMiddleware extends AbstractMiddleware
 {
     /** @var GameSaper */
     private $model;
+    private $error = '';
 
     /**
      * @inheritDoc
@@ -34,6 +35,9 @@ class PlayMiddleware extends AbstractMiddleware
             $next = new SwitchCreatorMiddleware();
             $next->insertNext(new HistoryCommissionMiddleware());
             $this->insertNext($next);
+
+            $this->updateModel();
+            return $this->stopProcessing($this->error);
         } else {
             $this->updateData();
         }
@@ -72,9 +76,15 @@ class PlayMiddleware extends AbstractMiddleware
 
         // если переданное значение не равно значению из таблицы, значит поле прошли успешно
         $check = $this->model->$pole !== (int) $this->model->col;
+        $this->consoleLog([
+            'check' => $check,
+            'pole' => $this->model->$pole,
+            'hod' => (int) $this->model->col,
+        ]);
 
         if (!$check) {
             $this->model->etap = $this->model::GAME_SAPER_ETAP_LOSE;
+            $this->error = 'Game lost';
         }
 
         return $check;

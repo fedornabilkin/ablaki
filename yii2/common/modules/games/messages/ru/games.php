@@ -7,7 +7,10 @@
  */
 
 //$arr['User wall {attr}'] = 'Стена пользователя {attr}';
-//$arr['Game complete'] = 'Игра сыграна';
+$arr['No my starting game'] = 'Игра не начата или чужая';
+$arr['Game complete'] = 'Игра сыграна';
+$arr['Previous row'] = 'Предыдущий ряд';
+$arr['Game lost'] = 'Игра проиграна';
 
 $arr['ID'] = '#';
 //$arr['Saper'] = 'Сапер';

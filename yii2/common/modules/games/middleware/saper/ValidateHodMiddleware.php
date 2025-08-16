@@ -39,19 +39,19 @@ class ValidateHodMiddleware extends GameMiddleware
     {
         // завершена
         if ($this->model->isComplete()) {
-            $this->error = Yii::t('games', 'Game complete');
+            $this->error = 'Game complete';
             return false;
         }
 
         // предыдущий
         if ($this->model->row < $this->model->etap) {
-            $this->error = Yii::t('games', 'Previous row');
+            $this->error = 'Previous row';
             return false;
         }
 
         // следующий
         if ($this->model->row > $this->model->etap) {
-            $this->error = Yii::t('games', 'Next row');
+            $this->error = 'Next row';
             return false;
         }
 

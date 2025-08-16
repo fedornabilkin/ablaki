@@ -40,26 +40,4 @@ return [
 
     'Status' => 'Статус',
 
-    // Customer
-//    'Customers' => 'Клиенты',
-//    'Create Customer' => 'Добавить клиента',
-
-    // Vacancy
-//    'Vacancies' => 'Вакансии',
-//    'Create Vacancy' => 'Добавить вакансию',
-//    'Customer' => 'Клиент',
-//    'Content' => 'Контент',
-//    'Age Min' => 'Возраст от',
-//    'Age Max' => 'Возраст до',
-//    'Salary Min' => 'Зарплата от',
-//    'Salary Max' => 'Зарплата до',
-//    'To leave bid' => 'Оставить заявку',
-//    'Sign up' => 'Записаться',
-
-    // Candidate
-//    'Candidates' => 'Соискатели',
-//    'Vacancy' => 'Вакансия',
-//    'Fname' => 'Фамилия',
-//    'Iname' => 'Имя',
-//    'Oname' => 'Отчество',
 ];

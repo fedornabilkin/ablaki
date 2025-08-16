@@ -13,7 +13,7 @@ class UserController extends Controller
 
     public function authExceptAction(): array
     {
-        return ['wall'];
+        return ['wall', 'last'];
     }
 
     public function actionWall($login)
@@ -22,6 +22,15 @@ class UserController extends Controller
             ->where(['username' => $login])
             ->with(['person'])
             ->one();
+    }
+
+    public function actionLast()
+    {
+        return User::find()
+            ->with(['person'])
+            ->orderBy(['id' => SORT_DESC])
+            ->limit(20)
+            ->all();
     }
 
     /**
