@@ -9,13 +9,13 @@
 namespace common\modules\games\exception;
 
 use Throwable;
-use yii\web\HttpException;
+use yii\web\BadRequestHttpException;
 
-class MainException extends HttpException
+class MainException extends BadRequestHttpException
 {
     public function __construct($message = '', $code = 0, Throwable $previous = null)
     {
         $message = $message ?: '';
-        parent::__construct(400, $message, 401, $previous);
+        parent::__construct($message, 401, $previous);
     }
 }

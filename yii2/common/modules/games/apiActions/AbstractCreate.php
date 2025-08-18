@@ -12,9 +12,11 @@ use common\helpers\App;
 use common\middleware\AbstractMiddleware;
 use common\modules\games\middleware\GameDataMiddleware;
 use Yii;
+use yii\base\InvalidArgumentException;
 use yii\base\Model;
 use yii\base\UserException;
 use yii\rest\Action;
+use yii\web\BadRequestHttpException;
 
 abstract class AbstractCreate extends Action
 {
@@ -28,7 +30,13 @@ abstract class AbstractCreate extends Action
         $this->model = new $this->modelClass();
 
         $this->model->load(Yii::$app->request->post(), '');
-        return $this->model->validate();
+
+        $validate = $this->model->validate();
+        if (!$validate) {
+            $errors = $this->model->getFirstErrors();
+            throw new BadRequestHttpException(reset($errors));
+        }
+        return $validate;
     }
 
     public function getDataMiddleware(): GameDataMiddleware
@@ -39,15 +47,19 @@ abstract class AbstractCreate extends Action
         ]);
     }
 
-    public function checkMiddleware(): void
+    public function checkMiddleware(): bool
     {
         $middleware = $this->getMiddleware();
 
         if ($middleware->check()) {
             App::response()->setStatusCode(201);
+            $message = '';
         } else {
             $errors = $middleware->getErrors();
-            throw new UserException(Yii::t('games', $errors[0]));
+            App::response()->setStatusCode(400);
+            $message = Yii::t('games', $errors[0]);
         }
+
+        return $message;
     }
 }

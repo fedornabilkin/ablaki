@@ -9,9 +9,9 @@
 namespace common\exceptions\person;
 
 use Throwable;
-use yii\base\UserException;
+use yii\web\BadRequestHttpException;
 
-class CreditException extends UserException
+class CreditException extends BadRequestHttpException
 {
     public function __construct($message = "", $code = 0, Throwable $previous = null)
     {

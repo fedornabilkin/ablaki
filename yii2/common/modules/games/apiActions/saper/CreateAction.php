@@ -27,9 +27,7 @@ class CreateAction extends AbstractCreate
             return $this->model->getErrors();
         }
 
-        $this->checkMiddleware();
-
-        return true;
+        return $this->checkMiddleware();
     }
 
     public function getMiddleware(): AbstractMiddleware

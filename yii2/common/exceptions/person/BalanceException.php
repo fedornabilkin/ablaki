@@ -9,12 +9,12 @@
 namespace common\exceptions\person;
 
 use Throwable;
-use yii\web\HttpException;
+use yii\web\BadRequestHttpException;
 
-class BalanceException extends HttpException
+class BalanceException extends BadRequestHttpException
 {
     public function __construct($message = '', $code = 0, Throwable $previous = null)
     {
-        parent::__construct(400, 'Insufficient funds', 102, $previous);
+        parent::__construct('Insufficient funds', 102, $previous);
     }
 }
