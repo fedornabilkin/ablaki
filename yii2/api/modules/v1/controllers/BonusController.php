@@ -6,6 +6,7 @@ use api\modules\v1\models\history\HistoryBalance;
 use api\modules\v1\traites\AuthTrait;
 use Yii;
 use yii\rest\ActiveController;
+use yii\web\ServerErrorHttpException;
 
 class BonusController extends ActiveController
 {
@@ -36,7 +37,7 @@ class BonusController extends ActiveController
             ->one();
 
         if ($todayBalance) {
-            return ['message' => 'Бонус уже был обновлен сегодня'];
+            return ['message' => Yii::t('app','The bonus has already been updated today')];
         }
 
         $person = $user->person;
@@ -51,7 +52,14 @@ class BonusController extends ActiveController
         $historyBalance->comment = 'everyday';
         $historyBalance->save();
 
-        return $person->updateCounters(['credit' => $this->credit]);
+        if ($historyBalance->save() && $person->updateCounters(['credit' => $this->credit])) {
+            return [
+                'message' => Yii::t('app','Bonus received'),
+                'credit' => $this->credit,
+            ];
+        }
+
+        throw new ServerErrorHttpException(Yii::t('app','The bonus was not received'));
 
     }
 }

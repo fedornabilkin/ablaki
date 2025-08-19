@@ -8,6 +8,7 @@
 
 namespace console\controllers;
 
+use common\services\game\GameCreateService;
 use common\services\user\UserClearService;
 use Yii;
 use yii\console\Controller;
@@ -18,13 +19,18 @@ class CronController extends Controller
     public function actionIndex()
     {
         Yii::error('run console action' . json_encode($this->request));
-
         return ExitCode::OK;
     }
 
     public function actionUserClear(): int
     {
         (new UserClearService())->clear();
+        return ExitCode::OK;
+    }
+
+    public function actionGameCreate(): int
+    {
+        (new GameCreateService())->execute();
         return ExitCode::OK;
     }
 }
