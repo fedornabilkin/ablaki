@@ -23,6 +23,28 @@ return [
     ],
     [
         'class' => UrlRule::class,
+        'controller' => ['v1/duel'],
+        'pluralize' => false,
+        'except' => ['view', 'update'],
+        'extraPatterns' => [
+            'GET my' => 'my',
+            'GET history' => 'history',
+            'POST play/{id}' => 'play',
+        ],
+    ],
+    [
+        'class' => UrlRule::class,
+        'controller' => ['v1/five'],
+        'pluralize' => false,
+        'except' => ['update'],
+        'extraPatterns' => [
+            'GET my' => 'my',
+            'GET history' => 'history',
+            'POST play/{id}' => 'play',
+        ],
+    ],
+    [
+        'class' => UrlRule::class,
         'controller' => ['v1/orel'],
         'pluralize' => false,
         'except' => ['view', 'update'],

@@ -24,6 +24,7 @@ class Person extends \common\models\user\Person
             'rating' => static function (self $model) {
                 return UserHelper::ratingRound($model->rating);
             },
+            'description',
         ];
 
 //        $f['id2'] = function (self $model) {

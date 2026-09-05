@@ -12,12 +12,13 @@ return [
     [
         'class' => UrlRule::class,
         'controller' => ['v1/user'],
-        'only' => ['wall', 'data', 'profile', 'last'],
+        'only' => ['wall', 'wall-update', 'data', 'profile', 'last'],
         'extraPatterns' => [
             'GET data' => 'data',
             'GET profile' => 'profile',
             'GET last' => 'last',
             'GET wall/<login:\w+>' => 'wall',
+            'PATCH wall' => 'wall-update',
         ],
     ],
     [
@@ -39,6 +40,16 @@ return [
         'only' => ['everyday'],
         'extraPatterns' => [
             'GET everyday' => 'everyday',
+        ],
+    ],
+    [
+        'class' => UrlRule::class,
+        'controller' => ['v1/stat'],
+        'pluralize' => false,
+        'only' => ['index', 'top', 'user'],
+        'extraPatterns' => [
+            'GET top' => 'top',
+            'GET user/<login:\w+>' => 'user',
         ],
     ],
     [

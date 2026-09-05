@@ -22,6 +22,7 @@ use yii\db\ActiveRecord;
  * @property int $bonus_count
  * @property int $autoriz
  * @property int $last_cleaning_at
+ * @property string $description
  *
  * @property User $user
  * @property User $refovodUser
@@ -46,6 +47,8 @@ class Person extends ActiveRecord implements UserRelationInterface
         return [
             [['user_id', 'refovod'], 'integer'],
             [['balance', 'credit', 'rating'], 'number'],
+            [['description'], 'trim'],
+            [['description'], 'string', 'max' => 2000],
             [['user_id'], 'exist', 'skipOnError' => true, 'targetClass' => User::class, 'targetAttribute' => ['user_id' => 'id']],
         ];
     }
