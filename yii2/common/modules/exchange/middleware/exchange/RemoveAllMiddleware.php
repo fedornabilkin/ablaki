@@ -54,7 +54,7 @@ class RemoveAllMiddleware extends AbstractMiddleware
 
         // query buy
         $this->queryBuy = $this->model::find()->onlyBuy()->free()->my($this->user->user);
-        $this->credit = $this->querySell->sum($this->model::creditFieldName());
+        $this->credit = $this->queryBuy->sum($this->model::creditFieldName());
 
 
         if ($this->credit > 0 || $this->balance > 0) {

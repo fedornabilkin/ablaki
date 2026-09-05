@@ -113,7 +113,8 @@ class DuelController extends ActiveController
         $model->setScenario($model::SCENARIO_PLAY);
 
         if (!$model->load(Yii::$app->request->post(), '') || !$model->validate()) {
-            return $model->getErrors();
+            App::response()->setStatusCode(422);
+            return ['errors' => $model->getErrors()];
         }
 
         (new DuelService())->play($model, App::user()->identity->person);

@@ -30,7 +30,10 @@ class UserController extends Controller
         }
 
         $person->description = App::request()->getBodyParam('description');
-        $person->save(true, ['description']);
+        if (!$person->save(true, ['description'])) {
+            App::response()->setStatusCode(422);
+            return ['errors' => $person->getErrors()];
+        }
 
         return $person;
     }

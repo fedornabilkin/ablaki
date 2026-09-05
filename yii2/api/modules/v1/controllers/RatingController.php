@@ -3,39 +3,23 @@
 namespace api\modules\v1\controllers;
 
 use api\modules\v1\traites\AuthTrait;
-use common\models\history\HistoryRating;
+use common\services\user\DailyRewardService;
 use Yii;
 use yii\rest\Controller;
 
 class RatingController extends Controller
 {
-    public $rating = 0.01;
-
     use AuthTrait;
+
+    public $rating = 0.01;
 
     public function actionEveryday()
     {
-        $beginOfDay = strtotime("midnight", time());
-        $user = Yii::$app->user->identity;
+        $received = (new DailyRewardService(Yii::$app->db))
+            ->claimRating((int)Yii::$app->user->id, (float)$this->rating);
 
-        $todayRating = HistoryRating::find()
-            ->where(['user_id' => $user->id])
-            ->andWhere(['>=', 'created_at', $beginOfDay])
-            ->andWhere(['=', 'type', 'everyday'])
-            ->one();
-
-        if ($todayRating) {
-            return ['message' => Yii::t('app','The rating has already been updated today')];
-        }
-
-        $userHistory = new HistoryRating();
-        $userHistory->user_id = $user->id;
-        $userHistory->rating = $user->person->rating;
-        $userHistory->rating_up = $this->rating;
-        $userHistory->type = 'everyday';
-        $userHistory->comment = 'everyday';
-        $userHistory->save();
-
-        return $user->person->updateCounters(['rating' => $this->rating]);
+        return $received
+            ? true
+            : ['message' => Yii::t('app', 'The rating has already been updated today')];
     }
 }
