@@ -9,6 +9,7 @@
 namespace common\modules\forum\api\controllers;
 
 use api\modules\v1\models\forum\Theme;
+use api\components\ApiList;
 use common\helpers\App;
 use Yii;
 use yii\data\ActiveDataProvider;
@@ -23,15 +24,15 @@ class ThemeController extends ActiveController
     {
         $actions = parent::actions();
 
-        $actions['my'] = $actions['index'];
-        $actions['my']['prepareDataProvider'] = function ($action, $filter) {
-            $filter = $filter ?? [];
-            return new ActiveDataProvider([
-                'query' => $this->modelClass::find()
-                    ->my(App::user()->identity)
-                    ->andFilterWhere($filter),
-            ]);
+        $actions['index']['prepareDataProvider'] = function () {
+            return ApiList::provider($this->modelClass::find(), ['title'], ['id', 'created_at', 'last_post', 'title']);
         };
+        $actions['my'] = $actions['index'];
+        $actions['my']['prepareDataProvider'] = function () {
+            return ApiList::provider($this->modelClass::find()->my(App::user()->identity), ['title'], ['id', 'created_at', 'last_post', 'title']);
+        };
+        $actions['create']['scenario'] = 'create';
+        $actions['update']['scenario'] = 'update';
 
         unset($actions['delete']); // remove awards and history balance?
         return $actions;

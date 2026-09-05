@@ -23,6 +23,10 @@ return [
         'pluralize' => false,
         'extraPatterns' => [
             'GET my' => 'my',
+            'POST <id:\d+>/gift' => 'gift',
+            'GET <id:\d+>/gifts' => 'gifts',
+            'OPTIONS <id:\d+>/gift' => 'options',
+            'OPTIONS <id:\d+>/gifts' => 'options',
         ],
     ],
 ];

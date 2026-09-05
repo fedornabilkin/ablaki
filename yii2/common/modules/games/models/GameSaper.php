@@ -213,13 +213,20 @@ class GameSaper extends Saper
             'user_id',
             'user_gamer',
             'username' => static function (Saper $model) {
-                return $model->user->username;
+                return $model->user ? $model->user->username : null;
             },
             'username_gamer' => static function (Saper $model) {
-                return $model->userGamer->username;
+                return $model->userGamer ? $model->userGamer->username : null;
+            },
+            'win' => static function (self $model) {
+                return (int)$model->user_gamer > 0 && $model->isComplete()
+                    ? (int)$model->etap === self::GAME_SAPER_ETAP_WIN : null;
             },
             'kon',
             'created_at',
+            'completed_at' => static function (self $model) {
+                return (int)$model->user_gamer > 0 && $model->isComplete() ? $model->time_over_at : null;
+            },
         ];
     }
 

@@ -52,6 +52,14 @@ class CreditExchange extends \common\modules\exchange\models\CreditExchange
             return $model->user_buyer;
         };
 
+        $fields['username'] = static function (self $model) {
+            return $model->user === null ? null : $model->user->username;
+        };
+
+        $fields['username_client'] = static function (self $model) {
+            return $model->userBuyer === null ? null : $model->userBuyer->username;
+        };
+
         $fields['price'] = static function (self $model) {
             return round((new ExchangeService())->pricePerThousand($model), 2);
         };

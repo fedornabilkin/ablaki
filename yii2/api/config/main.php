@@ -15,6 +15,11 @@ if (function_exists($header_remove)) {
 
 $cfg = [
     'id' => 'api',
+    'container' => [
+        'definitions' => [
+            yii\rest\Serializer::class => api\components\ListSerializer::class,
+        ],
+    ],
     'basePath' => dirname(__DIR__),
     'bootstrap' => ['log', 'v1', 'exchange', 'games', 'forum'],
     'controllerNamespace' => 'api\controllers',

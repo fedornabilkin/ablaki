@@ -8,6 +8,7 @@
 
 namespace common\modules\exchange\api\controllers;
 
+use api\components\ApiList;
 use common\helpers\App;
 use common\modules\exchange\api\actions\transfer\{CreateAction, DeleteAction, UpdateAction};
 use common\modules\exchange\api\models\CreditTransfer;
@@ -30,25 +31,30 @@ class TransferController extends ActiveController
         $actions['history'] = $actions['index'];
 
         $actions['index']['prepareDataProvider'] = function ($action, $filter) {
-            return new ActiveDataProvider([
-                'query' => $this->modelClass::find()
-                    ->orderBy(['created_at' => SORT_DESC])
-                    ->with(['user'])
-                    ->my(App::user()->identity)
-                    ->free()
-            ]);
+            return $this->listProvider($this->modelClass::find()
+                ->with(['user', 'userBuyer'])->my(App::user()->identity)->free());
         };
 
         $actions['history']['prepareDataProvider'] = function ($action, $filter) {
-            return new ActiveDataProvider([
-                'query' => $this->modelClass::find()
-                    ->orderBy(['created_at' => SORT_DESC])
-                    ->with(['user'])
-                    ->listHistory(App::user()->identity)
-            ]);
+            return $this->listProvider($this->modelClass::find()
+                ->with(['user', 'userBuyer'])->listHistory(App::user()->identity));
         };
 
         return $actions;
+    }
+
+    private function listProvider($query): ActiveDataProvider
+    {
+        return ApiList::provider($query, [], ['id', 'created_at', 'amount'], static function ($query, string $q): void {
+            $where = ApiList::relatedUserCondition(['user_id', 'user_buyer'], $q);
+            if (ctype_digit($q)) {
+                $where[] = ['id' => (int)$q];
+            }
+            if (is_numeric($q)) {
+                $where[] = ['amount' => (float)$q];
+            }
+            $query->andWhere($where);
+        });
     }
 
     public function checkAccess($action, $model = null, $params = []): void

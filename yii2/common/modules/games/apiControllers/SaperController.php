@@ -33,6 +33,8 @@ use yii\rest\ActiveController;
 
 class SaperController extends ActiveController
 {
+    use GameListsTrait;
+
     public $modelClass = GameSaper::class;
 
     /**
@@ -72,43 +74,7 @@ class SaperController extends ActiveController
             'checkAccess' => [$this, 'checkAccess'],
         ];
 
-        $actions['index']['dataFilter'] = $this->getFilter();
-        $actions['my'] = $actions['index'];
-        $actions['history'] = $actions['index'];
-
-        $actions['my']['prepareDataProvider'] = function ($action, $filter) {
-            $filter = $filter ?? [];
-            return new ActiveDataProvider([
-                'query' => $this->modelClass::find()
-                    ->with('user')
-                    ->listMyGame(App::user()->identity)
-                    ->andFilterWhere($filter),
-            ]);
-        };
-
-        $actions['history']['prepareDataProvider'] = function ($action, $filter) {
-            $filter = $filter ?? [];
-            return new ActiveDataProvider([
-                'query' => $this->modelClass::find()
-                    ->orderBy(['updated_at' => SORT_DESC])
-                    ->with(['user', 'userGamer'])
-                    ->listHistory(App::user()->identity)
-                    ->andFilterWhere($filter),
-            ]);
-        };
-
-        $actions['index']['prepareDataProvider'] = function ($action, $filter) {
-            $filter = $filter ?? [];
-            return new ActiveDataProvider([
-                'pagination' => false,
-                'query' => $this->modelClass::find()
-                    ->limit(20)
-                    ->orderBy(['id' => SORT_ASC])
-                    ->with('userGamer')
-                    ->listGame(App::user()->identity)
-                    ->andFilterWhere($filter),
-            ]);
-        };
+        $actions = $this->configureGameLists($actions);
 
         unset($actions['view'], $actions['update']);
         return $actions;

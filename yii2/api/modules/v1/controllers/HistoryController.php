@@ -1,116 +1,67 @@
 <?php
-/**
- * Created by PhpStorm.
- * User: fedornabilkin
- * Date: 07.01.2023
- * Time: 21:54
- */
 
 namespace api\modules\v1\controllers;
 
+use api\components\ApiList;
 use api\modules\v1\models\history\HistoryBalance;
 use api\modules\v1\models\history\HistoryRating;
 use api\modules\v1\traites\AuthTrait;
-use common\helpers\App;
-use common\services\history\HistoryService;
-use yii\base\DynamicModel;
-use yii\data\ActiveDataFilter;
-use yii\data\ActiveDataProvider;
-use yii\filters\AccessControl;
-use yii\rest\ActiveController;
+use Yii;
+use yii\rest\Controller;
+use yii\web\BadRequestHttpException;
 
-class HistoryController extends ActiveController
+class HistoryController extends Controller
 {
-    use AuthTrait {
-        behaviors as useAuthBehavior;
+    use AuthTrait;
+
+    public function actionIndex()
+    {
+        // Retain the existing daily rewards feed's deliberately limited public fields.
+        $query = HistoryBalance::find()->select(['type', 'credit_up', 'created_at'])
+            ->where(['type' => 'everyday'])->asArray();
+        return ApiList::provider($query, ['type']);
     }
 
-    public function behaviors()
+    public function actionBalance()
     {
-
-        return array_merge($this->useAuthBehavior(), [
-            'access' => [
-                'class' => AccessControl::class,
-                'only' => ['secret'],
-                'rules' => [
-                    [
-                        'allow' => true,
-                        'actions' => ['secret'],
-                        'roles' => ['@'],
-                    ],
-                ],
-            ],
-        ]);
-
+        return $this->history(HistoryBalance::class);
     }
 
-    public $modelClass = HistoryBalance::class;
-
-    public function actions(): array
+    public function actionRating()
     {
-        $actions = parent::actions();
-
-        $actions['index']['dataFilter'] = $this->filter();
-
-        $actions['balance'] = $actions['index'];
-        $actions['rating'] = $actions['index'];
-
-        $actions['index']['prepareDataProvider'] = function ($action, $filter) {
-            $filter = $filter ?? [];
-            return new ActiveDataProvider([
-                'query' => $this->modelClass::find()
-                    ->select(['type', 'credit_up', 'created_at'])
-                    ->orderBy(['id' => SORT_DESC])
-                    ->byEveryday()
-                    ->with(['user'])
-                    ->andFilterWhere($filter),
-            ]);
-        };
-
-        $actions['balance']['modelClass'] = HistoryBalance::class;
-        $actions['balance']['prepareDataProvider'] = function ($action, $filter) {
-            $filter = $filter ?? [];
-            return new ActiveDataProvider([
-                'query' => $this->modelClass::find()
-                    ->orderBy(['id' => SORT_DESC])
-                    ->with(['user'])
-                    ->my(App::user()->identity)
-                    ->andFilterWhere($filter),
-            ]);
-        };
-
-        $this->modelClass = HistoryRating::class;
-        $actions['rating']['prepareDataProvider'] = $actions['balance']['prepareDataProvider'];
-
-        unset($actions['create'], $actions['update'], $actions['view'], $actions['delete']);
-
-        return $actions;
+        return $this->history(HistoryRating::class);
     }
 
-    public function actionBalanceType()
+    private function history(string $modelClass)
     {
-        return (new HistoryService())
-            ->groupBalanceTypes()
-            ->my(App::user()->identity)
-            ->all();
+        $query = $modelClass::find()->where(['user_id' => (int)Yii::$app->user->id]);
+        $filter = Yii::$app->request->get('filter', []);
+        if (!is_array($filter) || (isset($filter['type']) && !is_string($filter['type']))) {
+            throw new BadRequestHttpException('Invalid history type filter.');
+        }
+        if (isset($filter['type']) && $filter['type'] !== '') {
+            $query->andWhere(['type' => $filter['type']]);
+        }
+        return ApiList::provider($query, ['type', 'comment']);
     }
 
-    public function actionRatingType()
+    public function actionBalanceType(): array
     {
-        return (new HistoryService())->groupRatingTypes()->all();
+        return $this->types(HistoryBalance::class);
     }
 
-    /**
-     * @return array
-     */
-    private function filter(): array
+    public function actionRatingType(): array
     {
-        return [
-            'class' => ActiveDataFilter::class,
-            'searchModel' => function () {
-                return (new DynamicModel(['type' => null]))
-                    ->addRule('type', 'string');
-            },
-        ];
+        return $this->types(HistoryRating::class);
+    }
+
+    private function types(string $modelClass): array
+    {
+        $rows = $modelClass::find()->select(['type', 'count' => 'COUNT(*)'])
+            ->where(['user_id' => (int)Yii::$app->user->id])
+            ->groupBy('type')->orderBy(['type' => SORT_ASC])->asArray()->all();
+        return array_map(static function (array $row): array {
+            return ['type' => trim((string)$row['type']), 'count' => (int)$row['count']];
+        }, $rows);
     }
 }

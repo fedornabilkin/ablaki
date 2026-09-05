@@ -97,11 +97,12 @@ class GameOrel extends Orel
         $fields = [
             'id',
             'user_id',
+            'user_gamer',
             'username' => static function (Orel $model) {
-                return $model->user->username;
+                return $model->user ? $model->user->username : null;
             },
             'username_gamer' => static function (Orel $model) {
-                return $model->userGamer->username;
+                return $model->userGamer ? $model->userGamer->username : null;
             },
             'win' => static function (Orel $model) {
                 return null;
@@ -109,6 +110,9 @@ class GameOrel extends Orel
             'kon',
             'created_at',
             'updated_at',
+            'completed_at' => static function (self $model) {
+                return (int)$model->user_gamer > 0 && !empty($model->hod) ? $model->updated_at : null;
+            },
         ];
 
         if (!empty($this->hod)) {

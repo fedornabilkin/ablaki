@@ -8,6 +8,7 @@
 
 namespace common\modules\exchange\api\controllers;
 
+use api\components\ApiList;
 use common\helpers\App;
 use common\modules\exchange\api\actions\exchange\{CreateAction, DeleteAction, RemoveAction, UpdateAction};
 use common\modules\exchange\api\models\CreditExchange;
@@ -69,43 +70,41 @@ class ExchangeController extends ActiveController
 
         $actions['index']['prepareDataProvider'] = function ($action, $filter) {
             $filter = $filter ?? [];
-            $sortPrice = $filter['type'] === $this->modelClass::EX_TYPE_SELL ? SORT_DESC : SORT_ASC;
-            return new ActiveDataProvider([
-                'query' => $this->modelClass::find()
-                    ->select('*, (1000 * amount / credit) AS price')
-                    ->orderBy(['price' => $sortPrice])
-                    ->with(['user', 'userBuyer'])
-                    ->list(App::user()->identity)
-                    ->andFilterWhere($filter),
-            ]);
+            return $this->listProvider($this->modelClass::find()
+                ->with(['user', 'userBuyer'])->list(App::user()->identity)->andFilterWhere($filter));
         };
 
         $actions['history']['prepareDataProvider'] = function ($action, $filter) {
             $filter = $filter ?? [];
-            return new ActiveDataProvider([
-                'query' => $this->modelClass::find()
-                    ->orderBy(['updated_at' => SORT_DESC])
-                    ->with(['user', 'userBuyer'])
-                    ->listHistory(App::user()->identity)
-                    ->andFilterWhere($filter),
-            ]);
+            return $this->listProvider($this->modelClass::find()
+                ->with(['user', 'userBuyer'])->listHistory(App::user()->identity)->andFilterWhere($filter));
         };
 
         $actions['my']['prepareDataProvider'] = function ($action, $filter) {
             $filter = $filter ?? [];
-            return new ActiveDataProvider([
-                'query' => $this->modelClass::find()
-                    ->select('*, (1000 * amount / credit) AS price')
-                    ->orderBy(['price' => SORT_ASC])
-                    ->with(['user', 'userBuyer'])
-                    ->listMy(App::user()->identity)
-                    ->andFilterWhere($filter),
-            ]);
+            return $this->listProvider($this->modelClass::find()
+                ->with(['user', 'userBuyer'])->listMy(App::user()->identity)->andFilterWhere($filter));
         };
 
         unset($actions['view']);
 
         return $actions;
+    }
+
+    private function listProvider($query): ActiveDataProvider
+    {
+        return ApiList::provider($query, [], ['id', 'created_at', 'amount', 'credit'], static function ($query, string $q): void {
+            $where = ApiList::relatedUserCondition(['user_id', 'user_buyer'], $q);
+            $where[] = ApiList::searchCondition(['type'], $q);
+            if (ctype_digit($q)) {
+                $where[] = ['id' => (int)$q];
+            }
+            if (is_numeric($q)) {
+                $where[] = ['amount' => (float)$q];
+                $where[] = ['credit' => (float)$q];
+            }
+            $query->andWhere($where);
+        });
     }
 
     public function actionAvailableCount(): int

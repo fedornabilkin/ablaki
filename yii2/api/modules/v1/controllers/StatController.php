@@ -2,6 +2,7 @@
 
 namespace api\modules\v1\controllers;
 
+use api\components\ApiList;
 use api\modules\v1\traites\AuthTrait;
 use common\helpers\UserHelper;
 use common\models\history\HistoryRating;
@@ -14,6 +15,7 @@ use common\modules\games\models\GameOrel;
 use common\modules\games\models\GameSaper;
 use Yii;
 use yii\rest\Controller;
+use yii\db\Query;
 use yii\web\BadRequestHttpException;
 use yii\web\NotFoundHttpException;
 
@@ -49,7 +51,7 @@ class StatController extends Controller
                 'users' => (int)User::find()->count(),
                 'games' => [
                     'orel' => (int)GameOrel::find()->notFree()->count(),
-                    'saper' => (int)GameSaper::find()->notFree()->count(),
+                    'saper' => (int)GameSaper::find()->andWhere(['etap' => [GameSaper::GAME_SAPER_ETAP_WIN, GameSaper::GAME_SAPER_ETAP_LOSE]])->count(),
                 ],
                 'forum' => [
                     'themes' => (int)ForumTheme::find()->count(),
@@ -65,23 +67,34 @@ class StatController extends Controller
      * Топ пользователей за период. За всё время — по текущему рейтингу,
      * за период — по сумме прироста рейтинга в history_rating.
      */
-    public function actionTop(string $period = 'all'): array
+    public function actionTop(string $period = 'all')
     {
         if (!array_key_exists($period, self::PERIODS)) {
             throw new BadRequestHttpException('Unknown period: ' . $period);
         }
 
-        return Yii::$app->cache->getOrSet(self::CACHE_KEY_TOP . $period, function () use ($period) {
-            $duration = self::PERIODS[$period];
-            $list = $duration === 0
-                ? $this->getTopRating(self::TOP_USERS_LIMIT)
-                : $this->getTopGained($duration);
-
-            return [
-                'period' => $period,
-                'list' => $list,
-            ];
-        }, self::CACHE_DURATION);
+        $duration = self::PERIODS[$period];
+        if ($duration === 0) {
+            $query = (new Query())->select(['id' => 'u.id', 'username' => 'u.username', 'rating' => 'p.rating'])
+                ->from(['p' => Person::tableName()])->innerJoin(['u' => User::tableName()], 'u.id = p.user_id')
+                ->where(['>', 'p.rating', 0]);
+        } else {
+            $gained = HistoryRating::find()->select(['user_id', 'rating' => 'SUM(rating_up)'])
+                ->where(['>=', 'created_at', time() - $duration])->andWhere(['>', 'rating_up', 0])->groupBy('user_id');
+            $query = (new Query())->select(['id' => 'u.id', 'username' => 'u.username', 'rating' => 'p.rating'])
+                ->from(['p' => $gained])->innerJoin(['u' => User::tableName()], 'u.id = p.user_id');
+        }
+        $provider = ApiList::provider($query, ['u.username'], [
+            'id' => ['asc' => ['u.id' => SORT_ASC], 'desc' => ['u.id' => SORT_DESC]],
+            'username' => ['asc' => ['u.username' => SORT_ASC], 'desc' => ['u.username' => SORT_DESC]],
+            'rating' => ['asc' => ['p.rating' => SORT_ASC, 'u.id' => SORT_DESC], 'desc' => ['p.rating' => SORT_DESC, 'u.id' => SORT_DESC]],
+        ]);
+        // A ranking intentionally keeps the highest score first; explicit URL sort can override it.
+        $provider->getSort()->defaultOrder = ['rating' => SORT_DESC];
+        if ((string)Yii::$app->request->get('envelope') === '1') {
+            return $provider;
+        }
+        return ['period' => $period, 'list' => $provider->getModels()];
     }
 
     /**
