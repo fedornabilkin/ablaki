@@ -30,3 +30,14 @@ Docker-команд, изменения `.env`, vendor или подключен
 сервисы, включая Composer 1.8/PostgreSQL на MySQL prod, а старый entrypoint
 делал Yii init Development и не останавливался при ошибке миграций. Текущие
 исправления PHP 7.3.33, API и CORS сохранены; пересборки PHP при деплое нет.
+
+## Результат нового запуска
+
+Изменения опубликованы в master коммитом `d971f9e`.
+[Actions #10](https://github.com/fedornabilkin/ablaki/actions/runs/34038590095):
+Backend checks прошёл за 22 секунды, включая Compose config и изолированные
+API-тесты. Production job прошёл git pull и завершился на `make up` с exit 2
+через 4 мин 32 сек. Публичная аннотация не содержит вывода make/Compose;
+подробные логи GitHub требуют входа. Для следующего исправления нужны последние
+строки шага Run git pull and make up on the VPS перед ошибкой.
+Успешный production-деплой пока не подтверждён; /health во время запуска отвечал 503.
