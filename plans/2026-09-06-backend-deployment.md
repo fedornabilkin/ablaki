@@ -16,7 +16,9 @@
 ## Группа C: Проверка и подключение
 - [x] C1. Проверить ошибки и порядок действий деплоя на изолированном окружении: 10 сценариев Bash, 9 health и 23 frontend gate проверки.
 - [x] C2. Документировать SSH secrets, первый запуск, сохранённые копии и восстановление.
-- [ ] C3. Commit/push master и проверить CI на PHP 7.3.
+- [x] C3. Commit/push master и проверить CI на PHP 7.3: [запуск 34026282545](https://github.com/fedornabilkin/ablaki/actions/runs/34026282545), checks и сборка артефакта успешны.
 - [ ] C4. Подключить GitHub secrets и выполнить первый серверный запуск при доступности SSH.
 
 Критерий готовности: неудачные проверки/миграции не публикуют API; успешный запуск подтверждён healthcheck и SHA. Данные и production-конфигурация не пересоздаются. Без доступа к GitHub settings/VPS нельзя считать серверный деплой выполненным.
+
+Фактический статус 6 сентября: backend deploy остановился на Validate deployment settings — не задан `BACKEND_DEPLOY_HOST`; до SSH не дошёл. Frontend master отправлен, checks/сборка успешны, публикация статики остановилась на таймауте API readiness. Для C4 нужно заполнить пять `BACKEND_DEPLOY_*` secrets и `BACKEND_HEALTHCHECK_URL` по инструкции, выполнить backend workflow и затем повторить frontend workflow.
