@@ -11,9 +11,9 @@ services:
       - ./docker/nginx/add/:/etc/nginx/add/
       - ./yii2/:/web/yii2/
     ports:
-      - "${APP_BIND_IP:-127.0.0.1}:${PORT_NGINX_API}:80"
-      - "${APP_BIND_IP:-127.0.0.1}:${PORT_NGINX_FRONT}:88"
-      - "${APP_BIND_IP:-127.0.0.1}:${PORT_NGINX_ADMIN}:8080"
+      - ${PORT_NGINX_API}:80
+      - ${PORT_NGINX_FRONT}:88
+      - ${PORT_NGINX_ADMIN}:8080
     links:
       - php
 
@@ -24,14 +24,11 @@ services:
       dockerfile: Dockerfile
     env_file:
       - .env
-    environment:
-      APP_ENVIRONMENT: ${APP_ENVIRONMENT:-test}
     volumes:
       - ./yii2/:/web/yii2/
-      - ./.env:/etc/environment:ro
-      - ./docker/php/entrypoint.sh:/entrypoint.sh:ro
-    entrypoint: ["/bin/bash", "/entrypoint.sh"]
-    command: ["php-fpm"]
+      - ./.env:/etc/environment
+      - ./docker/php/entrypoint.sh:/entrypoint.sh
+    entrypoint: /entrypoint.sh
 
   composer:
     build:
@@ -46,14 +43,14 @@ services:
     image: postgres:11
     restart: unless-stopped
     ports:
-      - "${PG_BIND_IP:-127.0.0.1}:${PG_DB_PORT:-5432}:5432"
+      - ${PG_DB_PORT}:5432
     volumes:
       - postgresdata:/data/postgres
     environment:
       PGDATA: /data/postgres
-      POSTGRES_PASSWORD: ${PG_DB_PASSWORD:-}
-      POSTGRES_USER: ${PG_DB_USER:-}
-      POSTGRES_DB: ${PG_DB_NAME:-}
+      POSTGRES_PASSWORD: ${PG_DB_PASSWORD}
+      POSTGRES_USER: ${PG_DB_USER}
+      POSTGRES_DB: ${PG_DB_NAME}
 
 #  mailcatcher:
 #    image: dockage/mailcatcher:0.6.5
@@ -74,4 +71,7 @@ services:
 networks:
   default:
     driver: bridge
-    # Let Docker allocate a free subnet for new networks on this shared VPS.
+    ipam:
+      driver: default
+      config:
+        - subnet: 192.168.22.0/24

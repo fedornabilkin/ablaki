@@ -1,5 +1,3 @@
-COMPOSE ?= bash deploy/compose.sh
-
 ifeq ($(M_CNT),)
     M_CNT=1
 endif
@@ -23,81 +21,82 @@ pull: docker-pull
 init: docker-down-clear docker-pull docker-build docker-up
 
 docker-pull:
-	$(COMPOSE) pull
+	docker-compose pull
 
 # build
 docker-build:
-	$(COMPOSE) build
+	docker-compose build
 build-nginx:
-	$(COMPOSE) build nginx
+	docker-compose build nginx
 build-php:
-	$(COMPOSE) build php
+	docker-compose build php
 build-php-with-xdebug:
-	$(COMPOSE) build --build-arg ENV=DEV php
+	docker-compose build --build-arg ENV=DEV php
 
 # up/down
 docker-up:
-	bash deploy/start.sh
+	docker-compose up --detach --remove-orphans
+	docker-compose ps
 up-php:
-	$(COMPOSE) up --detach php
+	docker-compose up --detach php
 up-nginx:
-	$(COMPOSE) up --detach nginx
+	docker-compose up --detach nginx
 docker-down:
-	$(COMPOSE) down --remove-orphans
+	docker-compose down --remove-orphans
 docker-down-clear:
-	$(COMPOSE) down --volumes --remove-orphans
+	docker-compose down --volumes --remove-orphans
 
 # start/restart/stop
 docker-stop:
-	$(COMPOSE) stop
+	docker-compose stop
 docker-start:
-	$(COMPOSE) start
-	$(COMPOSE) ps
+	docker-compose start
+	docker-compose ps
 docker-restart:
-	$(COMPOSE) restart
-	$(COMPOSE) ps
+	docker-compose restart
+	docker-compose ps
 restart-php:
-	$(COMPOSE) restart php
+	docker-compose restart php
 restart-nginx:
-	$(COMPOSE) restart nginx
+	docker-compose restart nginx
 
 # migrations
-migration: # fail fast; no FPM or cron in the migration container
-	bash deploy/migrate.sh
+migration: # migration up (all new migrations) in php container
+	docker-compose run --rm -v "$(PWD)/yii2:/web/yii2" php php yii migrate --interactive=0
 migration-down: # down one last migration
-	$(COMPOSE) run --rm -v "$(PWD)/yii2:/web/yii2" php php yii migrate/down $(M_CNT) --interactive=0
+	docker-compose run --rm -v "$(PWD)/yii2:/web/yii2" php php yii migrate/down $(M_CNT) --interactive=0
 migration-redo: # revert one last migration (down and up)
-	$(COMPOSE) run --rm -v "$(PWD)/yii2:/web/yii2" php php yii migrate/redo $(M_CNT) --interactive=0
+	docker-compose run --rm -v "$(PWD)/yii2:/web/yii2" php php yii migrate/redo $(M_CNT) --interactive=0
 
 # cache
 cache-flush-all:
-	$(COMPOSE) run --rm -v "$(PWD)/yii2:/web/yii2" php php yii cache/flush-all
+	docker-compose run --rm -v "$(PWD)/yii2:/web/yii2" php php yii cache/flush-all
 cache-flush-schema:
-	$(COMPOSE) run --rm -v "$(PWD)/yii2:/web/yii2" php php yii cache/flush-schema
+	docker-compose run --rm -v "$(PWD)/yii2:/web/yii2" php php yii cache/flush-schema
 
 # tests
 codecept: # start tests
-	$(COMPOSE) run --rm -v "$(PWD)/yii2:/web/yii2" php vendor/bin/codecept run
+	docker-compose run --rm -v "$(PWD)/yii2:/web/yii2" php vendor/bin/codecept run
 
 # shell
 shell-php:
-	$(COMPOSE) exec php bash
+	docker-compose exec php bash
 shell-nginx:
-	$(COMPOSE) exec nginx sh
+	docker-compose exec nginx sh
 shell-redis:
-	$(COMPOSE) exec redis sh
+	docker-compose exec redis sh
 shell-composer:
 	docker run -v "$(PWD)/yii2:/web/yii2" -w /web/yii2 -i -t composer bash
 
 # logs
 log-nginx:
-	$(COMPOSE) logs --follow nginx
+	docker-compose logs --follow nginx
 log-php:
-	$(COMPOSE) logs --follow php
+	docker-compose logs --follow php
 log-composer:
-	$(COMPOSE) logs --follow composer
+	docker-compose logs --follow composer
 logs:
-	$(COMPOSE) logs --follow
+	docker-compose logs --follow
 
 # build images
 build-image-php-fpm:

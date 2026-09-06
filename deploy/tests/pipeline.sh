@@ -5,8 +5,7 @@ source_root=$(cd "$(dirname "$0")/../.." && pwd)
 test_root=$(mktemp -d)
 trap 'rm -rf -- "$test_root"' EXIT
 mkdir -p "$test_root/bin"
-export TEST_LOG TEST_REPO TEST_FAIL TEST_BRANCH TEST_SHA
-TEST_SHA=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+export TEST_LOG TEST_REPO TEST_FAIL TEST_BRANCH
 cat > "$test_root/bin/git" <<'MOCK'
 #!/usr/bin/env bash
 set -eu
@@ -23,7 +22,6 @@ case "$1 $2" in
     [[ "$TEST_FAIL" != pull ]] || exit 23
     printf 'updated code\n' > "$TEST_REPO/code.txt"
     ;;
-  'rev-parse HEAD') printf '%s\n' "$TEST_SHA" ;;
   *) echo "Unexpected Git command: $*" >&2; exit 1 ;;
 esac
 MOCK
@@ -34,32 +32,22 @@ printf 'make %s\n' "$*" >> "$TEST_LOG"
 [[ "$*" = up ]]
 [[ -f "$TEST_REPO/code.txt" ]] || { echo 'make ran before git pull' >&2; exit 1; }
 [[ "$TEST_FAIL" != make ]] || exit 31
-# Exercise the actual make up runner with Docker commands substituted below.
-bash deploy/start.sh
 MOCK
 cat > "$test_root/bin/docker" <<'MOCK'
 #!/usr/bin/env bash
 set -eu
 printf 'docker %s\n' "$*" >> "$TEST_LOG"
 grep -Fxq 'make up' "$TEST_LOG" || { echo 'Docker ran before make up' >&2; exit 1; }
-[[ "$1" = compose ]]
-shift
-case "$*" in
-  version|ps|'up --detach --no-deps php nginx') ;;
-  run*)
-    [[ "$*" = *'--entrypoint php php yii '* ]]
-    if [[ "$*" = *'migrate/up'* && "$TEST_FAIL" = migration ]]; then exit 42; fi
-    ;;
-  *) echo "Unexpected Docker operation: $*" >&2; exit 1 ;;
-esac
+echo 'The deploy wrapper must not call Docker directly' >&2
+exit 1
 MOCK
 chmod +x "$test_root/bin/"*
 export PATH="$test_root/bin:$PATH"
 
-for scenario in production test pull make migration wrong_branch invalid_branch production_branch; do
+for scenario in production test pull make wrong_branch invalid_branch production_branch; do
   TEST_FAIL=$scenario
   TEST_REPO="$test_root/$scenario"
-  mkdir -p "$TEST_REPO/.git" "$TEST_REPO/yii2/vendor" "$TEST_REPO/yii2/api/runtime" "$TEST_REPO/deploy"
+  mkdir -p "$TEST_REPO/.git" "$TEST_REPO/yii2/vendor"
   TEST_REPO=$(cd "$TEST_REPO" && pwd -P)
   TEST_LOG="$TEST_REPO/commands.log"
   TEST_BRANCH=master
@@ -68,7 +56,6 @@ for scenario in production test pull make migration wrong_branch invalid_branch 
   if [[ "$scenario" = test ]]; then target=test; branch=feature/test; TEST_BRANCH=$branch; fi
   if [[ "$scenario" = wrong_branch ]]; then TEST_BRANCH=another; fi
   if [[ "$scenario" = production_branch ]]; then branch=feature/test; fi
-  cp "$source_root/deploy/"{compose,migrate,start}.sh "$TEST_REPO/deploy/"
   printf '# Local configuration\nDB_FIXTURE=preserved\n' > "$TEST_REPO/.env"
   cp "$TEST_REPO/.env" "$TEST_REPO/env-before"
   printf 'existing vendor\n' > "$TEST_REPO/yii2/vendor/autoload.php"
@@ -80,9 +67,7 @@ for scenario in production test pull make migration wrong_branch invalid_branch 
       [[ "$status" = 0 ]] || { cat "$TEST_REPO/output.log"; exit 1; }
       grep -Fxq "git pull --ff-only origin $branch" "$TEST_LOG"
       grep -Fxq 'make up' "$TEST_LOG"
-      [[ "$(grep -c -- 'yii migrate/up' "$TEST_LOG")" = 5 ]]
-      grep -Fxq 'docker compose up --detach --no-deps php nginx' "$TEST_LOG"
-      [[ "$(cat "$TEST_REPO/yii2/api/runtime/deploy-version.txt")" = "$TEST_SHA" ]]
+      ! grep -q '^docker' "$TEST_LOG"
       ;;
     pull)
       [[ "$status" = 23 ]]
@@ -91,11 +76,6 @@ for scenario in production test pull make migration wrong_branch invalid_branch 
     make)
       [[ "$status" = 31 ]]
       ! grep -q '^docker' "$TEST_LOG"
-      ;;
-    migration)
-      [[ "$status" = 42 ]]
-      ! grep -q 'up --detach' "$TEST_LOG"
-      [[ ! -f "$TEST_REPO/yii2/api/runtime/deploy-version.txt" ]]
       ;;
     wrong_branch|invalid_branch|production_branch)
       [[ "$status" != 0 ]]

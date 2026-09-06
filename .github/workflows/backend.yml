@@ -45,11 +45,9 @@ jobs:
       - name: Check deployment scripts
         run: |
           for script in deploy/*.sh deploy/tests/*.sh docker/php/entrypoint.sh; do bash -n "$script"; done
-          php -l deploy/database-fingerprint.php
-          php -l deploy/check-api.php
           php -l yii2/yii
+          php -l yii2/console/migrations/AbstractMigration.php
           bash deploy/tests/pipeline.sh
-          bash deploy/tests/compose-config.sh
 
       - name: Install locked dependencies for the selected target
         working-directory: yii2
@@ -58,7 +56,8 @@ jobs:
           COMPOSER_AUTH: '{"github-oauth":{"github.com":"${{ github.token }}"}}'
         shell: bash
         run: |
-          options=(--no-interaction --prefer-dist --no-progress --optimize-autoloader)
+          # CI only: do not require new allow-plugins settings in the restored manifest.
+          options=(--no-interaction --prefer-dist --no-progress --optimize-autoloader --no-plugins)
           if [[ "$TARGET" = production ]]; then options+=(--no-dev); fi
           composer install "${options[@]}"
 
@@ -66,7 +65,7 @@ jobs:
         working-directory: yii2
         shell: bash
         run: |
-          for suite in frontend-lists frontend-api-routing game-overview forum-gift daily-reward exchange-refund health; do
+          for suite in frontend-lists frontend-api-routing game-overview forum-gift daily-reward exchange-refund; do
             if ! php "tests/release/$suite.php" 2>&1 | tee "$RUNNER_TEMP/backend-$suite.log"; then
               details=$(tail -n 15 "$RUNNER_TEMP/backend-$suite.log")
               details=${details//%/%25}

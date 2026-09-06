@@ -1,5 +1,8 @@
 # Разделение production и test
 
+> Заменён [полным восстановлением исходной выкатки](2026-09-06-restore-original-deployment.md).
+> Ниже сохранена история, не действующая инструкция.
+
 Цель: production backend в `/var/www/api.ablakin.ru` с существующей MySQL, test backend в `/var/code/ablaki` с существующей PostgreSQL. Сохраняются действующие .env и инфраструктура. По последнему решению владельца: обновить код и выполнить `make up` с миграциями, без backup. Production frontend уже работает из `/var/www/ablakin.ru`; test frontend публикуется в `/var/code/ablaki-front/project/dist`, сохраняя checkout.
 
 ## Группа A: Конфигурация и запуск
