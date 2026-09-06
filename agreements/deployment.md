@@ -19,7 +19,8 @@
 - Production backend — `/var/www/api.ablakin.ru`, существующая MySQL по `MYSQL_DB_*` production `.env`, `APP_ENVIRONMENT=production`.
 - Test backend — `/var/code/ablaki`, существующая PostgreSQL по `PG_DB_*` test `.env`, `APP_ENVIRONMENT=test`.
 - Сохранять действующие `.env`, локальные конфиги Yii, загрузки, имена сервисов, Compose project, volumes, сети и порты. `COMPOSE_PROJECT_NAME` не является обязательной новой настройкой; не назначать новое значение вместо существующего имени.
-- Test использует собственные secrets/variables с префиксом `TEST_BACKEND_`; production fallback запрещён. Тестовые домены требуют отдельной настройки.
+- Test использует собственные secrets/variables с префиксом `TEST_BACKEND_`; production fallback запрещён. Адреса теста: API `http://94.250.251.94:3180/`, admin `http://94.250.251.94:3195`, frontend `http://94.250.251.94:3181`.
+- Production vendor устанавливается с `--no-dev`, test — с dev-зависимостями текущего lock для существующего Yii debug. Локальные настройки debug и разрешённых IP сохраняются.
 - Служебные каталоги — `/opt/ablaki-backend` и `/opt/ablaki-backend-test`: incoming, releases и состояние публикации. Они отделены от checkout.
 - Production frontend остаётся в `/var/www/ablakin.ru`, test frontend публикуется только в `/var/code/ablaki-front/project/dist`.
 

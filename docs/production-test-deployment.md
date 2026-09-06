@@ -10,11 +10,12 @@ Production использует существующую **MySQL** из `MYSQL_D
 | Backend incoming, releases, состояние | `/opt/ablaki-backend` | `/opt/ablaki-backend-test` |
 | База данных | Существующая MySQL, `MYSQL_DB_*` | Существующая PostgreSQL, `PG_DB_*` |
 | `APP_ENVIRONMENT` | `production` | `test` |
-| Сайт | `https://ablakin.ru` | `https://test.ablakin.ru` — пример |
-| API | `https://api.ablakin.ru/` | `https://api-test.ablakin.ru/` — пример |
+| Сайт | `https://ablakin.ru` | `http://94.250.251.94:3181` |
+| API | `https://api.ablakin.ru/` | `http://94.250.251.94:3180/` |
+| Админка | Действующая production-настройка | `http://94.250.251.94:3195` |
 | Запуск | Push master; вручную production из master | Вручную test из выбранной ветки |
 
-Тестовые домены ещё нужно выбрать и настроить. Compose project, Docker-сети, порты, имена сервисов и доступ к существующим БД сохраняются. `COMPOSE_PROJECT_NAME` не является обязательной новой настройкой: если он задан, сохраните значение; если используется существующее имя по умолчанию, не вводите другое ради примера.
+Тест работает по HTTP, IP и портам. [Готовые команды для VPS и настройки GitHub](test-deployment-commands.md). Compose project, Docker-сети и доступ к существующим БД сохраняются. `COMPOSE_PROJECT_NAME` не является обязательной новой настройкой: если он задан, сохраните значение; если используется существующее имя по умолчанию, не вводите другое ради примера.
 
 ## 1. Настройки GitHub
 
@@ -28,7 +29,7 @@ Production использует существующую **MySQL** из `MYSQL_D
 | `BACKEND_DEPLOY_SSH_KEY` | `TEST_BACKEND_DEPLOY_SSH_KEY` | Приватный SSH-ключ |
 | `BACKEND_DEPLOY_KNOWN_HOSTS` | `TEST_BACKEND_DEPLOY_KNOWN_HOSTS` | Проверенная запись SSH host key |
 
-Production variable `BACKEND_HEALTHCHECK_URL` — `https://api.ablakin.ru/`. Test variable `TEST_BACKEND_HEALTHCHECK_URL` — отдельный адрес тестового API с `/` на конце. Настройки размещаются в environments `production-backend`, `test-backend` или как repository secrets/variables с указанными именами. Отсутствующие test-настройки не заменяются production-значениями. Ключи и содержимое `.env` не публикуются в Git или чате.
+Production variable `BACKEND_HEALTHCHECK_URL` — `https://api.ablakin.ru/`. Test variable `TEST_BACKEND_HEALTHCHECK_URL` — `http://94.250.251.94:3180/`. Настройки размещаются в environments `production-backend`, `test-backend` или как repository secrets/variables с указанными именами. Отсутствующие test-настройки не заменяются production-значениями. Ключи и содержимое `.env` не публикуются в Git или чате.
 
 Во frontend production repository variable `VITE_API_URL` — `https://api.ablakin.ru/`. После изменения URL frontend нужно пересобрать. Для теста используются `TEST_VITE_API_URL`, `TEST_FRONTEND_HEALTHCHECK_URL` и пять `TEST_FRONTEND_DEPLOY_*` secrets в `test-frontend`. [Инструкция frontend](https://github.com/fedornabilkin/ablaki-front/blob/master/docs/deployment-github-vps.md).
 
@@ -105,11 +106,13 @@ make up
 
 `make up` применяет ожидающие миграции к существующей БД этого окружения и запускает приложение. Миграции не отключаются; отдельный запуск `deploy/migrate.sh` перед этой командой не нужен. Никакого предварительного dump или переноса test → production в данном сценарии нет. Для test используйте `/var/code/ablaki` и его существующую `.env`.
 
-## 5. nginx и HTTPS API
+## 5. nginx: production HTTPS и тестовые порты
 
 Backend checkout находится в каталоге с именем домена, но системный nginx **проксирует API в контейнер**, а не раздаёт checkout и `.env` как статику. Сверьте `proxy_pass` с фактическим адресом и портом действующего API. Порты `19881/19882` в приложенных nginx-конфигах — примеры; исправьте upstream в примере под VPS, не перенастраивайте действующие порты ради документации.
 
-Для нового API-домена направьте DNS A на VPS и выберите отдельный тестовый API-домен. `api-test.ablakin.ru` в примерах заменяется вместе с путями сертификатов. AAAA нужна только при работающем IPv6. Существующий рабочий vhost сохраняется, если адреса уже настроены.
+Тестовые API/admin доступны напрямую на 3180/3195 через Docker nginx при `APP_BIND_IP=0.0.0.0`; PostgreSQL использует отдельный `PG_BIND_IP=127.0.0.1`. Frontend обслуживает системный nginx на 3181. Для теста DNS и сертификаты не нужны; старые файлы `api-test.ablakin.ru*.example` являются только образцами возможного HTTPS-стенда.
+
+Следующие команды относятся только к production API-домену `api.ablakin.ru`. Направьте его DNS A на VPS; AAAA нужна только при работающем IPv6. Существующий рабочий vhost сохраняется, если адреса уже настроены.
 
 При первичной настройке сначала используйте [HTTP-конфиг](../deploy/nginx/api.ablakin.ru.http.conf.example), отдающий только ACME challenge, и получите сертификат. Если конфиг или symlink уже существуют, проверьте их перед заменой:
 

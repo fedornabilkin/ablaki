@@ -35,10 +35,11 @@ ENV
 
 COMPOSE_PROJECT_NAME=ablaki
 COMPOSE_SUBNET=192.168.22.0/24
-APP_BIND_IP=127.0.0.1
-PORT_NGINX_API=19882
+APP_BIND_IP=0.0.0.0
+PG_BIND_IP=127.0.0.1
+PORT_NGINX_API=3180
 PORT_NGINX_FRONT=18092
-PORT_NGINX_ADMIN=18082
+PORT_NGINX_ADMIN=3195
 PG_DB_PORT=15432
 PG_DB_HOST=postgres
 PG_DB_NAME=existing_test
@@ -67,7 +68,7 @@ configs = {name: json.loads((root / name / 'config.json').read_text())
 all_ports = set()
 for name, project, subnet, api_port in (
         ('production', 'ablaki-production', '192.168.23.0/24', 19881),
-        ('test', 'ablaki', '192.168.22.0/24', 19882)):
+        ('test', 'ablaki', '192.168.22.0/24', 3180)):
     config = configs[name]
     assert config['name'] == project, (name, 'unexpected Compose project')
     assert config['networks']['default']['name'] == project + '_default'
@@ -89,11 +90,12 @@ for name, project, subnet, api_port in (
         assert services['postgres']['environment']['POSTGRES_USER'] == 'fixture_user'
         assert services['postgres']['environment']['POSTGRES_PASSWORD'] == 'fixture_password'
         assert services['php']['environment']['PG_DB_NAME'] == services['postgres']['environment']['POSTGRES_DB']
-    for service in services.values():
+    for service_name, service in services.items():
         assert not service.get('container_name'), 'Fixed container names collide across projects'
         assert set(service['networks']) == {'default'}
         for port in service.get('ports', []):
-            assert port['host_ip'] == '127.0.0.1', (name, 'public port binding')
+            expected_bind = '0.0.0.0' if name == 'test' and service_name == 'nginx' else '127.0.0.1'
+            assert port['host_ip'] == expected_bind, (name, service_name, 'unexpected port binding')
             published = int(port['published'])
             assert published not in all_ports, (name, 'duplicate host port')
             all_ports.add(published)

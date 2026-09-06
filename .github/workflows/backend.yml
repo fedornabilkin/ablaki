@@ -51,11 +51,16 @@ jobs:
           bash deploy/tests/pipeline.sh
           bash deploy/tests/compose-config.sh
 
-      - name: Install locked production dependencies
+      - name: Install locked dependencies for the selected target
         working-directory: yii2
         env:
+          TARGET: ${{ inputs.target || 'production' }}
           COMPOSER_AUTH: '{"github-oauth":{"github.com":"${{ github.token }}"}}'
-        run: composer install --no-dev --no-interaction --prefer-dist --no-progress --optimize-autoloader
+        shell: bash
+        run: |
+          options=(--no-interaction --prefer-dist --no-progress --optimize-autoloader)
+          if [[ "$TARGET" = production ]]; then options+=(--no-dev); fi
+          composer install "${options[@]}"
 
       - name: Run isolated API checks
         working-directory: yii2

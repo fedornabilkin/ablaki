@@ -137,7 +137,9 @@ if [[ -n "$(git diff --name-only "$previous" "$sha" -- docker/php/Dockerfile doc
   "${compose[@]}" build php
 fi
 phase='Checking installed PHP dependencies'
-"${compose[@]}" run --rm --no-deps -T --workdir /web/yii2 --entrypoint php php vendor/bin/deploy-composer.phar check-platform-reqs --no-dev
+platform_options=()
+if [[ "$target" = production ]]; then platform_options+=(--no-dev); fi
+"${compose[@]}" run --rm --no-deps -T --workdir /web/yii2 --entrypoint php php vendor/bin/deploy-composer.phar check-platform-reqs "${platform_options[@]}"
 # Keep the owner's existing release sequence: update code, then make up with migrations.
 phase='Running make up with migrations against the existing database'
 make up

@@ -170,8 +170,13 @@ for scenario in success stale dirty branch lock checksum migration health root_i
       before 'migrate/up' 'up --detach --no-deps --force-recreate php nginx'
       [[ -n "$(find "$TEST_DEPLOY/releases" -path '*/previous-vendor/previous.txt' -print -quit)" ]]
       [[ ! -e "$TEST_DEPLOY/backups" ]]
-      if [[ "$TEST_TARGET" = production ]]; then reject_log 'up --detach postgres';
-      else before 'up --detach postgres' 'migrate/up'; fi
+      if [[ "$TEST_TARGET" = production ]]; then
+        expect_log 'check-platform-reqs --no-dev'
+        reject_log 'up --detach postgres'
+      else
+        reject_log 'check-platform-reqs --no-dev'
+        before 'up --detach postgres' 'migrate/up'
+      fi
       [[ ! -e "$TEST_REPO/.git/ablaki-deploy" ]]
       [[ "$(cat "$TEST_BRANCH_FILE")" = "$branch_arg" ]]
       grep -Fxq 'DB_FIXTURE=preserved' "$TEST_REPO/.env"

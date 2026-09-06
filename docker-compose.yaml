@@ -46,7 +46,7 @@ services:
     image: postgres:11
     restart: unless-stopped
     ports:
-      - "${APP_BIND_IP:-127.0.0.1}:${PG_DB_PORT:-5432}:5432"
+      - "${PG_BIND_IP:-127.0.0.1}:${PG_DB_PORT:-5432}:5432"
     volumes:
       - postgresdata:/data/postgres
     environment:
