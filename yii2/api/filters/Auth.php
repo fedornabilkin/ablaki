@@ -9,7 +9,6 @@
 namespace api\filters;
 
 use common\services\user\PresenceService;
-use Yii;
 use yii\filters\auth\HttpBearerAuth;
 
 class Auth extends HttpBearerAuth
@@ -18,7 +17,7 @@ class Auth extends HttpBearerAuth
     {
         $identity = parent::authenticate($user, $request, $response);
         if ($identity !== null) {
-            (new PresenceService(Yii::$app->db))->touch((int)$identity->getId());
+            PresenceService::recordActivity((int)$identity->getId());
         }
         return $identity;
     }

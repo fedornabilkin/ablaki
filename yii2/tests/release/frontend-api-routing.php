@@ -51,6 +51,7 @@ try {
     $api = require dirname(__DIR__, 2) . '/api/config/main.php';
     $app = new \yii\web\Application([
         'id' => 'routing-test', 'basePath' => dirname(__DIR__, 2), 'vendorPath' => dirname(__DIR__, 2) . '/vendor',
+        'runtimePath' => sys_get_temp_dir() . '/ablakin-routing-presence-' . uniqid(),
         'container' => $api['container'],
         'modules' => ['v1' => ['class' => \api\modules\v1\Module::class], 'user' => ['class' => \dektrium\user\Module::class]],
         'components' => [
@@ -71,7 +72,6 @@ try {
     $db = $app->db;
     $db->createCommand('CREATE TABLE user (id INTEGER PRIMARY KEY, username TEXT, email TEXT, created_at INTEGER, last_login_at INTEGER)')->execute();
     $db->createCommand('CREATE TABLE persone (id INTEGER PRIMARY KEY, user_id INTEGER UNIQUE, balance NUMERIC, credit NUMERIC, rating NUMERIC, description TEXT, refovod INTEGER, bonus_count INTEGER)')->execute();
-    $db->createCommand('CREATE TABLE user_presence (user_id INTEGER PRIMARY KEY, last_seen_at INTEGER)')->execute();
     $db->createCommand('CREATE TABLE forum_theme (id INTEGER PRIMARY KEY, user_id INTEGER, title TEXT, created_at INTEGER, last_post INTEGER, view INTEGER)')->execute();
     $db->createCommand('CREATE TABLE forum_comment (id INTEGER PRIMARY KEY, user_id INTEGER, theme_id INTEGER, comment TEXT, active INTEGER, created_at INTEGER)')->execute();
     $db->createCommand('CREATE TABLE forum_comment_gift (id INTEGER PRIMARY KEY, comment_id INTEGER, user_id INTEGER, recipient_id INTEGER, created_at INTEGER, UNIQUE(comment_id,user_id))')->execute();
@@ -121,6 +121,36 @@ try {
     routeCheck(dispatch('POST', 'v1/users/heartbeat')[0] === 401, 'heartbeat requires authentication');
     routeCheck(dispatch('POST', 'v1/users/heartbeat', true)[1]['count'] === 1, 'heartbeat activity is visible in online count');
     routeCheck((int)$db->createCommand('SELECT COUNT(*) FROM history_balance')->queryScalar() === 2, 'full dispatch retry produced one exact gift history pair');
+
+    $db->createCommand("INSERT INTO forum_theme VALUES (2,1,'Own topic',2,2,0)")->execute();
+    routeCheck(dispatch('POST', 'v1/users/heartbeat')[0] === 401, 'legacy heartbeat still requires authentication');
+    list($status, $heartbeat) = dispatch('POST', 'v1/users/heartbeat', true);
+    routeCheck($status === 200 && $heartbeat === ['count' => 1, 'windowSeconds' => 300],
+        'authenticated heartbeat succeeds without the presence migration');
+    list($status, $themes) = dispatch('GET', 'v1/forum-theme/my', true, ['page' => '1', 'sort' => '-id', 'envelope' => '1']);
+    routeCheck($status === 200 && array_column($themes['items'], 'id') === [2] && $themes['_meta']['totalCount'] === 1,
+        'exact my topics request succeeds and excludes another author on legacy schema');
+    list($status, $online) = dispatch('GET', 'v1/users/online', false, ['envelope' => '1']);
+    routeCheck($status === 200 && array_column($online['items'], 'id') === [1]
+        && $online['_meta']['totalCount'] === $heartbeat['count'], 'public online list and count agree on legacy schema');
+    $now = time();
+    $presence = new \common\services\user\PresenceService();
+    $presence->touch(2, $now - 300);
+    routeCheck(in_array(2, \common\services\user\PresenceService::onlineIds($now), true), 'activity at five-minute boundary is included');
+    routeCheck(!in_array(2, \common\services\user\PresenceService::onlineIds($now + 1), true), 'activity older than five minutes is excluded');
+    $presence->touch(1, $now - 400);
+    routeCheck(in_array(1, \common\services\user\PresenceService::onlineIds($now), true), 'older requests cannot regress cached presence');
+    routeCheck(array_column(dispatch('GET', 'v1/users/online', false, ['q' => 'Donor', 'envelope' => '1'])[1]['items'], 'id') === [1],
+        'legacy online list applies server search');
+    // Even an unexpected presence storage failure must not break unrelated protected endpoints.
+    $runtime = Yii::getAlias('@runtime');
+    Yii::setAlias('@runtime', null);
+    try {
+        routeCheck(dispatch('GET', 'v1/forum-theme/my', true, ['envelope' => '1'])[0] === 200,
+            'presence write failure does not invalidate an authenticated forum request');
+    } finally {
+        Yii::setAlias('@runtime', $runtime);
+    }
     echo "API routing integration passed on disposable SQLite.\n";
 } finally {
     if (isset($db)) $db->close();

@@ -2,41 +2,68 @@
 
 namespace common\services\user;
 
-use yii\db\Connection;
-use yii\db\Query;
+use Yii;
+use RuntimeException;
+use yii\caching\FileCache;
+use yii\mutex\FileMutex;
 
 /** API activity is separate from the actual last login timestamp. */
 class PresenceService
 {
     const WINDOW_SECONDS = 300;
-    private $db;
+    private $cache;
+    private $mutex;
+    private const KEY = 'active-users';
 
-    public function __construct(Connection $db)
+    public function __construct()
     {
-        $this->db = $db;
+        $this->cache = new FileCache(['cachePath' => '@runtime/presence/cache']);
+        $this->mutex = new FileMutex(['mutexPath' => '@runtime/presence/mutex']);
     }
 
     public function touch(int $userId, int $now = null): void
     {
         $now = $now ?? time();
-        $lastSeen = (new Query())->select('last_seen_at')->from('{{%user_presence}}')
-            ->where(['user_id' => $userId])->scalar($this->db);
-        if ($lastSeen !== false && (int)$lastSeen >= $now - 60) {
-            return;
+        if (!$this->mutex->acquire(self::KEY, 2)) {
+            throw new RuntimeException('Presence storage is busy.');
         }
-        // An older parallel request must not move activity backwards.
-        if ($lastSeen === false) {
-            $this->db->createCommand()->upsert('{{%user_presence}}', [
-                'user_id' => $userId, 'last_seen_at' => $now,
-            ], false)->execute();
+        try {
+            $active = $this->active($now);
+            // An older parallel request must not move activity backwards.
+            if (isset($active[$userId]) && $active[$userId] > $now - 60) {
+                return;
+            }
+            $active[$userId] = $now;
+            if (!$this->cache->set(self::KEY, $active, self::WINDOW_SECONDS + 1)) {
+                throw new RuntimeException('Unable to store presence.');
+            }
+        } finally {
+            $this->mutex->release(self::KEY);
         }
-        $this->db->createCommand()->update('{{%user_presence}}', ['last_seen_at' => $now],
-            ['and', ['user_id' => $userId], ['<', 'last_seen_at', $now - 60]])->execute();
     }
 
-    public static function onlineIds(int $now = null): Query
+    /** @return int[] */
+    public static function onlineIds(int $now = null): array
     {
-        return (new Query())->select('user_id')->from('{{%user_presence}}')
-            ->where(['>=', 'last_seen_at', ($now ?? time()) - self::WINDOW_SECONDS]);
+        return array_map('intval', array_keys((new self())->active($now ?? time())));
+    }
+
+    private function active(int $now): array
+    {
+        $active = $this->cache->get(self::KEY);
+        return is_array($active) ? array_filter($active, function ($seen) use ($now) {
+            return $seen >= $now - self::WINDOW_SECONDS;
+        }) : [];
+    }
+
+    /** Presence is ancillary: a storage failure must not invalidate a valid session. */
+    public static function recordActivity(int $userId): void
+    {
+        try {
+            (new self())->touch($userId);
+        } catch (\Throwable $error) {
+            // Never log SQL, request headers or identity credentials here.
+            Yii::warning('Unable to record user activity (' . get_class($error) . ').', __METHOD__);
+        }
     }
 }

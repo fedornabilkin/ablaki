@@ -2,6 +2,7 @@
 namespace api\models;
 
 use Exception;
+use common\services\user\PresenceService;
 use Yii;
 use yii\base\Exception as BaseException;
 use yii\web\IdentityInterface;
@@ -20,6 +21,10 @@ class LoginForm extends \dektrium\user\models\LoginForm
 
     public function loginKey(string $key): bool
     {
+        $this->token = null;
+        if ($key === '') {
+            return false;
+        }
         $module = Yii::$app->getModule('user');
 
         $userModel = $module->modelMap['User'];
@@ -33,6 +38,7 @@ class LoginForm extends \dektrium\user\models\LoginForm
                 $this->user->updateAttributes(['last_login_at' => time()]);
                 $this->changeAuthKey($this->user);
                 $this->token = $this->user->auth_key;
+                PresenceService::recordActivity((int)$this->user->getId());
             }
 
             return $isLogged;
@@ -47,10 +53,17 @@ class LoginForm extends \dektrium\user\models\LoginForm
      */
     public function login(): bool
     {
-        $parent = parent::login();
+        $this->token = null;
+        if (!parent::login()) {
+            return false;
+        }
+        if (!is_string($this->user->auth_key) || trim($this->user->auth_key) === '') {
+            $this->changeAuthKey($this->user);
+        }
         $this->token = $this->user->auth_key;
+        PresenceService::recordActivity((int)$this->user->getId());
 
-        return $parent;
+        return true;
     }
 
     /**
@@ -66,8 +79,10 @@ class LoginForm extends \dektrium\user\models\LoginForm
 
     public function changeAuthKey(IdentityInterface $user): void
     {
-        $user->auth_key = Yii::$app->security->generateRandomString();
-        $user->save();
+        $token = Yii::$app->security->generateRandomString();
+        if ($user->updateAttributes(['auth_key' => $token]) !== 1) {
+            throw new BaseException('Unable to persist authentication token.');
+        }
     }
 
     public function responseApi(): array

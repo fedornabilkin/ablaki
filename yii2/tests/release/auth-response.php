@@ -22,6 +22,7 @@ Yii::$container->set(\yii\rest\Serializer::class, \api\components\ListSerializer
 $app = new Application([
     'id' => 'auth-response-test',
     'basePath' => dirname(__DIR__, 2),
+    'runtimePath' => sys_get_temp_dir() . '/ablakin-auth-presence-' . uniqid(),
     // CI installs without Composer plugins: bootstrap dependencies explicitly.
     'extensions' => [],
     'bootstrap' => [\dektrium\user\Bootstrap::class],
@@ -100,6 +101,36 @@ try {
     $invalid = $app->runAction('site/login-key', ['key' => 'invalid-fixture-key']);
     authResponseCheck($app->user->isGuest && isset($invalid['errors'])
         && !array_key_exists('user', $invalid) && !array_key_exists('token', $invalid), 'invalid key still rejects login');
+    authResponseCheck($app->response->statusCode === 401, 'invalid credentials return HTTP 401');
+    foreach ([null, '', '   '] as $emptyKey) {
+        $app->user->setIdentity(null);
+        $db->createCommand()->update('user', ['auth_key' => $emptyKey], ['id' => 1])->execute();
+        $app->request->setBodyParams(['login' => 'FixtureUser', 'password' => 'fixture-password']);
+        $response = $app->runAction('site/login');
+        authResponseCheck(is_string($response['token']) && strlen($response['token']) >= 32
+            && $response['token'] === $db->createCommand('SELECT auth_key FROM user WHERE id=1')->queryScalar(),
+            'password login repairs an empty token and persists it before returning');
+        authResponseCheck(User::findIdentityByAccessToken($response['token'])->id === 1,
+            'issued token authenticates subsequent API requests');
+    }
+    foreach ([['FixtureUser', 'incorrect'], ['MissingUser', 'fixture-password']] as $credentials) {
+        $app->user->setIdentity(null);
+        $app->request->setBodyParams(['login' => $credentials[0], 'password' => $credentials[1]]);
+        $response = $app->runAction('site/login');
+        authResponseCheck($app->response->statusCode === 401 && $app->user->isGuest
+            && isset($response['errors']) && !isset($response['token']), 'bad password or unknown user never issues a token');
+    }
+    authResponseCheck(in_array(1, \common\services\user\PresenceService::onlineIds(), true),
+        'successful login records activity without a presence table');
+    $db->pdo->exec("CREATE TRIGGER reject_token BEFORE UPDATE OF auth_key ON user BEGIN SELECT RAISE(IGNORE); END");
+    $key = $db->createCommand('SELECT auth_key FROM user WHERE id=1')->queryScalar();
+    try {
+        $app->runAction('site/login-key', ['key' => $key]);
+        throw new RuntimeException('An unpersisted token must not be returned');
+    } catch (\yii\base\Exception $expected) {
+        authResponseCheck($db->createCommand('SELECT auth_key FROM user WHERE id=1')->queryScalar() === $key,
+            'failed credential write never returns a new unusable token');
+    }
     echo "Authentication response regression passed without any live API or database.\n";
 } finally {
     $db->close();

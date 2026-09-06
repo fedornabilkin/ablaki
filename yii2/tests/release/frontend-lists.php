@@ -51,6 +51,7 @@ $file = tempnam(sys_get_temp_dir(), 'ablakin-lists-');
 try {
     $app = new Application([
         'id' => 'list-test', 'basePath' => dirname(__DIR__, 2), 'vendorPath' => dirname(__DIR__, 2) . '/vendor',
+        'runtimePath' => sys_get_temp_dir() . '/ablakin-list-presence-' . uniqid(),
         'modules' => ['user' => ['class' => dektrium\user\Module::class]],
         'components' => [
             'db' => ['class' => yii\db\Connection::class, 'dsn' => 'sqlite:' . $file],
@@ -69,7 +70,6 @@ try {
     $db->createCommand('CREATE TABLE persone (id INTEGER PRIMARY KEY, user_id INTEGER, refovod INTEGER, rating NUMERIC, bonus_count INTEGER, description TEXT, balance NUMERIC, credit NUMERIC)')->execute();
     $db->createCommand('CREATE TABLE history_balance (id INTEGER PRIMARY KEY, user_id INTEGER, balance NUMERIC, credit NUMERIC, balance_up NUMERIC, credit_up NUMERIC, type TEXT, comment TEXT, created_at INTEGER)')->execute();
     $db->createCommand('CREATE TABLE history_rating (id INTEGER PRIMARY KEY, user_id INTEGER, rating NUMERIC, rating_up NUMERIC, type TEXT, comment TEXT, created_at INTEGER)')->execute();
-    $db->createCommand('CREATE TABLE user_presence (user_id INTEGER PRIMARY KEY, last_seen_at INTEGER)')->execute();
     $db->createCommand('CREATE TABLE fact (id INTEGER PRIMARY KEY, title TEXT, type TEXT, hide INTEGER)')->execute();
     $db->createCommand('CREATE TABLE credit_transfer (id INTEGER PRIMARY KEY, user_id INTEGER, user_buyer INTEGER, amount NUMERIC, password TEXT, created_at INTEGER, updated_at INTEGER)')->execute();
     $db->createCommand('CREATE TABLE credit_exchange (id INTEGER PRIMARY KEY, user_id INTEGER, user_buyer INTEGER, amount NUMERIC, credit NUMERIC, type TEXT, created_at INTEGER, updated_at INTEGER)')->execute();
@@ -102,14 +102,14 @@ try {
     $referrals = serialized($users->actionReferrals());
     checkList(array_column($referrals['items'], 'id') === [45, 43, 41], 'referral query and search are scoped to current inviter');
 
-    $presence = new PresenceService($db);
+    $presence = new PresenceService();
     $presence->touch(1, $now);
     $presence->touch(1, $now - 100);
     $presence->touch(2, $now - 400);
     $presence->touch(3, $now - 10);
     checkList($users->actionOnlineCount()['count'] === 2, 'online count excludes stale activity');
     checkList((int)$db->createCommand('SELECT last_login_at FROM user WHERE id=1')->queryScalar() === 123, 'presence does not alter last login');
-    checkList((int)$db->createCommand('SELECT last_seen_at FROM user_presence WHERE user_id=1')->queryScalar() === $now, 'older requests cannot regress presence');
+    checkList(in_array(1, PresenceService::onlineIds($now + 300), true), 'older requests cannot regress presence');
     params(['q' => 'Member3', 'envelope' => '1']);
     checkList(serialized($users->actionOnline())['_meta']['totalCount'] === 1, 'online list is searchable and paginated');
 

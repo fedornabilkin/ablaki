@@ -48,6 +48,7 @@ class SiteController extends Controller
         if ($model->loginKey($key)) {
             $response = $model->responseApi();
         } else {
+            Yii::$app->response->setStatusCode(401);
             $response['errors'] = 'invalid authenticate';
         }
 
@@ -66,6 +67,7 @@ class SiteController extends Controller
         if ($model->load(Yii::$app->request->post(), '') && $model->login()) {
             $response = $model->responseApi();
         } else {
+            Yii::$app->response->setStatusCode(401);
             $response['errors'] = $model->getFirstErrors();
         }
 
