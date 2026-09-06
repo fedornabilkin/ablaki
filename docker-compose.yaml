@@ -28,7 +28,8 @@ services:
       - ./yii2/:/web/yii2/
       - ./.env:/etc/environment
       - ./docker/php/entrypoint.sh:/entrypoint.sh
-    entrypoint: /entrypoint.sh
+    entrypoint: ["/bin/bash", "/entrypoint.sh"]
+    command: ["php-fpm"]
 
   composer:
     build:

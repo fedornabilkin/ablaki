@@ -65,6 +65,7 @@ $cfg = [
             'enableStrictParsing' => true,
             'showScriptName' => false,
             'rules' => [
+                'GET health' => 'health/index',
                 'login' => 'site/login',
                 'login-key/<key:[\w\-]+>' => 'site/login-key',
                 'logout' => 'site/logout',

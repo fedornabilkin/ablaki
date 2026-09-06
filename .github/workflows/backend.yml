@@ -1,0 +1,126 @@
+name: Backend CI and production deploy
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  checks:
+    name: Backend checks and dependencies
+    runs-on: ubuntu-22.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Set up the supported PHP runtime
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '7.3'
+          extensions: mbstring, pdo_sqlite, pdo_pgsql, pdo_mysql, intl, gd, curl, zip
+          tools: composer:2.10.3
+          coverage: none
+
+      - name: Check deployment scripts
+        run: |
+          for script in deploy/*.sh docker/php/entrypoint.sh; do bash -n "$script"; done
+          php -l deploy/database-fingerprint.php
+          php -l deploy/check-api.php
+          php -l yii2/yii
+          bash deploy/tests/pipeline.sh
+
+      - name: Install locked production dependencies
+        working-directory: yii2
+        env:
+          COMPOSER_AUTH: '{"github-oauth":{"github.com":"${{ github.token }}"}}'
+        run: composer install --no-dev --no-interaction --prefer-dist --no-progress --optimize-autoloader
+
+      - name: Run isolated API checks
+        working-directory: yii2
+        run: |
+          for suite in frontend-lists frontend-api-routing game-overview forum-gift daily-reward exchange-refund health; do
+            php "tests/release/$suite.php"
+          done
+
+      - name: Package checked dependencies
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/master'
+        shell: bash
+        run: |
+          mkdir -p release yii2/vendor/bin
+          cp "$(command -v composer)" yii2/vendor/bin/deploy-composer.phar
+          printf '%s\n' "$GITHUB_SHA" > yii2/commit.txt
+          sha256sum yii2/composer.lock | cut -d' ' -f1 > yii2/composer.lock.sha256
+          tar -C yii2 -czf release/vendor.tar.gz vendor commit.txt composer.lock.sha256
+          (cd release && sha256sum vendor.tar.gz > vendor.tar.gz.sha256)
+
+      - name: Save release artifact
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/master'
+        uses: actions/upload-artifact@v7
+        with:
+          name: backend-${{ github.sha }}
+          path: release/
+          if-no-files-found: error
+          retention-days: 14
+
+  deploy:
+    name: Deploy backend to production
+    needs: checks
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/master'
+    runs-on: ubuntu-22.04
+    timeout-minutes: 30
+    environment: production-backend
+    concurrency:
+      group: production-backend
+      cancel-in-progress: false
+    env:
+      DEPLOY_HOST: ${{ secrets.BACKEND_DEPLOY_HOST }}
+      DEPLOY_PORT: ${{ secrets.BACKEND_DEPLOY_PORT }}
+      DEPLOY_USER: ${{ secrets.BACKEND_DEPLOY_USER }}
+      DEPLOY_SSH_KEY: ${{ secrets.BACKEND_DEPLOY_SSH_KEY }}
+      DEPLOY_KNOWN_HOSTS: ${{ secrets.BACKEND_DEPLOY_KNOWN_HOSTS }}
+      API_URL: ${{ vars.BACKEND_HEALTHCHECK_URL }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/download-artifact@v8
+        with:
+          name: backend-${{ github.sha }}
+          path: release
+
+      - name: Validate deployment settings
+        shell: bash
+        run: |
+          for name in DEPLOY_HOST DEPLOY_PORT DEPLOY_USER DEPLOY_SSH_KEY DEPLOY_KNOWN_HOSTS API_URL; do
+            if [ -z "${!name:-}" ]; then
+              echo "::error::$name is not configured for backend deployment"
+              exit 1
+            fi
+          done
+          [[ "$DEPLOY_HOST" =~ ^[A-Za-z0-9][A-Za-z0-9._-]*$ ]]
+          [[ "$DEPLOY_USER" =~ ^[a-z_][a-z0-9_-]*$ ]]
+          [[ "$DEPLOY_PORT" =~ ^[0-9]{1,5}$ ]]
+          ((10#$DEPLOY_PORT >= 1 && 10#$DEPLOY_PORT <= 65535))
+          [[ "$API_URL" =~ ^https?://[A-Za-z0-9._:-]+(/[A-Za-z0-9._/-]+)?/$ && "$API_URL" != *..* ]]
+
+      - name: Configure SSH
+        shell: bash
+        run: |
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$DEPLOY_SSH_KEY" | tr -d '\r' > "$HOME/.ssh/deploy_key"
+          printf '%s\n' "$DEPLOY_KNOWN_HOSTS" | tr -d '\r' > "$HOME/.ssh/known_hosts"
+          chmod 600 "$HOME/.ssh/deploy_key" "$HOME/.ssh/known_hosts"
+
+      - name: Upload and deploy the checked backend
+        shell: bash
+        run: |
+          remote_dir="/var/code/ablaki/.git/ablaki-deploy/incoming/$GITHUB_SHA"
+          options=(-i "$HOME/.ssh/deploy_key" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=yes -o UserKnownHostsFile="$HOME/.ssh/known_hosts" -o ServerAliveInterval=30 -o ServerAliveCountMax=6)
+          ssh "${options[@]}" -p "$DEPLOY_PORT" "$DEPLOY_USER@$DEPLOY_HOST" "mkdir -p '$remote_dir' && chmod 700 '$remote_dir'"
+          scp "${options[@]}" -P "$DEPLOY_PORT" release/vendor.tar.gz release/vendor.tar.gz.sha256 deploy/backend-deploy.sh deploy/database-fingerprint.php deploy/check-api.php "$DEPLOY_USER@$DEPLOY_HOST:$remote_dir/"
+          ssh "${options[@]}" -p "$DEPLOY_PORT" "$DEPLOY_USER@$DEPLOY_HOST" \
+            "bash '$remote_dir/backend-deploy.sh' '/var/code/ablaki' '$GITHUB_SHA' '$remote_dir/vendor.tar.gz' '$API_URL'"
