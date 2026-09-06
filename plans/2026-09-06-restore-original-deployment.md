@@ -14,7 +14,7 @@ Production и прежде запускался из `/var/www/api.ablakin.ru`.
 - [x] A2. Восстановить yii2/yii, AbstractMigration и Composer manifest из c875c7c.
 - [x] A3. Удалить добавленные runtime/migration/backup/health-скрипты и примеры инфраструктуры.
 - [x] A4. Удалить зависимость frontend deploy от добавленного backend /health; 44 проверки deploy и actionlint прошли.
-- [x] A5. Сверить прежний Compose project по списку контейнеров владельца: production apiablakinru (PHP/nginx/PostgreSQL Up 3 weeks), test ablaki. Нужно вернуть в production .env COMPOSE_PROJECT_NAME=apiablakinru.
+- [x] A5. Сверить прежний Compose project по списку контейнеров владельца: production apiablakinru (PHP/nginx/PostgreSQL Up 3 weeks), test ablaki. Владелец подтвердил отсутствие COMPOSE_PROJECT_NAME в исходной .env: удалить добавленную при автоматизации строку, не устанавливать новое явное значение.
 
 ## Группа B: Проверки и публикация
 
