@@ -22,7 +22,7 @@ fi
 printf 'git %s\n' "$*" >> "$TEST_LOG"
 case "$1 $2" in
   'rev-parse --show-toplevel') printf '%s\n' "$TEST_REPO" ;;
-  'branch --show-current') if [[ "$TEST_FAIL" = branch ]]; then echo work; else cat "$TEST_BRANCH_FILE"; fi ;;
+  'symbolic-ref --quiet') if [[ "$TEST_FAIL" = branch ]]; then echo work; else cat "$TEST_BRANCH_FILE"; fi ;;
   'rev-parse HEAD') cat "$TEST_HEAD" ;;
   'rev-parse origin/master'|'rev-parse origin/feature/test') if [[ "$TEST_FAIL" = stale ]]; then echo cccccccccccccccccccccccccccccccccccccccc; else echo "$TEST_SHA"; fi ;;
   'diff --quiet') [[ "$TEST_FAIL" != dirty ]] ;;

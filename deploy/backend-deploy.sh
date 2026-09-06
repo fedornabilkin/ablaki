@@ -36,14 +36,14 @@ cd "$repo"
 git() { command git -c safe.directory="$repo" "$@"; }
 [[ "$(git rev-parse --show-toplevel)" = "$repo" ]] || die 'Repository path mismatch'
 git check-ref-format --branch "$branch" > /dev/null
-previous_branch=$(git branch --show-current)
+previous_branch=$(git symbolic-ref --quiet --short HEAD)
 [[ -n "$previous_branch" ]] || die 'The VPS checkout must use a branch'
 [[ "$target" != production || "$previous_branch" = master ]] || die 'The production checkout must use master'
 git diff --quiet && git diff --cached --quiet || die 'Tracked local changes must be preserved before deployment'
 mkdir -p "$state/releases"
 exec 9>"$state/deploy.lock"
 flock -w 600 9 || die 'Another deployment holds the lock'
-[[ "$(git branch --show-current)" = "$previous_branch" ]] || die 'Checkout changed while waiting for the lock'
+[[ "$(git symbolic-ref --quiet --short HEAD)" = "$previous_branch" ]] || die 'Checkout changed while waiting for the lock'
 git diff --quiet && git diff --cached --quiet || die 'Tracked files changed while waiting for the lock'
 script_dir=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 archive=$(readlink -f "$archive")
