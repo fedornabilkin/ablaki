@@ -8,18 +8,24 @@ repo=${1:-}
 sha=${2:-}
 archive=${3:-}
 api_url=${4:-}
+deploy_root=${5:-}
 [[ "$repo" =~ ^/[A-Za-z0-9._/-]+$ && "$repo" != '/' && "$repo" != *..* ]] || die 'Invalid repository path'
+[[ "$deploy_root" =~ ^/[A-Za-z0-9._/-]+$ && "$deploy_root" != '/' && "$deploy_root" != *..* ]] || die 'Invalid deployment root'
 [[ "$sha" =~ ^[a-f0-9]{40}$ ]] || die 'Invalid release SHA'
 [[ "$api_url" =~ ^https?://[A-Za-z0-9._:-]+(/[A-Za-z0-9._/-]+)?/$ ]] || die 'Invalid API base URL (must end with /)'
 [[ "$api_url" != *..* ]] || die 'Invalid API base path'
 for tool in git docker make curl flock tar sha256sum readlink find mktemp cut tr chmod; do command -v "$tool" >/dev/null || die "$tool is required"; done
 repo=$(readlink -f "$repo")
+state=$(readlink -f "$deploy_root")
+[[ "$repo" != '/' && "$state" != '/' ]] || die 'Resolved paths must not be the root filesystem'
 [[ -d "$repo/.git" && -d "$repo/yii2" ]] || die 'Existing checkout with a .git directory is required'
+[[ -d "$state" && -w "$state" && -x "$state" ]] || die 'Prepare a writable deployment root for the SSH user first'
+case "$state/" in "$repo/"*) die 'Deployment root must be outside the checkout' ;; esac
+case "$repo/" in "$state/"*) die 'Checkout must be outside the deployment root' ;; esac
 cd "$repo"
 [[ "$(git rev-parse --show-toplevel)" = "$repo" ]] || die 'Repository path mismatch'
 [[ "$(git branch --show-current)" = master ]] || die 'The VPS checkout must use master'
 git diff --quiet && git diff --cached --quiet || die 'Tracked local changes must be preserved before deployment'
-state="$repo/.git/ablaki-deploy"
 mkdir -p "$state/releases" "$state/backups"
 exec 9>"$state/deploy.lock"
 flock -w 600 9 || die 'Another deployment holds the lock'

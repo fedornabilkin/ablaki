@@ -81,8 +81,10 @@ export PATH="$test_root/bin:$PATH"
 setup_case() {
   TEST_FAIL=$1
   TEST_REPO="$test_root/$1"
-  mkdir -p "$TEST_REPO/.git/ablaki-deploy/incoming/$TEST_SHA" "$TEST_REPO/yii2/vendor" "$TEST_REPO/yii2/api/runtime" "$TEST_REPO/deploy" "$TEST_REPO/package/vendor/bin"
+  TEST_DEPLOY="$test_root/$1-deploy"
+  mkdir -p "$TEST_DEPLOY/incoming/$TEST_SHA" "$TEST_REPO/.git" "$TEST_REPO/yii2/vendor" "$TEST_REPO/yii2/api/runtime" "$TEST_REPO/deploy" "$TEST_REPO/package/vendor/bin"
   TEST_REPO=$(cd "$TEST_REPO" && pwd)
+  TEST_DEPLOY=$(cd "$TEST_DEPLOY" && pwd)
   TEST_LOG="$TEST_REPO/commands.log"
   TEST_HEAD="$TEST_REPO/head.txt"
   : > "$TEST_LOG"
@@ -90,7 +92,7 @@ setup_case() {
   printf 'old vendor' > "$TEST_REPO/yii2/vendor/previous.txt"
   printf '{"locked":true}\n' > "$TEST_REPO/yii2/composer.lock"
   cp "$source_root/deploy/"{compose,migrate,start}.sh "$TEST_REPO/deploy/"
-  incoming="$TEST_REPO/.git/ablaki-deploy/incoming/$TEST_SHA"
+  incoming="$TEST_DEPLOY/incoming/$TEST_SHA"
   cp "$source_root/deploy/"{backend-deploy.sh,database-fingerprint.php,check-api.php} "$incoming/"
   printf 'new vendor' > "$TEST_REPO/package/vendor/autoload.php"
   printf 'composer fixture' > "$TEST_REPO/package/vendor/bin/deploy-composer.phar"
@@ -108,25 +110,35 @@ before() {
   second=$(grep -nF -- "$2" "$TEST_LOG" | head -n 1 | cut -d: -f1)
   [[ "$first" -lt "$second" ]] || { echo "Wrong order: $1 / $2" >&2; exit 1; }
 }
-for scenario in success stale dirty branch lock checksum identity backup migration health; do
+for scenario in success stale dirty branch lock checksum identity backup migration health root_inside root_parent root_missing wrong_archive; do
   setup_case "$scenario"
+  state_arg="$TEST_DEPLOY"
+  archive_arg="$incoming/vendor.tar.gz"
+  case "$scenario" in
+    root_inside) state_arg="$TEST_REPO/.deploy"; mkdir "$state_arg" ;;
+    root_parent) state_arg="$test_root" ;;
+    root_missing) state_arg="$test_root/absent-deploy" ;;
+    wrong_archive) archive_arg="$TEST_REPO/vendor.tar.gz"; cp "$incoming/vendor.tar.gz" "$archive_arg"; cp "$incoming/vendor.tar.gz.sha256" "$archive_arg.sha256" ;;
+  esac
   status=0
-  bash "$incoming/backend-deploy.sh" "$TEST_REPO" "$TEST_SHA" "$incoming/vendor.tar.gz" 'https://api.example.test/' > "$TEST_REPO/output.log" 2>&1 || status=$?
+  bash "$incoming/backend-deploy.sh" "$TEST_REPO" "$TEST_SHA" "$archive_arg" 'https://api.example.test/' "$state_arg" > "$TEST_REPO/output.log" 2>&1 || status=$?
   case "$scenario" in
     success)
       [[ "$status" = 0 ]] || { cat "$TEST_REPO/output.log"; exit 1; }
-      [[ "$(cat "$TEST_REPO/.git/ablaki-deploy/current")" = "$TEST_SHA" ]]
+      [[ "$(cat "$TEST_DEPLOY/current")" = "$TEST_SHA" ]]
       [[ "$(cat "$TEST_REPO/yii2/api/runtime/deploy-version.txt")" = "$TEST_SHA" ]]
       before 'stop nginx php composer' 'pg_dump'
       before 'pg_restore' 'git merge --ff-only'
       before 'check-platform-reqs' 'migrate/up'
       before 'migrate/up' 'up --detach --no-deps --force-recreate php nginx'
-      [[ -n "$(find "$TEST_REPO/.git/ablaki-deploy/releases" -path '*/previous-vendor/previous.txt' -print -quit)" ]]
+      [[ -n "$(find "$TEST_DEPLOY/releases" -path '*/previous-vendor/previous.txt' -print -quit)" ]]
+      [[ -n "$(find "$TEST_DEPLOY/backups" -name '*.dump' -print -quit)" ]]
+      [[ ! -e "$TEST_REPO/.git/ablaki-deploy" ]]
       ;;
     stale)
       [[ "$status" = 0 ]]; reject_log 'stop nginx'; reject_log 'git merge --ff-only'
       ;;
-    dirty|branch|lock|checksum)
+    dirty|branch|lock|checksum|root_inside|root_parent|root_missing|wrong_archive)
       [[ "$status" != 0 ]]; reject_log 'stop nginx'; reject_log 'git merge --ff-only'
       ;;
     identity|backup)
@@ -134,7 +146,7 @@ for scenario in success stale dirty branch lock checksum identity backup migrati
       [[ -f "$TEST_REPO/yii2/vendor/previous.txt" ]]
       ;;
     migration|health)
-      [[ "$status" != 0 ]]; expect_log 'stop nginx php'; [[ ! -f "$TEST_REPO/.git/ablaki-deploy/current" ]]
+      [[ "$status" != 0 ]]; expect_log 'stop nginx php'; [[ ! -f "$TEST_DEPLOY/current" ]]
       reject_log 'git reset'; reject_log 'migrate/down'
       if [[ "$scenario" = migration ]]; then reject_log 'up --detach --no-deps --force-recreate php nginx'; fi
       ;;
