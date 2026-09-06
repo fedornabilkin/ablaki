@@ -34,6 +34,10 @@ $app = new Application([
         'user' => ['identityClass' => User::class, 'enableSession' => false, 'enableAutoLogin' => false],
         'response' => ['format' => \yii\web\Response::FORMAT_JSON],
         'cache' => ['class' => \yii\caching\ArrayCache::class],
+        'i18n' => ['translations' => ['user*' => [
+            'class' => \yii\i18n\PhpMessageSource::class,
+            'basePath' => '@vendor/dektrium/yii2-user/messages',
+        ]]],
     ],
 ]);
 $app->request->getHeaders()->set('Accept', 'application/json');
