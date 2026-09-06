@@ -17,9 +17,10 @@
 - Отдельно проверять Yii debug/env и секреты; frontend workflow не должен менять эти настройки.
 
 ## Публикация
-- Push в master запускает backend CI и SSH-деплой в существующий `/var/code/ablaki`; настройка доступа описана в [инструкции](../docs/deployment-github-vps.md).
-- Служебный каталог backend-деплоя — `/opt/ablaki-backend`: incoming, releases, backups и состояние публикации. Он отделён от рабочего checkout, как `/opt/ablaki-frontend` отделён от `/var/www/ablakin.ru`.
+- Push в master запускает backend CI и production SSH-деплой в `/var/www/api.ablakin.ru`; настройка доступа и первого запуска описана в [инструкции](../docs/production-test-deployment.md).
+- Test запускается вручную для выбранной ветки и использует существующий `/var/code/ablaki`. Секреты, URL, Compose project, volumes, сеть и порты окружений разделяются; test не использует production-настройки по умолчанию.
+- Служебные каталоги backend-деплоя — `/opt/ablaki-backend` и `/opt/ablaki-backend-test`: incoming, releases, backups и состояние публикации. Они отделены от checkout. Production frontend остаётся в `/var/www/ablakin.ru`, test frontend публикуется только в `/var/code/ablaki-front/project/dist`.
 - Сохранять Compose project, локальную конфигурацию и volumes. Установка vendor, миграции и перезапуск PHP выполняются последовательно, с остановленным API/cron и проверенной копией используемой PostgreSQL-БД.
-- Публикация считается успешной только после проверки внешнего API и SHA. Ошибка после изменения кода оставляет API остановленным; автоматический откат данных запрещён. До изменения кода можно возобновить прежние контейнеры.
+- До остановки API проверять принадлежность контейнера и volume выбранному checkout/project и APP_ENVIRONMENT. Публикация считается успешной только после проверки внутреннего и внешнего API, SHA и environment. Ошибка после изменения кода оставляет API остановленным; автоматический откат данных запрещён. До изменения кода можно возобновить прежние контейнеры.
 - Доступы GitHub/VPS и первый серверный запуск проверяются отдельно; наличие workflow не подтверждает подключённый автодеплой.
 - Успешные локальные проверки не означают, что релиз готов к production: незакрытые блокеры перечисляются в [плане](../plans/2026-09-05-critical-refactoring.md).

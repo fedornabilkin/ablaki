@@ -1,27 +1,21 @@
-FROM php:7.3.2-fpm
+FROM php:7.3.33-fpm-buster
 
-RUN apt-get update \
-&& apt-get install -y libpq-dev libicu-dev libpng-dev libjpeg62-turbo-dev cron \
-&& apt-get clean \
-&& apt-get autoclean \
-&& apt-get autoremove -y --force-yes \
-&& rm -rf /var/lib/apt/lists/* \
-&& docker-php-ext-configure gd --with-gd --with-jpeg-dir=/usr/lib64 \
-&& docker-php-ext-install pdo pdo_pgsql pdo_mysql intl gd \
-&& docker-php-ext-enable gd
-
-#ARG ENV
-#COPY xdebugInstall.sh xdebugInstall.sh
-#RUN chmod u+x xdebugInstall.sh && ./xdebugInstall.sh
-
-RUN export XDEBUG_INI=/usr/local/etc/php/conf.d/docker-php-ext-xdebug.ini \
-    && echo '' >> $XDEBUG_INI \
-    && echo 'xdebug.client_host=192.168.240.1' >> $XDEBUG_INI \
-    && echo 'xdebug.mode=debug' >> $XDEBUG_INI \
-    && echo 'xdebug.start_with_request=yes' >> $XDEBUG_INI \
-    && echo 'xdebug.remote_connectback=off' >> $XDEBUG_INI \
-    && echo 'xdebug.log_level=0' >> $XDEBUG_INI \
-    && echo 'xdebug.client_port=9003' >> $XDEBUG_INI
+# Buster is archived. Keep repository signature verification enabled; only the
+# expiration check is disabled for these frozen repositories.
+# https://www.debian.org/distrib/archive
+RUN set -eux; \
+    printf '%s\n' \
+        'deb [check-valid-until=no] https://archive.debian.org/debian buster main' \
+        'deb [check-valid-until=no] https://archive.debian.org/debian-security buster/updates main' \
+        > /etc/apt/sources.list; \
+    apt-get update; \
+    apt-get install -y --no-install-recommends \
+        cron libpq-dev libicu-dev libpng-dev libjpeg62-turbo-dev libfreetype6-dev libzip-dev; \
+    docker-php-ext-configure gd --with-freetype-dir=/usr/include/ --with-jpeg-dir=/usr/include/; \
+    docker-php-ext-install -j"$(nproc)" pdo_pgsql pdo_mysql intl gd zip opcache; \
+    cp "$PHP_INI_DIR/php.ini-production" "$PHP_INI_DIR/php.ini"; \
+    rm -rf /var/lib/apt/lists/*; \
+    php -r 'if (PHP_VERSION_ID !== 70333) exit(1); foreach (["PDO", "pdo_pgsql", "pdo_mysql", "pdo_sqlite", "mbstring", "intl", "gd", "zip", "curl", "openssl", "json", "iconv", "Zend OPcache"] as $extension) { if (!extension_loaded($extension)) { fwrite(STDERR, "Missing extension: " . $extension . PHP_EOL); exit(1); } }'
 
 COPY ./cron /var/spool/cron/crontabs/root
 COPY ./entrypoint.sh /entrypoint.sh
@@ -29,4 +23,5 @@ COPY ./entrypoint.sh /entrypoint.sh
 RUN chmod a+x /entrypoint.sh && \
     chmod 600 /var/spool/cron/crontabs/root
 
-CMD /entrypoint.sh
+ENTRYPOINT ["/bin/bash", "/entrypoint.sh"]
+CMD ["php-fpm"]

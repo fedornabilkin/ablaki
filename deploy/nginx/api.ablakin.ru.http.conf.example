@@ -1,0 +1,12 @@
+# Initial certificate issuance: expose only the ACME challenge before API setup.
+server {
+    listen 80;
+    server_name api.ablakin.ru;
+
+    location ^~ /.well-known/acme-challenge/ {
+        root /var/www/letsencrypt;
+    }
+    location / {
+        return 503;
+    }
+}

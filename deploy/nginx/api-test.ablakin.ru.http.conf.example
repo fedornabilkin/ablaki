@@ -1,0 +1,12 @@
+# Placeholder test domain; replace it with the chosen test API domain.
+server {
+    listen 80;
+    server_name api-test.ablakin.ru;
+
+    location ^~ /.well-known/acme-challenge/ {
+        root /var/www/letsencrypt;
+    }
+    location / {
+        return 503;
+    }
+}

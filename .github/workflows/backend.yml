@@ -1,4 +1,4 @@
-name: Backend CI and production deploy
+name: Backend CI and deployment
 
 on:
   push:
@@ -6,6 +6,13 @@ on:
   pull_request:
     branches: [master]
   workflow_dispatch:
+    inputs:
+      target:
+        description: Deployment environment (production requires master)
+        type: choice
+        options: [test, production]
+        default: test
+        required: true
 
 permissions:
   contents: read
@@ -18,6 +25,15 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
+      - name: Validate requested target
+        env:
+          TARGET: ${{ inputs.target || 'production' }}
+        run: |
+          if [[ "$GITHUB_EVENT_NAME" = workflow_dispatch ]]; then
+            [[ "$GITHUB_REF_TYPE" = branch ]]
+            [[ "$TARGET" = test || ( "$TARGET" = production && "$GITHUB_REF_NAME" = master ) ]]
+          fi
+
       - name: Set up the supported PHP runtime
         uses: shivammathur/setup-php@v2
         with:
@@ -28,11 +44,12 @@ jobs:
 
       - name: Check deployment scripts
         run: |
-          for script in deploy/*.sh docker/php/entrypoint.sh; do bash -n "$script"; done
+          for script in deploy/*.sh deploy/tests/*.sh docker/php/entrypoint.sh; do bash -n "$script"; done
           php -l deploy/database-fingerprint.php
           php -l deploy/check-api.php
           php -l yii2/yii
           bash deploy/tests/pipeline.sh
+          bash deploy/tests/compose-config.sh
 
       - name: Install locked production dependencies
         working-directory: yii2
@@ -56,7 +73,6 @@ jobs:
           done
 
       - name: Package checked dependencies
-        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/master'
         shell: bash
         run: |
           mkdir -p release yii2/vendor/bin
@@ -67,7 +83,6 @@ jobs:
           (cd release && sha256sum vendor.tar.gz > vendor.tar.gz.sha256)
 
       - name: Save release artifact
-        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/master'
         uses: actions/upload-artifact@v7
         with:
           name: backend-${{ github.sha }}
@@ -75,23 +90,42 @@ jobs:
           if-no-files-found: error
           retention-days: 14
 
-  deploy:
-    name: Deploy backend to production
+  runtime:
+    name: PHP image and PostgreSQL installation
     needs: checks
-    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/master'
+    runs-on: ubuntu-22.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/download-artifact@v8
+        with:
+          name: backend-${{ github.sha }}
+          path: release
+      - name: Build the production PHP image
+        run: bash deploy/tests/report-check.sh docker build --tag ablaki-php-ci docker/php
+      - name: Validate API nginx configurations
+        run: bash deploy/tests/report-check.sh bash deploy/tests/nginx-config.sh
+      - name: Verify fresh migrations and backup restore in disposable PostgreSQL
+        run: bash deploy/tests/report-check.sh bash deploy/tests/first-install.sh
+
+  deploy:
+    name: Deploy backend to ${{ inputs.target || 'production' }}
+    needs: [checks, runtime]
+    if: github.event_name != 'pull_request' && (github.ref == 'refs/heads/master' || (github.event_name == 'workflow_dispatch' && inputs.target == 'test' && github.ref_type == 'branch'))
     runs-on: ubuntu-22.04
     timeout-minutes: 30
-    environment: production-backend
+    environment: ${{ inputs.target == 'test' && 'test-backend' || 'production-backend' }}
     concurrency:
-      group: production-backend
+      group: ${{ inputs.target == 'test' && 'test-backend' || 'production-backend' }}
       cancel-in-progress: false
     env:
-      DEPLOY_HOST: ${{ secrets.BACKEND_DEPLOY_HOST }}
-      DEPLOY_PORT: ${{ secrets.BACKEND_DEPLOY_PORT }}
-      DEPLOY_USER: ${{ secrets.BACKEND_DEPLOY_USER }}
-      DEPLOY_SSH_KEY: ${{ secrets.BACKEND_DEPLOY_SSH_KEY }}
-      DEPLOY_KNOWN_HOSTS: ${{ secrets.BACKEND_DEPLOY_KNOWN_HOSTS }}
-      API_URL: ${{ vars.BACKEND_HEALTHCHECK_URL }}
+      TARGET: ${{ inputs.target || 'production' }}
+      DEPLOY_HOST: ${{ secrets[inputs.target == 'test' && 'TEST_BACKEND_DEPLOY_HOST' || 'BACKEND_DEPLOY_HOST'] }}
+      DEPLOY_PORT: ${{ secrets[inputs.target == 'test' && 'TEST_BACKEND_DEPLOY_PORT' || 'BACKEND_DEPLOY_PORT'] }}
+      DEPLOY_USER: ${{ secrets[inputs.target == 'test' && 'TEST_BACKEND_DEPLOY_USER' || 'BACKEND_DEPLOY_USER'] }}
+      DEPLOY_SSH_KEY: ${{ secrets[inputs.target == 'test' && 'TEST_BACKEND_DEPLOY_SSH_KEY' || 'BACKEND_DEPLOY_SSH_KEY'] }}
+      DEPLOY_KNOWN_HOSTS: ${{ secrets[inputs.target == 'test' && 'TEST_BACKEND_DEPLOY_KNOWN_HOSTS' || 'BACKEND_DEPLOY_KNOWN_HOSTS'] }}
+      API_URL: ${{ vars[inputs.target == 'test' && 'TEST_BACKEND_HEALTHCHECK_URL' || 'BACKEND_HEALTHCHECK_URL'] }}
     steps:
       - uses: actions/checkout@v7
 
@@ -114,6 +148,12 @@ jobs:
           [[ "$DEPLOY_PORT" =~ ^[0-9]{1,5}$ ]]
           ((10#$DEPLOY_PORT >= 1 && 10#$DEPLOY_PORT <= 65535))
           [[ "$API_URL" =~ ^https?://[A-Za-z0-9._:-]+(/[A-Za-z0-9._/-]+)?/$ && "$API_URL" != *..* ]]
+          if [[ "$TARGET" = production ]]; then
+            [[ "$API_URL" = 'https://api.ablakin.ru/' ]]
+          else
+            api_host=${API_URL#*://}; api_host=${api_host%%/*}; api_host=${api_host%%:*}
+            [[ "${api_host,,}" != api.ablakin.ru ]]
+          fi
 
       - name: Configure SSH
         shell: bash
@@ -126,10 +166,17 @@ jobs:
       - name: Upload and deploy the checked backend
         shell: bash
         run: |
-          deploy_root='/opt/ablaki-backend'
+          if [[ "$TARGET" = test ]]; then
+            deploy_root='/opt/ablaki-backend-test'
+            repo_root='/var/code/ablaki'
+          else
+            deploy_root='/opt/ablaki-backend'
+            repo_root='/var/www/api.ablakin.ru'
+          fi
+          [[ "$GITHUB_REF_NAME" =~ ^[A-Za-z0-9][A-Za-z0-9._/-]*$ && "$GITHUB_REF_NAME" != *..* ]]
           remote_dir="$deploy_root/incoming/$GITHUB_SHA"
           options=(-i "$HOME/.ssh/deploy_key" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=yes -o UserKnownHostsFile="$HOME/.ssh/known_hosts" -o ServerAliveInterval=30 -o ServerAliveCountMax=6)
           ssh "${options[@]}" -p "$DEPLOY_PORT" "$DEPLOY_USER@$DEPLOY_HOST" "test -d '$deploy_root' && test -w '$deploy_root' && umask 077 && mkdir -p '$remote_dir' && chmod 700 '$remote_dir'"
           scp "${options[@]}" -P "$DEPLOY_PORT" release/vendor.tar.gz release/vendor.tar.gz.sha256 deploy/backend-deploy.sh deploy/database-fingerprint.php deploy/check-api.php "$DEPLOY_USER@$DEPLOY_HOST:$remote_dir/"
           ssh "${options[@]}" -p "$DEPLOY_PORT" "$DEPLOY_USER@$DEPLOY_HOST" \
-            "bash '$remote_dir/backend-deploy.sh' '/var/code/ablaki' '$GITHUB_SHA' '$remote_dir/vendor.tar.gz' '$API_URL' '$deploy_root'"
+            "bash '$remote_dir/backend-deploy.sh' '$repo_root' '$GITHUB_SHA' '$remote_dir/vendor.tar.gz' '$API_URL' '$deploy_root' '$GITHUB_REF_NAME' '$TARGET'"

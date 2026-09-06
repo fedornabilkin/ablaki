@@ -21,6 +21,7 @@ try {
     if (($health['status'] ?? '') !== 'ok' || ($health['portalListsVersion'] ?? 0) !== 1
         || !isset($health['revision']) || !preg_match('/^[a-f0-9]{40}$/D', $health['revision'])
         || (isset($argv[2]) && $health['revision'] !== $argv[2])) throw new RuntimeException('Unexpected API release');
+    if (isset($argv[3]) && ($health['environment'] ?? '') !== $argv[3]) throw new RuntimeException('Unexpected API environment');
     $online = getApiJson($base . 'v1/users/online-count');
     if (!isset($online['count'], $online['windowSeconds']) || !is_int($online['count']) || $online['count'] < 0 || !is_int($online['windowSeconds']) || $online['windowSeconds'] < 1) throw new RuntimeException('Missing presence API');
     $comments = getApiJson($base . 'v1/forum-comment?envelope=1&per-page=1');

@@ -45,6 +45,8 @@ if ($runtime === false || !unlink($runtime) || !mkdir($runtime, 0700)) {
     throw new RuntimeException('Cannot create isolated health runtime.');
 }
 $marker = $runtime . '/deploy-version.txt';
+$previousEnvironment = getenv('APP_ENVIRONMENT');
+putenv('APP_ENVIRONMENT=production');
 try {
     $app = new Application([
         'id' => 'health-regression', 'basePath' => dirname(__DIR__, 2), 'runtimePath' => $runtime,
@@ -76,9 +78,17 @@ try {
     $db->createCommand('DROP TABLE user_presence')->execute();
     $db->createCommand('CREATE TABLE user_presence (user_id INTEGER PRIMARY KEY, last_seen_at INTEGER)')->execute();
     list($status, $data, $output) = healthResponse($controller);
-    healthCheck($status === 200 && $data === ['status' => 'ok', 'revision' => $sha, 'portalListsVersion' => 1]
+    healthCheck($status === 200 && $data === ['status' => 'ok', 'revision' => $sha, 'portalListsVersion' => 1, 'environment' => 'production']
         && $output === '', 'ready schema returns 200, exact deployed SHA and contract version');
     healthCheck($app->response->headers->get('Cache-Control') === 'no-store', 'successful readiness response cannot be cached');
+
+    putenv('APP_ENVIRONMENT');
+    healthUnavailable($controller, 'missing deployment environment returns 503');
+    putenv('APP_ENVIRONMENT=staging');
+    healthUnavailable($controller, 'unknown deployment environment returns 503');
+    putenv('APP_ENVIRONMENT=test');
+    list($status, $data) = healthResponse($controller);
+    healthCheck($status === 200 && $data['environment'] === 'test', 'test API identifies its environment');
 
     $app->set('db', new class extends yii\base\Component {
         public function getTableSchema($table, $refresh = false)
@@ -89,6 +99,7 @@ try {
     healthUnavailable($controller, 'database exception is reduced to 503 without error details or trace');
     echo "Health checks passed using isolated SQLite and temporary runtime only.\n";
 } finally {
+    putenv($previousEnvironment === false ? 'APP_ENVIRONMENT' : 'APP_ENVIRONMENT=' . $previousEnvironment);
     if (isset($db)) $db->close();
     if (is_file($marker)) unlink($marker);
     if (is_dir($runtime)) rmdir($runtime);

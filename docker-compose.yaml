@@ -11,9 +11,9 @@ services:
       - ./docker/nginx/add/:/etc/nginx/add/
       - ./yii2/:/web/yii2/
     ports:
-      - ${PORT_NGINX_API}:80
-      - ${PORT_NGINX_FRONT}:88
-      - ${PORT_NGINX_ADMIN}:8080
+      - "${APP_BIND_IP:-127.0.0.1}:${PORT_NGINX_API}:80"
+      - "${APP_BIND_IP:-127.0.0.1}:${PORT_NGINX_FRONT}:88"
+      - "${APP_BIND_IP:-127.0.0.1}:${PORT_NGINX_ADMIN}:8080"
     links:
       - php
 
@@ -24,10 +24,12 @@ services:
       dockerfile: Dockerfile
     env_file:
       - .env
+    environment:
+      APP_ENVIRONMENT: ${APP_ENVIRONMENT:-test}
     volumes:
       - ./yii2/:/web/yii2/
-      - ./.env:/etc/environment
-      - ./docker/php/entrypoint.sh:/entrypoint.sh
+      - ./.env:/etc/environment:ro
+      - ./docker/php/entrypoint.sh:/entrypoint.sh:ro
     entrypoint: ["/bin/bash", "/entrypoint.sh"]
     command: ["php-fpm"]
 
@@ -44,7 +46,7 @@ services:
     image: postgres:11
     restart: unless-stopped
     ports:
-      - ${PG_DB_PORT}:5432
+      - "${APP_BIND_IP:-127.0.0.1}:${PG_DB_PORT}:5432"
     volumes:
       - postgresdata:/data/postgres
     environment:
@@ -75,4 +77,4 @@ networks:
     ipam:
       driver: default
       config:
-        - subnet: 192.168.22.0/24
+        - subnet: ${COMPOSE_SUBNET:-192.168.22.0/24}

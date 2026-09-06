@@ -5,7 +5,7 @@ source_root=$(cd "$(dirname "$0")/../.." && pwd)
 test_root=$(mktemp -d)
 trap 'rm -rf -- "$test_root"' EXIT
 mkdir -p "$test_root/bin"
-export TEST_LOG TEST_REPO TEST_HEAD TEST_SHA TEST_OLD TEST_FAIL TEST_FINGERPRINT
+export TEST_LOG TEST_REPO TEST_HEAD TEST_SHA TEST_OLD TEST_FAIL TEST_FINGERPRINT TEST_BRANCH_FILE TEST_TARGET
 TEST_SHA=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 TEST_OLD=bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
 TEST_FINGERPRINT=$(printf 'cluster/database' | sha256sum | cut -d' ' -f1)
@@ -15,11 +15,15 @@ set -eu
 printf 'git %s\n' "$*" >> "$TEST_LOG"
 case "$1 $2" in
   'rev-parse --show-toplevel') printf '%s\n' "$TEST_REPO" ;;
-  'branch --show-current') if [[ "$TEST_FAIL" = branch ]]; then echo work; else echo master; fi ;;
+  'branch --show-current') if [[ "$TEST_FAIL" = branch ]]; then echo work; else cat "$TEST_BRANCH_FILE"; fi ;;
   'rev-parse HEAD') cat "$TEST_HEAD" ;;
-  'rev-parse origin/master') if [[ "$TEST_FAIL" = stale ]]; then echo cccccccccccccccccccccccccccccccccccccccc; else echo "$TEST_SHA"; fi ;;
+  'rev-parse origin/master'|'rev-parse origin/feature/test') if [[ "$TEST_FAIL" = stale ]]; then echo cccccccccccccccccccccccccccccccccccccccc; else echo "$TEST_SHA"; fi ;;
   'diff --quiet') [[ "$TEST_FAIL" != dirty ]] ;;
-  'diff --cached'|'diff --name-only'|'fetch --no-tags'|'merge-base --is-ancestor') ;;
+  'diff --cached'|'diff --name-only'|'fetch --no-tags'|'check-ref-format --branch') ;;
+  'merge-base --is-ancestor') [[ "$TEST_FAIL" != diverged ]] ;;
+  'show-ref --verify') [[ "$TEST_FAIL" != new_branch ]] ;;
+  'checkout feature/test') printf 'feature/test\n' > "$TEST_BRANCH_FILE" ;;
+  'checkout -b') printf '%s\n' "$3" > "$TEST_BRANCH_FILE" ;;
   'merge --ff-only')
     [[ "$(umask)" = 0022 ]] || { echo 'Checkout must be readable by PHP/nginx' >&2; exit 1; }
     printf '%s\n' "$TEST_SHA" > "$TEST_HEAD"
@@ -32,12 +36,26 @@ cat > "$test_root/bin/docker" <<'MOCK'
 #!/usr/bin/env bash
 set -eu
 printf 'docker %s\n' "$*" >> "$TEST_LOG"
+if [[ "$1" = inspect ]]; then
+  case "$*" in
+    *working_dir*) if [[ "$TEST_FAIL" = wrong_checkout ]]; then echo /another/checkout; else echo "$TEST_REPO"; fi ;;
+    *Mounts*) echo fixture-pg-volume ;;
+    *) if [[ "$TEST_TARGET" = production || "$TEST_FAIL" = wrong_project ]]; then echo ablaki-production; else echo ablaki; fi ;;
+  esac
+  exit 0
+fi
+if [[ "$1 $2" = 'volume inspect' ]]; then
+  if [[ "$TEST_FAIL" = shared_volume ]]; then echo another-project;
+  elif [[ "$TEST_TARGET" = production ]]; then echo ablaki-production; else echo ablaki; fi
+  exit 0
+fi
 [[ "$1" = compose ]] || exit 1
 shift
 case "$1" in
   version|config|stop|start|up|build) exit 0 ;;
   ps) if [[ "$*" = 'ps -q postgres' ]]; then echo fixture-postgres; fi; exit 0 ;;
   run)
+    if [[ "$*" = *'getenv("APP_ENVIRONMENT")'* && "$TEST_FAIL" = wrong_environment ]]; then exit 1; fi
     if [[ "$*" = *'migrate/up'* && "$TEST_FAIL" = migration ]]; then exit 1; fi
     if [[ "$*" = *'--entrypoint php php' ]]; then
       cat > /dev/null
@@ -67,7 +85,7 @@ cat > "$test_root/bin/curl" <<'MOCK'
 set -eu
 printf 'curl %s\n' "$*" >> "$TEST_LOG"
 [[ "$TEST_FAIL" != health ]]
-printf '{"status":"ok","revision":"%s","portalListsVersion":1}' "$TEST_SHA"
+printf '{"status":"ok","revision":"%s","portalListsVersion":1,"environment":"%s"}' "$TEST_SHA" "$TEST_TARGET"
 MOCK
 cat > "$test_root/bin/flock" <<'MOCK'
 #!/usr/bin/env bash
@@ -87,6 +105,9 @@ setup_case() {
   TEST_DEPLOY=$(cd "$TEST_DEPLOY" && pwd)
   TEST_LOG="$TEST_REPO/commands.log"
   TEST_HEAD="$TEST_REPO/head.txt"
+  TEST_BRANCH_FILE="$TEST_REPO/branch.txt"
+  TEST_TARGET=production
+  printf 'master\n' > "$TEST_BRANCH_FILE"
   : > "$TEST_LOG"
   printf '%s\n' "$TEST_OLD" > "$TEST_HEAD"
   printf 'old vendor' > "$TEST_REPO/yii2/vendor/previous.txt"
@@ -110,20 +131,26 @@ before() {
   second=$(grep -nF -- "$2" "$TEST_LOG" | head -n 1 | cut -d: -f1)
   [[ "$first" -lt "$second" ]] || { echo "Wrong order: $1 / $2" >&2; exit 1; }
 }
-for scenario in success stale dirty branch lock checksum identity backup migration health root_inside root_parent root_missing wrong_archive; do
+for scenario in success stale dirty branch lock checksum identity backup migration health root_inside root_parent root_missing wrong_archive test_branch new_branch diverged wrong_checkout wrong_project shared_volume wrong_environment test_production_api production_branch; do
   setup_case "$scenario"
   state_arg="$TEST_DEPLOY"
   archive_arg="$incoming/vendor.tar.gz"
+  branch_arg=master
+  api_arg='https://api.example.test/'
   case "$scenario" in
     root_inside) state_arg="$TEST_REPO/.deploy"; mkdir "$state_arg" ;;
     root_parent) state_arg="$test_root" ;;
     root_missing) state_arg="$test_root/absent-deploy" ;;
     wrong_archive) archive_arg="$TEST_REPO/vendor.tar.gz"; cp "$incoming/vendor.tar.gz" "$archive_arg"; cp "$incoming/vendor.tar.gz.sha256" "$archive_arg.sha256" ;;
+    test_branch|new_branch) TEST_TARGET=test; branch_arg=feature/test ;;
+    wrong_project) TEST_TARGET=test ;;
+    test_production_api) TEST_TARGET=test; api_arg='https://api.ablakin.ru/' ;;
+    production_branch) branch_arg=feature/test ;;
   esac
   status=0
-  bash "$incoming/backend-deploy.sh" "$TEST_REPO" "$TEST_SHA" "$archive_arg" 'https://api.example.test/' "$state_arg" > "$TEST_REPO/output.log" 2>&1 || status=$?
+  bash "$incoming/backend-deploy.sh" "$TEST_REPO" "$TEST_SHA" "$archive_arg" "$api_arg" "$state_arg" "$branch_arg" "$TEST_TARGET" > "$TEST_REPO/output.log" 2>&1 || status=$?
   case "$scenario" in
-    success)
+    success|test_branch|new_branch)
       [[ "$status" = 0 ]] || { cat "$TEST_REPO/output.log"; exit 1; }
       [[ "$(cat "$TEST_DEPLOY/current")" = "$TEST_SHA" ]]
       [[ "$(cat "$TEST_REPO/yii2/api/runtime/deploy-version.txt")" = "$TEST_SHA" ]]
@@ -134,11 +161,12 @@ for scenario in success stale dirty branch lock checksum identity backup migrati
       [[ -n "$(find "$TEST_DEPLOY/releases" -path '*/previous-vendor/previous.txt' -print -quit)" ]]
       [[ -n "$(find "$TEST_DEPLOY/backups" -name '*.dump' -print -quit)" ]]
       [[ ! -e "$TEST_REPO/.git/ablaki-deploy" ]]
+      [[ "$(cat "$TEST_BRANCH_FILE")" = "$branch_arg" ]]
       ;;
     stale)
       [[ "$status" = 0 ]]; reject_log 'stop nginx'; reject_log 'git merge --ff-only'
       ;;
-    dirty|branch|lock|checksum|root_inside|root_parent|root_missing|wrong_archive)
+    dirty|branch|lock|checksum|root_inside|root_parent|root_missing|wrong_archive|diverged|wrong_checkout|wrong_project|shared_volume|wrong_environment|test_production_api|production_branch)
       [[ "$status" != 0 ]]; reject_log 'stop nginx'; reject_log 'git merge --ff-only'
       ;;
     identity|backup)

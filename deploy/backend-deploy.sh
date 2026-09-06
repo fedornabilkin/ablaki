@@ -9,11 +9,18 @@ sha=${2:-}
 archive=${3:-}
 api_url=${4:-}
 deploy_root=${5:-}
+branch=${6:-master}
+target=${7:-production}
+[[ "$target" = production || "$target" = test ]] || die 'Invalid deployment environment'
+[[ "$branch" =~ ^[A-Za-z0-9][A-Za-z0-9._/-]*$ && "$branch" != *..* ]] || die 'Invalid branch'
+[[ "$target" != production || "$branch" = master ]] || die 'Production only accepts master'
 [[ "$repo" =~ ^/[A-Za-z0-9._/-]+$ && "$repo" != '/' && "$repo" != *..* ]] || die 'Invalid repository path'
 [[ "$deploy_root" =~ ^/[A-Za-z0-9._/-]+$ && "$deploy_root" != '/' && "$deploy_root" != *..* ]] || die 'Invalid deployment root'
 [[ "$sha" =~ ^[a-f0-9]{40}$ ]] || die 'Invalid release SHA'
 [[ "$api_url" =~ ^https?://[A-Za-z0-9._:-]+(/[A-Za-z0-9._/-]+)?/$ ]] || die 'Invalid API base URL (must end with /)'
 [[ "$api_url" != *..* ]] || die 'Invalid API base path'
+api_host=${api_url#*://}; api_host=${api_host%%/*}; api_host=${api_host%%:*}
+[[ "$target" != test || "${api_host,,}" != api.ablakin.ru ]] || die 'Test cannot use the production API host'
 for tool in git docker make curl flock tar sha256sum readlink find mktemp cut tr chmod; do command -v "$tool" >/dev/null || die "$tool is required"; done
 repo=$(readlink -f "$repo")
 state=$(readlink -f "$deploy_root")
@@ -24,12 +31,15 @@ case "$state/" in "$repo/"*) die 'Deployment root must be outside the checkout' 
 case "$repo/" in "$state/"*) die 'Checkout must be outside the deployment root' ;; esac
 cd "$repo"
 [[ "$(git rev-parse --show-toplevel)" = "$repo" ]] || die 'Repository path mismatch'
-[[ "$(git branch --show-current)" = master ]] || die 'The VPS checkout must use master'
+git check-ref-format --branch "$branch" > /dev/null
+previous_branch=$(git branch --show-current)
+[[ -n "$previous_branch" ]] || die 'The VPS checkout must use a branch'
+[[ "$target" != production || "$previous_branch" = master ]] || die 'The production checkout must use master'
 git diff --quiet && git diff --cached --quiet || die 'Tracked local changes must be preserved before deployment'
 mkdir -p "$state/releases" "$state/backups"
 exec 9>"$state/deploy.lock"
 flock -w 600 9 || die 'Another deployment holds the lock'
-[[ "$(git branch --show-current)" = master ]] || die 'Checkout changed while waiting for the lock'
+[[ "$(git branch --show-current)" = "$previous_branch" ]] || die 'Checkout changed while waiting for the lock'
 git diff --quiet && git diff --cached --quiet || die 'Tracked files changed while waiting for the lock'
 script_dir=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 archive=$(readlink -f "$archive")
@@ -48,17 +58,32 @@ while IFS= read -r -d '' link; do
 done < <(find "$release/vendor" -type l -print0)
 chmod -R u=rwX,go=rX "$release/vendor"
 
-git fetch --no-tags origin master
-[[ "$(git rev-parse origin/master)" = "$sha" ]] || { log 'A newer master exists; skipping this outdated deployment'; exit 0; }
+git fetch --no-tags origin "$branch"
+[[ "$(git rev-parse "origin/$branch")" = "$sha" ]] || { log 'A newer branch revision exists; skipping this outdated deployment'; exit 0; }
 previous=$(git rev-parse HEAD)
-git merge-base --is-ancestor "$previous" "$sha" || die 'VPS master has commits absent from the release'
+if git show-ref --verify --quiet "refs/heads/$branch"; then
+  git merge-base --is-ancestor "refs/heads/$branch" "$sha" || die 'The VPS target branch has commits absent from the release'
+fi
 expected_lock=$(tr -d '\r\n' < "$release/composer.lock.sha256")
 actual_lock=$(git show "$sha:yii2/composer.lock" | sha256sum | cut -d' ' -f1)
 [[ "$expected_lock" =~ ^[a-f0-9]{64}$ && "$actual_lock" = "$expected_lock" ]] || die 'Vendor was built from another lock file'
 if docker compose version >/dev/null 2>&1; then compose=(docker compose); else compose=(docker-compose); fi
 "${compose[@]}" config --quiet
-[[ -n "$("${compose[@]}" ps -q postgres)" ]] || die 'Existing PostgreSQL container must be running'
-"${compose[@]}" run --rm --no-deps -T --entrypoint php php -r 'exit(PHP_VERSION_ID >= 70300 ? 0 : 1);'
+postgres_id=$("${compose[@]}" ps -q postgres)
+[[ -n "$postgres_id" ]] || die 'Prepare the environment PostgreSQL container and database before the first deployment'
+container_repo=$(docker inspect --format '{{ index .Config.Labels "com.docker.compose.project.working_dir" }}' "$postgres_id")
+[[ -n "$container_repo" && "$(readlink -f "$container_repo")" = "$repo" ]] || die 'PostgreSQL belongs to another checkout'
+project=$(docker inspect --format '{{ index .Config.Labels "com.docker.compose.project" }}' "$postgres_id")
+[[ "$project" =~ ^[a-z0-9][a-z0-9_-]*$ ]] || die 'Missing Compose project identity'
+if [[ "$target" = production ]]; then
+  [[ "$project" = ablaki-production ]] || die 'Production requires its own ablaki-production Compose project'
+else
+  [[ "$project" != ablaki-production ]] || die 'Test cannot use the production Compose project'
+fi
+volume=$(docker inspect --format '{{ range .Mounts }}{{ if eq .Destination "/data/postgres" }}{{ .Name }}{{ end }}{{ end }}' "$postgres_id")
+[[ -n "$volume" ]] || die 'PostgreSQL requires a dedicated named data volume'
+[[ "$(docker volume inspect --format '{{ index .Labels "com.docker.compose.project" }}' "$volume")" = "$project" ]] || die 'PostgreSQL volume belongs to another environment'
+"${compose[@]}" run --rm --no-deps -T --entrypoint php php -r 'exit(PHP_VERSION_ID >= 70300 && getenv("APP_ENVIRONMENT") === $argv[1] ? 0 : 1);' "$target"
 
 stopped=0
 changed=0
@@ -99,10 +124,18 @@ test -s "$backup.tmp"
 mv "$backup.tmp" "$backup"
 sha256sum "$backup" > "$backup.sha256"
 printf '%s\n' "$previous" > "$release/previous-sha"
+printf '%s\n' "$previous_branch" > "$release/previous-branch"
 log 'Database backup verified; installing checked code and dependencies'
 changed=1
 # Git-created code/directories must remain readable by FPM/nginx users in bind mounts.
-(umask 022; git merge --ff-only "$sha")
+(
+  umask 022
+  if [[ "$previous_branch" != "$branch" ]]; then
+    if git show-ref --verify --quiet "refs/heads/$branch"; then git checkout "$branch";
+    else git checkout -b "$branch" --track "origin/$branch"; fi
+  fi
+  git merge --ff-only "$sha"
+)
 [[ "$(git rev-parse HEAD)" = "$sha" ]]
 if [[ -e yii2/vendor ]]; then mv yii2/vendor "$release/previous-vendor"; fi
 mv "$release/vendor" yii2/vendor
@@ -114,9 +147,9 @@ fi
 make up
 ready=0
 for attempt in {1..12}; do
-  if "${compose[@]}" exec -T --workdir /web/yii2 php php /dev/stdin 'http://nginx/' "$sha" < "$script_dir/check-api.php" \
+  if "${compose[@]}" exec -T --workdir /web/yii2 php php /dev/stdin 'http://nginx/' "$sha" "$target" < "$script_dir/check-api.php" \
     && curl --fail --silent --show-error --connect-timeout 5 --max-time 15 "${api_url}health" > "$release/public-health.json" \
-    && "${compose[@]}" exec -T php php -r '$d=json_decode(stream_get_contents(STDIN),true);exit(is_array($d)&&($d["status"]??null)==="ok"&&($d["revision"]??null)===$argv[1]&&($d["portalListsVersion"]??null)===1?0:1);' "$sha" < "$release/public-health.json"; then
+    && "${compose[@]}" exec -T php php -r '$d=json_decode(stream_get_contents(STDIN),true);exit(is_array($d)&&($d["status"]??null)==="ok"&&($d["revision"]??null)===$argv[1]&&($d["portalListsVersion"]??null)===1&&($d["environment"]??null)===$argv[2]?0:1);' "$sha" "$target" < "$release/public-health.json"; then
     ready=1; break
   fi
   sleep 5

@@ -23,7 +23,7 @@ class AbstractMigration extends Migration
     public function __construct(array $config = [])
     {
         parent::__construct($config);
-        $this->remote_db = \Yii::$app->params['remote_db'];
+        $this->remote_db = \Yii::$app->params['remote_db'] ?? null;
     }
 
     public function init()
@@ -42,6 +42,9 @@ class AbstractMigration extends Migration
      */
     public function getRemoteRows($sql)
     {
+        if (!$this->remote_db instanceof Connection) {
+            throw new \RuntimeException('Legacy import requires an explicitly configured remote_db connection.');
+        }
         return $this->remote_db->createCommand($sql)->queryAll();
     }
 
