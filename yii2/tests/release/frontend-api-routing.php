@@ -86,6 +86,10 @@ try {
     $db->createCommand("INSERT INTO persone VALUES (1,1,10,2,1,'',0,0),(2,2,10,1,2,'',1,0)")->execute();
     $db->createCommand("INSERT INTO forum_theme VALUES (1,2,'Topic',1,1,0)")->execute();
     $db->createCommand("INSERT INTO forum_comment VALUES (1,2,1,'Message',1,1)")->execute();
+    $db->createCommand("INSERT INTO forum_comment VALUES (2,2,1,'Hidden message',0,2)")->execute();
+    list($themeStatus, $themeList) = dispatch('GET', 'v1/forum-theme', false, ['envelope' => '1']);
+    routeCheck($themeStatus === 200 && $themeList['items'][0]['comment_count'] === 1
+        && $themeList['items'][0]['view'] === 0, 'topic list returns visible comment and view counts');
     foreach (['v1/users','v1/users/online','v1/forum-theme','v1/forum-comment'] as $path) {
         list($status, $data) = dispatch('GET', $path, false, ['envelope' => '1']);
         routeCheck($status === 200 && isset($data['items'], $data['_meta']['pageCount']), 'public list dispatch and serializer: ' . $path);

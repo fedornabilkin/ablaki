@@ -112,6 +112,10 @@ try {
     checkList(in_array(1, PresenceService::onlineIds($now + 300), true), 'older requests cannot regress presence');
     params(['q' => 'Member3', 'envelope' => '1']);
     checkList(serialized($users->actionOnline())['_meta']['totalCount'] === 1, 'online list is searchable and paginated');
+    $onlineUser = serialized($users->actionOnline())['items'][0];
+    checkList($onlineUser['is_online'] === true, 'user DTO exposes actual online presence');
+    params(['envelope' => '1', 'q' => 'Member2']);
+    checkList(serialized($users->actionIndex())['items'][0]['is_online'] === false, 'inactive users are not marked online');
 
     $db->createCommand("INSERT INTO history_balance VALUES (1,1,5,2,1,0,'game','win',1),(2,2,9,3,1,0,'game','win',2),(3,1,7,4,1,0,'everyday','bonus',3)")->execute();
     $db->createCommand("INSERT INTO history_rating VALUES (1,1,5,1,'rating','earned',1),(2,2,6,1,'private','other',2)")->execute();
@@ -177,6 +181,13 @@ try {
     $_SERVER['REQUEST_METHOD'] = 'POST';
     $app->request->setPathInfo('v1/users/heartbeat');
     checkList($routes->parseRequest($app->request)[0] === 'v1/user/heartbeat', 'heartbeat is a POST route');
+    for ($id = 1; $id <= 45; $id++) $presence->touch($id, time());
+    params(['all' => '1']);
+    $allOnline = serialized($users->actionOnline());
+    checkList(count($allOnline) === 45 && $allOnline[0]['id'] === 45,
+        'online modal receives every active user beyond the default page size');
+    checkList(!isset($allOnline[0]['email']) && !isset($allOnline[0]['person']['balance']),
+        'full online list preserves public-field privacy');
     echo "All frontend list checks passed.\n";
 } finally {
     if (isset($db)) $db->close();

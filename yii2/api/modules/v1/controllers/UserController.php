@@ -67,7 +67,12 @@ class UserController extends Controller
 
     public function actionOnline()
     {
-        return ApiList::provider(User::find()->with(['person'])->where(['id' => PresenceService::onlineIds()]),
+        $query = User::find()->with(['person'])->where(['id' => PresenceService::onlineIds()]);
+        // The online modal shows the complete active list in a scrollable region.
+        if (Yii::$app->request->get('all') === '1') {
+            return $query->orderBy(['id' => SORT_DESC])->all();
+        }
+        return ApiList::provider($query,
             ['username'], ['id', 'username', 'created_at']);
     }
 

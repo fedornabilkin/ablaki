@@ -29,6 +29,9 @@ class User extends \common\models\user\User
             'last_login_at',
             'username',
             'person',
+            'is_online' => static function (self $model) {
+                return in_array((int)$model->id, \common\services\user\PresenceService::onlineIds(), true);
+            },
         ];
 
         // todo отображается для action profile, не отображается на стене. Непонятно как работает.
