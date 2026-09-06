@@ -12,7 +12,7 @@ production прежним способом, улучшения тестовог�
 | Существующий debug API | http://94.250.251.94:3180/debug/default/index |
 
 Backend checkout: /var/code/ablaki, его существующая PostgreSQL настроена в .env.
-Frontend checkout: /var/code/ablaki-front; системный nginx раздаёт только project/dist.
+Frontend web-root: /var/code/ablaki-front; системный nginx раздаёт готовую сборку прямо из этого каталога. Прежний frontend checkout сохраняется за пределами web-root; команды перехода находятся в [инструкции frontend](https://github.com/fedornabilkin/ablaki-front/blob/master/docs/deployment-github-vps.md#3-подготовить-только-test-каталоги-и-доступ).
 
 Исходный Compose использует PORT_NGINX_API, PORT_NGINX_ADMIN, PORT_NGINX_FRONT и
 PG_DB_PORT. Сохраните их действующие значения и прежние настройки сети/проекта.

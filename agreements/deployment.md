@@ -10,7 +10,7 @@
 ## Существующий запуск
 
 - Production checkout: /var/www/api.ablakin.ru. Владелец подтвердил, что и прежний рабочий ручной запуск выполнялся из этой папки.
-- Test checkout: /var/code/ablaki. Production frontend: /var/www/ablakin.ru; test frontend: /var/code/ablaki-front/project/dist.
+- Test checkout: /var/code/ablaki. Production frontend: /var/www/ablakin.ru; test frontend: /var/code/ablaki-front (только готовая статика, по уточнению владельца от 2026-09-06).
 - make up снова вызывает docker-compose up --detach --remove-orphans и docker-compose ps.
 - Инициализация Yii и пять команд миграций остаются в исходном docker/php/entrypoint.sh. Отдельных preflight/start/migrate-скриптов нет.
 - Исходный PHP Dockerfile, Composer-контейнер, порты, volumes и фиксированная подсеть восстановлены без модернизации.
