@@ -2,7 +2,13 @@
 set -Eeuo pipefail
 cd "$(dirname "$0")/.."
 compose=(bash deploy/compose.sh)
-"${compose[@]}" up --detach postgres
+# Match common/config/main.php: the existing MySQL configuration takes precedence.
+database_driver=$("${compose[@]}" run --rm --no-deps -T --entrypoint php php -r 'echo getenv("MYSQL_DB_HOST") && getenv("MYSQL_DB_NAME") ? "mysql" : "pgsql";')
+case "$database_driver" in
+  mysql) ;; # Use the existing production database; do not start PostgreSQL.
+  pgsql) "${compose[@]}" up --detach postgres ;;
+  *) printf 'Cannot determine the configured database driver\n' >&2; exit 1 ;;
+esac
 bash deploy/migrate.sh
 test -d yii2/api/runtime
 git rev-parse HEAD > yii2/api/runtime/deploy-version.txt

@@ -36,7 +36,7 @@ previous_branch=$(git branch --show-current)
 [[ -n "$previous_branch" ]] || die 'The VPS checkout must use a branch'
 [[ "$target" != production || "$previous_branch" = master ]] || die 'The production checkout must use master'
 git diff --quiet && git diff --cached --quiet || die 'Tracked local changes must be preserved before deployment'
-mkdir -p "$state/releases" "$state/backups"
+mkdir -p "$state/releases"
 exec 9>"$state/deploy.lock"
 flock -w 600 9 || die 'Another deployment holds the lock'
 [[ "$(git branch --show-current)" = "$previous_branch" ]] || die 'Checkout changed while waiting for the lock'
@@ -69,20 +69,13 @@ actual_lock=$(git show "$sha:yii2/composer.lock" | sha256sum | cut -d' ' -f1)
 [[ "$expected_lock" =~ ^[a-f0-9]{64}$ && "$actual_lock" = "$expected_lock" ]] || die 'Vendor was built from another lock file'
 if docker compose version >/dev/null 2>&1; then compose=(docker compose); else compose=(docker-compose); fi
 "${compose[@]}" config --quiet
-postgres_id=$("${compose[@]}" ps -q postgres)
-[[ -n "$postgres_id" ]] || die 'Prepare the environment PostgreSQL container and database before the first deployment'
-container_repo=$(docker inspect --format '{{ index .Config.Labels "com.docker.compose.project.working_dir" }}' "$postgres_id")
-[[ -n "$container_repo" && "$(readlink -f "$container_repo")" = "$repo" ]] || die 'PostgreSQL belongs to another checkout'
-project=$(docker inspect --format '{{ index .Config.Labels "com.docker.compose.project" }}' "$postgres_id")
-[[ "$project" =~ ^[a-z0-9][a-z0-9_-]*$ ]] || die 'Missing Compose project identity'
-if [[ "$target" = production ]]; then
-  [[ "$project" = ablaki-production ]] || die 'Production requires its own ablaki-production Compose project'
-else
-  [[ "$project" != ablaki-production ]] || die 'Test cannot use the production Compose project'
-fi
-volume=$(docker inspect --format '{{ range .Mounts }}{{ if eq .Destination "/data/postgres" }}{{ .Name }}{{ end }}{{ end }}' "$postgres_id")
-[[ -n "$volume" ]] || die 'PostgreSQL requires a dedicated named data volume'
-[[ "$(docker volume inspect --format '{{ index .Labels "com.docker.compose.project" }}' "$volume")" = "$project" ]] || die 'PostgreSQL volume belongs to another environment'
+for service in php nginx; do
+  container_id=$("${compose[@]}" ps -q "$service")
+  if [[ -n "$container_id" ]]; then
+    container_repo=$(docker inspect --format '{{ index .Config.Labels "com.docker.compose.project.working_dir" }}' "$container_id")
+    [[ -n "$container_repo" && "$(readlink -f "$container_repo")" = "$repo" ]] || die 'Application container belongs to another checkout'
+  fi
+done
 "${compose[@]}" run --rm --no-deps -T --entrypoint php php -r 'exit(PHP_VERSION_ID >= 70300 && getenv("APP_ENVIRONMENT") === $argv[1] ? 0 : 1);' "$target"
 
 stopped=0
@@ -104,28 +97,14 @@ trap on_exit EXIT
 trap 'exit 130' INT
 trap 'exit 143' TERM
 trap 'exit 129' HUP
-log 'Stopping API and cron for a consistent backup and update'
+log 'Updating the existing application; no automatic database backup'
+log 'Stopping API and cron to replace code and dependencies'
 stopped=1
 "${compose[@]}" stop nginx php composer
 
-# Boot existing local console configuration with the incoming production dependencies first.
-# A leftover development module must fail before changing the checkout or original vendor.
-app_hash=$("${compose[@]}" run --rm --no-deps -T --volume "$release/vendor:/web/yii2/vendor:ro" --workdir /web/yii2 --entrypoint php php < "$script_dir/database-fingerprint.php")
-db_identity=$("${compose[@]}" exec -T postgres sh -c 'export PGPASSWORD="$POSTGRES_PASSWORD"; exec psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -Atc "SELECT system_identifier::text || chr(47) || current_database() FROM pg_control_system()"')
-db_hash=$(printf '%s' "$db_identity" | sha256sum | cut -d' ' -f1)
-if [[ ! "$app_hash" =~ ^[a-f0-9]{64}$ || "$app_hash" != "$db_hash" ]]; then
-  log 'Application DB differs from the Compose PostgreSQL database; checkout is unchanged'
-  false
-fi
-backup="$state/backups/$(date -u +%Y%m%dT%H%M%SZ)-$previous.dump"
-"${compose[@]}" exec -T postgres sh -c 'export PGPASSWORD="$POSTGRES_PASSWORD"; exec pg_dump -U "$POSTGRES_USER" -d "$POSTGRES_DB" --format=custom' > "$backup.tmp"
-test -s "$backup.tmp"
-"${compose[@]}" exec -T postgres pg_restore --list < "$backup.tmp" > /dev/null
-mv "$backup.tmp" "$backup"
-sha256sum "$backup" > "$backup.sha256"
 printf '%s\n' "$previous" > "$release/previous-sha"
 printf '%s\n' "$previous_branch" > "$release/previous-branch"
-log 'Database backup verified; installing checked code and dependencies'
+log 'Installing checked code and dependencies; keeping existing environment files'
 changed=1
 # Git-created code/directories must remain readable by FPM/nginx users in bind mounts.
 (
@@ -143,7 +122,7 @@ if [[ -n "$(git diff --name-only "$previous" "$sha" -- docker/php/Dockerfile doc
   "${compose[@]}" build php
 fi
 "${compose[@]}" run --rm --no-deps -T --workdir /web/yii2 --entrypoint php php vendor/bin/deploy-composer.phar check-platform-reqs --no-dev
-# make up explicitly applies migrations before starting cron/FPM and recreates PHP/nginx.
+# Keep the owner's existing release sequence: update code, then make up with migrations.
 make up
 ready=0
 for attempt in {1..12}; do

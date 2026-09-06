@@ -46,14 +46,14 @@ services:
     image: postgres:11
     restart: unless-stopped
     ports:
-      - "${APP_BIND_IP:-127.0.0.1}:${PG_DB_PORT}:5432"
+      - "${APP_BIND_IP:-127.0.0.1}:${PG_DB_PORT:-5432}:5432"
     volumes:
       - postgresdata:/data/postgres
     environment:
       PGDATA: /data/postgres
-      POSTGRES_PASSWORD: ${PG_DB_PASSWORD}
-      POSTGRES_USER: ${PG_DB_USER}
-      POSTGRES_DB: ${PG_DB_NAME}
+      POSTGRES_PASSWORD: ${PG_DB_PASSWORD:-}
+      POSTGRES_USER: ${PG_DB_USER:-}
+      POSTGRES_DB: ${PG_DB_NAME:-}
 
 #  mailcatcher:
 #    image: dockage/mailcatcher:0.6.5

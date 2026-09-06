@@ -15,6 +15,37 @@ for environment in production test legacy; do
   example=$environment
   if [[ "$environment" = legacy ]]; then example=test; fi
   cp "$source_root/deploy/env/$example.env.example" "$fixture/.env"
+  # Examples document merge-only settings. Concrete values below belong only to CI.
+  if [[ "$environment" = production ]]; then
+    cat >> "$fixture/.env" <<'ENV'
+
+COMPOSE_PROJECT_NAME=ablaki-production
+COMPOSE_SUBNET=192.168.23.0/24
+APP_BIND_IP=127.0.0.1
+PORT_NGINX_API=19881
+PORT_NGINX_FRONT=18091
+PORT_NGINX_ADMIN=18081
+MYSQL_DB_HOST=existing-mysql.invalid
+MYSQL_DB_NAME=existing_production
+MYSQL_DB_USER=fixture_user
+MYSQL_DB_PASSWORD=fixture_password
+ENV
+  else
+    cat >> "$fixture/.env" <<'ENV'
+
+COMPOSE_PROJECT_NAME=ablaki
+COMPOSE_SUBNET=192.168.22.0/24
+APP_BIND_IP=127.0.0.1
+PORT_NGINX_API=19882
+PORT_NGINX_FRONT=18092
+PORT_NGINX_ADMIN=18082
+PG_DB_PORT=15432
+PG_DB_HOST=postgres
+PG_DB_NAME=existing_test
+PG_DB_USER=fixture_user
+PG_DB_PASSWORD=fixture_password
+ENV
+  fi
   if [[ "$environment" = legacy ]]; then
     sed -i '/^APP_BIND_IP=/d; /^COMPOSE_SUBNET=/d' "$fixture/.env"
   fi
@@ -48,11 +79,16 @@ for name, project, subnet, api_port in (
         assert not volume.get('external', False)
     services = config['services']
     assert services['php']['environment']['APP_ENVIRONMENT'] == name
-    assert services['php']['environment']['PG_DB_HOST'] == 'postgres'
-    assert services['postgres']['environment']['POSTGRES_DB'] == 'ablaki_' + name
-    assert services['postgres']['environment']['POSTGRES_USER'] == 'ablaki_' + name
-    assert services['postgres']['environment']['POSTGRES_PASSWORD'] == 'REPLACE_ME'
-    assert services['php']['environment']['PG_DB_NAME'] == services['postgres']['environment']['POSTGRES_DB']
+    if name == 'production':
+        assert services['php']['environment']['MYSQL_DB_HOST'] == 'existing-mysql.invalid'
+        assert services['php']['environment']['MYSQL_DB_NAME'] == 'existing_production'
+        assert not services['postgres']['environment']['POSTGRES_DB']
+    else:
+        assert services['php']['environment']['PG_DB_HOST'] == 'postgres'
+        assert services['postgres']['environment']['POSTGRES_DB'] == 'existing_test'
+        assert services['postgres']['environment']['POSTGRES_USER'] == 'fixture_user'
+        assert services['postgres']['environment']['POSTGRES_PASSWORD'] == 'fixture_password'
+        assert services['php']['environment']['PG_DB_NAME'] == services['postgres']['environment']['POSTGRES_DB']
     for service in services.values():
         assert not service.get('container_name'), 'Fixed container names collide across projects'
         assert set(service['networks']) == {'default'}

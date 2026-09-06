@@ -1,93 +1,86 @@
 # Production и тестовый деплой
 
-Уточнённая схема от 6 сентября 2026 года:
+Production использует существующую **MySQL** из `MYSQL_DB_*` в своей `.env`, test — существующую **PostgreSQL** из `PG_DB_*` в своей `.env`. Текущий деплой обновляет код и зависимости, затем выполняет обычный `make up` **с миграциями**. Backup/dump перед публикацией не создаётся. Создание новой БД, перенос данных между окружениями и смена инфраструктуры в этот процесс не входят.
 
 | Параметр | Production | Test |
 | --- | --- | --- |
-| Frontend | `/var/www/ablakin.ru` | `/var/code/ablaki-front/project/dist` |
+| Frontend web-root | `/var/www/ablakin.ru` | `/var/code/ablaki-front/project/dist` |
 | Backend checkout | `/var/www/api.ablakin.ru` | `/var/code/ablaki` |
 | Frontend releases | `/opt/ablaki-frontend` | `/opt/ablaki-frontend-test` |
-| Backend archives, releases, backups | `/opt/ablaki-backend` | `/opt/ablaki-backend-test` |
+| Backend incoming, releases, состояние | `/opt/ablaki-backend` | `/opt/ablaki-backend-test` |
+| База данных | Существующая MySQL, `MYSQL_DB_*` | Существующая PostgreSQL, `PG_DB_*` |
+| `APP_ENVIRONMENT` | `production` | `test` |
 | Сайт | `https://ablakin.ru` | `https://test.ablakin.ru` — пример |
 | API | `https://api.ablakin.ru/` | `https://api-test.ablakin.ru/` — пример |
-| Compose project | `ablaki-production` | Существующее имя, обычно `ablaki` |
-| API на localhost | `127.0.0.1:19881` | `127.0.0.1:19882` |
-| Сеть Docker | `192.168.23.0/24` | Существующая, обычно `192.168.22.0/24` |
-| Запуск | Push master; вручную production на master | Вручную test с выбранной ветки |
+| Запуск | Push master; вручную production из master | Вручную test из выбранной ветки |
 
-Тестовые домены и новые порты пока являются примерами. Исходники тестового frontend сохраняются: nginx раздаёт только `project/dist`. Backend checkout находится в каталоге с именем домена, но системный nginx **проксирует запросы в контейнер**, а не раздаёт checkout и `.env` как статику.
+Тестовые домены ещё нужно выбрать и настроить. Compose project, Docker-сети, порты, имена сервисов и доступ к существующим БД сохраняются. `COMPOSE_PROJECT_NAME` не является обязательной новой настройкой: если он задан, сохраните значение; если используется существующее имя по умолчанию, не вводите другое ради примера.
 
-## 1. Изменения в GitHub
+## 1. Настройки GitHub
 
-В [настройках backend-репозитория](https://github.com/fedornabilkin/ablaki/settings/secrets/actions):
+В [настройках backend-репозитория](https://github.com/fedornabilkin/ablaki/settings/secrets/actions) используйте отдельные параметры окружений:
 
 | Production secret | Test secret | Значение |
 | --- | --- | --- |
 | `BACKEND_DEPLOY_HOST` | `TEST_BACKEND_DEPLOY_HOST` | IP/DNS VPS |
 | `BACKEND_DEPLOY_PORT` | `TEST_BACKEND_DEPLOY_PORT` | SSH-порт |
-| `BACKEND_DEPLOY_USER` | `TEST_BACKEND_DEPLOY_USER` | Пользователь с правами на каталоги и Docker |
+| `BACKEND_DEPLOY_USER` | `TEST_BACKEND_DEPLOY_USER` | Пользователь с доступом к checkout, служебному каталогу и Docker |
 | `BACKEND_DEPLOY_SSH_KEY` | `TEST_BACKEND_DEPLOY_SSH_KEY` | Приватный SSH-ключ |
 | `BACKEND_DEPLOY_KNOWN_HOSTS` | `TEST_BACKEND_DEPLOY_KNOWN_HOSTS` | Проверенная запись SSH host key |
 
-**Production `BACKEND_HEALTHCHECK_URL` изменить на `https://api.ablakin.ru/`.** Test variable `TEST_BACKEND_HEALTHCHECK_URL` задаёт отдельный адрес тестового API, также с `/` на конце. Тест не подставляет production-секреты при отсутствии своих настроек. Настройки можно хранить в environments `production-backend`, `test-backend` или как repository secrets/variables с указанными именами. Ключи не публикуются в Git или чате.
+Production variable `BACKEND_HEALTHCHECK_URL` — `https://api.ablakin.ru/`. Test variable `TEST_BACKEND_HEALTHCHECK_URL` — отдельный адрес тестового API с `/` на конце. Настройки размещаются в environments `production-backend`, `test-backend` или как repository secrets/variables с указанными именами. Отсутствующие test-настройки не заменяются production-значениями. Ключи и содержимое `.env` не публикуются в Git или чате.
 
-**Во frontend production `VITE_API_URL` также изменить на `https://api.ablakin.ru/`**, затем пересобрать frontend. Для теста используются `TEST_VITE_API_URL`, `TEST_FRONTEND_HEALTHCHECK_URL` и пять `TEST_FRONTEND_DEPLOY_*` secrets в `test-frontend`. Полная frontend-инструкция — `docs/deployment-github-vps.md` репозитория `ablaki-front`.
+Во frontend production repository variable `VITE_API_URL` — `https://api.ablakin.ru/`. После изменения URL frontend нужно пересобрать. Для теста используются `TEST_VITE_API_URL`, `TEST_FRONTEND_HEALTHCHECK_URL` и пять `TEST_FRONTEND_DEPLOY_*` secrets в `test-frontend`. [Инструкция frontend](https://github.com/fedornabilkin/ablaki-front/blob/master/docs/deployment-github-vps.md).
 
 ## 2. Каталоги VPS
 
-Пример рассчитан на действующий Debian/Ubuntu VPS с Docker Compose и nginx. Подставьте фактического SSH-пользователя вместо `deploy`:
+Для уже подготовленных каталогов проверьте доступ SSH-пользователя. Следующие команды нужны только для отсутствующих каталогов; вместо `deploy` подставьте фактического пользователя:
 
 ```bash
 backend_deploy_user=deploy
 backend_deploy_group=$(id -gn "$backend_deploy_user")
 sudo install -d -o "$backend_deploy_user" -g "$backend_deploy_group" -m 0755 /var/www/api.ablakin.ru
 sudo install -d -o "$backend_deploy_user" -g "$backend_deploy_group" -m 0700 \
-  /opt/ablaki-backend /opt/ablaki-backend/incoming /opt/ablaki-backend/releases /opt/ablaki-backend/backups \
-  /opt/ablaki-backend-test /opt/ablaki-backend-test/incoming /opt/ablaki-backend-test/releases /opt/ablaki-backend-test/backups
+  /opt/ablaki-backend /opt/ablaki-backend/incoming /opt/ablaki-backend/releases \
+  /opt/ablaki-backend-test /opt/ablaki-backend-test/incoming /opt/ablaki-backend-test/releases
 ```
 
-Только в **пустой** production-каталог клонируйте backend. Если файлы уже есть, сначала проверьте и сохраните их:
+Только в **пустой** production-каталог клонируйте backend. Если checkout уже существует, сохраните его `.env`, локальные настройки Yii, пользовательские загрузки и изменения файлов:
 
 ```bash
 sudo -u "$backend_deploy_user" git clone https://github.com/fedornabilkin/ablaki.git /var/www/api.ablakin.ru
 ```
 
-Тестовый `/var/code/ablaki` не переносить. Проверьте оба checkout под SSH-пользователем: `git status --short`, ветку, origin и неинтерактивный `git fetch origin master`. Production использует master. Тест может переключаться на выбранную ветку GitHub; workflow сохраняет другие локальные ветки и не сбрасывает расходящиеся коммиты или локальные правки.
+Тестовый `/var/code/ablaki` не переносить. В каждом checkout под SSH-пользователем проверьте `git status --short`, ветку, origin и неинтерактивный `git fetch origin master`. Production использует master. Тест использует выбранную ветку; локальные правки и расходящиеся коммиты нужно сохранить до публикации. Каталог `/var/code/ablaki-front` является checkout frontend: nginx раздаёт только `project/dist`, исходники не заменяются архивом статики.
 
-## 3. Отдельные Docker-проекты и .env
+## 3. Существующие .env и PHP
 
-В новом production скопируйте [production.env.example](../deploy/env/production.env.example) в `/var/www/api.ablakin.ru/.env`, замените `REPLACE_ME` отдельным паролем и установите права `0600`. Production обязательно использует `APP_ENVIRONMENT=production`, `COMPOSE_PROJECT_NAME=ablaki-production`, собственные БД, сеть и порты. `PG_DB_HOST=postgres` разрешается внутри собственного Docker-проекта.
+Образцы [production.env.example](../deploy/env/production.env.example) и [test.env.example](../deploy/env/test.env.example) служат памяткой. **Не копируйте их поверх действующей `.env`.** Добавьте или проверьте только `APP_ENVIRONMENT` нужного окружения; права `.env` — `0600`. Сохраните действующие параметры подключения:
 
-В существующей тестовой `.env` внесите изменения по [test.env.example](../deploy/env/test.env.example), **не заменяя файл целиком**. Сохраните фактическое имя Compose-проекта, имя БД, пользователя, пароль и сеть: иначе можно выбрать новый пустой volume. Добавьте `APP_ENVIRONMENT=test`. Текущие project/cwd читаются из labels PostgreSQL-контейнера:
+| Production `.env` | Test `.env` |
+| --- | --- |
+| `MYSQL_DB_HOST`, `MYSQL_DB_NAME` | `PG_DB_HOST`, `PG_DB_NAME` |
+| `MYSQL_DB_USER`, `MYSQL_DB_PASSWORD` | `PG_DB_USER`, `PG_DB_PASSWORD` |
 
-```bash
-cd /var/code/ablaki
-bash deploy/compose.sh ps -q postgres
-# Подставить полученный container ID:
-docker inspect --format '{{ index .Config.Labels "com.docker.compose.project" }}' CONTAINER_ID
-docker inspect --format '{{ index .Config.Labels "com.docker.compose.project.working_dir" }}' CONTAINER_ID
-```
+В текущей конфигурации Yii заполненные `MYSQL_DB_HOST` и `MYSQL_DB_NAME` выбирают MySQL; иначе используется PostgreSQL. Поэтому не добавляйте production `MYSQL_DB_*` в test. Локальные переопределения Yii сохраняются вместе с `.env`.
 
-В образцах API порты `19881/19882`, серверный UI `18091/18092`, admin `18081/18082`, PostgreSQL `15431/15432`. Проверьте свободные порты и непересекающиеся сети перед применением. Они привязаны к `127.0.0.1`; публичные запросы идут через системный nginx. Если тестовый API ранее использовал внешний IP:порт, сначала подготовьте его домен/proxy и обновите потребителей.
+Параметры сети, публикации портов, Compose project и существующих сервисов остаются фактическими настройками VPS. Не создавайте для этого релиза новые БД или volumes и не меняйте реквизиты подключения. `make init` и `down --volumes` для обновления действующего приложения не использовать.
 
-Для нового production под SSH-пользователем:
+Если production PHP-образ ещё не подготовлен, соберите только его из production checkout:
 
 ```bash
 cd /var/www/api.ablakin.ru
 bash deploy/compose.sh config --quiet
 bash deploy/compose.sh build php
-bash deploy/compose.sh up -d postgres
 ```
 
-Это запускает только отдельную production-БД. До запуска API подготовьте данные. `make init` и `down --volumes` не использовать на действующих окружениях. Новый PHP-образ сохраняет совместимость PHP 7.3.33; переход на поддерживаемую ветку PHP — отдельная задача.
+Команда `config --quiet` проверяет конфигурацию без вывода секретов. PHP-образ этого этапа сохраняет совместимость с PHP 7.3.33. Обновление версии PHP и инфраструктуры планируется отдельно.
 
-## 4. Первые production-данные
+## 4. Зависимости и первый запуск
 
-Источник нужно выбрать явно: копия текущей тестовой БД, существующая отдельная production-БД или пустая новая база. Workflow не копирует и не восстанавливает данные между окружениями автоматически.
+Этот раздел нужен для нового PHP checkout. В уже работающем окружении обычный workflow сам устанавливает проверенный vendor перед `make up`.
 
-При переносе создайте PostgreSQL custom dump **исходной БД**, проверьте восстановление в отдельную временную БД, затем восстановите в новую production-БД. Согласуйте окно переключения, если в исходной системе продолжаются начисления, переводы или игры. Не подключайте production к тестовому volume. Сохраните dump вне VPS; используемые пользовательские загрузки перенесите отдельно от checkout/vendor с нужными путями и правами.
-
-Для первичной подготовки зависимостей используйте artifact `backend-<SHA>` из Actions: скачайте, распакуйте и передайте на VPS `vendor.tar.gz` с `.sha256`. Сверьте checksum и `commit.txt` внутри архива с `git rev-parse HEAD`; устанавливайте vendor в новый подготовленный checkout. После распаковки в `yii2/vendor` проверьте реальные расширения PHP:
+Используйте artifact `backend-<SHA>` из Actions: скачайте, распакуйте и передайте на VPS `vendor.tar.gz` и `vendor.tar.gz.sha256`. Сверьте checksum архива и `commit.txt` внутри него с `git rev-parse HEAD`; устанавливайте vendor в подготовленный checkout той же ревизии. После распаковки в `yii2/vendor` проверьте реальные расширения PHP:
 
 ```bash
 cd /var/www/api.ablakin.ru
@@ -107,16 +100,18 @@ done
 mkdir -p yii2/console/runtime
 setfacl -R -m u:33:rwx,u:"$(id -u)":rwx yii2/console/runtime
 setfacl -d -m u:33:rwx,u:"$(id -u)":rwx yii2/console/runtime
-bash deploy/migrate.sh
+make up
 ```
 
-Обычным миграциям больше не требуется старый `params['remote_db']`. Локальные настройки Yii не перезаписываются. При пустой базе **создайте и проверьте владельца до публичного открытия API**: историческая RBAC-миграция назначает admin пользователю с ID 1. Не оставляйте первый аккаунт открытой регистрации. Для копии БД проверьте ожидаемого владельца/admin и балансы. Точный первичный запуск зависит от выбранного источника данных.
+`make up` применяет ожидающие миграции к существующей БД этого окружения и запускает приложение. Миграции не отключаются; отдельный запуск `deploy/migrate.sh` перед этой командой не нужен. Никакого предварительного dump или переноса test → production в данном сценарии нет. Для test используйте `/var/code/ablaki` и его существующую `.env`.
 
 ## 5. nginx и HTTPS API
 
-Добавьте DNS A для `api.ablakin.ru` на VPS и выберите отдельный тестовый API-домен. `api-test.ablakin.ru` в примерах заменяется вместе с путями сертификатов. AAAA нужна только при работающем IPv6.
+Backend checkout находится в каталоге с именем домена, но системный nginx **проксирует API в контейнер**, а не раздаёт checkout и `.env` как статику. Сверьте `proxy_pass` с фактическим адресом и портом действующего API. Порты `19881/19882` в приложенных nginx-конфигах — примеры; исправьте upstream в примере под VPS, не перенастраивайте действующие порты ради документации.
 
-Сначала используйте [HTTP-конфиг](../deploy/nginx/api.ablakin.ru.http.conf.example), отдающий только ACME challenge, и получите сертификат. Если конфиг или symlink уже существуют, проверьте текущие файлы и сохраните копию перед заменой:
+Для нового API-домена направьте DNS A на VPS и выберите отдельный тестовый API-домен. `api-test.ablakin.ru` в примерах заменяется вместе с путями сертификатов. AAAA нужна только при работающем IPv6. Существующий рабочий vhost сохраняется, если адреса уже настроены.
+
+При первичной настройке сначала используйте [HTTP-конфиг](../deploy/nginx/api.ablakin.ru.http.conf.example), отдающий только ACME challenge, и получите сертификат. Если конфиг или symlink уже существуют, проверьте их перед заменой:
 
 ```bash
 sudo mkdir -p /var/www/letsencrypt
@@ -127,7 +122,7 @@ sudo systemctl reload nginx
 sudo certbot certonly --webroot -w /var/www/letsencrypt -d api.ablakin.ru
 ```
 
-После подготовки данных и сертификата установите [HTTPS-конфиг](../deploy/nginx/api.ablakin.ru.conf.example):
+После запуска PHP/API и получения сертификата установите [HTTPS-конфиг](../deploy/nginx/api.ablakin.ru.conf.example), предварительно исправив в нём upstream под фактический API:
 
 ```bash
 sudo cp /var/www/api.ablakin.ru/deploy/nginx/api.ablakin.ru.conf.example /etc/nginx/sites-available/api.ablakin.ru
@@ -135,24 +130,27 @@ sudo nginx -t
 sudo systemctl reload nginx
 ```
 
-Для теста повторите с `api-test.ablakin.ru*.conf.example` и портом `19882`. Не добавляйте `default_server`: frontend уже использует этот nginx. Backend URI передаётся без добавления `/api/`. CORS обрабатывается контейнерным nginx; дублировать эти заголовки на внешнем proxy не нужно.
+Для теста есть отдельные [HTTP](../deploy/nginx/api-test.ablakin.ru.http.conf.example) и [HTTPS](../deploy/nginx/api-test.ablakin.ru.conf.example) образцы. Не добавляйте `default_server`: frontend уже использует этот nginx. Backend URI передаётся без добавления `/api/`. CORS обрабатывается контейнерным nginx; дублировать эти заголовки на внешнем proxy не нужно.
 
-## 6. Запуск и проверка
+## 6. Публикация и проверка
 
-Backend Actions: **Backend CI and deployment → Run workflow → target=production, branch=master**. Для теста — `target=test` и выбранная ветка. Push master запускает только production. У окружений независимые секреты, блокировки и каталоги релизов.
+В backend Actions откройте **Backend CI and deployment → Run workflow**. Для production выберите **Use workflow from: master**, `target=production`. Для test выберите нужную существующую ветку в **Use workflow from**, `target=test`. Push master запускает production автоматически. У окружений независимые секреты, блокировки и каталоги релизов.
 
-CI проверяет PHP/API, конфигурации Compose, сборку PHP-образа, полный запуск миграций и восстановление dump в временной PostgreSQL. На VPS до изменения приложения проверяются checkout, `APP_ENVIRONMENT`, принадлежность PostgreSQL-контейнера и его volume, SHA/checksum. Production требует отдельный `ablaki-production`, а test не может использовать production-проект или API-хост.
+CI проверяет код и зависимости до передачи на VPS. Тесты с собственной временной БД не используют production или test данные VPS. Серверный сценарий соответствует привычному обновлению checkout и `make up`, с привязкой к проверенному SHA и vendor из Actions:
 
-На время backup и замены vendor/кода API и cron останавливаются. `make up` применяет миграции до запуска PHP/nginx. В конце внутренний API и внешний `health` должны подтвердить SHA и `environment: "production"` либо `"test"`. Только тогда обновляется `current`.
+1. Проверяет checkout, SHA и checksum артефакта, сохраняет существующие `.env` и локальные настройки.
+2. Обновляет код без принудительного сброса локальных изменений и устанавливает vendor. На время замены приложение останавливается.
+3. Выполняет `make up`: миграции существующей БД, затем запуск PHP/nginx.
+4. Проверяет внутренний и внешний API, опубликованный SHA и `environment` нужного окружения; после успеха обновляет `current`.
 
-Затем запустите frontend workflow **для того же окружения**. Он собирает bundle с нужным API URL, проверяет готовность и environment API. При отказе прежняя статика сохраняется. Backend push сам по себе не запускает отдельный frontend-репозиторий.
+Backup/dump, SQL fingerprint, создание БД и перенос данных не являются этапами публикации. Значение `APP_ENVIRONMENT` должно соответствовать target и ответу `/health`.
 
-## 7. Ошибки и восстановление
+Затем выпустите frontend **того же окружения**. Он ждёт полный `/health`, совместимость списков, правильный `environment` и CORS. Если backend ещё публикуется или схема/контракт не готовы, новая статика не активируется; прежний frontend остаётся. Backend push сам по себе не запускает отдельный frontend-репозиторий.
 
-До изменения checkout/vendor ошибка возобновляет прежние PHP/nginx. После изменения кода или миграций API остаётся остановленным до исправления. Автоматического отката БД нет.
+## 7. Ошибки и повтор
 
-В соответствующем `/opt/ablaki-backend` или `/opt/ablaki-backend-test` хранятся `backups/*.dump` и checksum, `releases/<sha>.<suffix>/previous-sha`, `previous-branch`, `previous-vendor`; `current` — SHA успешного релиза. Старые копии не удаляются автоматически. Изучайте логи именно нужного Docker-проекта. Повтор после исправления применяет оставшиеся миграции; восстановление данных согласуется отдельно с учётом выполненных операций.
+При ошибке изучите логи выбранного окружения и причину отказа `make up` или health. Миграция с ошибкой должна остановить запуск; не отмечайте её выполненной вручную для обхода ошибки. После исправления повторите публикацию: Yii применит оставшиеся миграции.
 
-## Статус
+`/opt/ablaki-backend` и `/opt/ablaki-backend-test` содержат входящие артефакты, каталоги релизов и `current` успешной публикации. Предыдущие SHA/vendor позволяют разбирать сбой кода; они не являются копией БД. Автоматического восстановления данных нет. Уже существующие архивы или резервные копии не удаляются этим изменением процесса.
 
-Код workflow и образцы конфигурации не означают, что DNS, сертификаты, данные и каталоги уже настроены на VPS. Для первого серверного запуска нужны SSH-доступ, выбранный источник production-данных и тестовые домены. Автоматические проверки используют только временные базы и контейнеры.
+Наличие workflow и образцов не подтверждает настройки DNS, сертификатов, каталогов или успешную серверную публикацию. Проверки на VPS выполняются отдельно; существующие MySQL production и PostgreSQL test сохраняются.

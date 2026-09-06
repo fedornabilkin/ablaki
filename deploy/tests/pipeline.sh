@@ -53,9 +53,13 @@ fi
 shift
 case "$1" in
   version|config|stop|start|up|build) exit 0 ;;
-  ps) if [[ "$*" = 'ps -q postgres' ]]; then echo fixture-postgres; fi; exit 0 ;;
+  ps) if [[ "$*" = 'ps -q php' || "$*" = 'ps -q nginx' ]]; then echo fixture-app; fi; exit 0 ;;
   run)
     if [[ "$*" = *'getenv("APP_ENVIRONMENT")'* && "$TEST_FAIL" = wrong_environment ]]; then exit 1; fi
+    if [[ "$*" = *'getenv("MYSQL_DB_HOST")'* ]]; then
+      if [[ "$TEST_TARGET" = production ]]; then echo mysql; else echo pgsql; fi
+      exit 0
+    fi
     if [[ "$*" = *'migrate/up'* && "$TEST_FAIL" = migration ]]; then exit 1; fi
     if [[ "$*" = *'--entrypoint php php' ]]; then
       cat > /dev/null
@@ -131,7 +135,7 @@ before() {
   second=$(grep -nF -- "$2" "$TEST_LOG" | head -n 1 | cut -d: -f1)
   [[ "$first" -lt "$second" ]] || { echo "Wrong order: $1 / $2" >&2; exit 1; }
 }
-for scenario in success stale dirty branch lock checksum identity backup migration health root_inside root_parent root_missing wrong_archive test_branch new_branch diverged wrong_checkout wrong_project shared_volume wrong_environment test_production_api production_branch; do
+for scenario in success stale dirty branch lock checksum migration health root_inside root_parent root_missing wrong_archive test_branch new_branch diverged wrong_checkout wrong_environment test_production_api production_branch; do
   setup_case "$scenario"
   state_arg="$TEST_DEPLOY"
   archive_arg="$incoming/vendor.tar.gz"
@@ -143,7 +147,6 @@ for scenario in success stale dirty branch lock checksum identity backup migrati
     root_missing) state_arg="$test_root/absent-deploy" ;;
     wrong_archive) archive_arg="$TEST_REPO/vendor.tar.gz"; cp "$incoming/vendor.tar.gz" "$archive_arg"; cp "$incoming/vendor.tar.gz.sha256" "$archive_arg.sha256" ;;
     test_branch|new_branch) TEST_TARGET=test; branch_arg=feature/test ;;
-    wrong_project) TEST_TARGET=test ;;
     test_production_api) TEST_TARGET=test; api_arg='https://api.ablakin.ru/' ;;
     production_branch) branch_arg=feature/test ;;
   esac
@@ -154,24 +157,21 @@ for scenario in success stale dirty branch lock checksum identity backup migrati
       [[ "$status" = 0 ]] || { cat "$TEST_REPO/output.log"; exit 1; }
       [[ "$(cat "$TEST_DEPLOY/current")" = "$TEST_SHA" ]]
       [[ "$(cat "$TEST_REPO/yii2/api/runtime/deploy-version.txt")" = "$TEST_SHA" ]]
-      before 'stop nginx php composer' 'pg_dump'
-      before 'pg_restore' 'git merge --ff-only'
+      before 'stop nginx php composer' 'git merge --ff-only'
       before 'check-platform-reqs' 'migrate/up'
       before 'migrate/up' 'up --detach --no-deps --force-recreate php nginx'
       [[ -n "$(find "$TEST_DEPLOY/releases" -path '*/previous-vendor/previous.txt' -print -quit)" ]]
-      [[ -n "$(find "$TEST_DEPLOY/backups" -name '*.dump' -print -quit)" ]]
+      [[ ! -e "$TEST_DEPLOY/backups" ]]
+      if [[ "$TEST_TARGET" = production ]]; then reject_log 'up --detach postgres';
+      else before 'up --detach postgres' 'migrate/up'; fi
       [[ ! -e "$TEST_REPO/.git/ablaki-deploy" ]]
       [[ "$(cat "$TEST_BRANCH_FILE")" = "$branch_arg" ]]
       ;;
     stale)
       [[ "$status" = 0 ]]; reject_log 'stop nginx'; reject_log 'git merge --ff-only'
       ;;
-    dirty|branch|lock|checksum|root_inside|root_parent|root_missing|wrong_archive|diverged|wrong_checkout|wrong_project|shared_volume|wrong_environment|test_production_api|production_branch)
+    dirty|branch|lock|checksum|root_inside|root_parent|root_missing|wrong_archive|diverged|wrong_checkout|wrong_environment|test_production_api|production_branch)
       [[ "$status" != 0 ]]; reject_log 'stop nginx'; reject_log 'git merge --ff-only'
-      ;;
-    identity|backup)
-      [[ "$status" != 0 ]]; expect_log 'start php nginx'; reject_log 'git merge --ff-only'
-      [[ -f "$TEST_REPO/yii2/vendor/previous.txt" ]]
       ;;
     migration|health)
       [[ "$status" != 0 ]]; expect_log 'stop nginx php'; [[ ! -f "$TEST_DEPLOY/current" ]]
@@ -181,5 +181,8 @@ for scenario in success stale dirty branch lock checksum identity backup migrati
   esac
   reject_log 'down --volumes'
   reject_log 'make init'
+  reject_log 'pg_dump'
+  reject_log 'pg_restore'
+  reject_log 'pg_control_system'
   printf 'PASS deployment scenario: %s\n' "$scenario"
 done

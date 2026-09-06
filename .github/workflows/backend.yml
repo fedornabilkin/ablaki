@@ -176,7 +176,10 @@ jobs:
           [[ "$GITHUB_REF_NAME" =~ ^[A-Za-z0-9][A-Za-z0-9._/-]*$ && "$GITHUB_REF_NAME" != *..* ]]
           remote_dir="$deploy_root/incoming/$GITHUB_SHA"
           options=(-i "$HOME/.ssh/deploy_key" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=yes -o UserKnownHostsFile="$HOME/.ssh/known_hosts" -o ServerAliveInterval=30 -o ServerAliveCountMax=6)
-          ssh "${options[@]}" -p "$DEPLOY_PORT" "$DEPLOY_USER@$DEPLOY_HOST" "test -d '$deploy_root' && test -w '$deploy_root' && umask 077 && mkdir -p '$remote_dir' && chmod 700 '$remote_dir'"
-          scp "${options[@]}" -P "$DEPLOY_PORT" release/vendor.tar.gz release/vendor.tar.gz.sha256 deploy/backend-deploy.sh deploy/database-fingerprint.php deploy/check-api.php "$DEPLOY_USER@$DEPLOY_HOST:$remote_dir/"
+          if ! ssh "${options[@]}" -p "$DEPLOY_PORT" "$DEPLOY_USER@$DEPLOY_HOST" "test -d '$deploy_root' && test -w '$deploy_root' && umask 077 && mkdir -p '$remote_dir' && chmod 700 '$remote_dir'"; then
+            echo "::error::Cannot prepare $remote_dir over SSH. Verify SSH access and that $deploy_root exists and is writable by the deployment user."
+            exit 1
+          fi
+          scp "${options[@]}" -P "$DEPLOY_PORT" release/vendor.tar.gz release/vendor.tar.gz.sha256 deploy/backend-deploy.sh deploy/check-api.php "$DEPLOY_USER@$DEPLOY_HOST:$remote_dir/"
           ssh "${options[@]}" -p "$DEPLOY_PORT" "$DEPLOY_USER@$DEPLOY_HOST" \
             "bash '$remote_dir/backend-deploy.sh' '$repo_root' '$GITHUB_SHA' '$remote_dir/vendor.tar.gz' '$API_URL' '$deploy_root' '$GITHUB_REF_NAME' '$TARGET'"
