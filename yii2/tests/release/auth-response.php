@@ -22,6 +22,9 @@ Yii::$container->set(\yii\rest\Serializer::class, \api\components\ListSerializer
 $app = new Application([
     'id' => 'auth-response-test',
     'basePath' => dirname(__DIR__, 2),
+    // CI installs without Composer plugins: bootstrap dependencies explicitly.
+    'extensions' => [],
+    'bootstrap' => [\dektrium\user\Bootstrap::class],
     'controllerNamespace' => 'api\controllers',
     'modules' => ['user' => [
         'class' => \dektrium\user\Module::class,
