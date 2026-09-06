@@ -80,11 +80,16 @@ try {
 
     $start = microtime(true) + 1;
     for ($i = 0; $i < 8; $i++) {
-        $args = [PHP_BINARY, '-n', '-d', 'extension_dir=' . ini_get('extension_dir'),
-            '-d', 'extension=pdo_sqlite', __FILE__, 'worker', $file, (string)$start];
+        $args = [PHP_BINARY, '-n', '-d', 'extension_dir=' . ini_get('extension_dir')];
+        // Ubuntu builds PDO as a shared extension; -n disables its usual pdo.ini.
+        if (is_file(ini_get('extension_dir') . '/pdo.so')) {
+            $args = array_merge($args, ['-d', 'extension=pdo']);
+        }
+        $args = array_merge($args, ['-d', 'extension=pdo_sqlite', __FILE__, 'worker', $file, (string)$start]);
         $command = implode(' ', array_map('escapeshellarg', $args));
         $pipes = [];
-        $process = proc_open($command, [0 => ['pipe', 'r'], 1 => ['pipe', 'w'], 2 => ['pipe', 'w']], $pipes);
+        $process = proc_open($command, [0 => ['pipe', 'r'], 1 => ['pipe', 'w'], 2 => ['pipe', 'w']],
+            $pipes, null, null, ['bypass_shell' => PHP_OS_FAMILY === 'Windows']);
         if (!is_resource($process)) throw new RuntimeException('Cannot start test worker.');
         fclose($pipes[0]);
         $processes[] = [$process, $pipes];

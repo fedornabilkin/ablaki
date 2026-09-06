@@ -42,9 +42,17 @@ jobs:
 
       - name: Run isolated API checks
         working-directory: yii2
+        shell: bash
         run: |
           for suite in frontend-lists frontend-api-routing game-overview forum-gift daily-reward exchange-refund health; do
-            php "tests/release/$suite.php"
+            if ! php "tests/release/$suite.php" 2>&1 | tee "$RUNNER_TEMP/backend-$suite.log"; then
+              details=$(tail -n 15 "$RUNNER_TEMP/backend-$suite.log")
+              details=${details//%/%25}
+              details=${details//$'\r'/%0D}
+              details=${details//$'\n'/%0A}
+              echo "::error file=yii2/tests/release/$suite.php,title=Isolated API check failed::$details"
+              exit 1
+            fi
           done
 
       - name: Package checked dependencies

@@ -16,7 +16,7 @@
 | `exchange-refund.php` | 2 |
 | Всего | 139 |
 
-Lint прошёл для всех 34 изменённых PHP-файлов, `git diff --check` — без ошибок. Новый код использует синтаксис PHP 7.3; локально проверен PHP 8.3.33, запуск на PHP 7.3 предусмотрен в CI и здесь не считается выполненным.
+Lint прошёл для всех 34 изменённых PHP-файлов, `git diff --check` — без ошибок. 6 сентября все 139 проверок повторены также на официальном PHP 7.3.33; вместе с новым health suite прошли 148 проверок. Для worker-процессов исправлены загрузка shared PDO на Linux и обход cmd.exe на Windows PHP 7.3. GitHub CI отдельно проверяет PHP 7.3 на Ubuntu.
 
 При заключительной синхронизации master включён уже влитый на GitHub PR #23. Обновлённый lock установлен локально через Composer 2.10.3 с `--no-dev`: Yii 2.0.49.4, jQuery 3.7.1, HTMLPurifier 4.17.0. На этих зависимостях все 139 проверок завершились успешно, без warning/notice/deprecated. Полный Yii dispatch подтвердил работоспособность autoload и сериализатора; дополнительно проверены generated aliases миграций `@fedornabilkin/binds`, `@fedornabilkin/redirect` и `@dektrium/user`.
 
