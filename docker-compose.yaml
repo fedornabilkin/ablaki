@@ -74,7 +74,4 @@ services:
 networks:
   default:
     driver: bridge
-    ipam:
-      driver: default
-      config:
-        - subnet: ${COMPOSE_SUBNET:-192.168.22.0/24}
+    # Let Docker allocate a free subnet for new networks on this shared VPS.

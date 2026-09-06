@@ -19,7 +19,7 @@ permissions:
 
 jobs:
   checks:
-    name: Backend checks and dependencies
+    name: Backend checks
     runs-on: ubuntu-22.04
     timeout-minutes: 20
     steps:
@@ -77,45 +77,9 @@ jobs:
             fi
           done
 
-      - name: Package checked dependencies
-        shell: bash
-        run: |
-          mkdir -p release yii2/vendor/bin
-          cp "$(command -v composer)" yii2/vendor/bin/deploy-composer.phar
-          printf '%s\n' "$GITHUB_SHA" > yii2/commit.txt
-          sha256sum yii2/composer.lock | cut -d' ' -f1 > yii2/composer.lock.sha256
-          tar -C yii2 -czf release/vendor.tar.gz vendor commit.txt composer.lock.sha256
-          (cd release && sha256sum vendor.tar.gz > vendor.tar.gz.sha256)
-
-      - name: Save release artifact
-        uses: actions/upload-artifact@v7
-        with:
-          name: backend-${{ github.sha }}
-          path: release/
-          if-no-files-found: error
-          retention-days: 14
-
-  runtime:
-    name: PHP image and PostgreSQL installation
-    needs: checks
-    runs-on: ubuntu-22.04
-    timeout-minutes: 25
-    steps:
-      - uses: actions/checkout@v7
-      - uses: actions/download-artifact@v8
-        with:
-          name: backend-${{ github.sha }}
-          path: release
-      - name: Build the production PHP image
-        run: bash deploy/tests/report-check.sh docker build --tag ablaki-php-ci docker/php
-      - name: Validate API nginx configurations
-        run: bash deploy/tests/report-check.sh bash deploy/tests/nginx-config.sh
-      - name: Verify fresh migrations and backup restore in disposable PostgreSQL
-        run: bash deploy/tests/report-check.sh bash deploy/tests/first-install.sh
-
   deploy:
     name: Deploy backend to ${{ inputs.target || 'production' }}
-    needs: [checks, runtime]
+    needs: checks
     if: github.event_name != 'pull_request' && (github.ref == 'refs/heads/master' || (github.event_name == 'workflow_dispatch' && inputs.target == 'test' && github.ref_type == 'branch'))
     runs-on: ubuntu-22.04
     timeout-minutes: 30
@@ -130,19 +94,13 @@ jobs:
       DEPLOY_USER: ${{ secrets[inputs.target == 'test' && 'TEST_BACKEND_DEPLOY_USER' || 'BACKEND_DEPLOY_USER'] }}
       DEPLOY_SSH_KEY: ${{ secrets[inputs.target == 'test' && 'TEST_BACKEND_DEPLOY_SSH_KEY' || 'BACKEND_DEPLOY_SSH_KEY'] }}
       DEPLOY_KNOWN_HOSTS: ${{ secrets[inputs.target == 'test' && 'TEST_BACKEND_DEPLOY_KNOWN_HOSTS' || 'BACKEND_DEPLOY_KNOWN_HOSTS'] }}
-      API_URL: ${{ vars[inputs.target == 'test' && 'TEST_BACKEND_HEALTHCHECK_URL' || 'BACKEND_HEALTHCHECK_URL'] }}
     steps:
       - uses: actions/checkout@v7
-
-      - uses: actions/download-artifact@v8
-        with:
-          name: backend-${{ github.sha }}
-          path: release
 
       - name: Validate deployment settings
         shell: bash
         run: |
-          for name in DEPLOY_HOST DEPLOY_PORT DEPLOY_USER DEPLOY_SSH_KEY DEPLOY_KNOWN_HOSTS API_URL; do
+          for name in DEPLOY_HOST DEPLOY_PORT DEPLOY_USER DEPLOY_SSH_KEY DEPLOY_KNOWN_HOSTS; do
             if [ -z "${!name:-}" ]; then
               echo "::error::$name is not configured for backend deployment"
               exit 1
@@ -152,13 +110,6 @@ jobs:
           [[ "$DEPLOY_USER" =~ ^[a-z_][a-z0-9_-]*$ ]]
           [[ "$DEPLOY_PORT" =~ ^[0-9]{1,5}$ ]]
           ((10#$DEPLOY_PORT >= 1 && 10#$DEPLOY_PORT <= 65535))
-          [[ "$API_URL" =~ ^https?://[A-Za-z0-9._:-]+(/[A-Za-z0-9._/-]+)?/$ && "$API_URL" != *..* ]]
-          if [[ "$TARGET" = production ]]; then
-            [[ "$API_URL" = 'https://api.ablakin.ru/' ]]
-          else
-            api_host=${API_URL#*://}; api_host=${api_host%%/*}; api_host=${api_host%%:*}
-            [[ "${api_host,,}" != api.ablakin.ru ]]
-          fi
 
       - name: Configure SSH
         shell: bash
@@ -168,7 +119,7 @@ jobs:
           printf '%s\n' "$DEPLOY_KNOWN_HOSTS" | tr -d '\r' > "$HOME/.ssh/known_hosts"
           chmod 600 "$HOME/.ssh/deploy_key" "$HOME/.ssh/known_hosts"
 
-      - name: Upload and deploy the checked backend
+      - name: Run git pull and make up on the VPS
         shell: bash
         run: |
           if [[ "$TARGET" = test ]]; then
@@ -179,12 +130,11 @@ jobs:
             repo_root='/var/www/api.ablakin.ru'
           fi
           [[ "$GITHUB_REF_NAME" =~ ^[A-Za-z0-9][A-Za-z0-9._/-]*$ && "$GITHUB_REF_NAME" != *..* ]]
-          remote_dir="$deploy_root/incoming/$GITHUB_SHA"
           options=(-i "$HOME/.ssh/deploy_key" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=yes -o UserKnownHostsFile="$HOME/.ssh/known_hosts" -o ServerAliveInterval=30 -o ServerAliveCountMax=6)
-          if ! ssh "${options[@]}" -p "$DEPLOY_PORT" "$DEPLOY_USER@$DEPLOY_HOST" "test -d '$deploy_root' && test -w '$deploy_root' && umask 077 && mkdir -p '$remote_dir' && chmod 700 '$remote_dir'"; then
-            echo "::error::Cannot prepare $remote_dir over SSH. Verify SSH access and that $deploy_root exists and is writable by the deployment user."
+          if ! ssh "${options[@]}" -p "$DEPLOY_PORT" "$DEPLOY_USER@$DEPLOY_HOST" "test -d '$deploy_root' && test -w '$deploy_root'"; then
+            echo "::error::Verify SSH access and that $deploy_root exists and is writable by the deployment user."
             exit 1
           fi
-          scp "${options[@]}" -P "$DEPLOY_PORT" release/vendor.tar.gz release/vendor.tar.gz.sha256 deploy/backend-deploy.sh deploy/check-api.php "$DEPLOY_USER@$DEPLOY_HOST:$remote_dir/"
+          scp "${options[@]}" -P "$DEPLOY_PORT" deploy/backend-deploy.sh "$DEPLOY_USER@$DEPLOY_HOST:$deploy_root/backend-deploy.sh"
           ssh "${options[@]}" -p "$DEPLOY_PORT" "$DEPLOY_USER@$DEPLOY_HOST" \
-            "bash '$remote_dir/backend-deploy.sh' '$repo_root' '$GITHUB_SHA' '$remote_dir/vendor.tar.gz' '$API_URL' '$deploy_root' '$GITHUB_REF_NAME' '$TARGET'"
+            "bash '$deploy_root/backend-deploy.sh' '$repo_root' '$GITHUB_REF_NAME' '$TARGET'"

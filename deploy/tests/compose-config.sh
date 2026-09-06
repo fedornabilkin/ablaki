@@ -57,7 +57,6 @@ ENV
 done
 
 python3 - "$test_root" <<'PY'
-import ipaddress
 import json
 import pathlib
 import sys
@@ -72,7 +71,8 @@ for name, project, subnet, api_port in (
     config = configs[name]
     assert config['name'] == project, (name, 'unexpected Compose project')
     assert config['networks']['default']['name'] == project + '_default'
-    assert config['networks']['default']['ipam']['config'][0]['subnet'] == subnet
+    # Even a legacy COMPOSE_SUBNET in .env must not force an overlapping pool.
+    assert not config['networks']['default'].get('ipam', {}).get('config')
     assert not config['networks']['default'].get('external', False)
     assert set(config['networks']) == {'default'}
     for key, volume in config['volumes'].items():
@@ -105,12 +105,11 @@ for name, project, subnet, api_port in (
     assert db_volume['type'] == 'volume' and db_volume['source'] == 'postgresdata'
     print('PASS isolated Compose configuration:', name)
 
-assert not ipaddress.ip_network('192.168.22.0/24').overlaps(ipaddress.ip_network('192.168.23.0/24'))
 assert len(all_ports) == 8
 legacy = configs['legacy']
-assert legacy['networks']['default']['ipam']['config'][0]['subnet'] == '192.168.22.0/24'
+assert not legacy['networks']['default'].get('ipam', {}).get('config')
 for service in legacy['services'].values():
     assert all(port['host_ip'] == '127.0.0.1' for port in service.get('ports', []))
 assert legacy['volumes']['postgresdata']['name'] == 'ablaki_postgresdata'
-print('PASS missing new variables preserve the legacy subnet and local port binding')
+print('PASS Docker allocates new subnets; project, volumes and port bindings are retained')
 PY

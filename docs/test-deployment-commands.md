@@ -28,7 +28,7 @@ sudo usermod -aG docker "$test_deploy_user"
 sudo setfacl -R -P -m "u:${test_deploy_user}:rwX" "$test_backend"
 
 sudo install -d -o "$test_deploy_user" -g "$test_deploy_group" -m 0700 \
-  /opt/ablaki-backend-test /opt/ablaki-backend-test/incoming /opt/ablaki-backend-test/releases \
+  /opt/ablaki-backend-test \
   /opt/ablaki-frontend-test /opt/ablaki-frontend-test/incoming /opt/ablaki-frontend-test/releases
 
 sudo -u "$test_deploy_user" git -c safe.directory="$test_backend" \
@@ -141,7 +141,6 @@ Repository variables:
 
 | Репозиторий | Имя | Значение |
 | --- | --- | --- |
-| `ablaki` | `TEST_BACKEND_HEALTHCHECK_URL` | `http://94.250.251.94:3180/` |
 | `ablaki-front` | `TEST_VITE_API_URL` | `http://94.250.251.94:3180/` |
 | `ablaki-front` | `TEST_FRONTEND_HEALTHCHECK_URL` | `http://94.250.251.94:3181` |
 
@@ -149,7 +148,7 @@ Repository variables:
 
 ## 5. Запуск
 
-1. В `ablaki`: Actions → **Backend CI and deployment** → Run workflow → **Use workflow from: master**, **target: test**. Workflow сам установит код/vendor, затем выполнит `make up` с миграциями существующей PostgreSQL.
+1. В `ablaki`: Actions → **Backend CI and deployment** → Run workflow → **Use workflow from: master**, **target: test**. В тестовом checkout тоже должен быть выбран master. Workflow выполняет `git pull --ff-only origin master`, затем `make up` с миграциями. PostgreSQL должна уже работать; существующий vendor сохраняется. `TEST_BACKEND_HEALTHCHECK_URL` больше не требуется.
 2. Дождитесь успеха backend и проверьте:
 
 ```bash

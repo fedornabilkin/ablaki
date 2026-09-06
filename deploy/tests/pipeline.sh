@@ -1,87 +1,30 @@
 #!/usr/bin/env bash
-# No Docker daemon, SSH, live checkout, or database: all external commands are fixtures.
+# Only temporary fixtures: no SSH, Docker daemon or real database.
 set -Eeuo pipefail
 source_root=$(cd "$(dirname "$0")/../.." && pwd)
 test_root=$(mktemp -d)
 trap 'rm -rf -- "$test_root"' EXIT
 mkdir -p "$test_root/bin"
-export TEST_LOG TEST_REPO TEST_HEAD TEST_SHA TEST_OLD TEST_FAIL TEST_FINGERPRINT TEST_BRANCH_FILE TEST_TARGET
+export TEST_LOG TEST_REPO TEST_FAIL TEST_BRANCH TEST_SHA
 TEST_SHA=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-TEST_OLD=bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-TEST_FINGERPRINT=$(printf 'cluster/database' | sha256sum | cut -d' ' -f1)
 cat > "$test_root/bin/git" <<'MOCK'
 #!/usr/bin/env bash
 set -eu
-if [[ "${1:-}" = -c ]]; then
-  [[ "$2" = "safe.directory=$TEST_REPO" ]] || { echo 'Unexpected trusted Git directory' >&2; exit 1; }
-  shift 2
-else
-  echo 'Deployment Git must trust exactly the selected checkout' >&2
-  exit 1
-fi
+[[ "$1" = -c && "$2" = "safe.directory=$TEST_REPO" ]]
+shift 2
 printf 'git %s\n' "$*" >> "$TEST_LOG"
 case "$1 $2" in
+  'check-ref-format --branch') [[ "$TEST_FAIL" != invalid_branch ]] ;;
   'rev-parse --show-toplevel') printf '%s\n' "$TEST_REPO" ;;
-  'symbolic-ref --quiet') if [[ "$TEST_FAIL" = branch ]]; then echo work; else cat "$TEST_BRANCH_FILE"; fi ;;
-  'rev-parse HEAD') cat "$TEST_HEAD" ;;
-  'rev-parse origin/master'|'rev-parse origin/feature/test') if [[ "$TEST_FAIL" = stale ]]; then echo cccccccccccccccccccccccccccccccccccccccc; else echo "$TEST_SHA"; fi ;;
-  'diff --quiet') [[ "$TEST_FAIL" != dirty ]] ;;
-  'diff --cached'|'diff --name-only'|'fetch --no-tags'|'check-ref-format --branch') ;;
-  'merge-base --is-ancestor') [[ "$TEST_FAIL" != diverged ]] ;;
-  'show-ref --verify') [[ "$TEST_FAIL" != new_branch ]] ;;
-  'checkout feature/test') printf 'feature/test\n' > "$TEST_BRANCH_FILE" ;;
-  'checkout -b') printf '%s\n' "$3" > "$TEST_BRANCH_FILE" ;;
-  'merge --ff-only')
-    [[ "$(umask)" = 0022 ]] || { echo 'Checkout must be readable by PHP/nginx' >&2; exit 1; }
-    printf '%s\n' "$TEST_SHA" > "$TEST_HEAD"
+  'symbolic-ref --quiet') printf '%s\n' "$TEST_BRANCH" ;;
+  'pull --ff-only')
+    [[ "$3" = origin && "$4" = "$TEST_BRANCH" ]]
+    [[ "$(umask)" = 0022 ]]
+    [[ "$TEST_FAIL" != pull ]] || exit 23
+    printf 'updated code\n' > "$TEST_REPO/code.txt"
     ;;
-  'show '*) cat "$TEST_REPO/yii2/composer.lock" ;;
-  *) echo "Unexpected git command: $*" >&2; exit 1 ;;
-esac
-MOCK
-cat > "$test_root/bin/docker" <<'MOCK'
-#!/usr/bin/env bash
-set -eu
-printf 'docker %s\n' "$*" >> "$TEST_LOG"
-if [[ "$1" = inspect ]]; then
-  case "$*" in
-    *working_dir*) if [[ "$TEST_FAIL" = wrong_checkout ]]; then echo /another/checkout; else echo "$TEST_REPO"; fi ;;
-    *Mounts*) echo fixture-pg-volume ;;
-    *) if [[ "$TEST_TARGET" = production || "$TEST_FAIL" = wrong_project ]]; then echo ablaki-production; else echo ablaki; fi ;;
-  esac
-  exit 0
-fi
-if [[ "$1 $2" = 'volume inspect' ]]; then
-  if [[ "$TEST_FAIL" = shared_volume ]]; then echo another-project;
-  elif [[ "$TEST_TARGET" = production ]]; then echo ablaki-production; else echo ablaki; fi
-  exit 0
-fi
-[[ "$1" = compose ]] || exit 1
-shift
-case "$1" in
-  version|config|stop|start|up|build) exit 0 ;;
-  ps) if [[ "$*" = 'ps -q php' || "$*" = 'ps -q nginx' ]]; then echo fixture-app; fi; exit 0 ;;
-  run)
-    if [[ "$*" = *'getenv("APP_ENVIRONMENT")'* && "$TEST_FAIL" = wrong_environment ]]; then exit 1; fi
-    if [[ "$*" = *'getenv("MYSQL_DB_HOST")'* ]]; then
-      if [[ "$TEST_TARGET" = production ]]; then echo mysql; else echo pgsql; fi
-      exit 0
-    fi
-    if [[ "$*" = *'migrate/up'* && "$TEST_FAIL" = migration ]]; then exit 1; fi
-    if [[ "$*" = *'--entrypoint php php' ]]; then
-      cat > /dev/null
-      if [[ "$TEST_FAIL" = identity ]]; then echo wrong; else printf '%s' "$TEST_FINGERPRINT"; fi
-    fi
-    exit 0
-    ;;
-  exec)
-    if [[ "$*" = *pg_control_system* ]]; then printf 'cluster/database\n'
-    elif [[ "$*" = *pg_dump* ]]; then [[ "$TEST_FAIL" != backup ]]; echo 'fixture dump'
-    elif [[ "$*" = *pg_restore* ]]; then cat > /dev/null
-    else cat > /dev/null; [[ "$TEST_FAIL" != health ]]
-    fi
-    ;;
-  *) echo "Unexpected compose command: $*" >&2; exit 1 ;;
+  'rev-parse HEAD') printf '%s\n' "$TEST_SHA" ;;
+  *) echo "Unexpected Git command: $*" >&2; exit 1 ;;
 esac
 MOCK
 cat > "$test_root/bin/make" <<'MOCK'
@@ -89,115 +32,78 @@ cat > "$test_root/bin/make" <<'MOCK'
 set -eu
 printf 'make %s\n' "$*" >> "$TEST_LOG"
 [[ "$*" = up ]]
+[[ -f "$TEST_REPO/code.txt" ]] || { echo 'make ran before git pull' >&2; exit 1; }
+[[ "$TEST_FAIL" != make ]] || exit 31
+# Exercise the actual make up runner with Docker commands substituted below.
 bash deploy/start.sh
 MOCK
-cat > "$test_root/bin/curl" <<'MOCK'
+cat > "$test_root/bin/docker" <<'MOCK'
 #!/usr/bin/env bash
 set -eu
-printf 'curl %s\n' "$*" >> "$TEST_LOG"
-[[ "$TEST_FAIL" != health ]]
-printf '{"status":"ok","revision":"%s","portalListsVersion":1,"environment":"%s"}' "$TEST_SHA" "$TEST_TARGET"
+printf 'docker %s\n' "$*" >> "$TEST_LOG"
+grep -Fxq 'make up' "$TEST_LOG" || { echo 'Docker ran before make up' >&2; exit 1; }
+[[ "$1" = compose ]]
+shift
+case "$*" in
+  version|ps|'up --detach --no-deps php nginx') ;;
+  run*)
+    [[ "$*" = *'--entrypoint php php yii '* ]]
+    if [[ "$*" = *'migrate/up'* && "$TEST_FAIL" = migration ]]; then exit 42; fi
+    ;;
+  *) echo "Unexpected Docker operation: $*" >&2; exit 1 ;;
+esac
 MOCK
-cat > "$test_root/bin/flock" <<'MOCK'
-#!/usr/bin/env bash
-printf 'flock %s\n' "$*" >> "$TEST_LOG"
-[[ "$TEST_FAIL" != lock ]]
-MOCK
-printf '#!/usr/bin/env bash\nexit 0\n' > "$test_root/bin/sleep"
 chmod +x "$test_root/bin/"*
 export PATH="$test_root/bin:$PATH"
 
-setup_case() {
-  TEST_FAIL=$1
-  TEST_REPO="$test_root/$1"
-  TEST_DEPLOY="$test_root/$1-deploy"
-  mkdir -p "$TEST_DEPLOY/incoming/$TEST_SHA" "$TEST_REPO/.git" "$TEST_REPO/yii2/vendor" "$TEST_REPO/yii2/api/runtime" "$TEST_REPO/deploy" "$TEST_REPO/package/vendor/bin"
-  TEST_REPO=$(cd "$TEST_REPO" && pwd)
-  TEST_DEPLOY=$(cd "$TEST_DEPLOY" && pwd)
+for scenario in production test pull make migration wrong_branch invalid_branch production_branch; do
+  TEST_FAIL=$scenario
+  TEST_REPO="$test_root/$scenario"
+  mkdir -p "$TEST_REPO/.git" "$TEST_REPO/yii2/vendor" "$TEST_REPO/yii2/api/runtime" "$TEST_REPO/deploy"
+  TEST_REPO=$(cd "$TEST_REPO" && pwd -P)
   TEST_LOG="$TEST_REPO/commands.log"
-  TEST_HEAD="$TEST_REPO/head.txt"
-  TEST_BRANCH_FILE="$TEST_REPO/branch.txt"
-  TEST_TARGET=production
-  printf 'master\n' > "$TEST_BRANCH_FILE"
-  printf '# Existing environment must remain intact\nDB_FIXTURE=preserved\n' > "$TEST_REPO/.env"
-  : > "$TEST_LOG"
-  printf '%s\n' "$TEST_OLD" > "$TEST_HEAD"
-  printf 'old vendor' > "$TEST_REPO/yii2/vendor/previous.txt"
-  printf '{"locked":true}\n' > "$TEST_REPO/yii2/composer.lock"
+  TEST_BRANCH=master
+  target=production
+  branch=master
+  if [[ "$scenario" = test ]]; then target=test; branch=feature/test; TEST_BRANCH=$branch; fi
+  if [[ "$scenario" = wrong_branch ]]; then TEST_BRANCH=another; fi
+  if [[ "$scenario" = production_branch ]]; then branch=feature/test; fi
   cp "$source_root/deploy/"{compose,migrate,start}.sh "$TEST_REPO/deploy/"
-  incoming="$TEST_DEPLOY/incoming/$TEST_SHA"
-  cp "$source_root/deploy/"{backend-deploy.sh,database-fingerprint.php,check-api.php} "$incoming/"
-  printf 'new vendor' > "$TEST_REPO/package/vendor/autoload.php"
-  printf 'composer fixture' > "$TEST_REPO/package/vendor/bin/deploy-composer.phar"
-  printf '%s\n' "$TEST_SHA" > "$TEST_REPO/package/commit.txt"
-  sha256sum "$TEST_REPO/yii2/composer.lock" | cut -d' ' -f1 > "$TEST_REPO/package/composer.lock.sha256"
-  tar -C "$TEST_REPO/package" -czf "$incoming/vendor.tar.gz" vendor commit.txt composer.lock.sha256
-  (cd "$incoming" && sha256sum vendor.tar.gz > vendor.tar.gz.sha256)
-  if [[ "$1" = checksum ]]; then printf tampered >> "$incoming/vendor.tar.gz"; fi
-}
-expect_log() { grep -Fq -- "$1" "$TEST_LOG" || { echo "Missing operation: $1" >&2; exit 1; }; }
-reject_log() { if grep -Fq -- "$1" "$TEST_LOG"; then echo "Forbidden operation: $1" >&2; exit 1; fi; }
-before() {
-  local first second
-  first=$(grep -nF -- "$1" "$TEST_LOG" | head -n 1 | cut -d: -f1)
-  second=$(grep -nF -- "$2" "$TEST_LOG" | head -n 1 | cut -d: -f1)
-  [[ "$first" -lt "$second" ]] || { echo "Wrong order: $1 / $2" >&2; exit 1; }
-}
-for scenario in success stale dirty branch lock checksum migration health root_inside root_parent root_missing wrong_archive test_branch new_branch diverged wrong_checkout wrong_environment test_production_api production_branch; do
-  setup_case "$scenario"
-  state_arg="$TEST_DEPLOY"
-  archive_arg="$incoming/vendor.tar.gz"
-  branch_arg=master
-  api_arg='https://api.example.test/'
-  case "$scenario" in
-    root_inside) state_arg="$TEST_REPO/.deploy"; mkdir "$state_arg" ;;
-    root_parent) state_arg="$test_root" ;;
-    root_missing) state_arg="$test_root/absent-deploy" ;;
-    wrong_archive) archive_arg="$TEST_REPO/vendor.tar.gz"; cp "$incoming/vendor.tar.gz" "$archive_arg"; cp "$incoming/vendor.tar.gz.sha256" "$archive_arg.sha256" ;;
-    test_branch|new_branch) TEST_TARGET=test; branch_arg=feature/test ;;
-    test_production_api) TEST_TARGET=test; api_arg='https://api.ablakin.ru/' ;;
-    production_branch) branch_arg=feature/test ;;
-  esac
+  printf '# Local configuration\nDB_FIXTURE=preserved\n' > "$TEST_REPO/.env"
+  cp "$TEST_REPO/.env" "$TEST_REPO/env-before"
+  printf 'existing vendor\n' > "$TEST_REPO/yii2/vendor/autoload.php"
+  : > "$TEST_LOG"
   status=0
-  bash "$incoming/backend-deploy.sh" "$TEST_REPO" "$TEST_SHA" "$archive_arg" "$api_arg" "$state_arg" "$branch_arg" "$TEST_TARGET" > "$TEST_REPO/output.log" 2>&1 || status=$?
+  bash "$source_root/deploy/backend-deploy.sh" "$TEST_REPO" "$branch" "$target" > "$TEST_REPO/output.log" 2>&1 || status=$?
   case "$scenario" in
-    success|test_branch|new_branch)
+    production|test)
       [[ "$status" = 0 ]] || { cat "$TEST_REPO/output.log"; exit 1; }
-      [[ "$(cat "$TEST_DEPLOY/current")" = "$TEST_SHA" ]]
+      grep -Fxq "git pull --ff-only origin $branch" "$TEST_LOG"
+      grep -Fxq 'make up' "$TEST_LOG"
+      [[ "$(grep -c -- 'yii migrate/up' "$TEST_LOG")" = 5 ]]
+      grep -Fxq 'docker compose up --detach --no-deps php nginx' "$TEST_LOG"
       [[ "$(cat "$TEST_REPO/yii2/api/runtime/deploy-version.txt")" = "$TEST_SHA" ]]
-      before 'stop nginx php composer' 'git merge --ff-only'
-      before 'check-platform-reqs' 'migrate/up'
-      before 'migrate/up' 'up --detach --no-deps --force-recreate php nginx'
-      [[ -n "$(find "$TEST_DEPLOY/releases" -path '*/previous-vendor/previous.txt' -print -quit)" ]]
-      [[ ! -e "$TEST_DEPLOY/backups" ]]
-      if [[ "$TEST_TARGET" = production ]]; then
-        expect_log 'check-platform-reqs --no-dev'
-        reject_log 'up --detach postgres'
-      else
-        reject_log 'check-platform-reqs --no-dev'
-        before 'up --detach postgres' 'migrate/up'
-      fi
-      [[ ! -e "$TEST_REPO/.git/ablaki-deploy" ]]
-      [[ "$(cat "$TEST_BRANCH_FILE")" = "$branch_arg" ]]
-      grep -Fxq 'DB_FIXTURE=preserved' "$TEST_REPO/.env"
-      grep -Fxq "APP_ENVIRONMENT=$TEST_TARGET" "$TEST_REPO/.env"
       ;;
-    stale)
-      [[ "$status" = 0 ]]; reject_log 'stop nginx'; reject_log 'git merge --ff-only'
+    pull)
+      [[ "$status" = 23 ]]
+      ! grep -q '^make\|^docker' "$TEST_LOG"
       ;;
-    dirty|branch|lock|checksum|root_inside|root_parent|root_missing|wrong_archive|diverged|wrong_checkout|wrong_environment|test_production_api|production_branch)
-      [[ "$status" != 0 ]]; reject_log 'stop nginx'; reject_log 'git merge --ff-only'
+    make)
+      [[ "$status" = 31 ]]
+      ! grep -q '^docker' "$TEST_LOG"
       ;;
-    migration|health)
-      [[ "$status" != 0 ]]; expect_log 'stop nginx php'; [[ ! -f "$TEST_DEPLOY/current" ]]
-      reject_log 'git reset'; reject_log 'migrate/down'
-      if [[ "$scenario" = migration ]]; then reject_log 'up --detach --no-deps --force-recreate php nginx'; fi
+    migration)
+      [[ "$status" = 42 ]]
+      ! grep -q 'up --detach' "$TEST_LOG"
+      [[ ! -f "$TEST_REPO/yii2/api/runtime/deploy-version.txt" ]]
+      ;;
+    wrong_branch|invalid_branch|production_branch)
+      [[ "$status" != 0 ]]
+      ! grep -q '^git pull\|^make\|^docker' "$TEST_LOG"
       ;;
   esac
-  reject_log 'down --volumes'
-  reject_log 'make init'
-  reject_log 'pg_dump'
-  reject_log 'pg_restore'
-  reject_log 'pg_control_system'
+  cmp "$TEST_REPO/.env" "$TEST_REPO/env-before"
+  [[ "$(cat "$TEST_REPO/yii2/vendor/autoload.php")" = 'existing vendor' ]]
+  ! grep -Eq 'stop |down |build |force-recreate|up --detach postgres|getenv|check-platform|reset|checkout|pg_dump|pg_restore' "$TEST_LOG"
   printf 'PASS deployment scenario: %s\n' "$scenario"
 done
