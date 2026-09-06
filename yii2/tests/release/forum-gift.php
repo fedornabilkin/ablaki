@@ -65,9 +65,12 @@ try {
     $start = microtime(true) + 1;
     for ($i = 0; $i < 8; $i++) {
         $args = [PHP_BINARY, '-n', '-d', 'extension_dir=' . ini_get('extension_dir')];
-        // Ubuntu builds PDO as a shared extension; -n disables its usual pdo.ini.
-        if (is_file(ini_get('extension_dir') . '/pdo.so')) {
-            $args = array_merge($args, ['-d', 'extension=pdo']);
+        // -n also disables Ubuntu's modular PHP extensions needed by Yii workers.
+        foreach (['pdo', 'ctype', 'json', 'iconv', 'mbstring'] as $extension) {
+            if (is_file(ini_get('extension_dir') . '/' . $extension . '.so')
+                || is_file(ini_get('extension_dir') . '/php_' . $extension . '.dll')) {
+                $args = array_merge($args, ['-d', 'extension=' . $extension]);
+            }
         }
         $args = array_merge($args, ['-d', 'extension=pdo_sqlite', __FILE__, 'worker', $file, (string)$start]);
         $pipes = [];
