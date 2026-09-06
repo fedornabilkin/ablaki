@@ -65,7 +65,7 @@ jobs:
         working-directory: yii2
         shell: bash
         run: |
-          for suite in frontend-lists frontend-api-routing game-overview forum-gift daily-reward exchange-refund; do
+          for suite in auth-response frontend-lists frontend-api-routing game-overview forum-gift daily-reward exchange-refund; do
             if ! php "tests/release/$suite.php" 2>&1 | tee "$RUNNER_TEMP/backend-$suite.log"; then
               details=$(tail -n 15 "$RUNNER_TEMP/backend-$suite.log")
               details=${details//%/%25}

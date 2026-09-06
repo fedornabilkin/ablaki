@@ -24,7 +24,10 @@ class Person extends \common\models\user\Person
             'rating' => static function (self $model) {
                 return UserHelper::ratingRound($model->rating);
             },
-            'description',
+            'description' => static function (self $model) {
+                // Older profile schemas may not have this optional column yet.
+                return $model->getAttribute('description');
+            },
         ];
 
 //        $f['id2'] = function (self $model) {
