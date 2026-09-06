@@ -12,6 +12,13 @@ TEST_FINGERPRINT=$(printf 'cluster/database' | sha256sum | cut -d' ' -f1)
 cat > "$test_root/bin/git" <<'MOCK'
 #!/usr/bin/env bash
 set -eu
+if [[ "${1:-}" = -c ]]; then
+  [[ "$2" = "safe.directory=$TEST_REPO" ]] || { echo 'Unexpected trusted Git directory' >&2; exit 1; }
+  shift 2
+else
+  echo 'Deployment Git must trust exactly the selected checkout' >&2
+  exit 1
+fi
 printf 'git %s\n' "$*" >> "$TEST_LOG"
 case "$1 $2" in
   'rev-parse --show-toplevel') printf '%s\n' "$TEST_REPO" ;;
@@ -112,6 +119,7 @@ setup_case() {
   TEST_BRANCH_FILE="$TEST_REPO/branch.txt"
   TEST_TARGET=production
   printf 'master\n' > "$TEST_BRANCH_FILE"
+  printf '# Existing environment must remain intact\nDB_FIXTURE=preserved\n' > "$TEST_REPO/.env"
   : > "$TEST_LOG"
   printf '%s\n' "$TEST_OLD" > "$TEST_HEAD"
   printf 'old vendor' > "$TEST_REPO/yii2/vendor/previous.txt"
@@ -166,6 +174,8 @@ for scenario in success stale dirty branch lock checksum migration health root_i
       else before 'up --detach postgres' 'migrate/up'; fi
       [[ ! -e "$TEST_REPO/.git/ablaki-deploy" ]]
       [[ "$(cat "$TEST_BRANCH_FILE")" = "$branch_arg" ]]
+      grep -Fxq 'DB_FIXTURE=preserved' "$TEST_REPO/.env"
+      grep -Fxq "APP_ENVIRONMENT=$TEST_TARGET" "$TEST_REPO/.env"
       ;;
     stale)
       [[ "$status" = 0 ]]; reject_log 'stop nginx'; reject_log 'git merge --ff-only'

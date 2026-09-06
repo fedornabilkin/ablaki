@@ -55,7 +55,7 @@ sudo -u "$backend_deploy_user" git clone https://github.com/fedornabilkin/ablaki
 
 ## 3. Существующие .env и PHP
 
-Образцы [production.env.example](../deploy/env/production.env.example) и [test.env.example](../deploy/env/test.env.example) служат памяткой. **Не копируйте их поверх действующей `.env`.** Добавьте или проверьте только `APP_ENVIRONMENT` нужного окружения; права `.env` — `0600`. Сохраните действующие параметры подключения:
+Образцы [production.env.example](../deploy/env/production.env.example) и [test.env.example](../deploy/env/test.env.example) служат памяткой. **Не копируйте их поверх действующей `.env`.** Если `APP_ENVIRONMENT` отсутствует, деплой дописывает это поле для выбранного окружения; существующее значение и остальные строки сохраняются. Права `.env` — `0600`. Сохраните действующие параметры подключения:
 
 | Production `.env` | Test `.env` |
 | --- | --- |

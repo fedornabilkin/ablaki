@@ -2,8 +2,10 @@
 set -Eeuo pipefail
 umask 077
 
-die() { printf '[backend-deploy] ERROR: %s\n' "$*" >&2; exit 1; }
+die() { printf '::error title=Backend deployment failed::%s\n' "$*" >&2; exit 1; }
 log() { printf '[backend-deploy] %s\n' "$*"; }
+phase='Checking deployment paths and artifact'
+trap 'code=$?; printf "::error title=Backend deployment failed::%s (line %s, exit %s)\n" "$phase" "$LINENO" "$code" >&2' ERR
 repo=${1:-}
 sha=${2:-}
 archive=${3:-}
@@ -30,6 +32,8 @@ state=$(readlink -f "$deploy_root")
 case "$state/" in "$repo/"*) die 'Deployment root must be outside the checkout' ;; esac
 case "$repo/" in "$state/"*) die 'Checkout must be outside the deployment root' ;; esac
 cd "$repo"
+# Trust only this validated checkout for this process, without global Git changes.
+git() { command git -c safe.directory="$repo" "$@"; }
 [[ "$(git rev-parse --show-toplevel)" = "$repo" ]] || die 'Repository path mismatch'
 git check-ref-format --branch "$branch" > /dev/null
 previous_branch=$(git branch --show-current)
@@ -58,6 +62,7 @@ while IFS= read -r -d '' link; do
 done < <(find "$release/vendor" -type l -print0)
 chmod -R u=rwX,go=rX "$release/vendor"
 
+phase='Fetching the selected Git branch'
 git fetch --no-tags origin "$branch"
 [[ "$(git rev-parse "origin/$branch")" = "$sha" ]] || { log 'A newer branch revision exists; skipping this outdated deployment'; exit 0; }
 previous=$(git rev-parse HEAD)
@@ -68,6 +73,12 @@ expected_lock=$(tr -d '\r\n' < "$release/composer.lock.sha256")
 actual_lock=$(git show "$sha:yii2/composer.lock" | sha256sum | cut -d' ' -f1)
 [[ "$expected_lock" =~ ^[a-f0-9]{64}$ && "$actual_lock" = "$expected_lock" ]] || die 'Vendor was built from another lock file'
 if docker compose version >/dev/null 2>&1; then compose=(docker compose); else compose=(docker-compose); fi
+phase='Checking Docker Compose and the existing environment'
+[[ -f .env ]] || die 'The checkout needs its existing .env file before deployment'
+# Add deployment metadata only; retain all existing connection settings verbatim.
+if ! grep -Eq '^[[:space:]]*(export[[:space:]]+)?APP_ENVIRONMENT[[:space:]]*=' .env; then
+  printf '\nAPP_ENVIRONMENT=%s\n' "$target" >> .env
+fi
 "${compose[@]}" config --quiet
 for service in php nginx; do
   container_id=$("${compose[@]}" ps -q "$service")
@@ -76,6 +87,7 @@ for service in php nginx; do
     [[ -n "$container_repo" && "$(readlink -f "$container_repo")" = "$repo" ]] || die 'Application container belongs to another checkout'
   fi
 done
+phase='Checking PHP 7.3+ and APP_ENVIRONMENT for the selected target'
 "${compose[@]}" run --rm --no-deps -T --entrypoint php php -r 'exit(PHP_VERSION_ID >= 70300 && getenv("APP_ENVIRONMENT") === $argv[1] ? 0 : 1);' "$target"
 
 stopped=0
@@ -100,12 +112,14 @@ trap 'exit 129' HUP
 log 'Updating the existing application; no automatic database backup'
 log 'Stopping API and cron to replace code and dependencies'
 stopped=1
+phase='Stopping the previous PHP/nginx application'
 "${compose[@]}" stop nginx php composer
 
 printf '%s\n' "$previous" > "$release/previous-sha"
 printf '%s\n' "$previous_branch" > "$release/previous-branch"
 log 'Installing checked code and dependencies; keeping existing environment files'
 changed=1
+phase='Installing the selected code and vendor'
 # Git-created code/directories must remain readable by FPM/nginx users in bind mounts.
 (
   umask 022
@@ -119,11 +133,15 @@ changed=1
 if [[ -e yii2/vendor ]]; then mv yii2/vendor "$release/previous-vendor"; fi
 mv "$release/vendor" yii2/vendor
 if [[ -n "$(git diff --name-only "$previous" "$sha" -- docker/php/Dockerfile docker/php/cron docker/php/xdebugInstall.sh)" ]]; then
+  phase='Building the changed PHP image'
   "${compose[@]}" build php
 fi
+phase='Checking installed PHP dependencies'
 "${compose[@]}" run --rm --no-deps -T --workdir /web/yii2 --entrypoint php php vendor/bin/deploy-composer.phar check-platform-reqs --no-dev
 # Keep the owner's existing release sequence: update code, then make up with migrations.
+phase='Running make up with migrations against the existing database'
 make up
+phase='Checking the deployed API version and environment'
 ready=0
 for attempt in {1..12}; do
   if "${compose[@]}" exec -T --workdir /web/yii2 php php /dev/stdin 'http://nginx/' "$sha" "$target" < "$script_dir/check-api.php" \

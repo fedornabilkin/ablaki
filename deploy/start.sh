@@ -11,7 +11,7 @@ case "$database_driver" in
 esac
 bash deploy/migrate.sh
 test -d yii2/api/runtime
-git rev-parse HEAD > yii2/api/runtime/deploy-version.txt
+git -c safe.directory="$(pwd)" rev-parse HEAD > yii2/api/runtime/deploy-version.txt
 chmod 644 yii2/api/runtime/deploy-version.txt
 "${compose[@]}" up --detach --no-deps --force-recreate php nginx
 "${compose[@]}" ps
