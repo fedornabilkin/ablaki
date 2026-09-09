@@ -17,7 +17,22 @@ repo=$(pwd -P)
 git() { command git -c safe.directory="$repo" "$@"; }
 git check-ref-format --branch "$branch" >/dev/null
 [[ "$(git rev-parse --show-toplevel)" = "$repo" ]] || die 'Repository path mismatch'
-[[ "$(git symbolic-ref --quiet --short HEAD)" = "$branch" ]] || die 'Select the same branch as the existing VPS checkout'
+
+phase='Preparing the checkout'
+if [ -n "$(git status --porcelain --untracked-files=no)" ]; then
+  stash_message="deploy: $target/$branch $(date -u '+%Y-%m-%d %H:%M:%S UTC')"
+  printf '[backend-deploy] stashing local changes: %s\n' "$stash_message"
+  git -c user.name='Ablaki deploy' -c user.email='deploy@ablaki.ru' stash push -m "$stash_message"
+fi
+git fetch --prune origin "$branch"
+if [[ "$(git symbolic-ref --quiet --short HEAD || true)" != "$branch" ]]; then
+  if git show-ref --verify --quiet "refs/heads/$branch"; then
+    git checkout "$branch"
+  else
+    git checkout -b "$branch" "origin/$branch"
+  fi
+fi
+[[ "$(git symbolic-ref --quiet --short HEAD)" = "$branch" ]] || die 'Unable to switch the VPS checkout to the requested branch'
 
 phase='git pull'
 printf '[backend-deploy] git pull (%s, %s)\n' "$target" "$branch"

@@ -8,10 +8,10 @@
 
 namespace common\modules\exchange\middleware;
 
-use common\middleware\DataMiddleware;
+use common\middleware\AbstractDataMiddleware;
 use common\modules\exchange\models\CreditTransfer;
 
-class TransferDataMiddleware extends DataMiddleware
+class TransferDataMiddleware extends AbstractDataMiddleware
 {
     /**
      * @var CreditTransfer

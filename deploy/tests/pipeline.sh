@@ -10,14 +10,27 @@ cat > "$test_root/bin/git" <<'MOCK'
 #!/usr/bin/env bash
 set -eu
 [[ "$1" = -c && "$2" = "safe.directory=$TEST_REPO" ]]
-shift 2
+while [[ "$1" = -c ]]; do shift 2; done
 printf 'git %s\n' "$*" >> "$TEST_LOG"
 case "$1 $2" in
   'check-ref-format --branch') [[ "$TEST_FAIL" != invalid_branch ]] ;;
   'rev-parse --show-toplevel') printf '%s\n' "$TEST_REPO" ;;
-  'symbolic-ref --quiet') printf '%s\n' "$TEST_BRANCH" ;;
+  'status --porcelain')
+    [[ "$TEST_FAIL" != dirty ]] || printf ' M local.php\n'
+    ;;
+  'stash push') ;;
+  'fetch --prune') ;;
+  'show-ref --verify') exit 1 ;;
+  'checkout -b') printf '%s\n' "$3" > "$TEST_REPO/current-branch" ;;
+  'checkout master') printf '%s\n' "$2" > "$TEST_REPO/current-branch" ;;
+  'checkout feature/test') printf '%s\n' "$2" > "$TEST_REPO/current-branch" ;;
+  'symbolic-ref --quiet')
+    if [[ -f "$TEST_REPO/current-branch" ]]; then cat "$TEST_REPO/current-branch"; else printf '%s\n' "$TEST_BRANCH"; fi
+    ;;
   'pull --ff-only')
-    [[ "$3" = origin && "$4" = "$TEST_BRANCH" ]]
+    expected_branch="$TEST_BRANCH"
+    [[ ! -f "$TEST_REPO/current-branch" ]] || expected_branch="$(cat "$TEST_REPO/current-branch")"
+    [[ "$3" = origin && "$4" = "$expected_branch" ]]
     [[ "$(umask)" = 0022 ]]
     [[ "$TEST_FAIL" != pull ]] || exit 23
     printf 'updated code\n' > "$TEST_REPO/code.txt"
@@ -44,7 +57,7 @@ MOCK
 chmod +x "$test_root/bin/"*
 export PATH="$test_root/bin:$PATH"
 
-for scenario in production test pull make wrong_branch invalid_branch production_branch; do
+for scenario in production test dirty pull make wrong_branch invalid_branch production_branch; do
   TEST_FAIL=$scenario
   TEST_REPO="$test_root/$scenario"
   mkdir -p "$TEST_REPO/.git" "$TEST_REPO/yii2/vendor"
@@ -63,10 +76,11 @@ for scenario in production test pull make wrong_branch invalid_branch production
   status=0
   bash "$source_root/deploy/backend-deploy.sh" "$TEST_REPO" "$branch" "$target" > "$TEST_REPO/output.log" 2>&1 || status=$?
   case "$scenario" in
-    production|test)
+    production|test|dirty)
       [[ "$status" = 0 ]] || { cat "$TEST_REPO/output.log"; exit 1; }
       grep -Fxq "git pull --ff-only origin $branch" "$TEST_LOG"
       grep -Fxq 'make up' "$TEST_LOG"
+      if [[ "$scenario" = dirty ]]; then grep -Eq '^git stash push -m deploy: production/master ' "$TEST_LOG"; fi
       ! grep -q '^docker' "$TEST_LOG"
       ;;
     pull)
@@ -77,13 +91,18 @@ for scenario in production test pull make wrong_branch invalid_branch production
       [[ "$status" = 31 ]]
       ! grep -q '^docker' "$TEST_LOG"
       ;;
-    wrong_branch|invalid_branch|production_branch)
+    invalid_branch|production_branch)
       [[ "$status" != 0 ]]
       ! grep -q '^git pull\|^make\|^docker' "$TEST_LOG"
+      ;;
+    wrong_branch)
+      [[ "$status" = 0 ]] || { cat "$TEST_REPO/output.log"; exit 1; }
+      grep -Fxq "git pull --ff-only origin $branch" "$TEST_LOG"
+      grep -Fxq 'make up' "$TEST_LOG"
       ;;
   esac
   cmp "$TEST_REPO/.env" "$TEST_REPO/env-before"
   [[ "$(cat "$TEST_REPO/yii2/vendor/autoload.php")" = 'existing vendor' ]]
-  ! grep -Eq 'stop |down |build |force-recreate|up --detach postgres|getenv|check-platform|reset|checkout|pg_dump|pg_restore' "$TEST_LOG"
+  ! grep -Eq 'stop |down |build |force-recreate|up --detach postgres|getenv|check-platform|reset|pg_dump|pg_restore' "$TEST_LOG"
   printf 'PASS deployment scenario: %s\n' "$scenario"
 done

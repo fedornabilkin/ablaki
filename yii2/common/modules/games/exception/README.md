@@ -1,6 +1,4 @@
 Коды ошибок в модуле игр должны располагаться в диапазоне 4**   
-yii2/common/modules/exchange/exception
+yii2/common/modules/games/exception
 
-* 401 - MainException
-* 402 - *Exception
-* 403 - *Exception
+* 401 - CountException

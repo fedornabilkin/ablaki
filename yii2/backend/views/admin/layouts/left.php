@@ -70,21 +70,33 @@ use mdm\admin\components\Helper;
                 ],
             ],
             [
-                'label' => Yii::t('app', 'Credit'),
+                'label' => Yii::t('exchange', 'Credit'),
                 'icon' => 'credit-card',
                 'url' => '#',
                 'items' => [
-                    ['label' => Yii::t('app', 'Exchange'), 'icon' => 'exchange', 'url' => ['/exchange/credit']],
-                    ['label' => Yii::t('app', 'Transfer'), 'icon' => 'long-arrow-right', 'url' => ['/exchange/transfer']],
+                    ['label' => Yii::t('exchange', 'Exchange'), 'icon' => 'exchange', 'url' => ['/exchange/credit']],
+                    ['label' => Yii::t('exchange', 'Transfer'), 'icon' => 'long-arrow-right', 'url' => ['/exchange/transfer']],
                 ],
             ],
             [
-                'label' => Yii::t('app', 'Forum'),
+                'label' => Yii::t('forum', 'Forum'),
                 'icon' => 'comment-o',
                 'url' => '#',
                 'items' => [
-                    ['label' => Yii::t('app', 'Theme'), 'icon' => 'commenting-o', 'url' => ['/forum/theme']],
-                    ['label' => Yii::t('app', 'Comment'), 'icon' => 'comments-o', 'url' => ['/forum/comment']],
+                    ['label' => Yii::t('forum', 'Theme'), 'icon' => 'commenting-o', 'url' => ['/forum/theme']],
+                    ['label' => Yii::t('forum', 'Comment'), 'icon' => 'comments-o', 'url' => ['/forum/comment']],
+                ],
+            ],
+            [
+                'label' => Yii::t('craft', 'Craft'),
+                'icon' => 'magic',
+                'url' => '#',
+                'items' => [
+                    ['label' => Yii::t('craft', 'Item'), 'icon' => 'th', 'url' => ['/craft/item']],
+                    ['label' => Yii::t('craft', 'Recipe'), 'icon' => 'book', 'url' => ['/craft/recipe']],
+                    ['label' => Yii::t('craft', 'Category'), 'icon' => 'list-alt', 'url' => ['/craft/category']],
+                    ['label' => Yii::t('craft', 'History'), 'icon' => 'bar-chart-o', 'url' => ['/craft/history']],
+                    ['label' => Yii::t('craft', 'Inventory'), 'icon' => 'suitcase', 'url' => ['/craft/inventory']],
                 ],
             ],
 

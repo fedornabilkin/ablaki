@@ -21,7 +21,7 @@ $cfg = [
         ],
     ],
     'basePath' => dirname(__DIR__),
-    'bootstrap' => ['log', 'v1', 'exchange', 'games', 'forum'],
+    'bootstrap' => ['log', 'v1', 'exchange', 'games', 'forum', 'craft'],
     'controllerNamespace' => 'api\controllers',
     'components' => [
         'response' => [
