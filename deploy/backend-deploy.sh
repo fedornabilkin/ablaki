@@ -17,7 +17,20 @@ repo=$(pwd -P)
 git() { command git -c safe.directory="$repo" "$@"; }
 git check-ref-format --branch "$branch" >/dev/null
 [[ "$(git rev-parse --show-toplevel)" = "$repo" ]] || die 'Repository path mismatch'
-[[ "$(git symbolic-ref --quiet --short HEAD)" = "$branch" ]] || die 'Select the same branch as the existing VPS checkout'
+
+phase='Preparing the checkout'
+if [ -n "$(git status --porcelain)" ]; then
+  die 'The VPS checkout contains uncommitted changes; clean it before deployment'
+fi
+git fetch --prune origin "$branch"
+if [[ "$(git symbolic-ref --quiet --short HEAD || true)" != "$branch" ]]; then
+  if git show-ref --verify --quiet "refs/heads/$branch"; then
+    git switch "$branch"
+  else
+    git switch --track -c "$branch" "origin/$branch"
+  fi
+fi
+[[ "$(git symbolic-ref --quiet --short HEAD)" = "$branch" ]] || die 'Unable to switch the VPS checkout to the requested branch'
 
 phase='git pull'
 printf '[backend-deploy] git pull (%s, %s)\n' "$target" "$branch"
