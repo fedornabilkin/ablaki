@@ -19,8 +19,10 @@ git check-ref-format --branch "$branch" >/dev/null
 [[ "$(git rev-parse --show-toplevel)" = "$repo" ]] || die 'Repository path mismatch'
 
 phase='Preparing the checkout'
-if [ -n "$(git status --porcelain)" ]; then
-  die 'The VPS checkout contains uncommitted changes; clean it before deployment'
+if [ -n "$(git status --porcelain --untracked-files=no)" ]; then
+  stash_message="deploy: $target/$branch $(date -u '+%Y-%m-%d %H:%M:%S UTC')"
+  printf '[backend-deploy] stashing local changes: %s\n' "$stash_message"
+  git stash push -m "$stash_message"
 fi
 git fetch --prune origin "$branch"
 if [[ "$(git symbolic-ref --quiet --short HEAD || true)" != "$branch" ]]; then

@@ -15,7 +15,10 @@ printf 'git %s\n' "$*" >> "$TEST_LOG"
 case "$1 $2" in
   'check-ref-format --branch') [[ "$TEST_FAIL" != invalid_branch ]] ;;
   'rev-parse --show-toplevel') printf '%s\n' "$TEST_REPO" ;;
-  'status --porcelain') ;;
+  'status --porcelain')
+    [[ "$TEST_FAIL" != dirty ]] || printf ' M local.php\n'
+    ;;
+  'stash push') ;;
   'fetch --prune') ;;
   'show-ref --verify') exit 1 ;;
   'switch --track') printf '%s\n' "$4" > "$TEST_REPO/current-branch" ;;
@@ -53,7 +56,7 @@ MOCK
 chmod +x "$test_root/bin/"*
 export PATH="$test_root/bin:$PATH"
 
-for scenario in production test pull make wrong_branch invalid_branch production_branch; do
+for scenario in production test dirty pull make wrong_branch invalid_branch production_branch; do
   TEST_FAIL=$scenario
   TEST_REPO="$test_root/$scenario"
   mkdir -p "$TEST_REPO/.git" "$TEST_REPO/yii2/vendor"
@@ -72,10 +75,11 @@ for scenario in production test pull make wrong_branch invalid_branch production
   status=0
   bash "$source_root/deploy/backend-deploy.sh" "$TEST_REPO" "$branch" "$target" > "$TEST_REPO/output.log" 2>&1 || status=$?
   case "$scenario" in
-    production|test)
+    production|test|dirty)
       [[ "$status" = 0 ]] || { cat "$TEST_REPO/output.log"; exit 1; }
       grep -Fxq "git pull --ff-only origin $branch" "$TEST_LOG"
       grep -Fxq 'make up' "$TEST_LOG"
+      if [[ "$scenario" = dirty ]]; then grep -Eq '^git stash push -m deploy: production/master ' "$TEST_LOG"; fi
       ! grep -q '^docker' "$TEST_LOG"
       ;;
     pull)
