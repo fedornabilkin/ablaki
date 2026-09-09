@@ -2,7 +2,7 @@ name: Backend CI and deployment
 
 on:
   push:
-    branches: [master]
+    branches: [master, test]
   pull_request:
     branches: [master]
   workflow_dispatch:
@@ -27,7 +27,7 @@ jobs:
 
       - name: Validate requested target
         env:
-          TARGET: ${{ inputs.target || 'production' }}
+          TARGET: ${{ (github.ref == 'refs/heads/test' && 'test') || inputs.target || 'production' }}
         run: |
           if [[ "$GITHUB_EVENT_NAME" = workflow_dispatch ]]; then
             [[ "$GITHUB_REF_TYPE" = branch ]]
@@ -52,7 +52,7 @@ jobs:
       - name: Install locked dependencies for the selected target
         working-directory: yii2
         env:
-          TARGET: ${{ inputs.target || 'production' }}
+          TARGET: ${{ (github.ref == 'refs/heads/test' && 'test') || inputs.target || 'production' }}
           COMPOSER_AUTH: '{"github-oauth":{"github.com":"${{ github.token }}"}}'
         shell: bash
         run: |
@@ -77,22 +77,22 @@ jobs:
           done
 
   deploy:
-    name: Deploy backend to ${{ inputs.target || 'production' }}
+    name: Deploy backend to ${{ (github.ref == 'refs/heads/test' && 'test') || inputs.target || 'production' }}
     needs: checks
-    if: github.event_name != 'pull_request' && (github.ref == 'refs/heads/master' || (github.event_name == 'workflow_dispatch' && inputs.target == 'test' && github.ref_type == 'branch'))
+    if: github.event_name != 'pull_request' && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/test' || (github.event_name == 'workflow_dispatch' && inputs.target == 'test' && github.ref_type == 'branch'))
     runs-on: ubuntu-22.04
     timeout-minutes: 30
-    environment: ${{ inputs.target == 'test' && 'test-backend' || 'production-backend' }}
+    environment: ${{ (inputs.target == 'test' || github.ref == 'refs/heads/test') && 'test-backend' || 'production-backend' }}
     concurrency:
-      group: ${{ inputs.target == 'test' && 'test-backend' || 'production-backend' }}
+      group: ${{ (inputs.target == 'test' || github.ref == 'refs/heads/test') && 'test-backend' || 'production-backend' }}
       cancel-in-progress: false
     env:
-      TARGET: ${{ inputs.target || 'production' }}
-      DEPLOY_HOST: ${{ secrets[inputs.target == 'test' && 'TEST_BACKEND_DEPLOY_HOST' || 'BACKEND_DEPLOY_HOST'] }}
-      DEPLOY_PORT: ${{ secrets[inputs.target == 'test' && 'TEST_BACKEND_DEPLOY_PORT' || 'BACKEND_DEPLOY_PORT'] }}
-      DEPLOY_USER: ${{ secrets[inputs.target == 'test' && 'TEST_BACKEND_DEPLOY_USER' || 'BACKEND_DEPLOY_USER'] }}
-      DEPLOY_SSH_KEY: ${{ secrets[inputs.target == 'test' && 'TEST_BACKEND_DEPLOY_SSH_KEY' || 'BACKEND_DEPLOY_SSH_KEY'] }}
-      DEPLOY_KNOWN_HOSTS: ${{ secrets[inputs.target == 'test' && 'TEST_BACKEND_DEPLOY_KNOWN_HOSTS' || 'BACKEND_DEPLOY_KNOWN_HOSTS'] }}
+      TARGET: ${{ (github.ref == 'refs/heads/test' && 'test') || inputs.target || 'production' }}
+      DEPLOY_HOST: ${{ secrets[(inputs.target == 'test' || github.ref == 'refs/heads/test') && 'TEST_BACKEND_DEPLOY_HOST' || 'BACKEND_DEPLOY_HOST'] }}
+      DEPLOY_PORT: ${{ secrets[(inputs.target == 'test' || github.ref == 'refs/heads/test') && 'TEST_BACKEND_DEPLOY_PORT' || 'BACKEND_DEPLOY_PORT'] }}
+      DEPLOY_USER: ${{ secrets[(inputs.target == 'test' || github.ref == 'refs/heads/test') && 'TEST_BACKEND_DEPLOY_USER' || 'BACKEND_DEPLOY_USER'] }}
+      DEPLOY_SSH_KEY: ${{ secrets[(inputs.target == 'test' || github.ref == 'refs/heads/test') && 'TEST_BACKEND_DEPLOY_SSH_KEY' || 'BACKEND_DEPLOY_SSH_KEY'] }}
+      DEPLOY_KNOWN_HOSTS: ${{ secrets[(inputs.target == 'test' || github.ref == 'refs/heads/test') && 'TEST_BACKEND_DEPLOY_KNOWN_HOSTS' || 'BACKEND_DEPLOY_KNOWN_HOSTS'] }}
     steps:
       - uses: actions/checkout@v7
 
