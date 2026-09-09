@@ -15,7 +15,14 @@ printf 'git %s\n' "$*" >> "$TEST_LOG"
 case "$1 $2" in
   'check-ref-format --branch') [[ "$TEST_FAIL" != invalid_branch ]] ;;
   'rev-parse --show-toplevel') printf '%s\n' "$TEST_REPO" ;;
-  'symbolic-ref --quiet') printf '%s\n' "$TEST_BRANCH" ;;
+  'status --porcelain') ;;
+  'fetch --prune') ;;
+  'show-ref --verify') exit 1 ;;
+  'switch --track') printf '%s\n' "$4" > "$TEST_REPO/current-branch" ;;
+  'switch feature/test') printf '%s\n' "$2" > "$TEST_REPO/current-branch" ;;
+  'symbolic-ref --quiet')
+    if [[ -f "$TEST_REPO/current-branch" ]]; then cat "$TEST_REPO/current-branch"; else printf '%s\n' "$TEST_BRANCH"; fi
+    ;;
   'pull --ff-only')
     [[ "$3" = origin && "$4" = "$TEST_BRANCH" ]]
     [[ "$(umask)" = 0022 ]]
@@ -77,9 +84,14 @@ for scenario in production test pull make wrong_branch invalid_branch production
       [[ "$status" = 31 ]]
       ! grep -q '^docker' "$TEST_LOG"
       ;;
-    wrong_branch|invalid_branch|production_branch)
+    invalid_branch|production_branch)
       [[ "$status" != 0 ]]
       ! grep -q '^git pull\|^make\|^docker' "$TEST_LOG"
+      ;;
+    wrong_branch)
+      [[ "$status" = 0 ]] || { cat "$TEST_REPO/output.log"; exit 1; }
+      grep -Fxq "git pull --ff-only origin $branch" "$TEST_LOG"
+      grep -Fxq 'make up' "$TEST_LOG"
       ;;
   esac
   cmp "$TEST_REPO/.env" "$TEST_REPO/env-before"
