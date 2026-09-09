@@ -10,7 +10,7 @@ cat > "$test_root/bin/git" <<'MOCK'
 #!/usr/bin/env bash
 set -eu
 [[ "$1" = -c && "$2" = "safe.directory=$TEST_REPO" ]]
-shift 2
+while [[ "$1" = -c ]]; do shift 2; done
 printf 'git %s\n' "$*" >> "$TEST_LOG"
 case "$1 $2" in
   'check-ref-format --branch') [[ "$TEST_FAIL" != invalid_branch ]] ;;

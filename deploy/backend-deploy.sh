@@ -22,7 +22,7 @@ phase='Preparing the checkout'
 if [ -n "$(git status --porcelain --untracked-files=no)" ]; then
   stash_message="deploy: $target/$branch $(date -u '+%Y-%m-%d %H:%M:%S UTC')"
   printf '[backend-deploy] stashing local changes: %s\n' "$stash_message"
-  git stash push -m "$stash_message"
+  git -c user.name='Ablaki deploy' -c user.email='deploy@ablaki.ru' stash push -m "$stash_message"
 fi
 git fetch --prune origin "$branch"
 if [[ "$(git symbolic-ref --quiet --short HEAD || true)" != "$branch" ]]; then
