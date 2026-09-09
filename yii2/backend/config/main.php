@@ -18,7 +18,7 @@ return [
 
     'basePath' => dirname(__DIR__),
     'controllerNamespace' => 'backend\controllers',
-    'bootstrap' => ['log', 'admin', 'exchange', 'games', 'forum'],
+    'bootstrap' => ['log', 'admin', 'exchange', 'games', 'forum', 'craft'],
     'modules' => [
         'user' => [
             'class' => 'dektrium\user\Module',

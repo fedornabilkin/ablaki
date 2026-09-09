@@ -8,13 +8,13 @@
 
 namespace common\modules\exchange\middleware;
 
-use common\middleware\DataMiddleware;
+use common\middleware\AbstractDataMiddleware;
 use common\modules\exchange\api\models\CreditExchange;
 
 /**
  *
  */
-class ExchangeDataMiddleware extends DataMiddleware
+class ExchangeDataMiddleware extends AbstractDataMiddleware
 {
     /**
      * @var CreditExchange

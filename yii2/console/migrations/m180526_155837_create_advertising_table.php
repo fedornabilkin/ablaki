@@ -1,7 +1,6 @@
 <?php
 
 use console\migrations\AbstractMigration;
-use yii\db\Migration;
 
 /**
  * Class m180526_155837_create_advertising_table

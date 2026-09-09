@@ -1,7 +1,6 @@
 <?php
 
 use console\migrations\AbstractMigration;
-use yii\db\Migration;
 
 /**
  * Class m180526_155737_create_game_saper_table
