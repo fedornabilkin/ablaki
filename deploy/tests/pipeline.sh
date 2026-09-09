@@ -24,7 +24,9 @@ case "$1 $2" in
     if [[ -f "$TEST_REPO/current-branch" ]]; then cat "$TEST_REPO/current-branch"; else printf '%s\n' "$TEST_BRANCH"; fi
     ;;
   'pull --ff-only')
-    [[ "$3" = origin && "$4" = "$TEST_BRANCH" ]]
+    expected_branch="$TEST_BRANCH"
+    [[ ! -f "$TEST_REPO/current-branch" ]] || expected_branch="$(cat "$TEST_REPO/current-branch")"
+    [[ "$3" = origin && "$4" = "$expected_branch" ]]
     [[ "$(umask)" = 0022 ]]
     [[ "$TEST_FAIL" != pull ]] || exit 23
     printf 'updated code\n' > "$TEST_REPO/code.txt"
