@@ -27,9 +27,9 @@ fi
 git fetch --prune origin "$branch"
 if [[ "$(git symbolic-ref --quiet --short HEAD || true)" != "$branch" ]]; then
   if git show-ref --verify --quiet "refs/heads/$branch"; then
-    git switch "$branch"
+    git checkout "$branch"
   else
-    git switch --track -c "$branch" "origin/$branch"
+    git checkout -b "$branch" "origin/$branch"
   fi
 fi
 [[ "$(git symbolic-ref --quiet --short HEAD)" = "$branch" ]] || die 'Unable to switch the VPS checkout to the requested branch'

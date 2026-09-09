@@ -21,8 +21,9 @@ case "$1 $2" in
   'stash push') ;;
   'fetch --prune') ;;
   'show-ref --verify') exit 1 ;;
-  'switch --track') printf '%s\n' "$4" > "$TEST_REPO/current-branch" ;;
-  'switch feature/test') printf '%s\n' "$2" > "$TEST_REPO/current-branch" ;;
+  'checkout -b') printf '%s\n' "$3" > "$TEST_REPO/current-branch" ;;
+  'checkout master') printf '%s\n' "$2" > "$TEST_REPO/current-branch" ;;
+  'checkout feature/test') printf '%s\n' "$2" > "$TEST_REPO/current-branch" ;;
   'symbolic-ref --quiet')
     if [[ -f "$TEST_REPO/current-branch" ]]; then cat "$TEST_REPO/current-branch"; else printf '%s\n' "$TEST_BRANCH"; fi
     ;;
@@ -102,6 +103,6 @@ for scenario in production test dirty pull make wrong_branch invalid_branch prod
   esac
   cmp "$TEST_REPO/.env" "$TEST_REPO/env-before"
   [[ "$(cat "$TEST_REPO/yii2/vendor/autoload.php")" = 'existing vendor' ]]
-  ! grep -Eq 'stop |down |build |force-recreate|up --detach postgres|getenv|check-platform|reset|checkout|pg_dump|pg_restore' "$TEST_LOG"
+  ! grep -Eq 'stop |down |build |force-recreate|up --detach postgres|getenv|check-platform|reset|pg_dump|pg_restore' "$TEST_LOG"
   printf 'PASS deployment scenario: %s\n' "$scenario"
 done
