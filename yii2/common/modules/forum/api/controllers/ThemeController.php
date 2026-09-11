@@ -25,11 +25,11 @@ class ThemeController extends ActiveController
         $actions = parent::actions();
 
         $actions['index']['prepareDataProvider'] = function () {
-            return ApiList::provider($this->modelClass::find(), ['title'], ['id', 'created_at', 'last_post', 'title', 'last_comment_text', 'last_comment_username', 'last_comment_created_at']);
+            return ApiList::provider($this->modelClass::find(), ['title'], ['id', 'user_id', 'created_at', 'last_post', 'title', 'last_comment_text', 'last_comment_username', 'last_comment_created_at', 'first_comment_user_id', 'first_comment_username']);
         };
         $actions['my'] = $actions['index'];
         $actions['my']['prepareDataProvider'] = function () {
-            return ApiList::provider($this->modelClass::find()->my(App::user()->identity), ['title'], ['id', 'created_at', 'last_post', 'title', 'last_comment_text', 'last_comment_username', 'last_comment_created_at']);
+            return ApiList::provider($this->modelClass::find()->my(App::user()->identity), ['title'], ['id', 'user_id', 'created_at', 'last_post', 'title', 'last_comment_text', 'last_comment_username', 'last_comment_created_at', 'first_comment_user_id', 'first_comment_username']);
         };
         $actions['create']['scenario'] = 'create';
         $actions['update']['scenario'] = 'update';
