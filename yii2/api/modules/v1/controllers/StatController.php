@@ -48,18 +48,34 @@ class StatController extends Controller
     public function actionIndex(): array
     {
         return Yii::$app->cache->getOrSet(self::CACHE_KEY, function () {
+            $users = $this->periodStats(fn () => User::find());
+            $orel = $this->periodStats(fn () => GameOrel::find()->notFree());
+            $saper = $this->periodStats(fn () => GameSaper::find()->andWhere(['etap' => [GameSaper::GAME_SAPER_ETAP_WIN, GameSaper::GAME_SAPER_ETAP_LOSE]]));
+            $themes = $this->periodStats(fn () => ForumTheme::find());
+            $comments = $this->periodStats(fn () => ForumComment::find());
+            $transfers = $this->periodStats(fn () => CreditTransfer::find());
+            $exchange = $this->periodStats(fn () => CreditExchange::find()->notFree());
+
             return [
-                'users' => $this->periodStats(fn () => User::find()),
+                // Keep the original scalar fields for existing clients and API checks.
+                'users' => $users['total'],
                 'games' => [
-                    'orel' => $this->periodStats(fn () => GameOrel::find()->notFree()),
-                    'saper' => $this->periodStats(fn () => GameSaper::find()->andWhere(['etap' => [GameSaper::GAME_SAPER_ETAP_WIN, GameSaper::GAME_SAPER_ETAP_LOSE]])),
+                    'orel' => $orel['total'],
+                    'saper' => $saper['total'],
                 ],
                 'forum' => [
-                    'themes' => $this->periodStats(fn () => ForumTheme::find()),
-                    'comments' => $this->periodStats(fn () => ForumComment::find()),
+                    'themes' => $themes['total'],
+                    'comments' => $comments['total'],
                 ],
-                'transfers' => $this->periodStats(fn () => CreditTransfer::find()),
-                'exchange' => $this->periodStats(fn () => CreditExchange::find()->notFree()),
+                'transfers' => $transfers['total'],
+                'exchange' => $exchange['total'],
+                'periods' => [
+                    'users' => $users,
+                    'games' => ['orel' => $orel, 'saper' => $saper],
+                    'forum' => ['themes' => $themes, 'comments' => $comments],
+                    'transfers' => $transfers,
+                    'exchange' => $exchange,
+                ],
                 'topRating' => $this->getTopRating(),
             ];
         }, self::CACHE_DURATION);
