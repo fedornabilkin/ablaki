@@ -9,6 +9,7 @@ use common\models\history\HistoryRating;
 use common\models\user\Person;
 use common\models\user\User;
 use common\modules\exchange\models\CreditExchange;
+use common\modules\exchange\models\CreditTransfer;
 use common\modules\forum\models\ForumComment;
 use common\modules\forum\models\ForumTheme;
 use common\modules\games\models\GameOrel;
@@ -48,19 +49,32 @@ class StatController extends Controller
     {
         return Yii::$app->cache->getOrSet(self::CACHE_KEY, function () {
             return [
-                'users' => (int)User::find()->count(),
+                'users' => $this->periodStats(fn () => User::find()),
                 'games' => [
-                    'orel' => (int)GameOrel::find()->notFree()->count(),
-                    'saper' => (int)GameSaper::find()->andWhere(['etap' => [GameSaper::GAME_SAPER_ETAP_WIN, GameSaper::GAME_SAPER_ETAP_LOSE]])->count(),
+                    'orel' => $this->periodStats(fn () => GameOrel::find()->notFree()),
+                    'saper' => $this->periodStats(fn () => GameSaper::find()->andWhere(['etap' => [GameSaper::GAME_SAPER_ETAP_WIN, GameSaper::GAME_SAPER_ETAP_LOSE]])),
                 ],
                 'forum' => [
-                    'themes' => (int)ForumTheme::find()->count(),
-                    'comments' => (int)ForumComment::find()->count(),
+                    'themes' => $this->periodStats(fn () => ForumTheme::find()),
+                    'comments' => $this->periodStats(fn () => ForumComment::find()),
                 ],
-                'exchange' => (int)CreditExchange::find()->notFree()->count(),
+                'transfers' => $this->periodStats(fn () => CreditTransfer::find()),
+                'exchange' => $this->periodStats(fn () => CreditExchange::find()->notFree()),
                 'topRating' => $this->getTopRating(),
             ];
         }, self::CACHE_DURATION);
+    }
+
+    private function periodStats(callable $factory): array
+    {
+        $today = strtotime('today');
+        $yesterday = $today - 86400;
+        $count = static function (?array $range) use ($factory): int {
+            $query = $factory();
+            if ($range !== null) $query->andWhere(['>=', 'created_at', $range[0]])->andWhere(['<', 'created_at', $range[1]]);
+            return (int)$query->count();
+        };
+        return ['total' => $count(null), 'today' => $count([$today, time() + 1]), 'yesterday' => $count([$yesterday, $today])];
     }
 
     /**
