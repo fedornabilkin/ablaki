@@ -10,6 +10,7 @@ namespace api\modules\v1\models;
 
 use common\helpers\App;
 use common\helpers\UserHelper;
+use yii\db\Query;
 
 class Person extends \common\models\user\Person
 {
@@ -27,6 +28,12 @@ class Person extends \common\models\user\Person
             'description' => static function (self $model) {
                 // Older profile schemas may not have this optional column yet.
                 return $model->getAttribute('description');
+            },
+            'forum_credits_sent' => static function (self $model): int {
+                return (int)(new Query())
+                    ->from('{{%forum_comment_gift}}')
+                    ->where(['user_id' => $model->user_id])
+                    ->count();
             },
         ];
 
