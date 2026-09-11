@@ -83,5 +83,8 @@ $cfg = [
 ];
 
 $cfg['modules']['user']['modelMap']['User'] = User::class;
+$cfg['modules']['user']['enableConfirmation'] = false;
+$cfg['modules']['user']['enableUnconfirmedLogin'] = true;
+$cfg['modules']['user']['mailer'] = ['class' => \api\components\SilentMailer::class];
 
 return $cfg;

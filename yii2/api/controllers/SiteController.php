@@ -103,7 +103,7 @@ class SiteController extends Controller
         $model = Yii::createObject(RegistrationForm::class);
 
         if ($model->load(Yii::$app->request->getBodyParams(), '') && $model->register()) {
-            $response['result'] = Yii::$app->session->getFlash('info');
+            $response['result'] = true;
             $response['user'] = ['username' => $model->username, 'email' => $model->email];
         } elseif (!$model->validate() || $model->hasErrors()) {
             $response['errors'] = $model->getFirstErrors();
