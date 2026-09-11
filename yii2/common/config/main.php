@@ -80,7 +80,8 @@ if (getenv('MYSQL_DB_HOST') && getenv('MYSQL_DB_NAME')) {
         'dsn' => 'mysql:host=' . getenv('MYSQL_DB_HOST') . ';dbname=' . getenv('MYSQL_DB_NAME'),
         'username' => getenv('MYSQL_DB_USER'),
         'password' => getenv('MYSQL_DB_PASSWORD'),
-        'charset' => 'utf8',
+        'charset' => 'utf8mb4',
+        'attributes' => [\PDO::MYSQL_ATTR_INIT_COMMAND => 'SET NAMES utf8mb4'],
         'enableSchemaCache' => true,
     ];
 }
