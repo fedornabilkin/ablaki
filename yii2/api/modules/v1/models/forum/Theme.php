@@ -9,16 +9,39 @@
 namespace api\modules\v1\models\forum;
 
 use common\modules\forum\models\ForumTheme;
+use yii\db\Query;
 
 class Theme extends ForumTheme
 {
     public $comment_count;
+    public $last_comment_text;
+    public $last_comment_username;
+    public $last_comment_created_at;
 
     public static function find(): \yii\db\ActiveQuery
     {
         $count = (new \yii\db\Query())->select('COUNT(*)')->from('forum_comment')
             ->where('[[forum_comment.theme_id]] = [[forum_theme.id]]')->andWhere(['active' => 1]);
-        return parent::find()->select(['forum_theme.*', 'comment_count' => $count]);
+        $lastText = self::latestCommentQuery('fc.comment');
+        $lastCreatedAt = self::latestCommentQuery('fc.created_at');
+        $lastUsername = self::latestCommentQuery('u.username')->leftJoin(['u' => 'user'], 'u.id = fc.user_id');
+        return parent::find()->select([
+            'forum_theme.*',
+            'comment_count' => $count,
+            'last_comment_text' => $lastText,
+            'last_comment_username' => $lastUsername,
+            'last_comment_created_at' => $lastCreatedAt,
+        ]);
+    }
+
+    private static function latestCommentQuery(string $column): Query
+    {
+        return (new Query())->select($column)
+            ->from(['fc' => 'forum_comment'])
+            ->where('fc.theme_id = forum_theme.id')
+            ->andWhere(['fc.active' => 1])
+            ->orderBy(['fc.created_at' => SORT_DESC, 'fc.id' => SORT_DESC])
+            ->limit(1);
     }
 
     public function fields(): array
@@ -26,6 +49,15 @@ class Theme extends ForumTheme
         $fields = parent::fields();
         $fields['comment_count'] = function () {
             return (int)($this->comment_count ?? $this->getForumComments()->andWhere(['active' => 1])->count());
+        };
+        $fields['last_comment_text'] = static function ($model) {
+            return $model->last_comment_text === null ? null : trim($model->last_comment_text);
+        };
+        $fields['last_comment_username'] = static function ($model) {
+            return $model->last_comment_username === null ? null : trim($model->last_comment_username);
+        };
+        $fields['last_comment_created_at'] = static function ($model) {
+            return $model->last_comment_created_at === null ? null : (int)$model->last_comment_created_at;
         };
         return $fields;
     }
