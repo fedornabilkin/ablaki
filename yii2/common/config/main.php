@@ -7,6 +7,7 @@ use yii\redis\Cache;
 
 $config = [
     'language' => 'ru-RU',
+    'charset' => 'UTF-8',
     'aliases' => [
         '@bower' => '@vendor/bower-asset',
         '@npm' => '@vendor/npm-asset',

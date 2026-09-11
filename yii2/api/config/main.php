@@ -26,6 +26,7 @@ $cfg = [
     'components' => [
         'response' => [
             'format' => yii\web\Response::FORMAT_JSON,
+            'charset' => 'UTF-8',
             /** https://www.yiiframework.com/doc/guide/2.0/ru/rest-response-formatting */
 //            'formatters' => [
 //                'class' => 'yii\web\JsonResponseFormatter',
