@@ -24,6 +24,12 @@ $config = [
         'cache' => [
             'class' => 'yii\caching\FileCache',
         ],
+        'mailer' => [
+            'class' => 'yii\swiftmailer\Mailer',
+            // Keep registration functional in environments without SMTP.
+            // The transport can be replaced by deployment configuration later.
+            'useFileTransport' => true,
+        ],
         'redis' => [
             'class' => Cache::class,
             'keyPrefix' => 'blk:cache',
