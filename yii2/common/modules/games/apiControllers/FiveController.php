@@ -15,6 +15,7 @@ use yii\web\BadRequestHttpException;
 
 class FiveController extends ActiveController
 {
+    use GameHistoryTrait;
     /** @var GameFive */
     public $modelClass = GameFive::class;
 
@@ -55,12 +56,7 @@ class FiveController extends ActiveController
         };
 
         $actions['history']['prepareDataProvider'] = function ($action, $filter) {
-            return new ActiveDataProvider([
-                'query' => $this->modelClass::find()
-                    ->orderBy(['updated_at' => SORT_DESC])
-                    ->with(['user', 'userGamer'])
-                    ->listHistory(App::user()->identity),
-            ]);
+            return $this->prepareHistoryList();
         };
 
         $actions['index']['prepareDataProvider'] = function ($action, $filter) {

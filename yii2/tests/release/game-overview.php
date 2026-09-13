@@ -107,4 +107,37 @@ $fields = $recent[0]->toArray();
 check($fields['win'] === true && $fields['completed_at'] !== null && !isset($fields['pole1']), 'completed mine DTO contains the outcome and time without exposing mines');
 $own = $saperActions['my']['prepareDataProvider'](null, [])->getModels()[0]->toArray();
 check($own['win'] === null && $own['username_gamer'] === null, 'available game serialization tolerates a missing opponent and does not invent a winner');
+$db->createCommand('CREATE TABLE game_duel (id INTEGER PRIMARY KEY, user_id INTEGER, user_gamer INTEGER,
+    kon NUMERIC, u1 INTEGER, u2 INTEGER, b1 INTEGER, b2 INTEGER, created_at INTEGER, updated_at INTEGER)')->execute();
+$db->createCommand('CREATE TABLE game_five (id INTEGER PRIMARY KEY, user_id INTEGER, user_gamer INTEGER,
+    kon NUMERIC, status TEXT, user_amount INTEGER, gamer_amount INTEGER, created_at INTEGER, updated_at INTEGER)')->execute();
+foreach (['duel' => \common\modules\games\apiControllers\DuelController::class, 'five' => \common\modules\games\apiControllers\FiveController::class] as $kind => $controllerClass) {
+    $defaults = $kind === 'duel' ? ['u1' => 1, 'u2' => 2, 'b1' => 2, 'b2' => 3] : ['status' => 'user', 'user_amount' => 21, 'gamer_amount' => 5];
+    foreach ([[1,1,2,5,10], [2,2,1,10,20], [3,2,3,5,30], [4,1,2,5,40], [5,1,0,5,50]] as $row) {
+        $values = array_merge($defaults, ['id' => $row[0], 'user_id' => $row[1], 'user_gamer' => $row[2], 'kon' => $row[3], 'created_at' => 1, 'updated_at' => $row[4]]);
+        if ($kind === 'five' && $row[0] === 5) $values['status'] = 'free';
+        $db->createCommand()->insert('game_' . $kind, $values)->execute();
+    }
+    $controller = new $controllerClass($kind, $app);
+    $prepare = $controller->actions()['history']['prepareDataProvider'];
+    $app->request->setQueryParams(['envelope' => '1', 'per-page' => '1', 'page' => '2']);
+    $provider = $prepare(null, null);
+    $models = $provider->getModels();
+    check($provider->getTotalCount() === 3 && $provider->getPagination()->getPageCount() === 3
+        && (int)$provider->getModels()[0]->id === 2, $kind . ' history is ordered by completion, paginated and scoped to the current participant');
+    $dto = $provider->getModels()[0]->toArray();
+    check($dto['username'] === 'Second' && $dto['username_gamer'] === 'First' && (int)$dto['user_gamer'] === 1
+        && (int)$dto['kon'] === 10 && (int)$dto['completed_at'] === 20, $kind . ' history exposes both participants, stake and actual completion time');
+    check(!isset($dto['auth_key'], $dto['email'], $dto['balance']), $kind . ' history does not expose account credentials or balances');
+    $app->request->setQueryParams(['q' => 'seCOND', 'filter' => ['kon' => '5']]);
+    $provider = $prepare(null, null);
+    check(array_map(static function ($game) { return (int)$game->id; }, $provider->getModels()) === [4, 1], $kind . ' combines player search and stake filter before pagination');
+    $app->request->setQueryParams(['q' => '3']);
+    check($prepare(null, null)->getTotalCount() === 0, $kind . ' game number search cannot reveal games of other users');
+    $app->request->setQueryParams(['q' => 'missing-player']);
+    check($prepare(null, null)->getTotalCount() === 0, $kind . ' empty search is successful');
+    $app->request->setQueryParams(['filter' => ['kon' => ['bad']]]);
+    try { $prepare(null, null); throw new RuntimeException('Invalid stake accepted'); }
+    catch (\yii\web\BadRequestHttpException $expected) { echo "PASS malformed history stake rejected\n"; }
+}
 echo "Read-only checks use SQLite in memory; no live game or account was changed.\n";
