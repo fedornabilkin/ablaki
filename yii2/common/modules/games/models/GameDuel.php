@@ -177,6 +177,7 @@ class GameDuel extends AbstractGame implements HistorySaveInterface
         $fields = [
             'id',
             'user_id',
+            'user_gamer',
             'username' => static function (self $model) {
                 return $model->user ? $model->user->username : null;
             },
@@ -186,6 +187,9 @@ class GameDuel extends AbstractGame implements HistorySaveInterface
             'kon',
             'created_at',
             'updated_at',
+            'completed_at' => static function (self $model) {
+                return $model->isFinished() ? $model->updated_at : null;
+            },
         ];
 
         // удар и блок создателя скрыты до розыгрыша (видны только ему)

@@ -209,6 +209,7 @@ class GameFive extends AbstractGame implements HistorySaveInterface
         return [
             'id',
             'user_id',
+            'user_gamer',
             'username' => static function (self $model) {
                 return $model->user ? $model->user->username : null;
             },
@@ -228,6 +229,9 @@ class GameFive extends AbstractGame implements HistorySaveInterface
             },
             'created_at',
             'updated_at',
+            'completed_at' => static function (self $model) {
+                return $model->isFinished() ? $model->updated_at : null;
+            },
         ];
     }
 
