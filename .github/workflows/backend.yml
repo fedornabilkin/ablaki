@@ -47,6 +47,8 @@ jobs:
           for script in deploy/*.sh deploy/tests/*.sh docker/php/entrypoint.sh; do bash -n "$script"; done
           php -l yii2/yii
           php -l yii2/console/migrations/AbstractMigration.php
+          php -l yii2/api/modules/v1/controllers/StatController.php
+          php -l yii2/tests/release/frontend-api-routing.php
           bash deploy/tests/pipeline.sh
 
       - name: Install locked dependencies for the selected target

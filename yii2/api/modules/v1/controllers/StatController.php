@@ -47,50 +47,60 @@ class StatController extends Controller
 
     public function actionIndex(): array
     {
-        return Yii::$app->cache->getOrSet(self::CACHE_KEY, function () {
-            $users = $this->periodStats(fn () => User::find());
-            $orel = $this->periodStats(fn () => GameOrel::find()->notFree());
-            $saper = $this->periodStats(fn () => GameSaper::find()->andWhere(['etap' => [GameSaper::GAME_SAPER_ETAP_WIN, GameSaper::GAME_SAPER_ETAP_LOSE]]));
-            $themes = $this->periodStats(fn () => ForumTheme::find());
-            $comments = $this->periodStats(fn () => ForumComment::find());
-            $transfers = $this->periodStats(fn () => CreditTransfer::find());
-            $exchange = $this->periodStats(fn () => CreditExchange::find()->notFree());
+        $timezone = new \DateTimeZone(Yii::$app->formatter->timeZone);
+        $today = new \DateTimeImmutable('today', $timezone);
+        $start = $today->getTimestamp();
+        $yesterday = $today->modify('-1 day')->getTimestamp();
+        $now = time();
+        // Version the payload and change the key at local midnight, even within the cache TTL.
+        $cacheKey = [self::CACHE_KEY, 'periods-v2', $timezone->getName(), $start];
+        return Yii::$app->cache->getOrSet($cacheKey, function () use ($start, $yesterday, $now) {
+            $queries = [
+                'users' => User::find(),
+                'orel' => GameOrel::find()->notFree(),
+                'saper' => GameSaper::find()->andWhere(['etap' => [GameSaper::GAME_SAPER_ETAP_WIN, GameSaper::GAME_SAPER_ETAP_LOSE]]),
+                'themes' => ForumTheme::find(),
+                'comments' => ForumComment::find(),
+                'transfers' => CreditTransfer::find(),
+                'exchange' => CreditExchange::find()->notFree(),
+            ];
+            $stats = [];
+            foreach ($queries as $name => $query) {
+                $stats[$name] = $this->periodStats($query, $start, $yesterday, $now);
+            }
 
             return [
                 // Keep the original scalar fields for existing clients and API checks.
-                'users' => $users['total'],
+                'users' => $stats['users']['total'],
                 'games' => [
-                    'orel' => $orel['total'],
-                    'saper' => $saper['total'],
+                    'orel' => $stats['orel']['total'],
+                    'saper' => $stats['saper']['total'],
                 ],
                 'forum' => [
-                    'themes' => $themes['total'],
-                    'comments' => $comments['total'],
+                    'themes' => $stats['themes']['total'],
+                    'comments' => $stats['comments']['total'],
                 ],
-                'transfers' => $transfers['total'],
-                'exchange' => $exchange['total'],
+                'transfers' => $stats['transfers']['total'],
+                'exchange' => $stats['exchange']['total'],
                 'periods' => [
-                    'users' => $users,
-                    'games' => ['orel' => $orel, 'saper' => $saper],
-                    'forum' => ['themes' => $themes, 'comments' => $comments],
-                    'transfers' => $transfers,
-                    'exchange' => $exchange,
+                    'users' => $stats['users'],
+                    'games' => ['orel' => $stats['orel'], 'saper' => $stats['saper']],
+                    'forum' => ['themes' => $stats['themes'], 'comments' => $stats['comments']],
+                    'transfers' => $stats['transfers'],
+                    'exchange' => $stats['exchange'],
                 ],
                 'topRating' => $this->getTopRating(),
             ];
         }, self::CACHE_DURATION);
     }
 
-    private function periodStats(callable $factory): array
+    private function periodStats(Query $query, int $today, int $yesterday, int $now): array
     {
-        $today = strtotime('today');
-        $yesterday = $today - 86400;
-        $count = static function (?array $range) use ($factory): int {
-            $query = $factory();
-            if ($range !== null) $query->andWhere(['>=', 'created_at', $range[0]])->andWhere(['<', 'created_at', $range[1]]);
-            return (int)$query->count();
-        };
-        return ['total' => $count(null), 'today' => $count([$today, time() + 1]), 'yesterday' => $count([$yesterday, $today])];
+        return [
+            'total' => (int)(clone $query)->count(),
+            'today' => (int)(clone $query)->andWhere(['>=', 'created_at', $today])->andWhere(['<=', 'created_at', $now])->count(),
+            'yesterday' => (int)(clone $query)->andWhere(['>=', 'created_at', $yesterday])->andWhere(['<', 'created_at', $today])->count(),
+        ];
     }
 
     /**
