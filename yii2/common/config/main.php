@@ -7,6 +7,7 @@ use yii\redis\Cache;
 
 $config = [
     'language' => 'ru-RU',
+    'charset' => 'UTF-8',
     'aliases' => [
         '@bower' => '@vendor/bower-asset',
         '@npm' => '@vendor/npm-asset',
@@ -18,11 +19,17 @@ $config = [
             'dsn' => 'pgsql:host=' . getenv('PG_DB_HOST') . ';dbname=' . getenv('PG_DB_NAME'),
             'username' => getenv('PG_DB_USER'),
             'password' => getenv('PG_DB_PASSWORD'),
+            'charset' => 'utf8',
             'enableSchemaCache' => true,
-//            'charset' => 'utf8',
         ],
         'cache' => [
             'class' => 'yii\caching\FileCache',
+        ],
+        'mailer' => [
+            'class' => 'yii\swiftmailer\Mailer',
+            // Keep registration functional in environments without SMTP.
+            // The transport can be replaced by deployment configuration later.
+            'useFileTransport' => true,
         ],
         'redis' => [
             'class' => Cache::class,
@@ -74,7 +81,8 @@ if (getenv('MYSQL_DB_HOST') && getenv('MYSQL_DB_NAME')) {
         'dsn' => 'mysql:host=' . getenv('MYSQL_DB_HOST') . ';dbname=' . getenv('MYSQL_DB_NAME'),
         'username' => getenv('MYSQL_DB_USER'),
         'password' => getenv('MYSQL_DB_PASSWORD'),
-        'charset' => 'utf8',
+        'charset' => 'utf8mb4',
+        'attributes' => [\PDO::MYSQL_ATTR_INIT_COMMAND => 'SET NAMES utf8mb4'],
         'enableSchemaCache' => true,
     ];
 }

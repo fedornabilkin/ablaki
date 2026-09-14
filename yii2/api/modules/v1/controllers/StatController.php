@@ -9,6 +9,7 @@ use common\models\history\HistoryRating;
 use common\models\user\Person;
 use common\models\user\User;
 use common\modules\exchange\models\CreditExchange;
+use common\modules\exchange\models\CreditTransfer;
 use common\modules\forum\models\ForumComment;
 use common\modules\forum\models\ForumTheme;
 use common\modules\games\models\GameOrel;
@@ -46,21 +47,60 @@ class StatController extends Controller
 
     public function actionIndex(): array
     {
-        return Yii::$app->cache->getOrSet(self::CACHE_KEY, function () {
+        $timezone = new \DateTimeZone(Yii::$app->formatter->timeZone);
+        $today = new \DateTimeImmutable('today', $timezone);
+        $start = $today->getTimestamp();
+        $yesterday = $today->modify('-1 day')->getTimestamp();
+        $now = time();
+        // Version the payload and change the key at local midnight, even within the cache TTL.
+        $cacheKey = [self::CACHE_KEY, 'periods-v2', $timezone->getName(), $start];
+        return Yii::$app->cache->getOrSet($cacheKey, function () use ($start, $yesterday, $now) {
+            $queries = [
+                'users' => User::find(),
+                'orel' => GameOrel::find()->notFree(),
+                'saper' => GameSaper::find()->andWhere(['etap' => [GameSaper::GAME_SAPER_ETAP_WIN, GameSaper::GAME_SAPER_ETAP_LOSE]]),
+                'themes' => ForumTheme::find(),
+                'comments' => ForumComment::find(),
+                'transfers' => CreditTransfer::find(),
+                'exchange' => CreditExchange::find()->notFree(),
+            ];
+            $stats = [];
+            foreach ($queries as $name => $query) {
+                $stats[$name] = $this->periodStats($query, $start, $yesterday, $now);
+            }
+
             return [
-                'users' => (int)User::find()->count(),
+                // Keep the original scalar fields for existing clients and API checks.
+                'users' => $stats['users']['total'],
                 'games' => [
-                    'orel' => (int)GameOrel::find()->notFree()->count(),
-                    'saper' => (int)GameSaper::find()->andWhere(['etap' => [GameSaper::GAME_SAPER_ETAP_WIN, GameSaper::GAME_SAPER_ETAP_LOSE]])->count(),
+                    'orel' => $stats['orel']['total'],
+                    'saper' => $stats['saper']['total'],
                 ],
                 'forum' => [
-                    'themes' => (int)ForumTheme::find()->count(),
-                    'comments' => (int)ForumComment::find()->count(),
+                    'themes' => $stats['themes']['total'],
+                    'comments' => $stats['comments']['total'],
                 ],
-                'exchange' => (int)CreditExchange::find()->notFree()->count(),
+                'transfers' => $stats['transfers']['total'],
+                'exchange' => $stats['exchange']['total'],
+                'periods' => [
+                    'users' => $stats['users'],
+                    'games' => ['orel' => $stats['orel'], 'saper' => $stats['saper']],
+                    'forum' => ['themes' => $stats['themes'], 'comments' => $stats['comments']],
+                    'transfers' => $stats['transfers'],
+                    'exchange' => $stats['exchange'],
+                ],
                 'topRating' => $this->getTopRating(),
             ];
         }, self::CACHE_DURATION);
+    }
+
+    private function periodStats(Query $query, int $today, int $yesterday, int $now): array
+    {
+        return [
+            'total' => (int)(clone $query)->count(),
+            'today' => (int)(clone $query)->andWhere(['>=', 'created_at', $today])->andWhere(['<=', 'created_at', $now])->count(),
+            'yesterday' => (int)(clone $query)->andWhere(['>=', 'created_at', $yesterday])->andWhere(['<', 'created_at', $today])->count(),
+        ];
     }
 
     /**

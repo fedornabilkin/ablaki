@@ -15,6 +15,7 @@ use yii\web\BadRequestHttpException;
 
 class DuelController extends ActiveController
 {
+    use GameHistoryTrait;
     /** @var GameDuel */
     public $modelClass = GameDuel::class;
 
@@ -54,12 +55,7 @@ class DuelController extends ActiveController
         };
 
         $actions['history']['prepareDataProvider'] = function ($action, $filter) {
-            return new ActiveDataProvider([
-                'query' => $this->modelClass::find()
-                    ->orderBy(['updated_at' => SORT_DESC])
-                    ->with(['user', 'userGamer'])
-                    ->listHistory(App::user()->identity),
-            ]);
+            return $this->prepareHistoryList();
         };
 
         $actions['index']['prepareDataProvider'] = function ($action, $filter) {

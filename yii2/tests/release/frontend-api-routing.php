@@ -39,7 +39,8 @@ function dispatch(string $method, string $path, bool $authenticated = false, arr
     $route = $app->urlManager->parseRequest($app->request);
     if ($route === false) return [404, null];
     try {
-        $data = $app->runAction($route[0], $route[1]);
+        // Match Request::resolve(): route parameters take precedence over the query string.
+        $data = $app->runAction($route[0], $route[1] + $query);
         return [$app->response->getStatusCode(), $data];
     } catch (\yii\web\HttpException $error) {
         return [$error->statusCode, null];
@@ -96,8 +97,78 @@ try {
     }
     list($status, $stat) = dispatch('GET', 'v1/stat');
     routeCheck($status === 200 && $stat['users'] === 2 && $stat['games']['saper'] === 0, 'public statistics exact path dispatches current database totals');
+    $statTransaction = $db->beginTransaction();
+    try {
+        $app->formatter->timeZone = 'Europe/Moscow';
+        $today = (new DateTimeImmutable('today', new DateTimeZone('Europe/Moscow')))->getTimestamp();
+        $yesterday = $today - 86400;
+        $dates = [$yesterday - 1, $yesterday, $today - 1, $today, time(), time() + 86400];
+        $tables = [
+            'user' => ['username' => 'StatUser'],
+            'game_orel' => ['user_id' => 1, 'user_gamer' => 2],
+            'game_saper' => ['user_id' => 1, 'user_gamer' => 2, 'etap' => 0],
+            'forum_theme' => ['user_id' => 1],
+            'forum_comment' => ['user_id' => 1, 'active' => 1],
+            'credit_transfer' => ['user_id' => 1, 'user_buyer' => 2],
+            'credit_exchange' => ['user_id' => 1, 'user_buyer' => 2],
+        ];
+        foreach ($tables as $table => $fields) {
+            $db->createCommand()->delete($table)->execute();
+            foreach ($dates as $index => $date) {
+                $db->createCommand()->insert($table, array_merge($fields, ['id' => $index + 1, 'created_at' => $date]))->execute();
+            }
+        }
+        $db->createCommand()->insert('game_orel', ['id' => 7, 'created_at' => $today, 'user_gamer' => 0])->execute();
+        $db->createCommand()->insert('game_saper', ['id' => 7, 'created_at' => $today, 'etap' => 5])->execute();
+        $db->createCommand()->insert('credit_exchange', ['id' => 7, 'created_at' => $today, 'user_buyer' => 0])->execute();
+        $app->cache->flush();
+        $app->cache->set(\api\modules\v1\controllers\StatController::CACHE_KEY, ['users' => 999]);
+        list($status, $periodStat) = dispatch('GET', 'v1/stat');
+        routeCheck($status === 200 && isset($periodStat['periods']), 'statistics ignores the cached legacy payload after deployment');
+        $periods = $periodStat['periods'];
+        foreach ([$periods['users'], $periods['games']['orel'], $periods['games']['saper'],
+            $periods['forum']['themes'], $periods['forum']['comments'], $periods['transfers'], $periods['exchange']] as $counts) {
+            routeCheck($counts === ['total' => 6, 'today' => 2, 'yesterday' => 2],
+                'statistics counts midnight boundaries once and excludes future records from today');
+        }
+        routeCheck($periodStat['transfers'] === 6 && $periodStat['games']['orel'] === 6
+            && $periodStat['games']['saper'] === 6 && $periodStat['exchange'] === 6,
+            'legacy scalar totals are preserved and unfinished games/orders are excluded');
+        routeCheck(dispatch('GET', 'v1/stat')[1] === $periodStat, 'cached statistics preserves the complete period contract');
+        foreach (array_keys($tables) as $table) $db->createCommand()->delete($table)->execute();
+        $app->cache->flush();
+        $emptyStats = dispatch('GET', 'v1/stat')[1];
+        routeCheck($emptyStats['periods']['users'] === ['total' => 0, 'today' => 0, 'yesterday' => 0]
+            && $emptyStats['periods']['transfers']['total'] === 0 && $emptyStats['topRating'] === [],
+            'empty database returns real zeroes and an empty rating');
+    } finally {
+        $statTransaction->rollBack();
+        $app->cache->flush();
+    }
     list($status, $ranking) = dispatch('GET', 'v1/stat/top', false, ['envelope' => '1', 'q' => 'Author']);
     routeCheck($status === 200 && $ranking['_meta']['totalCount'] === 1 && $ranking['items'][0]['username'] === 'Author', 'public ranking exact path dispatches searchable envelope');
+    $rankingTransaction = $db->beginTransaction();
+    try {
+        $now = time();
+        foreach ([[1, 1.25, $now], [1, 2.5, $now], [1, -100, $now], [2, 10, $now - 172800]] as $earned) {
+            $db->createCommand()->insert('history_rating', ['user_id' => $earned[0], 'rating_up' => $earned[1], 'created_at' => $earned[2]])->execute();
+        }
+        foreach (['day', 'week', 'month', 'half-year'] as $period) {
+            list($status, $top) = dispatch('GET', 'v1/stat/top', false, ['envelope' => '1', 'period' => $period, 'per-page' => '1']);
+            routeCheck($status === 200 && $top['_meta']['totalCount'] === ($period === 'day' ? 1 : 2)
+                && $top['_meta']['perPage'] === 1 && (float)$top['items'][0]['rating'] === ($period === 'day' ? 3.75 : 10.0),
+                'ranking aggregates positive gains before sorting/pagination for ' . $period);
+        }
+        $second = dispatch('GET', 'v1/stat/top', false, ['envelope' => '1', 'period' => 'week', 'per-page' => '1', 'page' => '2'])[1];
+        routeCheck($second['items'][0]['username'] === 'Donor' && $second['_meta']['pageCount'] === 2, 'ranking serves the actual second page');
+        $empty = dispatch('GET', 'v1/stat/top', false, ['envelope' => '1', 'period' => 'week', 'q' => 'missing-user'])[1];
+        routeCheck($empty['items'] === [] && $empty['_meta']['totalCount'] === 0, 'ranking search returns an empty successful envelope');
+        $legacyTop = dispatch('GET', 'v1/stat/top', false, ['period' => 'day'])[1];
+        routeCheck($legacyTop['period'] === 'day' && count($legacyTop['list']) === 1, 'legacy ranking list remains compatible');
+        routeCheck(dispatch('GET', 'v1/stat/top', false, ['period' => 'invalid'])[0] === 400, 'unknown ranking period is rejected');
+    } finally {
+        $rankingTransaction->rollBack();
+    }
     routeCheck(dispatch('GET', 'v1/tips/random') === [200, null], 'random tip exact path returns null when existing facts are empty');
     foreach (['v1/history/balance','v1/history/rating','v1/users/referrals','v1/transfer','v1/transfer/history',
         'v1/exchange','v1/exchange/my','v1/exchange/history','v1/orel','v1/orel/my','v1/orel/history','v1/orel/recent',
@@ -110,6 +181,25 @@ try {
         routeCheck(dispatch('GET', $path)[0] === 401, 'summary rejects guest: ' . $path);
         list($status, $data) = dispatch('GET', $path, true);
         routeCheck($status === 200 && isset($data['today']['played'], $data['own']['count']), 'summary dispatch: ' . $path);
+    }
+    $db->createCommand('CREATE TABLE game_duel (id INTEGER PRIMARY KEY, user_id INTEGER, user_gamer INTEGER, kon NUMERIC, u1 INTEGER, u2 INTEGER, b1 INTEGER, b2 INTEGER, created_at INTEGER, updated_at INTEGER)')->execute();
+    $db->createCommand('CREATE TABLE game_five (id INTEGER PRIMARY KEY, user_id INTEGER, user_gamer INTEGER, kon NUMERIC, status TEXT, user_amount INTEGER, gamer_amount INTEGER, created_at INTEGER, updated_at INTEGER)')->execute();
+    foreach (['orel', 'saper', 'duel', 'five'] as $kind) {
+        $values = ['id' => 1, 'user_id' => 1, 'user_gamer' => 2, 'kon' => 5, 'created_at' => 1];
+        $values[$kind === 'saper' ? 'time_over_at' : 'updated_at'] = time();
+        if ($kind === 'orel') $values += ['type' => 1, 'hod' => 2];
+        elseif ($kind === 'saper') $values += ['etap' => 0];
+        elseif ($kind === 'duel') $values += ['u1' => 1, 'u2' => 2, 'b1' => 2, 'b2' => 3];
+        else $values += ['status' => 'user', 'user_amount' => 21, 'gamer_amount' => 5];
+        $db->createCommand()->insert('game_' . $kind, $values)->execute();
+        $path = 'v1/' . $kind . '/history-kons';
+        routeCheck(dispatch('GET', $path)[0] === 401, 'grouped stakes reject guest: ' . $kind);
+        list($status, $groups) = dispatch('GET', $path, true, ['period' => 'today', 'filter' => ['kon' => 999]]);
+        routeCheck($status === 200 && count($groups) === 1 && (int)$groups[0]['kon'] === 5 && (int)$groups[0]['count'] === 1, 'grouped stakes dispatch: ' . $kind);
+        list($status, $games) = dispatch('GET', 'v1/' . $kind . '/history', true, ['period' => 'today', 'filter' => ['kon' => 5], 'envelope' => 1]);
+        routeCheck($status === 200 && $games['_meta']['totalCount'] === 1
+            && $games['items'][0]['creator']['username'] === 'Donor' && $games['items'][0]['player']['person']['rating'] === 2.0, 'history filters and public objects survive REST dispatch: ' . $kind);
+        routeCheck(dispatch('GET', $path, true, ['period' => 'invalid'])[0] === 400, 'grouped period validation: ' . $kind);
     }
     routeCheck(dispatch('POST', 'v1/forum-comment/1/gift')[0] === 401, 'gift route requires authentication');
     routeCheck(dispatch('GET', 'v1/forum-comment/1/gift', true)[0] === 404, 'GET cannot trigger a gift');
