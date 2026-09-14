@@ -212,6 +212,12 @@ class GameSaper extends Saper
             'id',
             'user_id',
             'user_gamer',
+            'creator' => static function (self $model) {
+                return \common\services\user\PublicProfile::fromUser($model->user);
+            },
+            'player' => static function (self $model) {
+                return \common\services\user\PublicProfile::fromUser($model->userGamer);
+            },
             'username' => static function (Saper $model) {
                 return $model->user ? $model->user->username : null;
             },
