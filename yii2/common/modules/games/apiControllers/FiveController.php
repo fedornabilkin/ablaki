@@ -3,8 +3,8 @@
 namespace common\modules\games\apiControllers;
 
 use api\filters\Auth;
+use api\components\ApiList;
 use common\helpers\App;
-use common\modules\games\apiActions\five\DeleteAction;
 use common\modules\games\models\GameFive;
 use common\modules\games\service\FiveService;
 use Yii;
@@ -37,22 +37,11 @@ class FiveController extends ActiveController
     {
         $actions = parent::actions();
 
-        $actions['delete'] = [
-            'class' => DeleteAction::class,
-            'modelClass' => $this->modelClass,
-            'checkAccess' => [$this, 'checkAccess'],
-        ];
-
         $actions['my'] = $actions['index'];
         $actions['history'] = $actions['index'];
 
         $actions['my']['prepareDataProvider'] = function ($action, $filter) {
-            return new ActiveDataProvider([
-                'query' => $this->modelClass::find()
-                    ->with(['user', 'userGamer'])
-                    ->listMyGame(App::user()->identity)
-                    ->orderBy(['updated_at' => SORT_DESC]),
-            ]);
+            return $this->prepareGames(true);
         };
 
         $actions['history']['prepareDataProvider'] = function ($action, $filter) {
@@ -60,18 +49,29 @@ class FiveController extends ActiveController
         };
 
         $actions['index']['prepareDataProvider'] = function ($action, $filter) {
-            return new ActiveDataProvider([
-                'pagination' => false,
-                'query' => $this->modelClass::find()
-                    ->limit(20)
-                    ->orderBy(['id' => SORT_ASC])
-                    ->with('user')
-                    ->listGame(App::user()->identity),
-            ]);
+            return $this->prepareGames(false);
         };
 
-        unset($actions['create'], $actions['update']);
+        unset($actions['create'], $actions['update'], $actions['delete']);
         return $actions;
+    }
+
+    private function prepareGames(bool $mine): ActiveDataProvider
+    {
+        $query = $this->modelClass::find()->with(['user.person', 'userGamer.person']);
+        if ($mine) $query->listMyGame(App::user()->identity);
+        else $query->listGame(App::user()->identity);
+        return ApiList::provider($query, [], ['id', 'created_at', 'updated_at', 'kon'], static function ($query, $search) {
+            $condition = ApiList::relatedUserCondition(['user_id', 'user_gamer'], $search);
+            if (ctype_digit($search)) $condition[] = ['id' => $search];
+            $query->andWhere($condition);
+        });
+    }
+
+    public function actionDelete(int $id): void
+    {
+        (new FiveService())->cancel($this->findModel($id), App::user()->identity->person);
+        App::response()->setStatusCode(204);
     }
 
     /**
@@ -115,10 +115,15 @@ class FiveController extends ActiveController
             return ['errors' => $model->getErrors()];
         }
 
+        $roundId = Yii::$app->request->post('round_id');
+        if ($roundId !== null && (!is_scalar($roundId) || !ctype_digit((string)$roundId) || (int)$roundId < 1)) {
+            throw new BadRequestHttpException('Invalid round.');
+        }
         $hod = (new FiveService())->move(
             $model,
             App::user()->identity->person,
-            (int)$model->ball
+            (int)$model->ball,
+            $roundId === null ? null : (int)$roundId
         );
 
         return [
@@ -137,7 +142,7 @@ class FiveController extends ActiveController
     {
         $model = call_user_func([$this->modelClass, 'findOne'], $id);
         if (!$model) {
-            throw new UserException(Yii::t('games', 'The requested model does not exist.'));
+            throw new \yii\web\NotFoundHttpException('Game not found.');
         }
         return $model;
     }
