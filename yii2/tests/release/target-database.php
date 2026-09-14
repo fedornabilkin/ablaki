@@ -73,7 +73,7 @@ function race(array $commands): array {
 }
 $tables=[
     'user'=>['id'=>'pk','username'=>'string','email'=>'string','created_at'=>'integer','last_login_at'=>'integer'],
-    'persone'=>['id'=>'pk','user_id'=>'integer','credit'=>'decimal(18,5)','balance'=>'decimal(18,5)','rating'=>'decimal(18,5)'],
+    'persone'=>['id'=>'pk','user_id'=>'integer','credit'=>'decimal(18,5)','balance'=>'decimal(18,5)','rating'=>'decimal(18,5)','bonus_count'=>'integer NOT NULL DEFAULT 0'],
     'game_five'=>['id'=>'pk','user_id'=>'integer','user_gamer'=>'integer','kon'=>'decimal(18,5)','status'=>'string','user_amount'=>'integer','gamer_amount'=>'integer','created_at'=>'integer','updated_at'=>'integer'],
     'game_five_hod'=>['id'=>'pk','game_five_id'=>'integer','user_id'=>'integer','user_gamer'=>'integer','user_ball'=>'integer','gamer_ball'=>'integer','status'=>'string','user_amount'=>'integer','gamer_amount'=>'integer','created_at'=>'integer'],
     'history_balance'=>['id'=>'pk','user_id'=>'integer','balance'=>'decimal(18,5)','credit'=>'decimal(18,5)','balance_up'=>'decimal(18,5)','credit_up'=>'decimal(18,5)','type'=>'string','comment'=>'string','created_at'=>'integer'],
