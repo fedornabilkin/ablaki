@@ -87,7 +87,7 @@ foreach ([1,2,3] as $id) {
     $db->createCommand()->insert('persone',['id'=>$id,'user_id'=>$id,'credit'=>100,'balance'=>100,'rating'=>10])->execute();
 }
 $credit=static function($id)use($db){return (float)$db->createCommand('SELECT credit FROM persone WHERE user_id=:id',[':id'=>$id])->queryScalar();};
-$count=static function($table)use($db){return (int)(new \yii\db\Query())->from($table)->count($db);};
+$count=static function($table)use($db){return (int)(new \yii\db\Query())->from($table)->count('*',$db);};
 $reset=static function()use($db){
     foreach (['game_five_hod','game_five','history_balance','history_rating','comission','credit_exchange'] as $table) $db->createCommand()->delete($table)->execute();
     $db->createCommand()->update('persone',['credit'=>100,'balance'=>100,'rating'=>10])->execute();
