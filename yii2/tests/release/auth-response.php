@@ -52,6 +52,8 @@ try {
         last_login_at INTEGER, confirmed_at INTEGER, blocked_at INTEGER)')->execute();
     $db->createCommand('CREATE TABLE persone (id INTEGER PRIMARY KEY, user_id INTEGER UNIQUE,
         bonus_count INTEGER, refovod INTEGER, rating NUMERIC, balance NUMERIC, credit NUMERIC)')->execute();
+    $db->createCommand('CREATE TABLE forum_comment_gift (id INTEGER PRIMARY KEY, comment_id INTEGER, user_id INTEGER, recipient_id INTEGER, created_at INTEGER)')->execute();
+    $db->createCommand("INSERT INTO forum_comment_gift VALUES (1,1,1,2,1),(2,2,1,2,2),(3,3,2,1,3)")->execute();
     $db->createCommand()->insert('user', [
         'id' => 1, 'username' => 'FixtureUser', 'email' => 'fixture@example.invalid',
         'password_hash' => password_hash('fixture-password', PASSWORD_BCRYPT),
@@ -85,6 +87,8 @@ try {
             authResponseCheck($response['user']['email'] === 'fixture@example.invalid'
                 && (float)$response['user']['person']['balance'] === 123.5
                 && (float)$response['user']['person']['credit'] === 7.0, 'owner receives email and account values');
+            authResponseCheck($response['user']['person']['forum_credits_sent'] === 2,
+                'profile statistics counts sent gifts and excludes received gifts');
             authResponseCheck($response['token'] === $db->createCommand('SELECT auth_key FROM user WHERE id=1')->queryScalar(), 'returned token matches persisted credentials');
             if ($action === 'login-key') authResponseCheck($response['token'] !== $key, 'existing key rotation is preserved');
         }
