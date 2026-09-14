@@ -24,6 +24,7 @@ use common\modules\exchange\middleware\exchange\PlayMiddleware;
 use common\modules\exchange\middleware\exchange\RemoveAllMiddleware;
 use common\modules\exchange\middleware\exchange\SwitchCreatorMiddleware;
 use common\modules\exchange\middleware\ExchangeDataMiddleware;
+use common\models\user\Person;
 use Exception;
 use Yii;
 use yii\base\InvalidConfigException;
@@ -42,25 +43,35 @@ class ExchangeService
      */
     public function create(CreditExchange $model): void
     {
-        $container = App::container();
+        Yii::$app->db->transaction(function () use ($model): void {
+            $container = App::container();
+            $identity = App::user()->identity;
 
-        $middle = $container->get($this->getChecker($model));
-        $middle
-            ->linkWith($container->get(CheckCountMiddleware::class))
-            ->linkWith($container->get(CreateMiddleware::class))
-            ->linkWith($container->get(UpdatePersonMiddleware::class));
+            // Serialize all creates for this user. The position limit and the
+            // balance/credit update must be calculated from the same snapshot.
+            $person = Person::find()
+                ->where(['user_id' => $identity->id])
+                ->forUpdate()
+                ->one();
+            if ($person === null) {
+                throw new Exception('Exchange owner not found.');
+            }
 
-        $middle::$data = $container->get(ExchangeDataMiddleware::class, [App::user()->identity->person, $model]);
+            $middle = $container->get($this->getChecker($model));
+            $middle
+                ->linkWith($container->get(CheckCountMiddleware::class))
+                ->linkWith($container->get(CreateMiddleware::class))
+                ->linkWith($container->get(UpdatePersonMiddleware::class));
 
-        $availableCnt = $this->availableCount(App::user()->identity, $model);
-        $middle::$data->setAvailableCount($availableCnt);
+            $middle::$data = $container->get(ExchangeDataMiddleware::class, [$person, $model]);
+            $middle::$data->setAvailableCount($this->availableCount($identity, $model, $person));
 
-        // todo transaction
-        if (!$middle->check()) {
-            throw new Exception(
-                Yii::t('exchange', 'Error create')
-            );
-        }
+            if (!$middle->check()) {
+                throw new Exception(
+                    Yii::t('exchange', 'Error create')
+                );
+            }
+        });
     }
 
     /**
@@ -140,7 +151,7 @@ class ExchangeService
      * @param CreditExchange $model
      * @return int
      */
-    public function availableCount(IdentityInterface $identity, CreditExchange $model): int
+    public function availableCount(IdentityInterface $identity, CreditExchange $model, ?Person $person = null): int
     {
         $count = $model::find()
             ->free()
@@ -148,7 +159,8 @@ class ExchangeService
             ->my($identity)
             ->count();
 
-        $cnt = $identity->person->rating / 10 - $count;
+        $rating = $person === null ? $identity->person->rating : $person->rating;
+        $cnt = $rating / 10 - $count;
         return round(max($cnt, 0));
     }
 

@@ -18,8 +18,8 @@ $config = [
             'dsn' => 'pgsql:host=' . getenv('PG_DB_HOST') . ';dbname=' . getenv('PG_DB_NAME'),
             'username' => getenv('PG_DB_USER'),
             'password' => getenv('PG_DB_PASSWORD'),
+            'charset' => 'utf8',
             'enableSchemaCache' => true,
-//            'charset' => 'utf8',
         ],
         'cache' => [
             'class' => 'yii\caching\FileCache',
