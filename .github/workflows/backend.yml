@@ -102,8 +102,12 @@ jobs:
 
       - name: Check MySQL and PostgreSQL transactions
         working-directory: yii2
+        env:
+          MYSQL_CONTAINER: ${{ job.services.mysql.id }}
         shell: bash
         run: |
+          # PHP 7.3 requires the legacy authentication plugin in this disposable MySQL 8 service.
+          docker exec "$MYSQL_CONTAINER" mysql -uroot -pci-only-root -e "ALTER USER 'ablakin_ci'@'%' IDENTIFIED WITH mysql_native_password BY 'ci-only-password';"
           ABL_TEST_DSN='mysql:host=127.0.0.1;port=3306;dbname=ablakin_ci' php tests/release/target-database.php
           ABL_TEST_DSN='pgsql:host=127.0.0.1;port=5432;dbname=ablakin_ci' php tests/release/target-database.php
 
