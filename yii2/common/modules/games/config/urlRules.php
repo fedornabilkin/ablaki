@@ -17,6 +17,7 @@ return [
         'extraPatterns' => [
             'GET my' => 'my',
             'GET history' => 'history',
+            'GET history-kons' => 'history-kons',
             'GET recent' => 'recent',
             'GET summary' => 'summary',
             'GET remove' => 'remove',
@@ -33,6 +34,7 @@ return [
         'extraPatterns' => [
             'GET my' => 'my',
             'GET history' => 'history',
+            'GET history-kons' => 'history-kons',
             'POST play/{id}' => 'play',
         ],
     ],
@@ -44,6 +46,7 @@ return [
         'extraPatterns' => [
             'GET my' => 'my',
             'GET history' => 'history',
+            'GET history-kons' => 'history-kons',
             'POST play/{id}' => 'play',
         ],
     ],
@@ -56,6 +59,7 @@ return [
             'GET remove' => 'remove',
             'GET my' => 'my',
             'GET history' => 'history',
+            'GET history-kons' => 'history-kons',
             'GET kon-count' => 'kon-count',
             'GET recent' => 'recent',
             'GET summary' => 'summary',

@@ -111,6 +111,25 @@ try {
         list($status, $data) = dispatch('GET', $path, true);
         routeCheck($status === 200 && isset($data['today']['played'], $data['own']['count']), 'summary dispatch: ' . $path);
     }
+    $db->createCommand('CREATE TABLE game_duel (id INTEGER PRIMARY KEY, user_id INTEGER, user_gamer INTEGER, kon NUMERIC, u1 INTEGER, u2 INTEGER, b1 INTEGER, b2 INTEGER, created_at INTEGER, updated_at INTEGER)')->execute();
+    $db->createCommand('CREATE TABLE game_five (id INTEGER PRIMARY KEY, user_id INTEGER, user_gamer INTEGER, kon NUMERIC, status TEXT, user_amount INTEGER, gamer_amount INTEGER, created_at INTEGER, updated_at INTEGER)')->execute();
+    foreach (['orel', 'saper', 'duel', 'five'] as $kind) {
+        $values = ['id' => 1, 'user_id' => 1, 'user_gamer' => 2, 'kon' => 5, 'created_at' => 1];
+        $values[$kind === 'saper' ? 'time_over_at' : 'updated_at'] = time();
+        if ($kind === 'orel') $values += ['type' => 1, 'hod' => 2];
+        elseif ($kind === 'saper') $values += ['etap' => 0];
+        elseif ($kind === 'duel') $values += ['u1' => 1, 'u2' => 2, 'b1' => 2, 'b2' => 3];
+        else $values += ['status' => 'user', 'user_amount' => 21, 'gamer_amount' => 5];
+        $db->createCommand()->insert('game_' . $kind, $values)->execute();
+        $path = 'v1/' . $kind . '/history-kons';
+        routeCheck(dispatch('GET', $path)[0] === 401, 'grouped stakes reject guest: ' . $kind);
+        list($status, $groups) = dispatch('GET', $path, true, ['period' => 'today', 'filter' => ['kon' => 999]]);
+        routeCheck($status === 200 && count($groups) === 1 && (int)$groups[0]['kon'] === 5 && (int)$groups[0]['count'] === 1, 'grouped stakes dispatch: ' . $kind);
+        list($status, $games) = dispatch('GET', 'v1/' . $kind . '/history', true, ['period' => 'today', 'filter' => ['kon' => 5], 'envelope' => 1]);
+        routeCheck($status === 200 && $games['_meta']['totalCount'] === 1
+            && $games['items'][0]['creator']['username'] === 'Donor' && $games['items'][0]['player']['person']['rating'] === 2.0, 'history filters and public objects survive REST dispatch: ' . $kind);
+        routeCheck(dispatch('GET', $path, true, ['period' => 'invalid'])[0] === 400, 'grouped period validation: ' . $kind);
+    }
     routeCheck(dispatch('POST', 'v1/forum-comment/1/gift')[0] === 401, 'gift route requires authentication');
     routeCheck(dispatch('GET', 'v1/forum-comment/1/gift', true)[0] === 404, 'GET cannot trigger a gift');
     list($status, $gift) = dispatch('POST', 'v1/forum-comment/1/gift', true);
