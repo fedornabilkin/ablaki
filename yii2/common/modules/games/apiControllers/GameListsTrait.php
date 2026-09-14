@@ -11,21 +11,20 @@ use Yii;
 
 trait GameListsTrait
 {
+    use GameHistoryTrait;
+
     private function configureGameLists(array $actions): array
     {
         $index = $actions['index'];
         $index['dataFilter'] = $this->getFilter();
         foreach (['index', 'my', 'history', 'recent'] as $mode) {
             $actions[$mode] = $index;
+            if (in_array($mode, ['history', 'recent'], true)) unset($actions[$mode]['dataFilter']);
             $actions[$mode]['prepareDataProvider'] = function ($action, $filter) use ($mode) {
-                $query = $this->modelClass::find()->with(['user', 'userGamer']);
+                if (in_array($mode, ['history', 'recent'], true)) return $this->prepareHistoryList($mode);
+                $query = $this->modelClass::find()->with(['user.person', 'userGamer.person']);
                 if ($mode === 'my') {
                     $query->listMyGame(App::user()->identity);
-                } elseif ($mode === 'history') {
-                    $query->listHistory(App::user()->identity);
-                    GameOverview::completed($query, is_a($this->modelClass, GameSaper::class, true));
-                } elseif ($mode === 'recent') {
-                    GameOverview::completed($query, is_a($this->modelClass, GameSaper::class, true));
                 } else {
                     $query->listGame(App::user()->identity);
                 }
