@@ -223,6 +223,13 @@ class GameFive extends AbstractGame implements HistorySaveInterface
                 return $model->userGamer ? $model->userGamer->username : null;
             },
             'kon',
+            'bank' => static function (self $model) { return $model->getBankAmount(); },
+            'commission' => static function (self $model) { return $model->getCommissionAmount(); },
+            'winner_amount' => static function (self $model) { return $model->getBankAmount() - $model->getCommissionAmount(); },
+            'last_hod' => static function (self $model) {
+                // Completed history needs no extra round query; active players need the current round token.
+                return $model->isFinished() ? null : $model->getLastHod();
+            },
             'status',
             'user_points' => static function (self $model) {
                 return (int)$model->user_amount;
