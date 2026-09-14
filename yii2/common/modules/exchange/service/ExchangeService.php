@@ -49,10 +49,18 @@ class ExchangeService
 
             // Serialize all creates for this user. The position limit and the
             // balance/credit update must be calculated from the same snapshot.
-            $person = Person::find()
-                ->where(['user_id' => $identity->id])
-                ->forUpdate()
-                ->one();
+            $query = Person::find()->where(['user_id' => $identity->id]);
+            $db = Yii::$app->db;
+            if ($db->driverName === 'sqlite') {
+                $db->createCommand('UPDATE ' . $db->quoteTableName(Person::tableName()) .
+                    ' SET [[id]] = [[id]] WHERE [[user_id]] = :id', [':id' => $identity->id])->execute();
+                $person = $query->one();
+            } else {
+                $command = $query->createCommand();
+                $row = $db->createCommand($command->sql . ' FOR UPDATE', $command->params)->queryOne();
+                $person = $row ? new Person() : null;
+                if ($person !== null) Person::populateRecord($person, $row);
+            }
             if ($person === null) {
                 throw new Exception('Exchange owner not found.');
             }
