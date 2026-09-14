@@ -11,7 +11,11 @@
 Результат A: [CI 34891279217](https://github.com/fedornabilkin/ablaki/actions/runs/34891279217) успешно проверил восемь API-наборов, шесть конкурентных сценариев и UTF-8-миграции на каждой из MySQL 8 / PostgreSQL 16, выполнил test deploy. Исправлен несовместимый с Yii вызов forUpdate в создании биржевых заявок.
 
 ## Группа B: Production
-- [ ] B1. Влить release-ветку в master и выполнить production deploy.
-- [ ] B2. Проверить публичный API, CORS и завершение CI; удалить выпущенные рабочие ветки.
+- [x] B1. Влить release-ветку в master и выполнить production deploy.
+- [x] B2. Проверить публичный API, CORS и завершение CI; удалить выпущенные рабочие ветки.
+
+Результат B: [production CI 34891542781](https://github.com/fedornabilkin/ablaki/actions/runs/34891542781) успешен, checkout VPS обновлён до 9aa6d61. https://api.ablakin.ru/v1/stat возвращает 200 и periods, top с envelope — 200; новые history-kons для five/duel — ожидаемый 401 гостю; OPTIONS игрового POST — 204 с разрешённым Origin и Authorization. Рабочие ветки релиза удалены локально и в origin; test в master не вливался.
+
+Ограничение проверки: журнал подтверждает git pull и make up; PHP-контейнер уже работал и не пересоздавался. Выполнение двух UTF-8-миграций на production отдельно не подтверждено (локальный SSH-ключ не допущен). Обе миграции проверены в изолированных CI-БД. Инфраструктура, конфигурация VPS и живые игровые счета не изменялись вручную.
 
 Критерии: проверенная версия backend работает на production, игровые проверки не используют живые счета.
