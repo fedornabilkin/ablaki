@@ -12,13 +12,14 @@ return [
     [
         'class' => UrlRule::class,
         'controller' => ['v1/user'],
-        'only' => ['index', 'wall', 'wall-update', 'data', 'profile', 'last', 'online', 'online-count', 'referrals', 'heartbeat'],
+        'only' => ['index', 'wall', 'wall-update', 'data', 'profile', 'last', 'online', 'online-count', 'referrals', 'heartbeat', 'visited'],
         'extraPatterns' => [
             'GET data' => 'data',
             'GET profile' => 'profile',
             'GET last' => 'last',
             'GET online' => 'online',
             'GET online-count' => 'online-count',
+            'GET visited' => 'visited',
             'GET referrals' => 'referrals',
             'POST heartbeat' => 'heartbeat',
             'GET wall/<login:[-a-zA-Z0-9_\.@]+>' => 'wall',
@@ -67,9 +68,12 @@ return [
         'class' => UrlRule::class,
         'controller' => ['v1/bonus'],
         'pluralize' => false,
-        'only' => ['everyday'],
+        'only' => ['everyday', 'recipients', 'fund', 'my-fund'],
         'extraPatterns' => [
             'GET everyday' => 'everyday',
+            'GET recipients' => 'recipients',
+            'GET fund' => 'fund',
+            'GET my-fund' => 'my-fund',
         ],
     ],
 //    [

@@ -18,7 +18,7 @@ class UserController extends Controller
 
     public function authExceptAction(): array
     {
-        return ['wall', 'last', 'index', 'online', 'online-count'];
+        return ['wall', 'last', 'index', 'online', 'online-count', 'visited'];
     }
 
     /**
@@ -82,6 +82,17 @@ class UserController extends Controller
             'count' => (int)User::find()->where(['id' => PresenceService::onlineIds()])->count(),
             'windowSeconds' => PresenceService::WINDOW_SECONDS,
         ];
+    }
+
+    public function actionVisited()
+    {
+        $now = time();
+        list($start, $end) = PresenceService::dayBounds($now);
+        $query = User::find()->with(['person'])->where(['or',
+            ['id' => PresenceService::todayIds($now)],
+            ['and', ['>=', 'last_login_at', $start], ['<', 'last_login_at', $end], ['<=', 'last_login_at', $now]],
+        ]);
+        return ApiList::provider($query, ['username'], ['id', 'username', 'created_at']);
     }
 
     public function actionHeartbeat(): array
