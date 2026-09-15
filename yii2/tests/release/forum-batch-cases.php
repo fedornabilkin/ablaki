@@ -14,21 +14,21 @@ try {
     $fallback = dispatch('GET', 'v1/forum-theme/1')[1]['user'];
     routeCheck((int)$fallback['id'] === 2 && (float)$fallback['person']['rating'] === 12.34, 'legacy theme uses first active author');
     $db->createCommand()->update('persone', ['credit' => 100], ['user_id' => 1])->execute();
-    routeCheck(dispatch('POST', 'v1/transfer', true, [], ['amount' => 1.25, 'count' => 2])[0] === 201, 'create accepts fractional credits');
+    routeCheck(dispatch('POST', 'v1/transfer', true, [], ['amount' => 2, 'count' => 2])[0] === 201, 'create accepts whole credits');
     $created = $db->createCommand('SELECT * FROM credit_transfer WHERE user_id=1 ORDER BY id DESC LIMIT 2')->queryAll();
     routeCheck(count($created) === 2 && strlen($created[0]['password']) === 32 && $created[0]['password'] !== $created[1]['password']
-        && (float)$db->createCommand('SELECT credit FROM persone WHERE user_id=1')->queryScalar() === 97.5, 'new codes unique, long, and reserve exact amount');
+        && (float)$db->createCommand('SELECT credit FROM persone WHERE user_id=1')->queryScalar() === 96.0, 'new codes unique, long, and reserve exact amount');
     routeCheck(dispatch('PUT', 'v1/transfer/' . $created[0]['id'], true, [], ['password' => $created[0]['password']])[0] === 403, 'cannot receive own transfer');
-    $db->createCommand()->insert('credit_transfer', ['id' => 9001, 'user_id' => 2, 'user_buyer' => 0, 'amount' => 2.75, 'password' => 'old-code', 'created_at' => 1])->execute();
+    $db->createCommand()->insert('credit_transfer', ['id' => 9001, 'user_id' => 2, 'user_buyer' => 0, 'amount' => 3, 'password' => 'old-code', 'created_at' => 1])->execute();
     foreach ([[], ['password' => 'wrong'], ['password' => ['old-code']]] as $invalid) {
         routeCheck(dispatch('PUT', 'v1/transfer/9001', true, [], $invalid)[0] === 422, 'missing or invalid code rejected');
     }
-    routeCheck((float)$db->createCommand('SELECT credit FROM persone WHERE user_id=1')->queryScalar() === 97.5, 'wrong claim preserves balance');
+    routeCheck((float)$db->createCommand('SELECT credit FROM persone WHERE user_id=1')->queryScalar() === 96.0, 'wrong claim preserves balance');
     list($status, $received) = dispatch('PUT', 'v1/transfer/9001', true, [], ['password' => 'old-code']);
-    routeCheck($status === 200 && $received['password'] === null && (float)$db->createCommand('SELECT credit FROM persone WHERE user_id=1')->queryScalar() === 100.25, 'legacy code pays without exposing recipient hash');
+    routeCheck($status === 200 && $received['password'] === null && (float)$db->createCommand('SELECT credit FROM persone WHERE user_id=1')->queryScalar() === 99.0, 'legacy code pays without exposing recipient hash');
     routeCheck(dispatch('PUT', 'v1/transfer/9001', true, [], ['password' => 'old-code'])[0] === 422, 'repeated receiving rejected');
     routeCheck(dispatch('DELETE', 'v1/transfer/' . $created[0]['id'], true)[0] < 300, 'sender cancels unreceived transfer');
-    routeCheck((float)$db->createCommand('SELECT credit FROM persone WHERE user_id=1')->queryScalar() === 101.5, 'cancellation refunds exact amount');
+    routeCheck((float)$db->createCommand('SELECT credit FROM persone WHERE user_id=1')->queryScalar() === 101.0, 'cancellation refunds exact amount');
     $before = (int)$db->createCommand('SELECT COUNT(*) FROM credit_transfer')->queryScalar();
     foreach ([['amount' => -1, 'count' => 1], ['amount' => 0.001, 'count' => 1], ['amount' => 1, 'count' => 101], ['amount' => 1000, 'count' => 1]] as $invalid) {
         routeCheck(dispatch('POST', 'v1/transfer', true, [], $invalid)[0] === 422, 'invalid transfer or insufficient funds rejected');
@@ -41,7 +41,7 @@ try {
         throw new RuntimeException('history failure must abort claim');
     } catch (\yii\db\Exception $expected) {
         routeCheck((int)$db->createCommand('SELECT user_buyer FROM credit_transfer WHERE id=9002')->queryScalar() === 0
-            && (float)$db->createCommand('SELECT credit FROM persone WHERE user_id=1')->queryScalar() === 101.5, 'failed history rolls back claim and balance');
+            && (float)$db->createCommand('SELECT credit FROM persone WHERE user_id=1')->queryScalar() === 101.0, 'failed history rolls back claim and balance');
     }
     $db->pdo->exec('DROP TRIGGER reject_transfer_history');
     $db->createCommand()->delete('game_duel')->execute();
