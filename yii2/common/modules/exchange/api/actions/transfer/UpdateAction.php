@@ -28,7 +28,11 @@ class UpdateAction extends Action
         }
 
         $service = App::container()->get(TransferService::class);
-        $service->confirm($model);
+        $password = \Yii::$app->request->getBodyParam('password');
+        if (!is_string($password) || trim($password) === '' || strlen($password) > 60) {
+            throw new \yii\web\UnprocessableEntityHttpException('Укажите номер и хэш перевода.');
+        }
+        $service->confirm($model, trim($password));
 
         return $model;
     }
