@@ -14,10 +14,10 @@ class TransferService
     {
         $amount = $model->amount;
         $count = $model->count ?? 1;
-        if (!is_numeric($amount) || !is_finite((float)$amount) || $amount < 0.01 || $amount > 1000000000
-            || abs(round((float)$amount, 2) - (float)$amount) > 0.000001
+        if (!is_numeric($amount) || !is_finite((float)$amount) || $amount < 1 || $amount > 1000000000
+            || floor((float)$amount) !== (float)$amount
             || filter_var($count, FILTER_VALIDATE_INT) === false || $count < 1 || $count > 100) {
-            throw new UnprocessableEntityHttpException('Укажите положительную сумму с точностью до сотых и количество от 1 до 100.');
+            throw new UnprocessableEntityHttpException('Укажите целое количество кредитов и количество переводов от 1 до 100.');
         }
         $userId = (int)App::user()->id;
         Yii::$app->db->transaction(function () use ($amount, $count, $userId): void {

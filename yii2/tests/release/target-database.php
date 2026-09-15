@@ -132,20 +132,20 @@ verifyDb(count(array_filter($results,static function($value){return $value==='ok
     && $credit(1)===90.0 && $count('history_balance')===1,'parallel exchange creates respect rating limit and balance');
 
 // New transfer claims and bot replenishment use real database locks, too.
-$db->createCommand()->createTable('credit_transfer', ['id'=>'pk','user_id'=>'integer','user_buyer'=>'integer NOT NULL DEFAULT 0','amount'=>'decimal(18,5)','password'=>'string','created_at'=>'integer','updated_at'=>'integer'])->execute();
+$db->createCommand()->createTable('credit_transfer', ['id'=>'pk','user_id'=>'integer','user_buyer'=>'integer NOT NULL DEFAULT 0','amount'=>'integer','password'=>'string','created_at'=>'integer','updated_at'=>'integer'])->execute();
 $db->createCommand()->createTable('game_duel', ['id'=>'pk','user_id'=>'integer','user_gamer'=>'integer','kon'=>'decimal(18,5)','u1'=>'integer','b1'=>'integer','u2'=>'integer','b2'=>'integer','created_at'=>'integer','updated_at'=>'integer'])->execute();
 $db->createCommand()->createTable('game_orel', ['id'=>'pk','user_id'=>'integer','user_gamer'=>'integer','kon'=>'decimal(18,5)','type'=>'integer','hod'=>'integer','created_at'=>'integer','updated_at'=>'integer'])->execute();
 $db->schema->refresh();
 $reset();
-$db->createCommand()->insert('credit_transfer', ['user_id'=>1,'user_buyer'=>0,'amount'=>2.75,'password'=>'fixture-code','created_at'=>time()])->execute();
+$db->createCommand()->insert('credit_transfer', ['user_id'=>1,'user_buyer'=>0,'amount'=>3,'password'=>'fixture-code','created_at'=>time()])->execute();
 $transferId=(int)$db->getLastInsertID();
 $results=race(array_fill(0,8,['transfer-claim',2,$transferId,0]));
-verifyDb(count(array_filter($results,static function($value){return $value==='ok';}))===1 && $credit(2)===102.75,
+verifyDb(count(array_filter($results,static function($value){return $value==='ok';}))===1 && $credit(2)===103.0,
     'parallel transfer claims pay once');
 $db->createCommand()->insert('credit_transfer', ['user_id'=>1,'user_buyer'=>0,'amount'=>3,'password'=>'fixture-code','created_at'=>time()])->execute();
 $transferId=(int)$db->getLastInsertID();
 $results=race([['transfer-claim',2,$transferId,0],['transfer-cancel',1,$transferId,0]]);
-verifyDb(count(array_filter($results,static function($value){return $value==='ok';}))===1 && $credit(1)+$credit(2)===205.75,
+verifyDb(count(array_filter($results,static function($value){return $value==='ok';}))===1 && $credit(1)+$credit(2)===206.0,
     'transfer claim versus cancel has one consistent payout');
 $db->createCommand()->update('user',['username'=>'bot'],['id'=>3])->execute();
 $db->createCommand()->update('persone',['credit'=>1000],['user_id'=>3])->execute();
