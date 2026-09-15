@@ -282,6 +282,7 @@ try {
     } finally {
         Yii::setAlias('@runtime', $runtime);
     }
+    require __DIR__ . '/forum-batch-cases.php';
     echo "API routing integration passed on disposable SQLite.\n";
 } finally {
     if (isset($db)) $db->close();

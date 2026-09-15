@@ -135,6 +135,8 @@ try {
         authResponseCheck($db->createCommand('SELECT auth_key FROM user WHERE id=1')->queryScalar() === $key,
             'failed credential write never returns a new unusable token');
     }
+    $db->pdo->exec('DROP TRIGGER reject_token');
+    require __DIR__ . '/legacy-auth-cases.php';
     echo "Authentication response regression passed without any live API or database.\n";
 } finally {
     $db->close();

@@ -10,6 +10,7 @@ namespace api\modules\v1\models\forum;
 
 use common\modules\forum\models\ForumTheme;
 use yii\db\Query;
+use common\services\user\PublicProfile;
 
 class Theme extends ForumTheme
 {
@@ -37,7 +38,7 @@ class Theme extends ForumTheme
             'last_comment_created_at' => $lastCreatedAt,
             'first_comment_user_id' => $firstUserId,
             'first_comment_username' => $firstUsername,
-        ]);
+        ])->with(['user.person', 'firstAuthor.person']);
     }
 
     private static function latestCommentQuery(string $column): Query
@@ -53,6 +54,9 @@ class Theme extends ForumTheme
     public function fields(): array
     {
         $fields = parent::fields();
+        $fields['user'] = static function ($model) {
+            return PublicProfile::fromUser($model->user ?: $model->firstAuthor);
+        };
         $fields['comment_count'] = function () {
             return (int)($this->comment_count ?? $this->getForumComments()->andWhere(['active' => 1])->count());
         };
@@ -86,7 +90,22 @@ class Theme extends ForumTheme
 
     public function extraFields(): array
     {
-        return ['user'];
+        return ['first_comment' => static function ($model) {
+            $comment = $model->firstComment;
+            if ($comment === null) return null;
+            return array_merge($comment->toArray(), ['user' => PublicProfile::fromUser($comment->user)]);
+        }];
+    }
+
+    public function getFirstAuthor(): \yii\db\ActiveQuery
+    {
+        return $this->hasOne(\common\models\user\User::class, ['id' => 'first_comment_user_id']);
+    }
+
+    public function getFirstComment(): \yii\db\ActiveQuery
+    {
+        return $this->hasOne(Comment::class, ['theme_id' => 'id'])->andWhere(['active' => 1])
+            ->orderBy(['created_at' => SORT_ASC, 'id' => SORT_ASC])->with('user.person');
     }
 
     public function beforeValidate()

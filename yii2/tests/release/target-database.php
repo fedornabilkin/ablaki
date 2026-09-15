@@ -43,6 +43,13 @@ if (($argv[1] ?? '') === 'worker') {
             $model=new \common\modules\exchange\api\models\CreditExchange(['type'=>'buy','credit'=>10,'amount'=>1,'count'=>1]);
             (new \common\modules\exchange\service\ExchangeService())->create($model);
         }
+        elseif ($action === 'transfer-claim' || $action === 'transfer-cancel') {
+            $transfer = new \common\modules\exchange\models\CreditTransfer(['id' => (int)$gameId]);
+            $transfers = new \common\modules\exchange\service\TransferService();
+            if ($action === 'transfer-claim') $transfers->confirm($transfer, 'fixture-code');
+            else $transfers->delete($transfer);
+        }
+        elseif ($action === 'bot') (new \common\services\game\GameCreateService())->execute();
         else throw new RuntimeException('Unknown worker action.');
         echo 'ok';
     } catch (\yii\web\HttpException $expected) { echo 'rejected'; }
@@ -123,6 +130,28 @@ $reset();
 $results=race(array_fill(0,8,['exchange',1,0,0]));
 verifyDb(count(array_filter($results,static function($value){return $value==='ok';}))===1 && $count('credit_exchange')===1
     && $credit(1)===90.0 && $count('history_balance')===1,'parallel exchange creates respect rating limit and balance');
+
+// New transfer claims and bot replenishment use real database locks, too.
+$db->createCommand()->createTable('credit_transfer', ['id'=>'pk','user_id'=>'integer','user_buyer'=>'integer NOT NULL DEFAULT 0','amount'=>'decimal(18,5)','password'=>'string','created_at'=>'integer','updated_at'=>'integer'])->execute();
+$db->createCommand()->createTable('game_duel', ['id'=>'pk','user_id'=>'integer','user_gamer'=>'integer','kon'=>'decimal(18,5)','u1'=>'integer','b1'=>'integer','u2'=>'integer','b2'=>'integer','created_at'=>'integer','updated_at'=>'integer'])->execute();
+$db->createCommand()->createTable('game_orel', ['id'=>'pk','user_id'=>'integer','user_gamer'=>'integer','kon'=>'decimal(18,5)','type'=>'integer','hod'=>'integer','created_at'=>'integer','updated_at'=>'integer'])->execute();
+$db->schema->refresh();
+$reset();
+$db->createCommand()->insert('credit_transfer', ['user_id'=>1,'user_buyer'=>0,'amount'=>2.75,'password'=>'fixture-code','created_at'=>time()])->execute();
+$transferId=(int)$db->getLastInsertID();
+$results=race(array_fill(0,8,['transfer-claim',2,$transferId,0]));
+verifyDb(count(array_filter($results,static function($value){return $value==='ok';}))===1 && $credit(2)===102.75,
+    'parallel transfer claims pay once');
+$db->createCommand()->insert('credit_transfer', ['user_id'=>1,'user_buyer'=>0,'amount'=>3,'password'=>'fixture-code','created_at'=>time()])->execute();
+$transferId=(int)$db->getLastInsertID();
+$results=race([['transfer-claim',2,$transferId,0],['transfer-cancel',1,$transferId,0]]);
+verifyDb(count(array_filter($results,static function($value){return $value==='ok';}))===1 && $credit(1)+$credit(2)===205.75,
+    'transfer claim versus cancel has one consistent payout');
+$db->createCommand()->update('user',['username'=>'bot'],['id'=>3])->execute();
+$db->createCommand()->update('persone',['credit'=>1000],['user_id'=>3])->execute();
+$results=race(array_fill(0,4,['bot',3,0,0]));
+verifyDb($count('game_duel')===39 && $count('game_orel')===39 && $credit(3)===846.0,
+    'concurrent cron replenishes each game plan once with correct debit');
 
 // Validate the two pending conversion migrations on representative Cyrillic text.
 $db->createCommand()->createTable('forum_theme',['id'=>'pk','title'=>'string'])->execute();
