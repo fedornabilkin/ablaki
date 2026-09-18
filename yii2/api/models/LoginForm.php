@@ -13,42 +13,30 @@ use yii\web\IdentityInterface;
 class LoginForm extends \dektrium\user\models\LoginForm
 {
     public $token;
-    private $legacyPasswordAccepted = false;
 
     public function rules()
     {
         $rules = parent::rules();
         if (isset($rules['passwordValidate'])) {
             $rules['passwordValidate'] = ['password', function ($attribute) {
-                $this->legacyPasswordAccepted = false;
                 if ($this->user && is_string($this->password)) {
-                    $this->legacyPasswordAccepted = (new \common\services\user\LegacyPasswordService())->verify($this->user, $this->password);
-                    if ($this->legacyPasswordAccepted || $this->validCurrentPassword()) return;
+                    if ((new \common\services\user\LegacyPasswordService())->verify($this->user, $this->password)
+                        || $this->validCurrentPassword()) return;
                 }
                 $this->addError($attribute, Yii::t('user', 'Invalid login or password'));
             }];
         }
+        $rules['authKeyValidate'] = ['login', function ($attribute) {
+            if (!$this->hasErrors() && $this->user && !$this->hasAuthKey()) {
+                $this->addError($attribute, 'Не настроен ключ доступа. Обратитесь к администратору.');
+            }
+        }];
         return $rules;
     }
 
-    public function afterValidate()
+    private function hasAuthKey(): bool
     {
-        parent::afterValidate();
-        if (!$this->legacyPasswordAccepted || $this->hasErrors()) return;
-        $hash = \dektrium\user\helpers\Password::hash($this->password);
-        $changed = $this->user::updateAll(['password_hash' => $hash], [
-            'id' => $this->user->id,
-            'password_hash' => $this->user->password_hash,
-            'salt' => $this->user->getAttribute('salt'),
-        ]);
-        if ($changed !== 1) {
-            $this->user->refresh();
-            if (!$this->validCurrentPassword()) {
-                $this->addError('password', Yii::t('user', 'Invalid login or password'));
-            }
-            return;
-        }
-        $this->user->password_hash = $hash;
+        return is_string($this->user->auth_key) && trim($this->user->auth_key) !== '';
     }
 
     private function validCurrentPassword(): bool
@@ -67,7 +55,7 @@ class LoginForm extends \dektrium\user\models\LoginForm
     public function loginKey(string $key): bool
     {
         $this->token = null;
-        if ($key === '') {
+        if (trim($key) === '') {
             return false;
         }
         $module = Yii::$app->getModule('user');
@@ -76,12 +64,11 @@ class LoginForm extends \dektrium\user\models\LoginForm
 //        var_dump($userModel);exit;
         $this->user = $userModel::find()->where(['auth_key' => $key])->one();
 
-        if ($this->user && $this->user->auth_key !== '') {
+        if ($this->user && $this->hasAuthKey()) {
             $isLogged = Yii::$app->getUser()->login($this->user);
 
             if ($isLogged) {
                 $this->user->updateAttributes(['last_login_at' => time()]);
-                $this->changeAuthKey($this->user);
                 $this->token = $this->user->auth_key;
                 PresenceService::recordActivity((int)$this->user->getId());
             }
@@ -101,9 +88,6 @@ class LoginForm extends \dektrium\user\models\LoginForm
         $this->token = null;
         if (!parent::login()) {
             return false;
-        }
-        if (!is_string($this->user->auth_key) || trim($this->user->auth_key) === '') {
-            $this->changeAuthKey($this->user);
         }
         $this->token = $this->user->auth_key;
         PresenceService::recordActivity((int)$this->user->getId());

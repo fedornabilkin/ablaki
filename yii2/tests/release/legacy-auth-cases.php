@@ -7,7 +7,7 @@ $legacyLogin = function (string $password) use ($app) {
     $app->user->setIdentity(null);
     $app->response->setStatusCode(200);
     $app->request->setBodyParams(['login' => 'FixtureUser', 'password' => $password]);
-    return $app->runAction('site/login');
+    return authWithoutCredentialWrites($app, 'login');
 };
 $db->createCommand()->update('user', ['password_hash' => $legacyHash, 'salt' => 'fixture-salt', 'blocked_at' => 1], ['id' => 1])->execute();
 $response = $legacyLogin('legacy-password');
@@ -17,7 +17,7 @@ $response = $legacyLogin('incorrect');
 authResponseCheck($app->user->isGuest && !isset($response['token']), 'wrong legacy password rejected');
 authResponseCheck($db->createCommand('SELECT password_hash FROM user WHERE id=1')->queryScalar() === $legacyHash, 'wrong legacy password leaves stored hash unchanged');
 $response = $legacyLogin('legacy-password');
-authResponseCheck($app->user->id === 1 && !empty($response['token']) && password_verify('legacy-password', $db->createCommand('SELECT password_hash FROM user WHERE id=1')->queryScalar()), 'legacy login upgrades password and completes existing session/token flow');
+authResponseCheck($app->user->id === 1 && !empty($response['token']) && $db->createCommand('SELECT password_hash FROM user WHERE id=1')->queryScalar() === $legacyHash, 'legacy login completes session/token flow without replacing the hash');
 authResponseCheck($db->createCommand('SELECT last_login_at FROM user WHERE id=1')->queryScalar() > 0, 'legacy login updates normal activity');
 authResponseCheck(!isset($response['user']['salt']) && !isset($response['user']['password_hash']), 'legacy credentials are not exposed in the login response');
 $db->createCommand()->update('user', ['password_hash' => password_hash('new-password', PASSWORD_BCRYPT)], ['id' => 1])->execute();

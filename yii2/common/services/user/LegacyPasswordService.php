@@ -18,7 +18,7 @@ class LegacyPasswordService
 
         // The old controller sanitized every POST value before encodePassword().
         // Pin the PHP 5/7 flags: PHP 8.1 changed htmlspecialchars() defaults.
-        // Only legacy verification uses this; the upgrade hashes the original input.
+        // Only legacy verification uses this; credentials are never rewritten at login.
         $legacyPassword = addslashes(htmlspecialchars(strip_tags(trim($password)), ENT_COMPAT | ENT_HTML401, 'UTF-8'));
         return hash_equals(strtolower($hash), md5($legacyPassword . md5($salt)));
     }

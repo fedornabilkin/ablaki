@@ -4,7 +4,7 @@ $loginWith = function (string $login, string $password) use ($app) {
     $app->user->setIdentity(null);
     $app->response->setStatusCode(200);
     $app->request->setBodyParams(['login' => $login, 'password' => $password]);
-    return $app->runAction('site/login');
+    return authWithoutCredentialWrites($app, 'login');
 };
 $setLegacy = function ($hash = null) use ($db) {
     $db->createCommand()->update('user', [
@@ -31,14 +31,10 @@ foreach ($legacyVectors as $index => list($input, $storedInput)) {
     $response = $loginWith('FixtureUser', $input);
     authResponseCheck($app->response->statusCode === 200 && !empty($response['token']),
         'legacy preprocessing vector ' . $index . ' authenticates');
-    $upgraded = $db->createCommand('SELECT password_hash FROM user WHERE id=1')->queryScalar();
-    authResponseCheck(password_verify($input, $upgraded), 'legacy upgrade hashes the original submitted password');
+    $stored = $db->createCommand('SELECT password_hash FROM user WHERE id=1')->queryScalar();
+    authResponseCheck($stored === md5($storedInput . md5('fixture-salt')), 'legacy login preserves the original MD5 hash');
     authResponseCheck(!empty($loginWith('fixture@example.invalid', $input)['token']),
-        'upgraded password authenticates by email without legacy preprocessing');
-    if ($input !== $storedInput) {
-        authResponseCheck(!isset($loginWith('FixtureUser', $storedInput)['token']),
-            'upgraded password no longer accepts the legacy transformed value');
-    }
+        'legacy password authenticates repeatedly by email without migration');
 }
 
 // Only credentials in the selected user row are considered; no users table exists.
@@ -58,42 +54,6 @@ authResponseCheck(!empty($loginWith('  FixtureUser  ', 'legacy-password')['token
     'legacy hex hash is case insensitive and login whitespace is trimmed');
 $setLegacy();
 authResponseCheck(!isset($loginWith('MissingUser', 'legacy-password')['token']), 'legacy password cannot authenticate an unknown username');
-
-// A reset must win over a concurrently attempted legacy upgrade.
-$setLegacy();
-$app->user->setIdentity(null);
-$form = Yii::createObject(\api\models\LoginForm::class);
-$form->login = 'FixtureUser';
-$form->password = 'legacy-password';
-$form->on(\yii\base\Model::EVENT_AFTER_VALIDATE, function () use ($db) {
-    $db->createCommand()->update('user', ['password_hash' => password_hash('reset-password', PASSWORD_BCRYPT)], ['id' => 1])->execute();
-});
-authResponseCheck(!$form->login() && $form->token === null && $app->user->isGuest,
-    'a concurrent password reset prevents legacy login and is not overwritten');
-authResponseCheck(!empty($loginWith('FixtureUser', 'reset-password')['token']),
-    'password saved by the concurrent reset remains usable');
-
-$setLegacy();
-$app->user->setIdentity(null);
-$form = Yii::createObject(\api\models\LoginForm::class);
-$form->login = 'FixtureUser';
-$form->password = 'legacy-password';
-$form->on(\yii\base\Model::EVENT_AFTER_VALIDATE, function () use ($db) {
-    $db->createCommand()->update('user', ['salt' => 'changed-salt'], ['id' => 1])->execute();
-});
-authResponseCheck(!$form->login() && $form->token === null && $app->user->isGuest,
-    'a concurrent salt change prevents upgrading stale legacy credentials');
-
-$setLegacy();
-$app->user->setIdentity(null);
-$form = Yii::createObject(\api\models\LoginForm::class);
-$form->login = 'FixtureUser';
-$form->password = 'legacy-password';
-$form->on(\yii\base\Model::EVENT_AFTER_VALIDATE, function () use ($db) {
-    $db->createCommand()->update('user', ['password_hash' => password_hash('legacy-password', PASSWORD_BCRYPT)], ['id' => 1])->execute();
-});
-authResponseCheck($form->login() && !empty($form->token),
-    'a concurrent successful upgrade still permits the same valid password');
 
 // Exercise the real registration action instead of inserting a precomputed modern hash.
 $db->createCommand('ALTER TABLE user ADD COLUMN registration_ip TEXT')->execute();
@@ -131,4 +91,4 @@ $setLegacy();
 $db->createCommand()->update('user', ['confirmed_at' => null], ['id' => 1])->execute();
 authResponseCheck(!isset($loginWith('FixtureUser', 'legacy-password')['token'])
     && $db->createCommand('SELECT password_hash FROM user WHERE id=1')->queryScalar() === md5('legacy-password' . md5('fixture-salt')),
-    'unconfirmed legacy account cannot log in or upgrade its password');
+    'unconfirmed legacy account cannot log in or change its password');
