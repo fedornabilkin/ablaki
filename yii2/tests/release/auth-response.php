@@ -51,7 +51,8 @@ try {
         password_hash TEXT, auth_key TEXT, created_at INTEGER, updated_at INTEGER,
         last_login_at INTEGER, confirmed_at INTEGER, blocked_at INTEGER)')->execute();
     $db->createCommand('CREATE TABLE persone (id INTEGER PRIMARY KEY, user_id INTEGER UNIQUE,
-        bonus_count INTEGER, refovod INTEGER, rating NUMERIC, balance NUMERIC, credit NUMERIC)')->execute();
+        bonus_count INTEGER DEFAULT 0, refovod INTEGER DEFAULT 0, rating NUMERIC DEFAULT 0,
+        balance NUMERIC DEFAULT 0, credit NUMERIC DEFAULT 0)')->execute();
     $db->createCommand('CREATE TABLE forum_comment_gift (id INTEGER PRIMARY KEY, comment_id INTEGER, user_id INTEGER, recipient_id INTEGER, created_at INTEGER)')->execute();
     $db->createCommand("INSERT INTO forum_comment_gift VALUES (1,1,1,2,1),(2,2,1,2,2),(3,3,2,1,3)")->execute();
     $db->createCommand()->insert('user', [
@@ -137,6 +138,7 @@ try {
     }
     $db->pdo->exec('DROP TRIGGER reject_token');
     require __DIR__ . '/legacy-auth-cases.php';
+    require __DIR__ . '/auth-algorithm-cases.php';
     echo "Authentication response regression passed without any live API or database.\n";
 } finally {
     $db->close();

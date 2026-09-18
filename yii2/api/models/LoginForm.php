@@ -36,7 +36,11 @@ class LoginForm extends \dektrium\user\models\LoginForm
         parent::afterValidate();
         if (!$this->legacyPasswordAccepted || $this->hasErrors()) return;
         $hash = \dektrium\user\helpers\Password::hash($this->password);
-        $changed = $this->user::updateAll(['password_hash' => $hash], ['id' => $this->user->id, 'password_hash' => $this->user->password_hash]);
+        $changed = $this->user::updateAll(['password_hash' => $hash], [
+            'id' => $this->user->id,
+            'password_hash' => $this->user->password_hash,
+            'salt' => $this->user->getAttribute('salt'),
+        ]);
         if ($changed !== 1) {
             $this->user->refresh();
             if (!$this->validCurrentPassword()) {
