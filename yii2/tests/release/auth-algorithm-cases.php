@@ -4,7 +4,7 @@ $loginWith = function (string $login, string $password) use ($app) {
     $app->user->setIdentity(null);
     $app->response->setStatusCode(200);
     $app->request->setBodyParams(['login' => $login, 'password' => $password]);
-    return authWithoutCredentialWrites($app, 'login');
+    return authWithoutPasswordWrites($app, 'login');
 };
 $setLegacy = function ($hash = null) use ($db) {
     $db->createCommand()->update('user', [

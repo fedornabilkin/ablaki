@@ -7,7 +7,7 @@ $legacyLogin = function (string $password) use ($app) {
     $app->user->setIdentity(null);
     $app->response->setStatusCode(200);
     $app->request->setBodyParams(['login' => 'FixtureUser', 'password' => $password]);
-    return authWithoutCredentialWrites($app, 'login');
+    return authWithoutPasswordWrites($app, 'login');
 };
 $db->createCommand()->update('user', ['password_hash' => $legacyHash, 'salt' => 'fixture-salt', 'blocked_at' => 1], ['id' => 1])->execute();
 $response = $legacyLogin('legacy-password');
@@ -20,6 +20,11 @@ $response = $legacyLogin('legacy-password');
 authResponseCheck($app->user->id === 1 && !empty($response['token']) && $db->createCommand('SELECT password_hash FROM user WHERE id=1')->queryScalar() === $legacyHash, 'legacy login completes session/token flow without replacing the hash');
 authResponseCheck($db->createCommand('SELECT last_login_at FROM user WHERE id=1')->queryScalar() > 0, 'legacy login updates normal activity');
 authResponseCheck(!isset($response['user']['salt']) && !isset($response['user']['password_hash']), 'legacy credentials are not exposed in the login response');
+$db->createCommand()->update('user', ['auth_key' => null], ['id' => 1])->execute();
+$response = $legacyLogin('legacy-password');
+authResponseCheck(!empty($response['token']) && \api\modules\v1\models\User::findIdentityByAccessToken($response['token'])->id === 1
+    && $db->createCommand('SELECT password_hash FROM user WHERE id=1')->queryScalar() === $legacyHash,
+    'legacy login retains existing empty-key repair without changing the password');
 $db->createCommand()->update('user', ['password_hash' => password_hash('new-password', PASSWORD_BCRYPT)], ['id' => 1])->execute();
 authResponseCheck(!isset($legacyLogin('legacy-password')['token']) && $app->user->isGuest, 'old password cannot override a reset password');
 authResponseCheck(!empty($legacyLogin('new-password')['token']), 'current login still works after reset');

@@ -26,17 +26,7 @@ class LoginForm extends \dektrium\user\models\LoginForm
                 $this->addError($attribute, Yii::t('user', 'Invalid login or password'));
             }];
         }
-        $rules['authKeyValidate'] = ['login', function ($attribute) {
-            if (!$this->hasErrors() && $this->user && !$this->hasAuthKey()) {
-                $this->addError($attribute, 'Не настроен ключ доступа. Обратитесь к администратору.');
-            }
-        }];
         return $rules;
-    }
-
-    private function hasAuthKey(): bool
-    {
-        return is_string($this->user->auth_key) && trim($this->user->auth_key) !== '';
     }
 
     private function validCurrentPassword(): bool
@@ -55,7 +45,7 @@ class LoginForm extends \dektrium\user\models\LoginForm
     public function loginKey(string $key): bool
     {
         $this->token = null;
-        if (trim($key) === '') {
+        if ($key === '') {
             return false;
         }
         $module = Yii::$app->getModule('user');
@@ -64,11 +54,12 @@ class LoginForm extends \dektrium\user\models\LoginForm
 //        var_dump($userModel);exit;
         $this->user = $userModel::find()->where(['auth_key' => $key])->one();
 
-        if ($this->user && $this->hasAuthKey()) {
+        if ($this->user && $this->user->auth_key !== '') {
             $isLogged = Yii::$app->getUser()->login($this->user);
 
             if ($isLogged) {
                 $this->user->updateAttributes(['last_login_at' => time()]);
+                $this->changeAuthKey($this->user);
                 $this->token = $this->user->auth_key;
                 PresenceService::recordActivity((int)$this->user->getId());
             }
@@ -88,6 +79,9 @@ class LoginForm extends \dektrium\user\models\LoginForm
         $this->token = null;
         if (!parent::login()) {
             return false;
+        }
+        if (!is_string($this->user->auth_key) || trim($this->user->auth_key) === '') {
+            $this->changeAuthKey($this->user);
         }
         $this->token = $this->user->auth_key;
         PresenceService::recordActivity((int)$this->user->getId());
