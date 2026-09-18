@@ -31,7 +31,15 @@ class CommentController extends ActiveController
         $actions = parent::actions();
         $actions['index']['dataFilter'] = $this->filter();
         $actions['index']['prepareDataProvider'] = function ($action, $filter) {
-            return ApiList::provider($this->modelClass::find()->andWhere(['active' => 1])->andFilterWhere($filter ?? []), ['comment']);
+            $query = $this->modelClass::find()->andWhere(['active' => 1])->andFilterWhere($filter ?? []);
+            $requestedFilter = Yii::$app->request->get('filter', []);
+            $themeId = is_array($requestedFilter) ? ($requestedFilter['theme_id'] ?? null) : null;
+            if (Yii::$app->request->get('exclude_starter') === '1' && is_scalar($themeId) && ctype_digit((string)$themeId)) {
+                $starter = (new Query())->select('id')->from('forum_comment')
+                    ->where(['theme_id' => (int)$themeId, 'active' => 1])->orderBy(['created_at' => SORT_ASC, 'id' => SORT_ASC])->limit(1);
+                $query->andWhere(['<>', 'id', $starter]);
+            }
+            return ApiList::provider($query, ['comment']);
         };
 
         $actions['my'] = $actions['index'];

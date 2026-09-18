@@ -53,6 +53,18 @@ class DuelService
      */
     public function play(GameDuel $game, Person $person): GameDuel
     {
+        return GameParticipation::run('game_duel', (int)$game->id, $person, function (array $row) use ($game, $person) {
+            $strike = $game->u2;
+            $block = $game->b2;
+            GameDuel::populateRecord($game, $row);
+            $game->u2 = $strike;
+            $game->b2 = $block;
+            return $this->playLocked($game, $person);
+        });
+    }
+
+    private function playLocked(GameDuel $game, Person $person): GameDuel
+    {
         $userId = (int)$person->user_id;
 
         if ($game->isFinished()) {

@@ -16,6 +16,7 @@ use yii\web\BadRequestHttpException;
 class FiveController extends ActiveController
 {
     use GameHistoryTrait;
+    use GameCancellationTrait;
     /** @var GameFive */
     public $modelClass = GameFive::class;
 
@@ -53,6 +54,7 @@ class FiveController extends ActiveController
         };
 
         unset($actions['create'], $actions['update'], $actions['delete']);
+        unset($actions['delete'], $actions['remove']);
         return $actions;
     }
 
@@ -68,13 +70,7 @@ class FiveController extends ActiveController
         });
     }
 
-    public function actionDelete(int $id): void
-    {
-        (new FiveService())->cancel($this->findModel($id), App::user()->identity->person);
-        App::response()->setStatusCode(204);
-    }
-
-    /**
+/**
      * Создание партии: ставка kon и скрытый первый ход ball.
      *
      * @return GameFive

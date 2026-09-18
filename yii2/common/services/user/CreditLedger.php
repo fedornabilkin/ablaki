@@ -32,17 +32,28 @@ class CreditLedger
 
     public function change(int $userId, float $amount, string $type, string $comment): void
     {
+        $this->changeCurrency($userId, $amount, $type, $comment, 'credit');
+    }
+
+    public function changeBalance(int $userId, float $amount, string $type, string $comment): void
+    {
+        $this->changeCurrency($userId, $amount, $type, $comment, 'balance');
+    }
+
+    private function changeCurrency(int $userId, float $amount, string $type, string $comment, string $currency): void
+    {
         $person = $this->lock('persone', ['user_id' => $userId]);
-        if (!$person || !is_finite($amount) || !is_numeric($person['credit'])) throw new RuntimeException('Account unavailable.');
+        if (!$person || !is_finite($amount) || !is_numeric($person[$currency])) throw new RuntimeException('Account unavailable.');
         $condition = ['user_id' => $userId];
-        if ($amount < 0) $condition = ['and', $condition, ['>=', 'credit', -$amount]];
-        if ($this->db->createCommand()->update('persone', ['credit' => new Expression('[[credit]] + :amount', [':amount' => $amount])], $condition)->execute() !== 1) {
-            throw new UnprocessableEntityHttpException('Недостаточно кредитов.');
+        if ($amount < 0) $condition = ['and', $condition, ['>=', $currency, -$amount]];
+        if ($this->db->createCommand()->update('persone', [$currency => new Expression('[[' . $currency . ']] + :amount', [':amount' => $amount])], $condition)->execute() !== 1) {
+            throw new UnprocessableEntityHttpException('Недостаточно средств.');
         }
         $updated = (new Query())->from('persone')->where(['user_id' => $userId])->one($this->db);
         if ($this->db->createCommand()->insert('history_balance', [
             'user_id' => $userId, 'balance' => $updated['balance'], 'credit' => $updated['credit'],
-            'balance_up' => 0, 'credit_up' => $amount, 'type' => $type, 'comment' => $comment, 'created_at' => time(),
+            'balance_up' => $currency === 'balance' ? $amount : 0, 'credit_up' => $currency === 'credit' ? $amount : 0,
+            'type' => $type, 'comment' => $comment, 'created_at' => time(),
         ])->execute() !== 1) throw new RuntimeException('Could not record credit history.');
     }
 }

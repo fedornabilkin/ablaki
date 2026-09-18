@@ -28,7 +28,7 @@ class PlayMiddleware extends AbstractMiddleware
         $this->model->user_gamer = self::$data->user->user_id;
 
         $this->updateData();
-        $this->model->save();
+        if (!$this->model->save()) throw new \RuntimeException('Could not save game.');
 
         return parent::check();
     }

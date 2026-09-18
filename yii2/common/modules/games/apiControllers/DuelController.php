@@ -16,6 +16,7 @@ use yii\web\BadRequestHttpException;
 class DuelController extends ActiveController
 {
     use GameHistoryTrait;
+    use GameCancellationTrait;
     /** @var GameDuel */
     public $modelClass = GameDuel::class;
 
@@ -37,11 +38,6 @@ class DuelController extends ActiveController
     {
         $actions = parent::actions();
 
-        $actions['delete'] = [
-            'class' => DeleteAction::class,
-            'modelClass' => $this->modelClass,
-            'checkAccess' => [$this, 'checkAccess'],
-        ];
 
         $actions['my'] = $actions['index'];
         $actions['history'] = $actions['index'];
@@ -70,6 +66,7 @@ class DuelController extends ActiveController
         };
 
         unset($actions['create'], $actions['view'], $actions['update']);
+        unset($actions['delete'], $actions['remove']);
         return $actions;
     }
 
