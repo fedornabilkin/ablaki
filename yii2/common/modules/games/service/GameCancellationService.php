@@ -22,7 +22,6 @@ class GameCancellationService
             $db = Yii::$app->db;
             $ledger = new CreditLedger($db);
             $condition = ['user_id' => $userId, 'user_gamer' => 0];
-            if ($kind === 'five') $condition['status'] = 'free';
             $ids = $id === null
                 ? (new Query())->select('id')->from($table)->where($condition)->orderBy(['id' => SORT_ASC])->column($db)
                 : [$id];
@@ -32,7 +31,7 @@ class GameCancellationService
             foreach ($ids as $gameId) {
                 $game = $ledger->lock($table, ['id' => $gameId]);
                 if (!$game || (int)$game['user_id'] !== $userId || (int)$game['user_gamer'] !== 0
-                    || ($kind === 'five' && $game['status'] !== 'free')) {
+                    || ($kind === 'five' && rtrim((string)$game['status']) !== 'free')) {
                     if ($id !== null) {
                         if (!$game) throw new NotFoundHttpException('Игра не найдена.');
                         if ((int)$game['user_id'] !== $userId) throw new ForbiddenHttpException('Можно удалить только свою игру.');
