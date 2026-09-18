@@ -34,6 +34,7 @@ use yii\web\ForbiddenHttpException;
 class OrelController extends ActiveController
 {
     use GameListsTrait;
+    use GameCancellationTrait;
 
     /** @var GameOrel */
     public $modelClass = GameOrel::class;
@@ -64,17 +65,7 @@ class OrelController extends ActiveController
     {
         $actions = parent::actions();
 
-        $actions['delete'] = [
-            'class' => DeleteAction::class,
-            'modelClass' => $this->modelClass,
-            'checkAccess' => [$this, 'checkAccess'],
-        ];
 
-        $actions['remove'] = [
-            'class' => RemoveAction::class,
-            'modelClass' => $this->modelClass,
-            'checkAccess' => [$this, 'checkAccess'],
-        ];
 
         $actions['create'] = [
             'class' => CreateAction::class,
@@ -85,6 +76,7 @@ class OrelController extends ActiveController
         $actions = $this->configureGameLists($actions);
 
         unset($actions['view'], $actions['update']);
+        unset($actions['delete'], $actions['remove']);
         return $actions;
     }
 
@@ -106,6 +98,12 @@ class OrelController extends ActiveController
      * @throws UserException
      */
     public function actionPlay(int $id)
+    {
+        return \common\modules\games\service\GameParticipation::run('game_orel', $id, Yii::$app->user->identity->person,
+            function () use ($id) { return $this->playLocked($id); });
+    }
+
+    private function playLocked(int $id)
     {
         $model = $this->findModel($id);
         $model->setScenario($model::SCENARIO_PLAY);

@@ -34,6 +34,7 @@ use yii\rest\ActiveController;
 class SaperController extends ActiveController
 {
     use GameListsTrait;
+    use GameCancellationTrait;
 
     public $modelClass = GameSaper::class;
 
@@ -56,17 +57,7 @@ class SaperController extends ActiveController
     {
         $actions = parent::actions();
 
-        $actions['delete'] = [
-            'class' => DeleteAction::class,
-            'modelClass' => $this->modelClass,
-            'checkAccess' => [$this, 'checkAccess'],
-        ];
 
-        $actions['remove'] = [
-            'class' => RemoveAction::class,
-            'modelClass' => $this->modelClass,
-            'checkAccess' => [$this, 'checkAccess'],
-        ];
 
         $actions['create'] = [
             'class' => CreateAction::class,
@@ -77,10 +68,17 @@ class SaperController extends ActiveController
         $actions = $this->configureGameLists($actions);
 
         unset($actions['view'], $actions['update']);
+        unset($actions['delete'], $actions['remove']);
         return $actions;
     }
 
     public function actionStart($id)
+    {
+        return \common\modules\games\service\GameParticipation::run('game_saper', (int)$id, Yii::$app->user->identity->person,
+            function () use ($id) { return $this->startLocked($id); });
+    }
+
+    private function startLocked($id)
     {
         $model = $this->findModel($id);
 
