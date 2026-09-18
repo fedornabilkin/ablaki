@@ -2,100 +2,50 @@
 
 namespace common\services\game;
 
-use common\middleware\person\CheckCreditMiddleware;
-use common\middleware\person\UpdatePersonMiddleware;
-use common\models\user\Person;
 use common\models\user\User;
-use common\modules\games\middleware\GameDataMiddleware;
-use common\modules\games\middleware\orel\CreateMiddleware;
+use common\modules\games\models\GameDuel;
 use common\modules\games\models\GameOrel;
+use common\services\user\CreditLedger;
 use Yii;
-use yii\console\Exception;
+use yii\db\Query;
 
-/**
- * получаем параметры создания (сколько штук, какая ставка)
- * получаем айди пользователя и смотрим план создания
- * проверяем количество игр с этим коном
- * пробуем создать недостающее количество игр с таким коном
- * если баланса не хватило, то переходим к дургому пользователю
- */
+/** Replenishes open bot games in the existing cron; repeated/concurrent runs share the account lock. */
 class GameCreateService
 {
     public function execute(): void
     {
         foreach ($this->plan() as $userId => $userPlan) {
-            foreach ($userPlan as $kon => $countPlanned) {
-
-                // сколько игр уже создано с этой ставкой для пользователя
-                $alreadyCreated = $this->searchGame($userId, $kon);
-
-                // сколько еще нужно создать
-                $count = $countPlanned - $alreadyCreated;
-
-                if ($count > 0) {
-                    $this->createGame($userId, $kon, $count);
+            Yii::$app->db->transaction(function () use ($userId, $userPlan): void {
+                $ledger = new CreditLedger(Yii::$app->db);
+                $person = $ledger->lock('persone', ['user_id' => $userId]);
+                if (!$person) return;
+                $available = (float)$person['credit'];
+                foreach ($userPlan as $kon => $planned) {
+                    foreach (['orel', 'duel'] as $kind) {
+                        $table = $kind === 'orel' ? GameOrel::tableName() : GameDuel::tableName();
+                        $existing = (int)(new Query())->from($table)->where(['user_id' => $userId, 'kon' => $kon, 'user_gamer' => 0])->count('*', Yii::$app->db);
+                        $count = min(max(0, $planned - $existing), max(0, (int)floor($available / $kon)));
+                        for ($i = 0; $i < $count; $i++) {
+                            $values = ['kon' => $kon, 'user_id' => $userId, 'user_gamer' => 0, 'created_at' => time()];
+                            if ($kind === 'orel') $values['type'] = (new GameOrel())->getRandomType();
+                            else $values += ['u1' => random_int(1, 3), 'b1' => random_int(1, 3), 'u2' => 0, 'b2' => 0];
+                            if (Yii::$app->db->createCommand()->insert($table, $values)->execute() !== 1) {
+                                throw new \RuntimeException('Could not create bot game.');
+                            }
+                        }
+                        if ($count > 0) {
+                            $ledger->change((int)$userId, -$kon * $count, 'game_' . $kind, 'Create game ' . $kind . ' ' . $count . 'x' . $kon);
+                            $available -= $kon * $count;
+                        }
+                    }
                 }
-
-            }
+            });
         }
     }
 
-    /**
-     * 1=>20 - kon=>count
-     * @return array[]
-     * @throws \yii\base\InvalidConfigException
-     */
     protected function plan(): array
     {
         $user = User::find()->where(['username' => 'bot'])->one();
-        return [
-            $user['id'] => [1=>20, 2=>10, 3=>5, 5=>3, 7=>1],
-        ];
-    }
-
-    protected function person($uid)
-    {
-        return Person::find()->where(['user_id' => $uid])->one();
-    }
-
-    protected function createGame($userId, $kon, $count): void
-    {
-        $model = new GameOrel();
-        $model->load(['kon'=>$kon, 'count'=>$count], '');
-
-        $validate = $model->validate();
-        if (!$validate) {
-            $errors = $model->getFirstErrors();
-            throw new Exception(reset($errors));
-        }
-
-        $person = $this->person($userId);
-        if (!$person) {
-            throw new Exception('No person by ' . $userId);
-        }
-
-        $middleware = new CheckCreditMiddleware();
-        $middleware::$data = new GameDataMiddleware([
-            'game' => $model,
-            'user' => $person,
-        ]);
-
-        $middleware
-            ->linkWith(new CreateMiddleware())
-            ->linkWith(new UpdatePersonMiddleware());
-
-        try {
-            $middleware->check();
-        } catch (\Exception $e) {
-            throw new Exception('Error create game ', 1);
-        }
-    }
-
-    protected function searchGame($uid, $kon): int
-    {
-        return GameOrel::find()
-            ->where(['user_id' => $uid, 'kon' => $kon])
-            ->andWhere(['user_gamer' => 0])
-            ->count();
+        return $user ? [(int)$user->id => [1 => 20, 2 => 10, 3 => 5, 5 => 3, 7 => 1]] : [];
     }
 }

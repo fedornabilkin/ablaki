@@ -13,12 +13,14 @@ class PublicProfile
     {
         if ($user === null) return null;
         $profile = $user->person;
+        try { $online = in_array((int)$user->id, PresenceService::onlineIds(), true); }
+        catch (\Throwable $error) { $online = false; }
         return [
             'id' => (int)$user->id,
             'username' => $user->username,
             'created_at' => $user->getAttribute('created_at'),
             'last_login_at' => $user->getAttribute('last_login_at'),
-            'is_online' => in_array((int)$user->id, PresenceService::onlineIds(), true),
+            'is_online' => $online,
             'person' => $profile === null ? null : [
                 'id' => (int)$profile->id,
                 'bonus_count' => $profile->bonus_count,

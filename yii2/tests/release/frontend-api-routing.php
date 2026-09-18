@@ -236,6 +236,43 @@ try {
     routeCheck(in_array(1, \common\services\user\PresenceService::onlineIds($now), true), 'older requests cannot regress cached presence');
     routeCheck(array_column(dispatch('GET', 'v1/users/online', false, ['q' => 'Donor', 'envelope' => '1'])[1]['items'], 'id') === [1],
         'legacy online list applies server search');
+    list($dayStart, $dayEnd) = \common\services\user\PresenceService::dayBounds($now);
+    $noon = $dayStart + 43200;
+    $presence->touch(999, $noon - 600);
+    routeCheck(in_array(999, \common\services\user\PresenceService::todayIds($noon), true)
+        && !in_array(999, \common\services\user\PresenceService::onlineIds($noon), true), 'daily visitors outlive the online window');
+    routeCheck(!in_array(999, \common\services\user\PresenceService::todayIds($dayEnd), true), 'daily visitors reset at Moscow midnight');
+    $homeTransaction = $db->beginTransaction();
+    try {
+        $db->createCommand()->update('user', ['last_login_at' => $now], ['id' => 2])->execute();
+        list($status, $visitors) = dispatch('GET', 'v1/users/visited', false, ['envelope' => '1', 'per-page' => '1']);
+        routeCheck($status === 200 && $visitors['_meta']['totalCount'] === 2 && count($visitors['items']) === 1,
+            'daily visitors combine login and activity with bounded pagination');
+        routeCheck(array_column(dispatch('GET', 'v1/users/visited', false, ['envelope' => '1', 'q' => 'Author'])[1]['items'], 'id') === [2],
+            'daily visitors support user search');
+        foreach ([[$dayStart, 1, 'everyday'], [$dayStart - 1, 4, 'everyday'], [$dayStart, 9, 'gift'], [$dayEnd, 5, 'everyday']] as $record) {
+            $db->createCommand()->insert('history_balance', ['user_id' => 1, 'created_at' => $record[0], 'credit_up' => $record[1], 'type' => $record[2]])->execute();
+        }
+        list($status, $recipients) = dispatch('GET', 'v1/bonus/recipients', false, ['envelope' => '1', 'q' => 'Donor']);
+        $recipient = $recipients['items'][0];
+        routeCheck($status === 200 && $recipients['_meta']['totalCount'] === 1 && (float)$recipient['amount'] === 1.0
+            && $recipient['user']['username'] === 'Donor', 'recipients show only actual positive daily credits for today');
+        routeCheck(!isset($recipient['user']['email']) && !isset($recipient['user']['auth_key'])
+            && !isset($recipient['user']['person']['credit']) && !isset($recipient['user']['person']['balance']), 'bonus recipients never expose private account data');
+        $db->createCommand('CREATE TABLE comission (id INTEGER PRIMARY KEY, type TEXT, amount NUMERIC, created_at INTEGER)')->execute();
+        foreach ([[$dayStart - 86400, 10, 'credit'], [$dayStart, 2, 'game_five'], [$dayStart, 999, 'game_saper'], [$dayStart, 999, 'exchange'], [$dayEnd, 999, 'credit'], [$dayStart - 86401, 999, 'credit']] as $row) {
+            $db->createCommand()->insert('comission', ['created_at' => $row[0], 'amount' => $row[1], 'type' => $row[2]])->execute();
+        }
+        list($status, $fund) = dispatch('GET', 'v1/bonus/fund');
+        routeCheck($status === 200 && (float)$fund['today'] === 10.0 && (float)$fund['tomorrow'] === 2.0 && $fund['user_today'] === null,
+            'public fund respects day bounds, credit currency and guest privacy');
+        routeCheck(dispatch('GET', 'v1/bonus/my-fund')[0] === 401, 'personal prize estimate requires authentication');
+        list($status, $fund) = dispatch('GET', 'v1/bonus/my-fund', true);
+        routeCheck($status === 200 && (float)$fund['user_today'] === 4.0 && (float)$fund['user_tomorrow'] === 1.0,
+            'personal prize estimate uses the current authenticated rating share');
+        $db->createCommand()->update('persone', ['rating' => 0])->execute();
+        routeCheck((float)dispatch('GET', 'v1/bonus/my-fund', true)[1]['user_today'] === 0.0, 'zero total rating never divides by zero');
+    } finally { $homeTransaction->rollBack(); }
     // Even an unexpected presence storage failure must not break unrelated protected endpoints.
     $runtime = Yii::getAlias('@runtime');
     Yii::setAlias('@runtime', null);
@@ -245,6 +282,7 @@ try {
     } finally {
         Yii::setAlias('@runtime', $runtime);
     }
+    require __DIR__ . '/forum-batch-cases.php';
     echo "API routing integration passed on disposable SQLite.\n";
 } finally {
     if (isset($db)) $db->close();
