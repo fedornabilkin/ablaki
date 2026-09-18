@@ -30,6 +30,7 @@ use yii\db\ActiveQuery;
  */
 class GameFiveHod extends AbstractGame
 {
+    use LegacyGameStatusTrait;
     /**
      * В таблице нет updated_at — родительский TimestampBehavior его бы записал.
      */

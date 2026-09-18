@@ -38,6 +38,7 @@ class GameFive extends AbstractGame implements HistorySaveInterface
 {
     use ModelQueryTrait;
     use HistoryTypeTrait;
+    use LegacyGameStatusTrait;
 
     protected $historyType = 'game_five';
 

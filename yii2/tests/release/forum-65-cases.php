@@ -53,7 +53,7 @@ try {
         $db->createCommand()->update('persone', [$currency => 100], ['user_id' => 1])->execute();
         foreach ([[1, 1, 0, 2], [2, 1, 0, 3], [3, 1, 0, 4], [4, 2, 0, 5], [5, 1, 2, 6]] as $row) {
             $game = ['id' => $row[0], 'user_id' => $row[1], 'user_gamer' => $row[2], 'kon' => $row[3]];
-            if ($kind === 'five') $game['status'] = $row[2] ? 'play' : 'free';
+            if ($kind === 'five') $game['status'] = str_pad($row[2] ? 'play' : 'free', 50);
             $db->createCommand()->insert($table, $game)->execute();
         }
         if ($kind === 'five') foreach ([1, 2, 3, 4, 5] as $id) $db->createCommand()->insert('game_five_hod', ['game_five_id' => $id])->execute();
