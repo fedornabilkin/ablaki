@@ -17,6 +17,26 @@ function authResponseCheck(bool $condition, string $message): void
     echo 'PASS ' . $message . PHP_EOL;
 }
 
+function authWithoutPasswordWrites(Application $app, string $action, array $params = [])
+{
+    $before = $app->db->createCommand('SELECT * FROM user ORDER BY id')->queryAll();
+    $protected = array_diff(array_keys($before[0]), ['last_login_at', 'auth_key']);
+    $app->db->pdo->exec('CREATE TRIGGER reject_login_writes BEFORE UPDATE OF '
+        . implode(', ', $protected) . ' ON user BEGIN SELECT RAISE(ABORT, \'login must not write passwords\'); END');
+    try {
+        $result = $app->runAction('site/' . $action, $params);
+        $after = $app->db->createCommand('SELECT * FROM user ORDER BY id')->queryAll();
+        foreach ($before as &$row) unset($row['last_login_at'], $row['auth_key']);
+        unset($row);
+        foreach ($after as &$row) unset($row['last_login_at'], $row['auth_key']);
+        unset($row);
+        authResponseCheck($before === $after, 'login preserves passwords and profile data while retaining the existing token flow');
+        return $result;
+    } finally {
+        $app->db->createCommand('DROP TRIGGER reject_login_writes')->execute();
+    }
+}
+
 Yii::$container->set(\dektrium\user\models\User::class, User::class);
 Yii::$container->set(\yii\rest\Serializer::class, \api\components\ListSerializer::class);
 $app = new Application([
@@ -80,7 +100,7 @@ try {
             $key = $db->createCommand('SELECT auth_key FROM user WHERE id=1')->queryScalar();
             $_SERVER['REQUEST_METHOD'] = $action === 'login' ? 'POST' : 'GET';
             $app->request->setBodyParams(['login' => 'FixtureUser', 'password' => 'fixture-password', 'rememberMe' => 0]);
-            $response = $app->runAction('site/' . $action, $action === 'login-key' ? ['key' => $key] : []);
+            $response = authWithoutPasswordWrites($app, $action, $action === 'login-key' ? ['key' => $key] : []);
             authResponseCheck($app->response->statusCode === 200 && $response['user']['id'] === 1
                 && $app->user->id === 1, $action . ' returns a serialized authenticated user on ' . $schema);
             authResponseCheck(array_key_exists('description', $response['user']['person'])
@@ -92,6 +112,7 @@ try {
                 'profile statistics counts sent gifts and excludes received gifts');
             authResponseCheck($response['token'] === $db->createCommand('SELECT auth_key FROM user WHERE id=1')->queryScalar(), 'returned token matches persisted credentials');
             if ($action === 'login-key') authResponseCheck($response['token'] !== $key, 'existing key rotation is preserved');
+            else authResponseCheck($response['token'] === $key, 'password login preserves an existing key');
         }
         $app->user->setIdentity(null);
         $public = User::findOne(1)->toArray();
@@ -111,13 +132,14 @@ try {
         $app->user->setIdentity(null);
         $db->createCommand()->update('user', ['auth_key' => $emptyKey], ['id' => 1])->execute();
         $app->request->setBodyParams(['login' => 'FixtureUser', 'password' => 'fixture-password']);
-        $response = $app->runAction('site/login');
+        $response = authWithoutPasswordWrites($app, 'login');
         authResponseCheck(is_string($response['token']) && strlen($response['token']) >= 32
             && $response['token'] === $db->createCommand('SELECT auth_key FROM user WHERE id=1')->queryScalar(),
             'password login repairs an empty token and persists it before returning');
         authResponseCheck(User::findIdentityByAccessToken($response['token'])->id === 1,
             'issued token authenticates subsequent API requests');
     }
+    $db->createCommand()->update('user', ['auth_key' => 'fixture-initial-key'], ['id' => 1])->execute();
     foreach ([['FixtureUser', 'incorrect'], ['MissingUser', 'fixture-password']] as $credentials) {
         $app->user->setIdentity(null);
         $app->request->setBodyParams(['login' => $credentials[0], 'password' => $credentials[1]]);

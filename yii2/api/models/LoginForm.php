@@ -13,42 +13,20 @@ use yii\web\IdentityInterface;
 class LoginForm extends \dektrium\user\models\LoginForm
 {
     public $token;
-    private $legacyPasswordAccepted = false;
 
     public function rules()
     {
         $rules = parent::rules();
         if (isset($rules['passwordValidate'])) {
             $rules['passwordValidate'] = ['password', function ($attribute) {
-                $this->legacyPasswordAccepted = false;
                 if ($this->user && is_string($this->password)) {
-                    $this->legacyPasswordAccepted = (new \common\services\user\LegacyPasswordService())->verify($this->user, $this->password);
-                    if ($this->legacyPasswordAccepted || $this->validCurrentPassword()) return;
+                    if ((new \common\services\user\LegacyPasswordService())->verify($this->user, $this->password)
+                        || $this->validCurrentPassword()) return;
                 }
                 $this->addError($attribute, Yii::t('user', 'Invalid login or password'));
             }];
         }
         return $rules;
-    }
-
-    public function afterValidate()
-    {
-        parent::afterValidate();
-        if (!$this->legacyPasswordAccepted || $this->hasErrors()) return;
-        $hash = \dektrium\user\helpers\Password::hash($this->password);
-        $changed = $this->user::updateAll(['password_hash' => $hash], [
-            'id' => $this->user->id,
-            'password_hash' => $this->user->password_hash,
-            'salt' => $this->user->getAttribute('salt'),
-        ]);
-        if ($changed !== 1) {
-            $this->user->refresh();
-            if (!$this->validCurrentPassword()) {
-                $this->addError('password', Yii::t('user', 'Invalid login or password'));
-            }
-            return;
-        }
-        $this->user->password_hash = $hash;
     }
 
     private function validCurrentPassword(): bool
