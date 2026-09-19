@@ -30,10 +30,7 @@ class Person extends \common\models\user\Person
                 return $model->getAttribute('description');
             },
             'forum_credits_sent' => static function (self $model): int {
-                return (int)(new Query())
-                    ->from('{{%forum_comment_gift}}')
-                    ->where(['user_id' => $model->user_id])
-                    ->sum('amount');
+                return \common\modules\forum\services\CommentGiftSchema::sent(\Yii::$app->db, (int)$model->user_id);
             },
         ];
 
