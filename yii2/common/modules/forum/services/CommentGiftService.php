@@ -18,10 +18,11 @@ class CommentGiftService
         $this->db = $db;
     }
 
-    public function give(int $commentId, int $donorId): array
+    public function give(int $commentId, int $donorId, int $amount = 1): array
     {
         if ($commentId < 1 || $donorId < 1) throw new DomainException('Invalid donor or message.');
-        return $this->db->transaction(function () use ($commentId, $donorId) {
+        if ($amount < 1 || $amount > 3) throw new DomainException('Invalid gift amount.');
+        return $this->db->transaction(function () use ($commentId, $donorId, $amount) {
             // Lock the message first, then accounts in stable order across all gifts.
             $comment = $this->lock('forum_comment', ['id' => $commentId], 'active');
             if (!$comment || (int)$comment['active'] !== 1) throw new DomainException('Message unavailable.');
@@ -41,20 +42,20 @@ class CommentGiftService
             if (!$already) {
                 // The predicate prevents overdraft even if an older balance writer ignores locks.
                 $changed = $this->db->createCommand()->update('persone', [
-                    'credit' => new Expression('[[credit]] - 1'),
-                ], ['and', ['user_id' => $donorId], ['>=', 'credit', 1]])->execute();
+                    'credit' => new Expression('[[credit]] - :gift', [':gift' => $amount]),
+                ], ['and', ['user_id' => $donorId], ['>=', 'credit', $amount]])->execute();
                 if ($changed !== 1) throw new DomainException('Not enough credit.');
                 if ($this->db->createCommand()->update('persone', [
-                    'credit' => new Expression('[[credit]] + 1'),
+                    'credit' => new Expression('[[credit]] + :gift', [':gift' => $amount]),
                 ], ['user_id' => $recipientId])->execute() !== 1) {
                     throw new RuntimeException('Could not credit recipient.');
                 }
                 $now = time();
                 if ($this->db->createCommand()->insert('forum_comment_gift', [
                     'comment_id' => $commentId, 'user_id' => $donorId,
-                    'recipient_id' => $recipientId, 'created_at' => $now,
+                    'recipient_id' => $recipientId, 'created_at' => $now, 'amount' => $amount,
                 ])->execute() !== 1) throw new RuntimeException('Could not record gift.');
-                foreach ([$donorId => -1, $recipientId => 1] as $userId => $change) {
+                foreach ([$donorId => -$amount, $recipientId => $amount] as $userId => $change) {
                     $person = (new Query())->from('persone')->where(['user_id' => $userId])->one($this->db);
                     if ($this->db->createCommand()->insert('history_balance', [
                         'user_id' => $userId, 'balance' => $person['balance'], 'credit' => $person['credit'],
@@ -65,6 +66,7 @@ class CommentGiftService
             }
             return [
                 'commentId' => $commentId, 'alreadyGiven' => $already, 'giftedByMe' => true,
+                'amount' => (int)(new Query())->select('amount')->from('forum_comment_gift')->where(['comment_id' => $commentId, 'user_id' => $donorId])->scalar($this->db),
                 'giftCount' => (int)(new Query())->from('forum_comment_gift')->where(['comment_id' => $commentId])->count('*', $this->db),
                 'credit' => (float)(new Query())->from('persone')->select('credit')->where(['user_id' => $donorId])->scalar($this->db),
             ];

@@ -14,6 +14,8 @@ return [
         'controller' => ['v1/forum-theme'],
         'pluralize' => false,
         'extraPatterns' => [
+            'POST <id:\d+>/visit' => 'visit',
+            'OPTIONS <id:\d+>/visit' => 'options',
             'GET my' => 'my',
         ],
     ],

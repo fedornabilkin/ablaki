@@ -59,6 +59,7 @@ class ForumTheme extends ActiveRecord implements UserRelationInterface
         return [
             [['user_id', 'view', 'last_post', 'created_at'], 'default', 'value' => null],
             [['user_id', 'view', 'last_post', 'created_at'], 'integer'],
+            [['title'], 'filter', 'filter' => static function ($value) { return is_string($value) ? preg_replace('/^[\s\p{Z}\p{Cf}]+|[\s\p{Z}\p{Cf}]+$/u', '', $value) : $value; }, 'skipOnArray' => true],
             [['title'], 'required'],
             [['title'], 'string', 'max' => 250],
             [['user_id'], 'exist', 'skipOnError' => true, 'targetClass' => User::class, 'targetAttribute' => ['user_id' => 'id']],

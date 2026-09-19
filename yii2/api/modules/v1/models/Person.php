@@ -33,7 +33,7 @@ class Person extends \common\models\user\Person
                 return (int)(new Query())
                     ->from('{{%forum_comment_gift}}')
                     ->where(['user_id' => $model->user_id])
-                    ->count();
+                    ->sum('amount');
             },
         ];
 

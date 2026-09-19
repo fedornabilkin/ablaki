@@ -43,8 +43,8 @@ $db->createCommand('CREATE TABLE user (id INTEGER PRIMARY KEY, username TEXT)')-
 $db->createCommand("INSERT INTO user VALUES (1, 'First'), (2, 'Second'), (3, 'Third')")->execute();
 $db->createCommand('CREATE TABLE persone (id INTEGER PRIMARY KEY, user_id INTEGER, rating NUMERIC, bonus_count INTEGER, refovod INTEGER, description TEXT, balance NUMERIC, credit NUMERIC)')->execute();
 $db->createCommand("INSERT INTO persone VALUES (1,1,12.3456,4,3,'Public description',999,888),(2,2,54.5,2,1,'Opponent',777,666)")->execute();
-$db->createCommand('CREATE TABLE forum_comment_gift (id INTEGER PRIMARY KEY, user_id INTEGER)')->execute();
-$db->createCommand('INSERT INTO forum_comment_gift VALUES (1,1)')->execute();
+$db->createCommand('CREATE TABLE forum_comment_gift (id INTEGER PRIMARY KEY, amount INTEGER NOT NULL DEFAULT 1, user_id INTEGER)')->execute();
+$db->createCommand('INSERT INTO forum_comment_gift (id,user_id) VALUES (1,1)')->execute();
 $db->createCommand('CREATE TABLE game_orel (id INTEGER PRIMARY KEY, user_id INTEGER, user_gamer INTEGER,
     kon NUMERIC, type INTEGER, hod INTEGER, created_at INTEGER, updated_at INTEGER)')->execute();
 $db->createCommand('CREATE TABLE game_saper (id INTEGER PRIMARY KEY, user_id INTEGER, user_gamer INTEGER,

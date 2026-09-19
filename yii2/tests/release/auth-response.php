@@ -73,8 +73,8 @@ try {
     $db->createCommand('CREATE TABLE persone (id INTEGER PRIMARY KEY, user_id INTEGER UNIQUE,
         bonus_count INTEGER DEFAULT 0, refovod INTEGER DEFAULT 0, rating NUMERIC DEFAULT 0,
         balance NUMERIC DEFAULT 0, credit NUMERIC DEFAULT 0)')->execute();
-    $db->createCommand('CREATE TABLE forum_comment_gift (id INTEGER PRIMARY KEY, comment_id INTEGER, user_id INTEGER, recipient_id INTEGER, created_at INTEGER)')->execute();
-    $db->createCommand("INSERT INTO forum_comment_gift VALUES (1,1,1,2,1),(2,2,1,2,2),(3,3,2,1,3)")->execute();
+    $db->createCommand('CREATE TABLE forum_comment_gift (id INTEGER PRIMARY KEY, amount INTEGER NOT NULL DEFAULT 1, comment_id INTEGER, user_id INTEGER, recipient_id INTEGER, created_at INTEGER)')->execute();
+    $db->createCommand("INSERT INTO forum_comment_gift (id,comment_id,user_id,recipient_id,created_at) VALUES (1,1,1,2,1),(2,2,1,2,2),(3,3,2,1,3)")->execute();
     $db->createCommand()->insert('user', [
         'id' => 1, 'username' => 'FixtureUser', 'email' => 'fixture@example.invalid',
         'password_hash' => password_hash('fixture-password', PASSWORD_BCRYPT),

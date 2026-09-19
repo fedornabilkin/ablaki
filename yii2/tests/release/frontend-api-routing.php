@@ -75,7 +75,7 @@ try {
     $db->createCommand('CREATE TABLE persone (id INTEGER PRIMARY KEY, user_id INTEGER UNIQUE, balance NUMERIC, credit NUMERIC, rating NUMERIC, description TEXT, refovod INTEGER, bonus_count INTEGER)')->execute();
     $db->createCommand('CREATE TABLE forum_theme (id INTEGER PRIMARY KEY, user_id INTEGER, title TEXT, created_at INTEGER, last_post INTEGER, view INTEGER)')->execute();
     $db->createCommand('CREATE TABLE forum_comment (id INTEGER PRIMARY KEY, user_id INTEGER, theme_id INTEGER, comment TEXT, active INTEGER, created_at INTEGER)')->execute();
-    $db->createCommand('CREATE TABLE forum_comment_gift (id INTEGER PRIMARY KEY, comment_id INTEGER, user_id INTEGER, recipient_id INTEGER, created_at INTEGER, UNIQUE(comment_id,user_id))')->execute();
+    $db->createCommand('CREATE TABLE forum_comment_gift (id INTEGER PRIMARY KEY, amount INTEGER NOT NULL DEFAULT 1, comment_id INTEGER, user_id INTEGER, recipient_id INTEGER, created_at INTEGER, UNIQUE(comment_id,user_id))')->execute();
     $db->createCommand('CREATE TABLE history_balance (id INTEGER PRIMARY KEY, user_id INTEGER, balance NUMERIC, credit NUMERIC, balance_up NUMERIC, credit_up NUMERIC, type TEXT, comment TEXT, created_at INTEGER)')->execute();
     $db->createCommand('CREATE TABLE history_rating (id INTEGER PRIMARY KEY, user_id INTEGER, rating NUMERIC, rating_up NUMERIC, type TEXT, comment TEXT, created_at INTEGER)')->execute();
     $db->createCommand('CREATE TABLE game_orel (id INTEGER PRIMARY KEY, user_id INTEGER, user_gamer INTEGER, kon NUMERIC, type INTEGER, hod INTEGER, created_at INTEGER, updated_at INTEGER)')->execute();
@@ -284,6 +284,7 @@ try {
     }
     require __DIR__ . '/forum-batch-cases.php';
     require __DIR__ . '/forum-65-cases.php';
+    require __DIR__ . '/forum-66-cases.php';
     echo "API routing integration passed on disposable SQLite.\n";
 } finally {
     if (isset($db)) $db->close();
