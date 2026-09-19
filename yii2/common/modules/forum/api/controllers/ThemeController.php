@@ -20,6 +20,20 @@ class ThemeController extends ActiveController
 {
     public $modelClass = Theme::class;
 
+    protected function verbs()
+    {
+        return array_merge(parent::verbs(), ['visit' => ['POST']]);
+    }
+
+    public function actionVisit(int $id): array
+    {
+        $changed = Yii::$app->db->createCommand()->update('forum_theme', [
+            'view' => new \yii\db\Expression('COALESCE([[view]], 0) + 1'),
+        ], ['id' => $id])->execute();
+        if ($changed !== 1) throw new \yii\web\NotFoundHttpException();
+        return ['view' => (int)(new \yii\db\Query())->select('view')->from('forum_theme')->where(['id' => $id])->scalar()];
+    }
+
     public function actions()
     {
         $actions = parent::actions();

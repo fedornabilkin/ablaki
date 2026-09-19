@@ -30,6 +30,20 @@ class DailyRewardService
         return $this->claim($userId, $amount, 'rating');
     }
 
+    public function available(int $userId): array
+    {
+        $now = time();
+        $start = strtotime('today', $now);
+        $end = strtotime('+1 day', $start);
+        $items = [];
+        foreach (['bonus' => HistoryBalance::tableName(), 'rating' => HistoryRating::tableName()] as $kind => $table) {
+            $claimed = (new Query())->from($table)->where(['user_id' => $userId, 'type' => 'everyday'])
+                ->andWhere(['>=', 'created_at', $start])->andWhere(['<', 'created_at', $end])->exists($this->db);
+            if (!$claimed) $items[] = ['id' => $kind];
+        }
+        return ['items' => $items, 'refresh_at' => $end];
+    }
+
     private function claim(int $userId, float $amount, string $counter): bool
     {
         if ($userId <= 0 || !is_finite($amount) || $amount <= 0) {

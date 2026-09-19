@@ -32,6 +32,8 @@ class Comment extends ForumComment
     public function fields(): array
     {
         return array_merge(parent::fields(), [
+            'editable_until' => function () { return (int)$this->created_at + 600; },
+            'can_edit' => function () { return Yii::$app->has('user') && !Yii::$app->user->isGuest && (int)$this->user_id === (int)Yii::$app->user->id && time() >= (int)$this->created_at && time() <= (int)$this->created_at + 600; },
             'gift_count' => function () { return (int)$this->gift_count; },
             'gifted_by_me' => function () { return (bool)$this->gifted_by_me; },
         ]);

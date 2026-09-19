@@ -39,7 +39,7 @@ try {
     $db->createCommand('CREATE TABLE persone (id INTEGER PRIMARY KEY, user_id INTEGER UNIQUE, credit NUMERIC NOT NULL, balance NUMERIC NOT NULL)')->execute();
     $db->createCommand('CREATE TABLE forum_comment (id INTEGER PRIMARY KEY, user_id INTEGER, active INTEGER, comment TEXT, theme_id INTEGER, created_at INTEGER)')->execute();
     $db->createCommand('CREATE TABLE forum_theme (id INTEGER PRIMARY KEY, user_id INTEGER, title TEXT, view INTEGER NOT NULL, last_post INTEGER DEFAULT 0, created_at INTEGER)')->execute();
-    $db->createCommand('CREATE TABLE forum_comment_gift (id INTEGER PRIMARY KEY, comment_id INTEGER NOT NULL, user_id INTEGER NOT NULL, recipient_id INTEGER NOT NULL, created_at INTEGER, UNIQUE(comment_id, user_id))')->execute();
+    $db->createCommand('CREATE TABLE forum_comment_gift (id INTEGER PRIMARY KEY, amount INTEGER NOT NULL DEFAULT 1, comment_id INTEGER NOT NULL, user_id INTEGER NOT NULL, recipient_id INTEGER NOT NULL, created_at INTEGER, UNIQUE(comment_id, user_id))')->execute();
     $db->createCommand('CREATE TABLE history_balance (id INTEGER PRIMARY KEY, user_id INTEGER, balance NUMERIC, credit NUMERIC, balance_up NUMERIC, credit_up NUMERIC, type TEXT, comment TEXT, created_at INTEGER)')->execute();
     $db->createCommand('CREATE TABLE user (id INTEGER PRIMARY KEY, username TEXT)')->execute();
     $db->createCommand("INSERT INTO user VALUES (1,'FirstDonor'), (2,'Author'), (3,'PoorDonor'), (4,'SecondDonor')")->execute();

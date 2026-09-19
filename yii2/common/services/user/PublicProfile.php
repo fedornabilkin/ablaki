@@ -28,7 +28,7 @@ class PublicProfile
                 'rating' => UserHelper::ratingRound($profile->rating),
                 'description' => $profile->getAttribute('description'),
                 'forum_credits_sent' => (int)(new Query())->from('{{%forum_comment_gift}}')
-                    ->where(['user_id' => $user->id])->count(),
+                    ->where(['user_id' => $user->id])->sum('amount'),
             ],
         ];
     }

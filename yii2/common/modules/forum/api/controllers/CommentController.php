@@ -50,28 +50,42 @@ class CommentController extends ActiveController
         $actions['update']['scenario'] = 'update';
         $actions['options']['resourceOptions'] = ['GET', 'HEAD', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'];
 
-        unset($actions['delete']); // remove awards and history balance?
+        unset($actions['delete'], $actions['update']); // financial history is retained
         return $actions;
     }
 
     protected function verbs()
     {
-        return array_merge(parent::verbs(), ['gift' => ['POST'], 'gifts' => ['GET', 'HEAD']]);
+        return array_merge(parent::verbs(), ['update' => ['PUT', 'PATCH'], 'gift' => ['POST'], 'gifts' => ['GET', 'HEAD']]);
     }
 
     public function actionGift($id): array
     {
+        $amount = Yii::$app->request->post('amount', 1);
+        if (!is_int($amount) || $amount < 1 || $amount > 3) throw new UnprocessableEntityHttpException('Выберите от 1 до 3 кредитов.');
         try {
-            return (new CommentGiftService(Yii::$app->db))->give((int)$id, (int)App::user()->id);
+            return (new CommentGiftService(Yii::$app->db))->give((int)$id, (int)App::user()->id, $amount);
         } catch (\DomainException $error) {
             throw new UnprocessableEntityHttpException('Не удалось передать кредит: проверьте сообщение и доступные средства.');
         }
     }
 
+    public function actionUpdate(int $id)
+    {
+        $model = $this->modelClass::findOne($id);
+        if (!$model) throw new NotFoundHttpException();
+        $model->setScenario('update');
+        if (!is_string(Yii::$app->request->post('comment'))) throw new UnprocessableEntityHttpException('Укажите текст сообщения.');
+        $model->load(Yii::$app->request->bodyParams, '');
+        if (!$model->validate()) { Yii::$app->response->statusCode = 422; return ['errors' => $model->errors]; }
+        (new \common\modules\forum\services\CommentEditService(Yii::$app->db))->edit($id, (int)App::user()->id, $model->comment);
+        return $this->modelClass::findOne($id);
+    }
+
     public function actionGifts($id): ActiveDataProvider
     {
         if (!$this->modelClass::find()->where(['id' => $id, 'active' => 1])->exists()) throw new NotFoundHttpException();
-        $gifts = (new Query())->select(['id' => 'gift.id', 'user_id' => 'gift.user_id', 'username' => 'donor.username', 'created_at' => 'gift.created_at'])
+        $gifts = (new Query())->select(['id' => 'gift.id', 'user_id' => 'gift.user_id', 'username' => 'donor.username', 'created_at' => 'gift.created_at', 'amount' => 'gift.amount'])
             ->from(['gift' => 'forum_comment_gift'])->innerJoin(['donor' => 'user'], '[[donor.id]] = [[gift.user_id]]')
             ->where(['gift.comment_id' => $id]);
         return ApiList::provider((new Query())->from(['gift_list' => $gifts]), ['username']);

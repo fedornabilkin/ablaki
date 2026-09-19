@@ -68,12 +68,13 @@ return [
         'class' => UrlRule::class,
         'controller' => ['v1/bonus'],
         'pluralize' => false,
-        'only' => ['everyday', 'recipients', 'fund', 'my-fund'],
+        'only' => ['everyday', 'recipients', 'fund', 'my-fund', 'available'],
         'extraPatterns' => [
             'GET everyday' => 'everyday',
             'GET recipients' => 'recipients',
             'GET fund' => 'fund',
             'GET my-fund' => 'my-fund',
+            'GET available' => 'available',
         ],
     ],
 //    [

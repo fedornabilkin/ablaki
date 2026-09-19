@@ -9,14 +9,18 @@
 namespace api\modules\v1\controllers;
 
 use api\modules\v1\traites\AuthTrait;
+use api\filters\Auth;
 use common\modules\forum\api\controllers\ThemeController;
 
 class ForumThemeController extends ThemeController
 {
-    use AuthTrait;
+    use AuthTrait { behaviors as private configuredAuthBehaviors; }
 
-    public function authExceptAction(): array
+    public function behaviors(): array
     {
-        return ['index', 'view'];
+        $behaviors = $this->configuredAuthBehaviors();
+        $behaviors[Auth::class]['optional'] = ['index', 'view', 'visit'];
+        $behaviors[Auth::class]['except'] = ['options'];
+        return $behaviors;
     }
 }
