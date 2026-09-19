@@ -48,4 +48,20 @@ try {
     routeCheck(array_column(dispatch('GET', 'v1/bonus/available', true)[1]['items'], 'id') === ['rating'], 'claimed credit leaves rating available');
     $db->createCommand()->insert('history_rating', ['user_id' => 1, 'type' => 'everyday', 'created_at' => time()])->execute();
     routeCheck(dispatch('GET', 'v1/bonus/available', true)[1]['items'] === [], 'both claimed rewards disappear');
+    $db->createCommand('ALTER TABLE forum_comment_gift RENAME TO forum_comment_gift_new')->execute();
+    $db->createCommand('CREATE TABLE forum_comment_gift (id INTEGER PRIMARY KEY, comment_id INTEGER, user_id INTEGER, recipient_id INTEGER, created_at INTEGER, UNIQUE(comment_id,user_id))')->execute();
+    $db->schema->refresh();
+    routeCheck(\api\modules\v1\models\Person::findOne(['user_id' => 1])->toArray()['forum_credits_sent'] === 0, 'profile remains available before the amount migration');
+    $db->createCommand()->update('persone', ['credit' => 10], ['user_id' => 1])->execute();
+    $legacy = dispatch('POST', 'v1/forum-comment/9106/gift', true, [], ['amount' => 3]);
+    routeCheck($legacy[0] === 200 && $legacy[1]['amount'] === 3 && $legacy[1]['credit'] === 7.0, 'legacy schema supports three-credit gifts using paired history');
+    routeCheck(dispatch('POST', 'v1/forum-comment/9106/gift', true, [], ['amount' => 2])[1]['amount'] === 3, 'legacy different-amount retry returns original amount');
+    routeCheck((int)dispatch('GET', 'v1/forum-comment/9106/gifts', false, ['envelope' => '1'])[1]['items'][0]['amount'] === 3, 'legacy donor list returns the amount from its exact debit');
+    routeCheck(\common\modules\forum\services\CommentGiftSchema::sent($db, 1) === 3, 'legacy profile totals sum actual gifted credits');
+    dispatch('POST', 'v1/forum-comment/9103/gift', true, [], ['amount' => 2]);
+    routeCheck(\common\modules\forum\services\CommentGiftSchema::sent($db, 1) === 5, 'several legacy gifts are matched to their own debit histories');
+    routeCheck(dispatch('GET', 'v1/forum-theme/1', false, ['expand' => 'first_comment'])[0] === 200, 'public profiles and themes work before amount migration');
+    $db->createCommand('DROP TABLE forum_comment_gift')->execute();
+    $db->createCommand('ALTER TABLE forum_comment_gift_new RENAME TO forum_comment_gift')->execute();
+    $db->schema->refresh();
 } finally { $batch->rollBack(); }

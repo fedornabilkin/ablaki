@@ -85,7 +85,8 @@ class CommentController extends ActiveController
     public function actionGifts($id): ActiveDataProvider
     {
         if (!$this->modelClass::find()->where(['id' => $id, 'active' => 1])->exists()) throw new NotFoundHttpException();
-        $gifts = (new Query())->select(['id' => 'gift.id', 'user_id' => 'gift.user_id', 'username' => 'donor.username', 'created_at' => 'gift.created_at', 'amount' => 'gift.amount'])
+        $amount = \common\modules\forum\services\CommentGiftSchema::amountExpression(Yii::$app->db);
+        $gifts = (new Query())->select(['id' => 'gift.id', 'user_id' => 'gift.user_id', 'username' => 'donor.username', 'created_at' => 'gift.created_at', 'amount' => $amount])
             ->from(['gift' => 'forum_comment_gift'])->innerJoin(['donor' => 'user'], '[[donor.id]] = [[gift.user_id]]')
             ->where(['gift.comment_id' => $id]);
         return ApiList::provider((new Query())->from(['gift_list' => $gifts]), ['username']);

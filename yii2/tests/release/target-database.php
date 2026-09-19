@@ -228,4 +228,18 @@ verifyDb($credit(1) === 97.0 && $credit(2) === 103.0 && $count('history_balance'
     'parallel three-credit retries charge once with one history pair');
 race(array_fill(0, 8, ['visit',1,$themeId,0]));
 verifyDb((int)$db->createCommand('SELECT view FROM forum_theme WHERE id=:id', [':id'=>$themeId])->queryScalar() === 8, 'parallel page views never lose increments');
+$db->createCommand()->dropColumn('forum_comment_gift', 'amount')->execute();
+$db->schema->refresh();
+verifyDb(\common\modules\forum\services\CommentGiftSchema::amount($db, $commentId, 1) === 3
+    && \common\modules\forum\services\CommentGiftSchema::sent($db, 1) === 4, 'legacy schema reads actual gift amounts and historic one-credit rows');
+$db->createCommand()->insert('forum_comment', ['user_id'=>2,'active'=>1,'comment'=>'Legacy schema','created_at'=>time()])->execute();
+$legacyComment = (int)$db->getLastInsertID();
+race(array_fill(0, 8, ['gift',1,$legacyComment,2]));
+verifyDb($credit(1) === 95.0 && $credit(2) === 105.0 && $count('history_balance') === 4
+    && \common\modules\forum\services\CommentGiftSchema::amount($db, $legacyComment, 1) === 2, 'legacy schema concurrent two-credit gifts debit once');
+(new \m260919_120000_add_forum_gift_amount(['db'=>$db]))->up();
+$db->schema->refresh();
+verifyDb(\common\modules\forum\services\CommentGiftSchema::amount($db, $commentId, 1) === 3
+    && \common\modules\forum\services\CommentGiftSchema::amount($db, $legacyComment, 1) === 2
+    && \common\modules\forum\services\CommentGiftSchema::sent($db, 1) === 6, 'later amount migration preserves multi-credit gifts already made on legacy schema');
 echo 'Target database checks passed: '.$db->driverName.PHP_EOL;
