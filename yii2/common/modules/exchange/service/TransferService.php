@@ -44,12 +44,34 @@ class TransferService
                 throw new UnprocessableEntityHttpException('Перевод недоступен или хэш указан неверно.');
             }
             $this->checkAmount($row);
+            $accounts = [(int)$row['user_id'], $userId];
+            sort($accounts, SORT_NUMERIC);
+            $sender = null;
+            foreach ($accounts as $accountId) {
+                $account = $ledger->lock('persone', ['user_id' => $accountId]);
+                if (!$account) throw new \RuntimeException('Account unavailable.');
+                if ($accountId === (int)$row['user_id']) $sender = $account;
+            }
             if (Yii::$app->db->createCommand()->update(CreditTransfer::tableName(), [
                 'user_buyer' => $userId, 'updated_at' => time(),
             ], ['id' => $row['id'], 'user_buyer' => 0])->execute() !== 1) {
                 throw new UnprocessableEntityHttpException('Перевод уже получен.');
             }
             $ledger->change($userId, (float)$row['amount'], 'transfer', 'Confirm #' . $row['id']);
+            $rating = (float)$sender['rating'];
+            // Same stake/current-rating formula as the credit games; reward only a received transfer.
+            $denominator = $rating + ($rating < 0.99 ? 1.9 : 0);
+            if (!is_finite($denominator) || $denominator <= 0) throw new \RuntimeException('Invalid rating.');
+            $reward = round(((float)$row['amount'] / 50) / $denominator, 5);
+            if (!is_finite($reward) || $reward < 0) throw new \RuntimeException('Invalid rating.');
+            if ($reward === 0.0) return;
+            if (Yii::$app->db->createCommand()->update('persone', ['rating' => $rating + $reward], ['user_id' => $row['user_id']])->execute() !== 1) {
+                throw new \RuntimeException('Could not update rating.');
+            }
+            if (Yii::$app->db->createCommand()->insert('history_rating', [
+                'user_id' => $row['user_id'], 'rating' => $rating + $reward, 'rating_up' => $reward,
+                'type' => 'transfer', 'comment' => 'Received transfer #' . $row['id'], 'created_at' => time(),
+            ])->execute() !== 1) throw new \RuntimeException('Could not record rating.');
         });
         $model->refresh();
     }

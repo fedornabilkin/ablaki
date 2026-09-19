@@ -76,6 +76,8 @@ list($status, $game) = fiveRequest('POST', '', 1, ['kon'=>10, 'ball'=>4]);
 checkFive($status === 201 && $balance(1) === 90.0 && $game['status'] === 'free', 'creating a game reserves one stake');
 $id = (int)$game['id'];
 $round = (int)$game['last_hod']['id'];
+$db->createCommand()->update('game_five', ['status' => str_pad('free', 50)], ['id' => $id])->execute();
+$db->createCommand()->update('game_five_hod', ['status' => str_pad('wait', 50)], ['id' => $round])->execute();
 checkFive($game['last_hod']['user_ball'] === 4 && $game['winner_amount'] === 19.0, 'creator sees own hidden move and server payout after commission');
 $other = fiveRequest('GET', '/' . $id, 2)[1];
 checkFive(!isset($other['last_hod']['user_ball']) && !isset($other['creator']['email'], $other['creator']['person']['credit']), 'opponent sees neither hidden move nor private creator fields');
