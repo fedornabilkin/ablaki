@@ -51,7 +51,6 @@ class CraftRecipe extends ActiveRecord implements ModelNameInterface
             [['category_id', 'item_id', 'active'], 'integer'],
             [['name'], 'string', 'max' => 50],
             [['description'], 'string', 'max' => 5000],
-            [['item_id'], 'unique'],
             [['name'], 'unique'],
             [['category_id'], 'exist', 'skipOnError' => true, 'targetClass' => CraftCategory::class, 'targetAttribute' => ['category_id' => 'id']],
             [['item_id'], 'exist', 'skipOnError' => true, 'targetClass' => CraftItem::class, 'targetAttribute' => ['item_id' => 'id']],

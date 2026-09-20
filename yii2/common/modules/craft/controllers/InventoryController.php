@@ -13,7 +13,7 @@ use yii\web\Controller;
 /**
  * InventoryController implements the CRUD actions for CraftInventory model.
  */
-class InventoryController extends Controller
+class InventoryController extends AdminController
 {
     /**
      * Lists all CraftInventory models.
@@ -33,20 +33,11 @@ class InventoryController extends Controller
 
     public function actionCraft()
     {
-        $recipe = CraftRecipe::findOne(3);
-
-        (new CraftService())->craftItem(App::user()->identity->person, $recipe);
-
-        return $this->redirect(['/craft/inventory']);
+        throw new \yii\web\GoneHttpException('Используйте защищённый API крафта.');
     }
 
     public function actionAddItem()
     {
-        $item = CraftItem::findOne(5);
-        $item->setQuantity(-2);
-
-        (new InventoryService())->addItem(App::user()->identity->person, $item);
-
-        return $this->redirect(['/craft/inventory']);
+        throw new \yii\web\GoneHttpException('Служебная выдача предметов отключена.');
     }
 }

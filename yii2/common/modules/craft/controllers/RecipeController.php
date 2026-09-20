@@ -15,7 +15,7 @@ use yii\web\Response;
 /**
  * RecipeController implements the CRUD actions for CraftRecipe model.
  */
-class RecipeController extends Controller
+class RecipeController extends AdminController
 {
     /**
      * @inheritDoc
@@ -57,50 +57,8 @@ class RecipeController extends Controller
      */
     public function actionUpdate($id = null)
     {
-        $model = CraftRecipe::findOne(['id' => $id]) ?? new CraftRecipe();
+        return $this->redirect(['/craft/catalog/edit','group'=>'recipes','code'=>$id ? trim($this->findModel($id)->code) : '']);
 
-        $recipeItems = CraftRecipeItem::find()->indexBy('id')->where(['recipe_id' => $model->id])->all();
-        $newRecipeItems = $postData = [];
-
-        if ($this->request->isPost && $model->load($this->request->post()) && $model->save()) {
-
-
-            foreach (Yii::$app->request->post('CraftRecipeItem', []) as $index => $post) {
-                if ($post['item_id'] === $model->item_id) {
-                    continue;
-                }
-
-                if (!empty($recipeItems[$index])) {
-                    $recipeItems[$index]->load($post, '');
-                    if (!$recipeItems[$index]->validate()) {
-                        $recipeItems[$index]->delete();
-                        continue;
-                    }
-
-                    $recipeItems[$index]->save(false);
-                } else {
-                    $postData[] = $post;
-                    $newRecipeItems[] = new CraftRecipeItem(['recipe_id' => $model->id]);
-                }
-            }
-
-            if ($model::loadMultiple($newRecipeItems, $postData, '') && $model::validateMultiple($newRecipeItems)) {
-                foreach ($newRecipeItems as $source) {
-                    $model->link('recipeItems', $source);
-                }
-            }
-
-            return $this->redirect(['update', 'id' => $model->id]);
-        }
-
-        $recipeItems[] = new CraftRecipeItem(['recipe_id' => $model->id]);
-
-        return $this->render('update', [
-            'model' => $model,
-            'categoryFilter' => (new FilterService())->categoryFilter('id'),
-            'itemFilter' => (new FilterService())->itemFilter('id'),
-            'recipeItems' => $recipeItems,
-        ]);
     }
 
     /**
