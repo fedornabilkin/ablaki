@@ -186,4 +186,4 @@ jobs:
           # Explicit feature migration, only in the established test checkout. No service restart.
           options=(-i "$HOME/.ssh/deploy_key" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=yes -o UserKnownHostsFile="$HOME/.ssh/known_hosts")
           ssh "${options[@]}" -p "$DEPLOY_PORT" "$DEPLOY_USER@$DEPLOY_HOST" \
-            "cd /var/code/ablaki && test \"\$(pwd -P)\" = /var/code/ablaki && docker-compose exec -T -e CRAFT_TEST_INSTALL=confirmed-test-checkout php php /web/yii2/yii craft/install-test"
+            "cd /var/code/ablaki && test \"\$(pwd -P)\" = /var/code/ablaki && docker-compose exec -T -e CRAFT_TEST_INSTALL=confirmed-test-checkout php php /web/yii2/yii craft-setup/install-test"
