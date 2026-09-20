@@ -39,7 +39,9 @@ class ThemeController extends ActiveController
         $actions = parent::actions();
 
         $actions['index']['prepareDataProvider'] = function () {
-            return ApiList::provider($this->modelClass::find(), ['title'], ['id', 'user_id', 'created_at', 'last_post', 'title', 'last_comment_text', 'last_comment_username', 'last_comment_created_at', 'first_comment_user_id', 'first_comment_username']);
+            $provider = ApiList::provider($this->modelClass::find(), ['title'], ['id', 'user_id', 'created_at', 'last_post', 'title', 'last_comment_text', 'last_comment_username', 'last_comment_created_at', 'first_comment_user_id', 'first_comment_username']);
+            $provider->sort->attributes['last_comment_created_at'] = ['asc' => ['last_comment_sort' => SORT_ASC, 'id' => SORT_DESC], 'desc' => ['last_comment_sort' => SORT_DESC, 'id' => SORT_DESC]];
+            return $provider;
         };
         $actions['my'] = $actions['index'];
         $actions['my']['prepareDataProvider'] = function () {

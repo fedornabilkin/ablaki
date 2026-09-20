@@ -242,4 +242,13 @@ $db->schema->refresh();
 verifyDb(\common\modules\forum\services\CommentGiftSchema::amount($db, $commentId, 1) === 3
     && \common\modules\forum\services\CommentGiftSchema::amount($db, $legacyComment, 1) === 2
     && \common\modules\forum\services\CommentGiftSchema::sent($db, 1) === 6, 'later amount migration preserves multi-credit gifts already made on legacy schema');
+$db->createCommand()->addColumn('forum_comment', 'theme_id', 'integer')->execute();
+$db->createCommand()->insert('forum_theme', ['title' => 'Empty newer topic', 'view' => 0])->execute();
+$db->createCommand()->update('forum_comment', ['theme_id' => $themeId])->execute();
+$db->schema->refresh();
+Yii::setAlias('@api', dirname(__DIR__, 2) . '/api');
+$query = \api\modules\v1\models\forum\Theme::find();
+$query->with = [];
+$themes = $query->orderBy(['last_comment_sort' => SORT_DESC, 'id' => SORT_DESC])->asArray()->all();
+verifyDb((int)$themes[0]['id'] === $themeId && (int)$themes[1]['last_comment_sort'] === 0, 'forum latest-message sorting keeps empty topics last on target database');
 echo 'Target database checks passed: '.$db->driverName.PHP_EOL;
