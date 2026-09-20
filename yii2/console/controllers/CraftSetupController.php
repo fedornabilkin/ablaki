@@ -6,7 +6,7 @@ use common\modules\craft\service\CraftStorage;
 use Yii;
 
 /** Explicit CLI setup for this release; normal deployment and production startup are unchanged. */
-class CraftController extends \yii\console\Controller
+class CraftSetupController extends \yii\console\Controller
 {
     public function actionInstallTest()
     {
