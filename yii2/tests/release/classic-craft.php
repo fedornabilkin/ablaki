@@ -5,6 +5,7 @@ require dirname(__DIR__,2).'/vendor/autoload.php';
 require dirname(__DIR__,2).'/vendor/yiisoft/yii2/Yii.php';
 Yii::setAlias('@common',dirname(__DIR__,2).'/common');
 Yii::setAlias('@api',dirname(__DIR__,2).'/api');
+Yii::setAlias('@console',dirname(__DIR__,2).'/console');
 error_reporting(E_ALL & ~E_DEPRECATED);
 use common\modules\craft\service\CraftStorage;
 use common\modules\craft\service\CraftCatalog;
@@ -45,6 +46,11 @@ function craftRace($id,$same){
         $pipes=[];$process=proc_open($cmd,[0=>['pipe','r'],1=>['pipe','w'],2=>['pipe','w']],$pipes);fclose($pipes[0]);$children[]=[$process,$pipes];
     }
     $results=[];foreach($children as list($process,$pipes)){$out=trim(stream_get_contents($pipes[1]));$err=stream_get_contents($pipes[2]);fclose($pipes[1]);fclose($pipes[2]);$code=proc_close($process);if($code!==0||!in_array($out,['ok','rejected'],true))throw new RuntimeException($out.$err);$results[]=$out;}return $results;
+}
+if (!$db->schema->getTableSchema('craft_command',true)) {
+    $controller=new \api\modules\v1\controllers\CraftController('craft',$app->getModule('v1'));
+    try{$controller->actionIndex();throw new RuntimeException('503 expected before migration');}
+    catch(\yii\web\HttpException $e){checkCraft($e->statusCode===503,'missing craft migration returns controlled 503');}
 }
 // Legacy schema shape, including unique output index and pre-existing inventory.
 $tables=[
@@ -182,4 +188,14 @@ if($dsn){
     $results=craftRace($ids['classic-plank'],true);
     checkCraft(count(array_filter($results,static function($v){return $v==='ok';}))===6&&$s->quantities(9001)[$log]===1&&(float)$engine->state(9001)['credit']===0.0,'parallel same-key requests all succeed with one debit');
 }
+// The allowlisted disposable database also covers installations without any legacy craft tables.
+foreach(['craft_event','craft_command','craft_known','craft_skill','craft_dependency','craft_history','craft_recipe_tool','craft_recipe_item','craft_inventory','craft_recipe','craft_station','craft_item','craft_category','craft_meta'] as $table)$db->createCommand()->dropTable($table)->execute();
+$db->schema->refresh();ob_start();$migration=new \m260920_190000_extend_classic_craft(['db'=>$db]);$result=$migration->up();ob_end_clean();$db->schema->refresh();
+checkCraft($result!==false,'migration creates only missing baseline craft tables on a fresh installation');
+$preview=$catalog->preview($seed);$catalog->apply($seed,$preview['digest']);
+$result=$engine->command(9002,'fresh-install-starter','starter',[]);
+checkCraft(count($result['state']['items'])===44&&count($result['state']['recipes'])===34&&count($result['state']['inventory'])===10,'fresh schema imports full catalog and accepts first command');
+$app->params['remote_db']=$db;
+foreach(glob(dirname(__DIR__,2).'/console/migrations/m230317_*_create_craft_*_table.php') as $file){require_once $file;$class=basename($file,'.php');ob_start();$legacyResult=(new $class(['db'=>$db]))->up();ob_end_clean();checkCraft($legacyResult!==false,'older migration recognizes installed craft schema: '.$class);}
+checkCraft(count($catalog->export()['items'])===44,'later normal migrations preserve initialized craft data');
 echo 'Classic craft checks passed: '.$db->driverName.PHP_EOL;

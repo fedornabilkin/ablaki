@@ -6,7 +6,31 @@ class m260920_190000_extend_classic_craft extends Migration
     private function reference($table)
     {
         // Imported MySQL installations may use unsigned bigint IDs; match the actual parent.
-        return $this->db->schema->getTableSchema($table, true)->columns['id']->dbType;
+        $schema=$this->db->schema->getTableSchema($table,true);
+        if(!$schema||!isset($schema->columns['id']))throw new \RuntimeException('Required application table missing: '.$table);
+        return $schema->columns['id']->dbType;
+    }
+    private function legacySchema()
+    {
+        // Some installations never ran the original craft migrations. Create only missing tables.
+        $user=$this->reference('user').' NOT NULL';
+        $definitions=[
+            'craft_category'=>function(){return ['id'=>$this->primaryKey(),'name'=>$this->string(50)->notNull(),'description'=>$this->text()];},
+            'craft_item'=>function(){return ['id'=>$this->primaryKey(),'name'=>$this->string(50)->notNull(),'description'=>$this->text(),'category_id'=>$this->reference('craft_category').' NOT NULL','active'=>$this->smallInteger()->defaultValue(0)];},
+            'craft_recipe'=>function(){return ['id'=>$this->primaryKey(),'name'=>$this->string(50)->notNull(),'description'=>$this->text(),'category_id'=>$this->reference('craft_category').' NOT NULL','item_id'=>$this->reference('craft_item').' NOT NULL','active'=>$this->smallInteger()->defaultValue(0)];},
+            'craft_inventory'=>function()use($user){return ['id'=>$this->primaryKey(),'user_id'=>$user,'item_id'=>$this->reference('craft_item'),'item_quantity'=>$this->integer()->notNull()->defaultValue(0),'slot'=>$this->integer()];},
+            'craft_history'=>function()use($user){return ['id'=>$this->primaryKey(),'user_id'=>$user,'recipe_id'=>$this->reference('craft_recipe').' NOT NULL','item_id'=>$this->reference('craft_item').' NOT NULL','created_at'=>$this->integer()->notNull()];},
+            'craft_recipe_item'=>function(){return ['id'=>$this->primaryKey(),'recipe_id'=>$this->reference('craft_recipe').' NOT NULL','item_id'=>$this->reference('craft_item').' NOT NULL','item_quantity'=>$this->integer()->notNull()];},
+            'craft_recipe_tool'=>function(){return ['id'=>$this->primaryKey(),'recipe_id'=>$this->reference('craft_recipe').' NOT NULL','item_id'=>$this->reference('craft_item').' NOT NULL'];},
+        ];
+        foreach($definitions as $table=>$columns)if(!$this->db->schema->getTableSchema($table,true)){
+            $this->createTable($table,$columns());
+            if(in_array($table,['craft_item','craft_recipe'],true))$this->createIndex('idx-'.$table.'-name',$table,'name',true);
+            if($table==='craft_recipe')$this->createIndex('idx-craft_recipe-item_id',$table,'item_id',true);
+            if(in_array($table,['craft_recipe_item','craft_recipe_tool'],true))$this->createIndex('ux_'.$table.'_pair',$table,['recipe_id','item_id'],true);
+            $schema=$this->db->schema->getTableSchema($table,true);
+            foreach(['category_id'=>'craft_category','item_id'=>'craft_item','recipe_id'=>'craft_recipe','user_id'=>'user'] as $field=>$parent)if(isset($schema->columns[$field]))$this->addForeignKey('fk_initial_'.$table.'_'.$field,$table,$field,$parent,'id',$field==='user_id'?'CASCADE':'RESTRICT');
+        }
     }
     public function addForeignKey($name, $table, $columns, $refTable, $refColumns, $delete = null, $update = null)
     {
@@ -15,6 +39,7 @@ class m260920_190000_extend_classic_craft extends Migration
     }
     public function safeUp()
     {
+        $this->legacySchema();
         $columns = [
             'craft_category' => ['code' => $this->string(64)],
             'craft_item' => ['code'=>$this->string(64), 'kind'=>$this->string(20)->notNull()->defaultValue('material'), 'rarity'=>$this->string(20)->notNull()->defaultValue('common'), 'icon'=>$this->string(64)->notNull()->defaultValue('cube'), 'stack_size'=>$this->integer()->notNull()->defaultValue(100), 'destroyable'=>$this->smallInteger()->notNull()->defaultValue(1), 'use_xp'=>$this->integer()->notNull()->defaultValue(0), 'gather_quantity'=>$this->integer()->notNull()->defaultValue(0)],

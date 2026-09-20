@@ -12,6 +12,8 @@ class m230317_174806_create_craft_history_table extends AbstractMigration
      */
     public function safeUp()
     {
+        // A fresh installation may already be initialized by the additive classic-craft migration.
+        if ($this->db->schema->getTableSchema('craft_meta', true) && $this->db->schema->getTableSchema('craft_history', true)) return;
         $this->createTable('{{%craft_history}}', [
             'id' => $this->primaryKey(),
             'user_id' => $this->bigInteger()->unsigned()->notNull(),
