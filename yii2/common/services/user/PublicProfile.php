@@ -27,8 +27,7 @@ class PublicProfile
                 'refovod' => $profile->refovod,
                 'rating' => UserHelper::ratingRound($profile->rating),
                 'description' => $profile->getAttribute('description'),
-                'forum_credits_sent' => (int)(new Query())->from('{{%forum_comment_gift}}')
-                    ->where(['user_id' => $user->id])->count(),
+                'forum_credits_sent' => \common\modules\forum\services\CommentGiftSchema::sent(\Yii::$app->db, (int)$user->id),
             ],
         ];
     }

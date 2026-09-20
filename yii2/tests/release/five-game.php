@@ -64,7 +64,7 @@ foreach ([
     'history_balance' => 'id INTEGER PRIMARY KEY, user_id INTEGER, balance NUMERIC, credit NUMERIC, balance_up NUMERIC, credit_up NUMERIC, type TEXT, comment TEXT, created_at INTEGER',
     'history_rating' => 'id INTEGER PRIMARY KEY, user_id INTEGER, rating NUMERIC, rating_up NUMERIC, type TEXT, comment TEXT, created_at INTEGER',
     'comission' => 'id INTEGER PRIMARY KEY, type TEXT, amount NUMERIC, created_at INTEGER',
-    'forum_comment_gift' => 'id INTEGER PRIMARY KEY, user_id INTEGER',
+    'forum_comment_gift' => 'id INTEGER PRIMARY KEY, user_id INTEGER, amount INTEGER NOT NULL DEFAULT 1',
 ] as $table => $columns) $db->createCommand('CREATE TABLE ' . $table . ' (' . $columns . ')')->execute();
 $db->createCommand("INSERT INTO user VALUES (1,'Creator','private1',1,1),(2,'Player','private2',1,1),(3,'Other','private3',1,1)")->execute();
 $db->createCommand("INSERT INTO persone VALUES (1,1,100,50,1,0,0,''),(2,2,100,50,1,0,0,''),(3,3,100,50,1,0,0,'')")->execute();

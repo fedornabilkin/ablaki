@@ -58,8 +58,9 @@ return [
         'class' => UrlRule::class,
         'controller' => ['v1/stat'],
         'pluralize' => false,
-        'only' => ['index', 'top', 'user'],
+        'only' => ['index', 'top', 'user', 'recent-games'],
         'extraPatterns' => [
+            'GET recent-games' => 'recent-games',
             'GET top' => 'top',
             'GET user/<login:[-a-zA-Z0-9_\.@]+>' => 'user',
         ],
@@ -68,12 +69,13 @@ return [
         'class' => UrlRule::class,
         'controller' => ['v1/bonus'],
         'pluralize' => false,
-        'only' => ['everyday', 'recipients', 'fund', 'my-fund'],
+        'only' => ['everyday', 'recipients', 'fund', 'my-fund', 'available'],
         'extraPatterns' => [
             'GET everyday' => 'everyday',
             'GET recipients' => 'recipients',
             'GET fund' => 'fund',
             'GET my-fund' => 'my-fund',
+            'GET available' => 'available',
         ],
     ],
 //    [

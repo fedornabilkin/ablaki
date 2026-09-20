@@ -17,6 +17,11 @@ class BonusController extends Controller
 
     public $credit = 1;
 
+    public function actionAvailable(): array
+    {
+        return (new DailyRewardService(Yii::$app->db))->available((int)Yii::$app->user->id);
+    }
+
     public function authExceptAction(): array
     {
         return ['recipients', 'fund'];

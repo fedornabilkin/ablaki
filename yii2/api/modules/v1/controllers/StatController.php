@@ -42,7 +42,12 @@ class StatController extends Controller
 
     public function authExceptAction(): array
     {
-        return ['index', 'top', 'user'];
+        return ['index', 'top', 'user', 'recent-games'];
+    }
+
+    public function actionRecentGames($kind = null): array
+    {
+        return \common\modules\games\service\HomeRecentGames::forKind($kind);
     }
 
     public function actionIndex(): array

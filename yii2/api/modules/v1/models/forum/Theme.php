@@ -18,6 +18,7 @@ class Theme extends ForumTheme
     public $last_comment_text;
     public $last_comment_username;
     public $last_comment_created_at;
+    public $last_comment_sort;
     public $first_comment_user_id;
     public $first_comment_username;
 
@@ -36,6 +37,7 @@ class Theme extends ForumTheme
             'last_comment_text' => $lastText,
             'last_comment_username' => $lastUsername,
             'last_comment_created_at' => $lastCreatedAt,
+            'last_comment_sort' => (clone $count)->select(new \yii\db\Expression('COALESCE(MAX([[forum_comment.created_at]]), 0)')),
             'first_comment_user_id' => $firstUserId,
             'first_comment_username' => $firstUsername,
         ])->with(['user.person', 'firstAuthor.person']);

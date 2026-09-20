@@ -50,6 +50,8 @@ if (($argv[1] ?? '') === 'worker') {
             else $transfers->delete($transfer);
         }
         elseif ($action === 'bot') (new \common\services\game\GameCreateService())->execute();
+        elseif ($action === 'gift') (new \common\modules\forum\services\CommentGiftService($db))->give((int)$gameId, (int)$userId, (int)$roundId);
+        elseif ($action === 'visit') (new \common\modules\forum\api\controllers\ThemeController('theme', $app))->actionVisit((int)$gameId);
         elseif (strpos($action, 'delete-') === 0 || strpos($action, 'bulk-') === 0) {
             $kind = substr($action, strpos($action, '-') + 1);
             (new \common\modules\games\service\GameCancellationService())->cancel($kind, (int)$userId,
@@ -207,4 +209,46 @@ $db->createCommand()->insert('forum_comment',['comment'=>$text])->execute();
 (new \console\migrations\m260911_130000_normalize_forum_utf8(['db'=>$db]))->up();
 verifyDb($db->createCommand('SELECT title FROM forum_theme')->queryScalar()===$text
     && $db->createCommand('SELECT comment FROM forum_comment')->queryScalar()===$text,'UTF-8 migrations preserve Cyrillic text');
+$db->createCommand()->addColumn('forum_theme', 'view', 'integer')->execute();
+foreach (['user_id' => 'integer', 'active' => 'integer', 'created_at' => 'integer'] as $column => $type) $db->createCommand()->addColumn('forum_comment', $column, $type)->execute();
+$db->createCommand()->createTable('forum_comment_gift', ['id'=>'pk','comment_id'=>'integer','user_id'=>'integer','recipient_id'=>'integer','created_at'=>'integer'])->execute();
+$db->createCommand()->createIndex('gift_once', 'forum_comment_gift', ['comment_id', 'user_id'], true)->execute();
+$db->createCommand()->insert('forum_comment_gift', ['comment_id'=>999, 'user_id'=>1, 'recipient_id'=>2, 'created_at'=>1])->execute();
+require dirname(__DIR__, 2) . '/console/migrations/m260919_120000_add_forum_gift_amount.php';
+(new \m260919_120000_add_forum_gift_amount(['db'=>$db]))->up();
+verifyDb((int)$db->createCommand('SELECT amount FROM forum_comment_gift')->queryScalar() === 1, 'gift migration preserves legacy one-credit amounts');
+$db->schema->refresh();
+$reset();
+$commentId = (int)$db->createCommand('SELECT id FROM forum_comment')->queryScalar();
+$themeId = (int)$db->createCommand('SELECT id FROM forum_theme')->queryScalar();
+$db->createCommand()->update('forum_comment', ['user_id'=>2,'active'=>1,'created_at'=>time()], ['id'=>$commentId])->execute();
+race(array_fill(0, 8, ['gift',1,$commentId,3]));
+verifyDb($credit(1) === 97.0 && $credit(2) === 103.0 && $count('history_balance') === 2
+    && (int)$db->createCommand('SELECT amount FROM forum_comment_gift WHERE comment_id=:id', [':id'=>$commentId])->queryScalar() === 3,
+    'parallel three-credit retries charge once with one history pair');
+race(array_fill(0, 8, ['visit',1,$themeId,0]));
+verifyDb((int)$db->createCommand('SELECT view FROM forum_theme WHERE id=:id', [':id'=>$themeId])->queryScalar() === 8, 'parallel page views never lose increments');
+$db->createCommand()->dropColumn('forum_comment_gift', 'amount')->execute();
+$db->schema->refresh();
+verifyDb(\common\modules\forum\services\CommentGiftSchema::amount($db, $commentId, 1) === 3
+    && \common\modules\forum\services\CommentGiftSchema::sent($db, 1) === 4, 'legacy schema reads actual gift amounts and historic one-credit rows');
+$db->createCommand()->insert('forum_comment', ['user_id'=>2,'active'=>1,'comment'=>'Legacy schema','created_at'=>time()])->execute();
+$legacyComment = (int)$db->getLastInsertID();
+race(array_fill(0, 8, ['gift',1,$legacyComment,2]));
+verifyDb($credit(1) === 95.0 && $credit(2) === 105.0 && $count('history_balance') === 4
+    && \common\modules\forum\services\CommentGiftSchema::amount($db, $legacyComment, 1) === 2, 'legacy schema concurrent two-credit gifts debit once');
+(new \m260919_120000_add_forum_gift_amount(['db'=>$db]))->up();
+$db->schema->refresh();
+verifyDb(\common\modules\forum\services\CommentGiftSchema::amount($db, $commentId, 1) === 3
+    && \common\modules\forum\services\CommentGiftSchema::amount($db, $legacyComment, 1) === 2
+    && \common\modules\forum\services\CommentGiftSchema::sent($db, 1) === 6, 'later amount migration preserves multi-credit gifts already made on legacy schema');
+$db->createCommand()->addColumn('forum_comment', 'theme_id', 'integer')->execute();
+$db->createCommand()->insert('forum_theme', ['title' => 'Empty newer topic', 'view' => 0])->execute();
+$db->createCommand()->update('forum_comment', ['theme_id' => $themeId])->execute();
+$db->schema->refresh();
+Yii::setAlias('@api', dirname(__DIR__, 2) . '/api');
+$query = \api\modules\v1\models\forum\Theme::find();
+$query->with = [];
+$themes = $query->orderBy(['last_comment_sort' => SORT_DESC, 'id' => SORT_DESC])->asArray()->all();
+verifyDb((int)$themes[0]['id'] === $themeId && (int)$themes[1]['last_comment_sort'] === 0, 'forum latest-message sorting keeps empty topics last on target database');
 echo 'Target database checks passed: '.$db->driverName.PHP_EOL;
