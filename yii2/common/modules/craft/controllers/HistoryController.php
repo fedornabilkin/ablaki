@@ -12,7 +12,7 @@ use yii\web\NotFoundHttpException;
 /**
  * HistoryController implements the CRUD actions for CraftHistory model.
  */
-class HistoryController extends Controller
+class HistoryController extends AdminController
 {
     /**
      * @inheritDoc

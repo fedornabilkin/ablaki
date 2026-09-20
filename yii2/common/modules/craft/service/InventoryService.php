@@ -36,18 +36,11 @@ class InventoryService
 
     public function moveItem(Person $person, CraftItem $item): void
     {
-        $middleware = new CheckFreeSlotMiddleware();
-        $middleware->linkWith(new MaxItemSlotMiddleware())
-            ->linkWith(new PrepareSlotMiddleware())
-            ->linkWith(new ChangeQuantityMiddleware());
-
-        $data = new InventoryDataMiddleware($person);
-        $data->setItem($item);
-        $middleware::$dataInventory = $data;
-
-        if (!$middleware->check()) {
-            throw new Exception(Yii::t('craft', 'Error add item in inventory'));
-        }
+        Yii::$app->db->transaction(function() use($person,$item) {
+            $storage=new CraftStorage(Yii::$app->db);
+            $storage->lock('craft_meta',['id'=>1]); $storage->lock('persone',['user_id'=>$person->user_id]);
+            $storage->move((int)$person->user_id,$item->getAttributes(),$item->getQuantity());
+        });
     }
 
     /**

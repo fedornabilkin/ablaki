@@ -23,11 +23,9 @@ class CheckRequiredItemsMiddleware extends AbstractCraftMiddleware
         $person = self::$dataCraft->getPerson();
         $availableItems = $inventory->availableItems($person, ...array_keys($requiredItems));
 
-        foreach ($availableItems as $availableItem) {
-            if ($inventory->deficitItem($availableItem, $requiredItems[$availableItem->id])) {
-                throw new InsufficientResourcesException();
-            }
-        }
+        $totals=[];
+        foreach($availableItems as $availableItem)$totals[$availableItem->item_id]=($totals[$availableItem->item_id]??0)+$availableItem->getQuantity();
+        foreach($requiredItems as $itemId=>$item)if(($totals[$itemId]??0)<$item->getQuantity())throw new InsufficientResourcesException();
 
         return parent::check();
     }

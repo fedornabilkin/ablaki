@@ -9,6 +9,8 @@
 use yii\rest\UrlRule;
 
 return [
+    ['class'=>UrlRule::class,'controller'=>['v1/craft'],'pluralize'=>false,'only'=>['index','command','history','options'],
+        'extraPatterns'=>['POST command'=>'command','GET history'=>'history','OPTIONS command'=>'options','OPTIONS history'=>'options']],
     [
         'class' => UrlRule::class,
         'controller' => ['v1/items'],
