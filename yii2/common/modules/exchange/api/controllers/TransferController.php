@@ -32,12 +32,12 @@ class TransferController extends ActiveController
 
         $actions['index']['prepareDataProvider'] = function ($action, $filter) {
             return $this->listProvider($this->modelClass::find()
-                ->with(['user', 'userBuyer'])->my(App::user()->identity)->free());
+                ->with(['user', 'userBuyer.person'])->my(App::user()->identity)->free());
         };
 
         $actions['history']['prepareDataProvider'] = function ($action, $filter) {
             return $this->listProvider($this->modelClass::find()
-                ->with(['user', 'userBuyer'])->listHistory(App::user()->identity));
+                ->with(['user', 'userBuyer.person'])->listHistory(App::user()->identity));
         };
 
         return $actions;

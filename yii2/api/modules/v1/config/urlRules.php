@@ -58,8 +58,9 @@ return [
         'class' => UrlRule::class,
         'controller' => ['v1/stat'],
         'pluralize' => false,
-        'only' => ['index', 'top', 'user'],
+        'only' => ['index', 'top', 'user', 'recent-games'],
         'extraPatterns' => [
+            'GET recent-games' => 'recent-games',
             'GET top' => 'top',
             'GET user/<login:[-a-zA-Z0-9_\.@]+>' => 'user',
         ],

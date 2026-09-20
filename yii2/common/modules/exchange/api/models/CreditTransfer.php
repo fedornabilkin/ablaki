@@ -34,6 +34,12 @@ class CreditTransfer extends \common\modules\exchange\models\CreditTransfer
             'username_buyer' => static function (self $model) {
                 return $model->userBuyer === null ? null : $model->userBuyer->username;
             },
+            'recipient' => static function (self $model) {
+                return \common\services\user\PublicProfile::fromUser($model->userBuyer);
+            },
+            'received_at' => static function (self $model) {
+                return (int)$model->user_buyer > 0 ? (int)$model->updated_at : null;
+            },
             'password' => static function (self $model) {
                 return (int)$model->user_id === (int)\Yii::$app->user->id ? trim((string)$model->password) : null;
             },
