@@ -12,6 +12,8 @@ class m230317_195416_create_craft_recipe_tool_table extends Migration
      */
     public function safeUp()
     {
+        // A fresh installation may already be initialized by the additive classic-craft migration.
+        if ($this->db->schema->getTableSchema('craft_meta', true) && $this->db->schema->getTableSchema('craft_recipe_tool', true)) return;
         $this->createTable('{{%craft_recipe_tool}}', [
             'id' => $this->primaryKey(),
             'recipe_id' => $this->integer()->unsigned()->notNull(),

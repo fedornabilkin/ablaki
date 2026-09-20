@@ -12,6 +12,8 @@ class m230317_174424_create_craft_recipe_table extends AbstractMigration
      */
     public function safeUp()
     {
+        // A fresh installation may already be initialized by the additive classic-craft migration.
+        if ($this->db->schema->getTableSchema('craft_meta', true) && $this->db->schema->getTableSchema('craft_recipe', true)) return;
         $this->createTable('{{%craft_recipe}}', [
             'id' => $this->primaryKey(),
             'name' => $this->char(50)->notNull(),

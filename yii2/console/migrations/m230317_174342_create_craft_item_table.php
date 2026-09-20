@@ -12,6 +12,8 @@ class m230317_174342_create_craft_item_table extends AbstractMigration
      */
     public function safeUp()
     {
+        // A fresh installation may already be initialized by the additive classic-craft migration.
+        if ($this->db->schema->getTableSchema('craft_meta', true) && $this->db->schema->getTableSchema('craft_item', true)) return;
         $this->createTable('{{%craft_item}}', [
             'id' => $this->primaryKey(),
             'name' => $this->char(50)->notNull(),
