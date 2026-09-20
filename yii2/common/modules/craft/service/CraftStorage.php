@@ -33,7 +33,7 @@ class CraftStorage
     public function insert(string $table,array $values): int
     {
         if ($this->db->createCommand()->insert($table,$values)->execute()!==1) throw new \RuntimeException('Craft write failed.');
-        return (int)$this->db->getLastInsertID();
+        return isset($values['id'])?(int)$values['id']:(int)$this->db->getLastInsertID();
     }
     public function quantities(int $userId): array
     {
