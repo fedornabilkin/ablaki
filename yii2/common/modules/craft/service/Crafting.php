@@ -25,7 +25,9 @@ class Crafting
         $skill=$this->one('craft_skill',['user_id'=>$user,'category_id'=>$recipe['category_id']]);
         if(1+intdiv((int)($skill['experience']??0),100)<(int)$recipe['min_level'])$reasons[]='Нужен уровень '.$recipe['min_level'];
         foreach($this->s->rows('craft_dependency',['recipe_id'=>$recipe['id']]) as $dep) if(!$this->one('craft_known',['user_id'=>$user,'recipe_id'=>$dep['requires_id']])) {
-            $parent=$this->one('craft_recipe',['id'=>$dep['requires_id']]); $reasons[]='Сначала создайте: '.trim($parent['name']);
+            $parent=$this->one('craft_recipe',['id'=>$dep['requires_id']]);
+            $output=$parent?$this->one('craft_item',['id'=>$parent['item_id']]):null;
+            $reasons[]='Сначала создайте: '.trim($output['name']??preg_replace('/^Создать:\s*/u','',$parent['name']??'рецепт #'.$dep['requires_id']));
         }
         return $reasons;
     }
@@ -42,12 +44,12 @@ class Crafting
         $fingerprint=hash('sha256',json_encode([$action,$id,$qty]));
         $result=$this->s->db->transaction(function() use($user,$key,$action,$id,$qty,$fingerprint) {
             // Catalog imports and player commands use the same short, deterministic lock order.
-            $this->s->lock('craft_meta',['id'=>1]); $person=$this->s->lock('persone',['user_id'=>$user]);
+            $meta=$this->s->lock('craft_meta',['id'=>1]); $person=$this->s->lock('persone',['user_id'=>$user]);
             $old=$this->one('craft_command',['user_id'=>$user,'request_key'=>$key]);
             if($old) { if(!hash_equals($old['fingerprint'],$fingerprint))throw new ConflictHttpException('Этот ключ уже использован для другой команды.'); return json_decode($old['result'],true)+['replayed'=>true]; }
             $recent=(new Query())->from('craft_command')->where(['user_id'=>$user])->andWhere(['>=','created_at',time()-60])->count('*',$this->s->db);
             if((int)$recent>=30)throw new \yii\web\TooManyRequestsHttpException('Слишком много операций. Попробуйте через минуту.');
-            if($action==='craft')$message=$this->craft($user,$person,$id,$qty);
+            if($action==='craft')$message=$this->craft($user,$person,$id,$qty,(int)($meta['charge_credits']??0)===1);
             elseif($action==='starter'||$action==='gather')$message=$this->supplies($user,$action);
             else {
                 $item=$this->item($id,$action!=='discard');
@@ -74,7 +76,7 @@ class Crafting
         $this->event($user,$action,$total);
         return $action==='starter'?'Стартовые материалы получены.':'Сырьё на сегодня собрано.';
     }
-    private function craft(int $user,array $person,int $id,int $qty): string
+    private function craft(int $user,array $person,int $id,int $qty,bool $chargeCredits): string
     {
         $recipe=$this->one('craft_recipe',['id'=>$id,'active'=>1]); if(!$recipe)throw new ConflictHttpException('Рецепт недоступен.');
         foreach (['output_quantity'=>[1,1000],'cost_credits'=>[0,1000000],'experience'=>[0,1000],'min_level'=>[1,100]] as $field=>$bounds) {
@@ -95,8 +97,8 @@ class Crafting
         $quantities=$this->s->quantities($user);
         foreach($reserve as $tool=>$count) { $items[$tool]=$this->item($tool); $required[$tool]=($required[$tool]??0)+$count; }
         foreach($required as $item=>$amount) if(($quantities[$item]??0)<$amount)throw new ConflictHttpException('Не хватает: '.trim($items[$item]['name']));
-        $cost=(int)$recipe['cost_credits']*$qty;
-        if((float)$person['credit']<$cost)throw new ConflictHttpException('Не хватает кредитов.');
+        $cost=$chargeCredits?(int)$recipe['cost_credits']*$qty:0;
+        if($cost>0&&(float)$person['credit']<$cost)throw new ConflictHttpException('Не хватает кредитов.');
         foreach($ingredients as $ing)$this->s->move($user,$items[$ing['item_id']],-(int)$ing['item_quantity']*$qty);
         $this->s->move($user,$output,(int)$recipe['output_quantity']*$qty);
         if($cost) {
@@ -124,11 +126,12 @@ class Crafting
             $r['requires']=array_map('intval',array_column($s->rows('craft_dependency',['recipe_id'=>$r['id']]),'requires_id'));
             $r['locked_reasons']=$this->requirements($user,$r); $r['crafted']=$known[$r['id']]??0; $recipes[]=$r;
         }
-        $categories=array_map(static function($r){return ['id'=>(int)$r['id'],'name'=>trim($r['name']),'code'=>trim($r['code'])];},$s->rows('craft_category'));
+        $categories=array_map(static function($r){return ['id'=>(int)$r['id'],'name'=>trim($r['name']),'code'=>trim($r['code']),'description'=>trim((string)$r['description'])];},$s->rows('craft_category'));
         $stations=array_map(static function($r){return ['id'=>(int)$r['id'],'name'=>trim($r['name']),'item_id'=>$r['item_id']===null?null:(int)$r['item_id']];},$s->rows('craft_station',['active'=>1]));
         $skills=array_map(static function($r){$xp=(int)$r['experience'];return ['category_id'=>(int)$r['category_id'],'experience'=>$xp,'level'=>1+intdiv($xp,100)];},$s->rows('craft_skill',['user_id'=>$user]));
         $inventory=[]; foreach($s->quantities($user) as $id=>$qty)if($qty>0)$inventory[]=['item_id'=>$id,'quantity'=>$qty];
         $today=(new \DateTimeImmutable('today',new \DateTimeZone('Europe/Moscow')))->getTimestamp();
-        return ['items'=>$items,'categories'=>$categories,'recipes'=>$recipes,'stations'=>$stations,'skills'=>$skills,'inventory'=>$inventory,'credit'=>(float)$person['credit'],'starter_available'=>!$this->one('craft_event',['user_id'=>$user,'action'=>'starter']),'gather_available'=>!(new Query())->from('craft_event')->where(['user_id'=>$user,'action'=>'gather'])->andWhere(['>=','created_at',$today])->exists($s->db),'slot_limit'=>200,'slots_used'=>(int)(new Query())->from('craft_inventory')->where(['user_id'=>$user])->andWhere(['>','item_quantity',0])->count('*',$s->db)];
+        $settings=['charge_credits'=>(new CraftSettings($s))->chargeCredits()];
+        return $settings+['items'=>$items,'categories'=>$categories,'recipes'=>$recipes,'stations'=>$stations,'skills'=>$skills,'inventory'=>$inventory,'credit'=>(float)$person['credit'],'starter_available'=>!$this->one('craft_event',['user_id'=>$user,'action'=>'starter']),'gather_available'=>!(new Query())->from('craft_event')->where(['user_id'=>$user,'action'=>'gather'])->andWhere(['>=','created_at',$today])->exists($s->db),'slot_limit'=>200,'slots_used'=>(int)(new Query())->from('craft_inventory')->where(['user_id'=>$user])->andWhere(['>','item_quantity',0])->count('*',$s->db)];
     }
 }
