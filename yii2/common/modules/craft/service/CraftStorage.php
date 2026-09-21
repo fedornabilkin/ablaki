@@ -8,6 +8,7 @@ use yii\web\ConflictHttpException;
 /** All inventory writers hold the catalog lock, then the owner lock, for the whole transaction. */
 class CraftStorage
 {
+    public const SLOT_LIMIT=100;
     public $db;
     public function __construct(Connection $db) { $this->db=$db; }
     public function lock(string $table,array $where): array
@@ -41,11 +42,16 @@ class CraftStorage
         foreach ($this->rows('craft_inventory',['user_id'=>$userId]) as $slot) if ($slot['item_id']!==null) $result[(int)$slot['item_id']]=($result[(int)$slot['item_id']]??0)+(int)$slot['item_quantity'];
         return $result;
     }
-    public function move(int $userId,array $item,int $delta): void
+    public function move(int $userId,array $item,int $delta,?int $slotId=null): void
     {
         if (!$this->db->getTransaction()) throw new \RuntimeException('Inventory transaction required.');
         if (!$delta) return;
         $slots=(new Query())->from('craft_inventory')->where(['user_id'=>$userId])->orderBy(['id'=>SORT_ASC])->all($this->db);
+        if($slotId!==null) {
+            if($delta>0)throw new \InvalidArgumentException('Slot targeting is only available for consumption.');
+            $slots=array_values(array_filter($slots,static function($slot)use($slotId,$item){return (int)$slot['id']===$slotId&&(int)$slot['item_id']===(int)$item['id'];}));
+            if(!$slots)throw new ConflictHttpException('Предмет в этом слоте уже изменился.');
+        }
         if ($delta<0) {
             $available=array_sum(array_map(static function($s) use($item) { return (int)$s['item_id']===(int)$item['id']?(int)$s['item_quantity']:0; },$slots));
             if ($available<-$delta) throw new ConflictHttpException('Не хватает предмета: '.trim($item['name']));
@@ -60,17 +66,26 @@ class CraftStorage
         } else {
             $limit=(int)$item['stack_size'];
             if ($limit<1||$limit>10000) throw new ConflictHttpException('Неверный размер стака.');
+            // Fill existing stacks before allocating cells. Empty legacy rows do not consume capacity.
+            $occupied=count(array_filter($slots,static function($slot){return $slot['item_id']!==null&&(int)$slot['item_quantity']>0;}));
             foreach ($slots as $slot) {
-                if ($slot['item_id']!==null&&(int)$slot['item_id']!==(int)$item['id']&&(int)$slot['item_quantity']>0) continue;
+                if ((int)$slot['item_id']!==(int)$item['id']||(int)$slot['item_quantity']<1) continue;
                 $add=min($delta,max(0,$limit-(int)$slot['item_quantity']));
                 if (!$add) continue;
                 if ($this->db->createCommand()->update('craft_inventory',['item_id'=>$item['id'],'item_quantity'=>(int)$slot['item_quantity']+$add],['id'=>$slot['id']])->execute()!==1) throw new \RuntimeException('Inventory write failed.');
                 $delta-=$add; if (!$delta) return;
             }
-            $count=count($slots); $label=0;
+            foreach($slots as $slot) {
+                if($slot['item_id']!==null&&(int)$slot['item_quantity']>0)continue;
+                if($occupied>=self::SLOT_LIMIT)throw new ConflictHttpException('Инвентарь заполнен (100 слотов).');
+                $add=min($delta,$limit);
+                if($this->db->createCommand()->update('craft_inventory',['item_id'=>$item['id'],'item_quantity'=>$add],['id'=>$slot['id']])->execute()!==1)throw new \RuntimeException('Inventory write failed.');
+                $occupied++;$delta-=$add;if(!$delta)return;
+            }
+            $label=0;
             foreach ($slots as $slot) $label=max($label,(int)$slot['slot']);
             while ($delta>0) {
-                if (++$count>200) throw new ConflictHttpException('Инвентарь заполнен (200 слотов).');
+                if (++$occupied>self::SLOT_LIMIT) throw new ConflictHttpException('Инвентарь заполнен (100 слотов).');
                 $add=min($delta,$limit);
                 $this->insert('craft_inventory',['user_id'=>$userId,'item_id'=>$item['id'],'item_quantity'=>$add,'slot'=>++$label]); $delta-=$add;
             }
