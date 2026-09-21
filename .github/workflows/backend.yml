@@ -89,7 +89,7 @@ jobs:
         working-directory: yii2
         shell: bash
         run: |
-          for suite in auth-response frontend-lists frontend-api-routing game-overview five-game forum-gift daily-reward exchange-refund classic-craft; do
+          for suite in auth-response frontend-lists frontend-api-routing game-overview five-game forum-gift daily-reward exchange-refund classic-craft classic-craft-install; do
             if ! php "tests/release/$suite.php" 2>&1 | tee "$RUNNER_TEMP/backend-$suite.log"; then
               details=$(tail -n 15 "$RUNNER_TEMP/backend-$suite.log")
               details=${details//%/%25}
@@ -179,11 +179,23 @@ jobs:
           ssh "${options[@]}" -p "$DEPLOY_PORT" "$DEPLOY_USER@$DEPLOY_HOST" \
             "bash '$deploy_root/backend-deploy.sh' '$repo_root' '$GITHUB_REF_NAME' '$TARGET'"
 
-      - name: Apply classic craft migration and initial catalog on test
-        if: env.TARGET == 'test'
+      - name: Apply classic craft migrations and initial catalog
         shell: bash
         run: |
-          # Explicit feature migration, only in the established test checkout. No service restart.
+          # Only craft migrations, in the selected environment's established checkout.
+          if [[ "$TARGET" = test ]]; then
+            repo_root='/var/code/ablaki'
+            install_context='CRAFT_TEST_INSTALL=confirmed-test-checkout'
+            install_action='install-test'
+          elif [[ "$TARGET" = production ]]; then
+            [[ "$GITHUB_REF_NAME" = master ]]
+            repo_root='/var/www/api.ablakin.ru'
+            install_context='CRAFT_PRODUCTION_INSTALL=confirmed-production-checkout'
+            install_action='install-production'
+          else
+            echo "::error::Unknown craft deployment target"
+            exit 1
+          fi
           options=(-i "$HOME/.ssh/deploy_key" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=yes -o UserKnownHostsFile="$HOME/.ssh/known_hosts")
           ssh "${options[@]}" -p "$DEPLOY_PORT" "$DEPLOY_USER@$DEPLOY_HOST" \
-            "cd /var/code/ablaki && test \"\$(pwd -P)\" = /var/code/ablaki && docker-compose exec -T -e CRAFT_TEST_INSTALL=confirmed-test-checkout php php /web/yii2/yii craft-setup/install-test"
+            "cd '$repo_root' && test \"\$(pwd -P)\" = '$repo_root' && docker-compose exec -T -e '$install_context' php php /web/yii2/yii craft-setup/$install_action"

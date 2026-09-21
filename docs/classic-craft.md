@@ -40,7 +40,7 @@
 
 ## Развёртывание
 
-Рабочая ветка: feature/09-classic-crafting. Test workflow отдельно применяет две миграции крафта (`m260920_190000_extend_classic_craft`, `m260921_100000_craft_credit_switch`) через `craft-setup/install-test` в `/var/code/ablaki`, затем начальный каталог. Команда требует явный флаг окружения CRAFT_TEST_INSTALL. Существующая команда обычного деплоя git pull / make up и production не изменены. Миграции необратимы через down: инвентари и журнал нельзя терять при откате приложения, а удаление переключателя может вернуть оплату в старом коде.
+После git pull / make up workflow отдельно применяет только две миграции крафта (`m260920_190000_extend_classic_craft`, `m260921_100000_craft_credit_switch`), затем начальный каталог. Test запускает `craft-setup/install-test` в `/var/code/ablaki` с `CRAFT_TEST_INSTALL=confirmed-test-checkout`. Production запускает `craft-setup/install-production` в `/var/www/api.ablakin.ru` с `CRAFT_PRODUCTION_INSTALL=confirmed-production-checkout`, только из master. Путь checkout проверяется до команды. Повтор использует штатный журнал миграций и сохраняет существующий каталог, инвентари и настройки оплаты. Перезапуск контейнера для этого шага не нужен. Миграции необратимы через down: инвентари и журнал нельзя терять при откате приложения, а удаление переключателя может вернуть оплату в старом коде.
 
 Перед production проверить резервную копию и миграцию на копии соответствующей БД; затем применить эту миграцию и начальный каталог. Сам production требует отдельного поручения владельца. SQLite-тест не заменяет CI на MySQL/PostgreSQL с параллельными запросами.
 
