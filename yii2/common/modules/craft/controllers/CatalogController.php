@@ -2,15 +2,26 @@
 namespace common\modules\craft\controllers;
 use common\modules\craft\service\CraftCatalog;
 use common\modules\craft\service\CraftStorage;
+use common\modules\craft\service\CraftSettings;
 use Yii;
 use yii\web\UploadedFile;
 use yii\web\UnprocessableEntityHttpException;
 
 class CatalogController extends AdminController
 {
-    public function behaviors() { return ['verbs'=>['class'=>\yii\filters\VerbFilter::class,'actions'=>['preview'=>['POST'],'import'=>['POST'],'edit'=>['GET','POST'],'export'=>['GET']]]]; }
+    public function behaviors() { return ['verbs'=>['class'=>\yii\filters\VerbFilter::class,'actions'=>['preview'=>['POST'],'import'=>['POST'],'settings'=>['POST'],'edit'=>['GET','POST'],'export'=>['GET']]]]; }
     private function catalog(): CraftCatalog { return new CraftCatalog(new CraftStorage(Yii::$app->db)); }
-    public function actionIndex() { return $this->render('index',['catalog'=>$this->catalog()->export(),'error'=>'']); }
+    private function settings(): CraftSettings { return new CraftSettings(new CraftStorage(Yii::$app->db)); }
+    public function actionIndex() { return $this->render('index',['catalog'=>$this->catalog()->export(),'error'=>'','chargeCredits'=>$this->settings()->chargeCredits()]); }
+    public function actionSettings()
+    {
+        $enabled=Yii::$app->request->post('charge_credits');
+        if(!in_array($enabled,['0','1'],true))throw new UnprocessableEntityHttpException('Неверное значение переключателя.');
+        $this->settings()->setChargeCredits($enabled==='1',(int)Yii::$app->user->id);
+        Yii::info(['actor'=>Yii::$app->user->id,'charge_credits'=>$enabled==='1'],'craft.settings');
+        Yii::$app->session->setFlash('success',$enabled==='1'?'Списание кредитов за крафт включено.':'Списание кредитов за крафт выключено.');
+        return $this->redirect(['index']);
+    }
     public function actionExport()
     {
         return Yii::$app->response->sendContentAsFile(json_encode($this->catalog()->export(),JSON_PRETTY_PRINT|JSON_UNESCAPED_UNICODE),'craft-catalog-v1.json',['mimeType'=>'application/json']);
@@ -32,7 +43,7 @@ class CatalogController extends AdminController
     public function actionPreview()
     {
         try { $data=$this->document(); $preview=$this->catalog()->preview($data); return $this->render('preview',['document'=>json_encode($data,JSON_UNESCAPED_UNICODE),'preview'=>$preview]); }
-        catch(\yii\web\HttpException $e) { Yii::$app->response->statusCode=$e->statusCode; return $this->render('index',['catalog'=>$this->catalog()->export(),'error'=>$e->getMessage()]); }
+        catch(\yii\web\HttpException $e) { Yii::$app->response->statusCode=$e->statusCode; return $this->render('index',['catalog'=>$this->catalog()->export(),'error'=>$e->getMessage(),'chargeCredits'=>$this->settings()->chargeCredits()]); }
     }
     public function actionImport()
     {

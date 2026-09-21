@@ -1,5 +1,13 @@
 <?php use yii\helpers\Html; $this->title='Каталог крафта'; ?>
 <h1><?= Html::encode($this->title) ?></h1>
+<section class="well">
+<h2>Оплата крафта</h2>
+<?= Html::beginForm(['settings'],'post') ?>
+<?= Html::checkbox('charge_credits',$chargeCredits,['value'=>'1','uncheck'=>'0','label'=>'Списывать кредиты за создание предметов','role'=>'switch']) ?>
+<p>Пока настраиваем мастерскую, оставьте выключенным. Ресурсы расходуются, кредиты не списываются. Цены рецептов сохраняются для последующего включения.</p>
+<?= Html::submitButton('Сохранить настройку',['class'=>'btn btn-primary']) ?>
+<?= Html::endForm() ?>
+</section>
 <p>Предметы, рецепты, станции и категории связаны стабильными кодами. Снятие флага «активен» отключает запись без удаления инвентаря игроков.</p>
 <?php if($error): ?><div class="alert alert-danger"><?= Html::encode($error) ?></div><?php endif ?>
 <p><?= Html::a('Экспорт каталога JSON',['export'],['class'=>'btn btn-primary']) ?></p>
