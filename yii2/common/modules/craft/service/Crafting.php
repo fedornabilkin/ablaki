@@ -40,9 +40,13 @@ class Crafting
         if($user<1||!preg_match('/^[A-Za-z0-9_-]{16,80}$/D',$key))throw new UnprocessableEntityHttpException('Нужен корректный ключ команды.');
         if(!in_array($action,['craft','starter','gather','discard','use'],true))throw new UnprocessableEntityHttpException('Неизвестная операция.');
         $qty=$payload['quantity']??1; $id=$payload['id']??0;
-        if(!is_int($qty)||$qty<1||$qty>100||!is_int($id)||$id<0)throw new UnprocessableEntityHttpException('Количество должно быть целым от 1 до 100.');
-        $fingerprint=hash('sha256',json_encode([$action,$id,$qty]));
-        $result=$this->s->db->transaction(function() use($user,$key,$action,$id,$qty,$fingerprint) {
+        $maxQty=in_array($action,['use','discard'],true)?10000:100;
+        if(!is_int($qty)||$qty<1||$qty>$maxQty||!is_int($id)||$id<0)throw new UnprocessableEntityHttpException('Количество должно быть целым от 1 до '.$maxQty.'.');
+        $slotId=$payload['slot_id']??null;
+        if($slotId!==null&&(!is_int($slotId)||$slotId<1||!in_array($action,['use','discard'],true)))throw new UnprocessableEntityHttpException('Некорректный слот инвентаря.');
+        $identity=[$action,$id,$qty];if($slotId!==null)$identity[]=$slotId;
+        $fingerprint=hash('sha256',json_encode($identity));
+        $result=$this->s->db->transaction(function() use($user,$key,$action,$id,$qty,$slotId,$fingerprint) {
             // Catalog imports and player commands use the same short, deterministic lock order.
             $meta=$this->s->lock('craft_meta',['id'=>1]); $person=$this->s->lock('persone',['user_id'=>$user]);
             $old=$this->one('craft_command',['user_id'=>$user,'request_key'=>$key]);
@@ -55,7 +59,7 @@ class Crafting
                 $item=$this->item($id,$action!=='discard');
                 if($action==='discard'&&!(int)$item['destroyable'])throw new ConflictHttpException('Этот предмет нельзя удалить.');
                 if($action==='use'&&(trim($item['kind'])!=='consumable'||(int)$item['use_xp']<1))throw new ConflictHttpException('Этот предмет нельзя использовать.');
-                $this->s->move($user,$item,-$qty);
+                $this->s->move($user,$item,-$qty,$slotId);
                 if($action==='use')$this->xp($user,(int)$item['category_id'],(int)$item['use_xp']*$qty);
                 $this->event($user,$action,$qty,['item_id'=>$id]); $message=($action==='use'?'Использовано: ':'Удалено: ').trim($item['name']).' × '.$qty;
             }
@@ -130,8 +134,9 @@ class Crafting
         $stations=array_map(static function($r){return ['id'=>(int)$r['id'],'name'=>trim($r['name']),'item_id'=>$r['item_id']===null?null:(int)$r['item_id']];},$s->rows('craft_station',['active'=>1]));
         $skills=array_map(static function($r){$xp=(int)$r['experience'];return ['category_id'=>(int)$r['category_id'],'experience'=>$xp,'level'=>1+intdiv($xp,100)];},$s->rows('craft_skill',['user_id'=>$user]));
         $inventory=[]; foreach($s->quantities($user) as $id=>$qty)if($qty>0)$inventory[]=['item_id'=>$id,'quantity'=>$qty];
+        $slots=[];foreach($s->rows('craft_inventory',['user_id'=>$user]) as $slot)if($slot['item_id']!==null&&(int)$slot['item_quantity']>0)$slots[]=['id'=>(int)$slot['id'],'item_id'=>(int)$slot['item_id'],'quantity'=>(int)$slot['item_quantity']];
         $today=(new \DateTimeImmutable('today',new \DateTimeZone('Europe/Moscow')))->getTimestamp();
         $settings=['charge_credits'=>(new CraftSettings($s))->chargeCredits()];
-        return $settings+['items'=>$items,'categories'=>$categories,'recipes'=>$recipes,'stations'=>$stations,'skills'=>$skills,'inventory'=>$inventory,'credit'=>(float)$person['credit'],'starter_available'=>!$this->one('craft_event',['user_id'=>$user,'action'=>'starter']),'gather_available'=>!(new Query())->from('craft_event')->where(['user_id'=>$user,'action'=>'gather'])->andWhere(['>=','created_at',$today])->exists($s->db),'slot_limit'=>200,'slots_used'=>(int)(new Query())->from('craft_inventory')->where(['user_id'=>$user])->andWhere(['>','item_quantity',0])->count('*',$s->db)];
+        return $settings+['items'=>$items,'categories'=>$categories,'recipes'=>$recipes,'stations'=>$stations,'skills'=>$skills,'inventory'=>$inventory,'inventory_slots'=>$slots,'credit'=>(float)$person['credit'],'starter_available'=>!$this->one('craft_event',['user_id'=>$user,'action'=>'starter']),'gather_available'=>!(new Query())->from('craft_event')->where(['user_id'=>$user,'action'=>'gather'])->andWhere(['>=','created_at',$today])->exists($s->db),'slot_limit'=>CraftStorage::SLOT_LIMIT,'slots_used'=>count($slots)];
     }
 }

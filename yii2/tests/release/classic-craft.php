@@ -146,7 +146,7 @@ $db->createCommand()->update('persone',['credit'=>0],['user_id'=>9001])->execute
 rejectsCraft(function()use($command,$ids){$command('craft',$ids['classic-plank']);},'insufficient shared credit rejected');
 // Full inventory rollback, invalid quantities and disabled entries.
 $db->createCommand()->delete('craft_inventory',['user_id'=>9001])->execute();
-for($i=1;$i<=200;$i++)$s->insert('craft_inventory',['user_id'=>9001,'item_id'=>$log,'item_quantity'=>100,'slot'=>$i]);
+for($i=1;$i<=100;$i++)$s->insert('craft_inventory',['user_id'=>9001,'item_id'=>$log,'item_quantity'=>100,'slot'=>$i]);
 $db->createCommand()->update('persone',['credit'=>100],['user_id'=>9001])->execute();
 $before=$engine->state(9001);rejectsCraft(function()use($command,$ids){$command('craft',$ids['classic-plank']);},'full inventory rejects craft');
 checkCraft($engine->state(9001)===$before,'full inventory failure restores ingredients');
@@ -159,11 +159,44 @@ $db->createCommand()->update('craft_item',['active'=>1],['id'=>$log])->execute()
 function craftDispatch($method,$path,$auth,$body=[]){$app=Yii::$app;$_SERVER['REQUEST_METHOD']=$method;$app->user->setIdentity(null);$app->request->headers->removeAll();if($auth)$app->request->headers->set('Authorization','Bearer craft-test');$app->request->setPathInfo($path);$app->request->setQueryParams(['envelope'=>'1']);$app->request->setBodyParams($body);$route=$app->urlManager->parseRequest($app->request);if(!$route)return [404,null];try{return [200,$app->runAction($route[0],$route[1])];}catch(\yii\web\HttpException $e){return [$e->statusCode,null];}}
 checkCraft(craftDispatch('GET','v1/craft',false)[0]===401,'API requires authentication');
 checkCraft(craftDispatch('GET','v1/craft/command',true)[0]!==200,'GET cannot mutate craft state');
-list($status,$state)=craftDispatch('GET','v1/craft',true);checkCraft($status===200&&$state['slots_used']===200,'API state dispatch uses authenticated owner');
+list($status,$state)=craftDispatch('GET','v1/craft',true);checkCraft($status===200&&$state['slots_used']===100&&$state['slot_limit']===100&&count($state['inventory_slots'])===100,'API returns 100 real occupied slots for authenticated owner');
 list($status,$history)=craftDispatch('GET','v1/craft/history',true);checkCraft($status===200&&isset($history['items'],$history['_meta']),'API history envelope dispatch');
 foreach($history['items'] as $entry)checkCraft((int)$entry['user_id']===9001,'history owner enforced');
 list($status,$result)=craftDispatch('POST','v1/craft/command',true,['action'=>'discard','id'=>$log,'quantity'=>1,'user_id'=>9002,'request_key'=>'http-command-test']);
 checkCraft($status===200&&isset($result['state'])&&$s->quantities(9002)[$old]===7,'POST command ignores supplied owner and returns real state');
+// Slot deletion cannot spill into another stack, target another owner, or change on retry.
+$slotTx=$db->beginTransaction();
+$db->createCommand()->delete('craft_inventory',['user_id'=>9001])->execute();
+$firstSlot=$s->insert('craft_inventory',['user_id'=>9001,'item_id'=>$log,'item_quantity'=>7,'slot'=>1]);
+$secondSlot=$s->insert('craft_inventory',['user_id'=>9001,'item_id'=>$log,'item_quantity'=>5,'slot'=>2]);
+$foreignSlot=(int)(new Query())->from('craft_inventory')->where(['user_id'=>9002])->one($db)['id'];
+$discard=['id'=>$log,'quantity'=>2,'slot_id'=>$secondSlot];
+$deleted=$engine->command(9001,'discard-specific-slot','discard',$discard);
+checkCraft($deleted['state']['inventory_slots'][0]['quantity']===7&&$deleted['state']['inventory_slots'][1]['quantity']===3,'discard removes only the dragged stack quantity');
+$repeated=$engine->command(9001,'discard-specific-slot','discard',$discard);
+checkCraft($repeated['replayed']&&$repeated['state']['inventory_slots']===$deleted['state']['inventory_slots'],'slot discard replay does not remove more items');
+$changed=$discard;$changed['slot_id']=$firstSlot;
+rejectsCraft(function()use($engine,$changed){$engine->command(9001,'discard-specific-slot','discard',$changed);},'idempotency includes target slot');
+rejectsCraft(function()use($engine,$log,$foreignSlot){$engine->command(9001,'discard-foreign-slot','discard',['id'=>$log,'quantity'=>1,'slot_id'=>$foreignSlot]);},'another owner slot cannot be discarded');
+rejectsCraft(function()use($engine,$log,$secondSlot){$engine->command(9001,'discard-excess-slot','discard',['id'=>$log,'quantity'=>4,'slot_id'=>$secondSlot]);},'slot shortage cannot consume another stack');
+rejectsCraft(function()use($engine,$plank,$secondSlot){$engine->command(9001,'discard-replaced-slot','discard',['id'=>$plank,'quantity'=>1,'slot_id'=>$secondSlot]);},'changed item in slot cannot be discarded');
+$db->createCommand()->update('craft_inventory',['item_quantity'=>250],['id'=>$secondSlot])->execute();
+$engine->command(9001,'discard-large-stack','discard',['id'=>$log,'quantity'=>250,'slot_id'=>$secondSlot]);
+checkCraft($s->quantities(9001)[$log]===7,'whole stacks above 100 units can be discarded');
+$slotTx->rollBack();
+// Old empty rows and overflow remain compatible with the new 100 occupied-cell limit.
+$slotTx=$db->beginTransaction();$db->createCommand()->delete('craft_inventory',['user_id'=>9001])->execute();
+for($i=1;$i<=150;$i++)$s->insert('craft_inventory',['user_id'=>9001,'item_id'=>null,'item_quantity'=>0,'slot'=>$i]);
+$s->move(9001,$items['classic-log'],10000);
+checkCraft($engine->state(9001)['slots_used']===100,'legacy empty rows do not reduce 100-slot capacity');
+rejectsCraft(function()use($s,$items){$s->move(9001,$items['classic-plank'],1);},'empty legacy rows cannot bypass 100-slot limit');
+$s->move(9001,$items['classic-log'],-1);$s->move(9001,$items['classic-log'],1);
+checkCraft($s->quantities(9001)[$log]===10000,'existing stack can be topped up at capacity');
+$s->move(9001,$items['classic-log'],-100);$s->move(9001,$items['classic-plank'],1);
+checkCraft($engine->state(9001)['slots_used']===100,'freed slot can be reused at new limit');
+$s->insert('craft_inventory',['user_id'=>9001,'item_id'=>$old,'item_quantity'=>7,'slot'=>151]);
+checkCraft($engine->state(9001)['slots_used']===101&&$s->quantities(9001)[$old]===7,'pre-existing overflow stays visible without losing items');
+$slotTx->rollBack();
 // Station, consumable, minimum level and an entire content tree can be exercised in a rolled-back fixture.
 $tx=$db->beginTransaction();
 $db->createCommand()->delete('craft_inventory',['user_id'=>9001])->execute();
