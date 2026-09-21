@@ -25,23 +25,6 @@ class CraftService
 {
     public function craftItem(Person $person, CraftRecipe $recipe): void
     {
-        $middleware = new CheckRecipePersoneMiddleware();
-        $middleware
-            ->linkWith(new RequiredItemsMiddleware())
-            ->linkWith(new CheckRequiredItemsMiddleware())
-            ->linkWith(new CraftItemMiddleware())
-            ->linkWith(new RemoveRequiredItemsMiddleware())
-            ->linkWith(new AddCraftedItemMiddleware())
-            ->linkWith(new CraftingHistoryMiddleware());
-
-        $data = new CraftDataMiddleware();
-        $data->setPerson($person);
-        $data->setRecipe($recipe);
-
-        $middleware::$dataCraft = $data;
-
-        if (!$middleware->check()) {
-            throw new Exception(Yii::t('craft', 'Error craft item'));
-        }
+        (new Crafting(new CraftStorage(Yii::$app->db)))->command((int)$person->user_id,bin2hex(random_bytes(16)),'craft',['id'=>(int)$recipe->id,'quantity'=>1]);
     }
 }

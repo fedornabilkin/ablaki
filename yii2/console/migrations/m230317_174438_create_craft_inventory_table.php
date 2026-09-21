@@ -12,6 +12,8 @@ class m230317_174438_create_craft_inventory_table extends AbstractMigration
      */
     public function safeUp()
     {
+        // A fresh installation may already be initialized by the additive classic-craft migration.
+        if ($this->db->schema->getTableSchema('craft_meta', true) && $this->db->schema->getTableSchema('craft_inventory', true)) return;
         $this->createTable('{{%craft_inventory}}', [
             'id' => $this->primaryKey(),
             'user_id' => $this->bigInteger()->unsigned()->notNull(),

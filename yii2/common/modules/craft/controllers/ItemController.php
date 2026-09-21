@@ -14,7 +14,7 @@ use yii\web\Response;
 /**
  * ItemController implements the CRUD actions for CraftItem model.
  */
-class ItemController extends Controller
+class ItemController extends AdminController
 {
     /**
      * @inheritDoc
@@ -70,17 +70,8 @@ class ItemController extends Controller
      */
     public function actionUpdate($id = null)
     {
-//        $model = $this->findModel($id);
-        $model = CraftItem::findOne(['id' => $id]) ?? new CraftItem();
+        return $this->redirect(['/craft/catalog/edit','group'=>'items','code'=>$id ? trim($this->findModel($id)->code) : '']);
 
-        if ($this->request->isPost && $model->load($this->request->post()) && $model->save()) {
-            return $this->redirect(['update', 'id' => $model->id]);
-        }
-
-        return $this->render('update', [
-            'model' => $model,
-            'categoryFilter' => (new FilterService())->categoryFilter('id'),
-        ]);
     }
 
     /**
@@ -92,9 +83,7 @@ class ItemController extends Controller
      */
     public function actionDelete($id)
     {
-        $this->findModel($id)->delete();
-
-        return $this->redirect(['index']);
+        throw new \yii\web\GoneHttpException('Отключите предмет в каталоге: инвентари и история должны сохраняться.');
     }
 
     /**

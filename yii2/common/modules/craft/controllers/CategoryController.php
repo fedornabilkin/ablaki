@@ -13,7 +13,7 @@ use yii\web\Response;
 /**
  * CategoryController implements the CRUD actions for CraftCategory model.
  */
-class CategoryController extends Controller
+class CategoryController extends AdminController
 {
     /**
      * @inheritDoc
@@ -55,15 +55,7 @@ class CategoryController extends Controller
      */
     public function actionUpdate($id = null)
     {
-        $model = CraftCategory::findOne(['id' => $id]) ?? new CraftCategory();
-
-        if ($this->request->isPost && $model->load($this->request->post()) && $model->save()) {
-            return $this->redirect(['update', 'id' => $model->id]);
-        }
-
-        return $this->render('update', [
-            'model' => $model,
-        ]);
+        return $this->redirect(['/craft/catalog/edit','group'=>'categories','code'=>$id ? trim($this->findModel($id)->code) : '']);
     }
 
     /**

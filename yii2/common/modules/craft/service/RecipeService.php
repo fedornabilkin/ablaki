@@ -15,6 +15,6 @@ class RecipeService
 {
     public function hasRecipe(Person $person, CraftRecipe $recipe): bool
     {
-        return true;
+        return (int)$recipe->active===1 && !(new Crafting(new CraftStorage(\Yii::$app->db)))->requirements((int)$person->user_id,$recipe->attributes);
     }
 }

@@ -92,6 +92,7 @@ use mdm\admin\components\Helper;
                 'icon' => 'magic',
                 'url' => '#',
                 'items' => [
+                    ['label' => 'Каталог · импорт / экспорт', 'icon' => 'th', 'url' => ['/craft/catalog']],
                     ['label' => Yii::t('craft', 'Item'), 'icon' => 'th', 'url' => ['/craft/item']],
                     ['label' => Yii::t('craft', 'Recipe'), 'icon' => 'book', 'url' => ['/craft/recipe']],
                     ['label' => Yii::t('craft', 'Category'), 'icon' => 'list-alt', 'url' => ['/craft/category']],

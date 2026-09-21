@@ -89,7 +89,7 @@ jobs:
         working-directory: yii2
         shell: bash
         run: |
-          for suite in auth-response frontend-lists frontend-api-routing game-overview five-game forum-gift daily-reward exchange-refund; do
+          for suite in auth-response frontend-lists frontend-api-routing game-overview five-game forum-gift daily-reward exchange-refund classic-craft; do
             if ! php "tests/release/$suite.php" 2>&1 | tee "$RUNNER_TEMP/backend-$suite.log"; then
               details=$(tail -n 15 "$RUNNER_TEMP/backend-$suite.log")
               details=${details//%/%25}
@@ -110,6 +110,8 @@ jobs:
           docker exec "$MYSQL_CONTAINER" mysql -uroot -pci-only-root -e "ALTER USER 'ablakin_ci'@'%' IDENTIFIED WITH mysql_native_password BY 'ci-only-password';"
           ABL_TEST_DSN='mysql:host=127.0.0.1;port=3306;dbname=ablakin_ci' php tests/release/target-database.php
           ABL_TEST_DSN='pgsql:host=127.0.0.1;port=5432;dbname=ablakin_ci' php tests/release/target-database.php
+          ABL_TEST_DSN='mysql:host=127.0.0.1;port=3306;dbname=ablakin_ci' php tests/release/classic-craft.php
+          ABL_TEST_DSN='pgsql:host=127.0.0.1;port=5432;dbname=ablakin_ci' php tests/release/classic-craft.php
 
   deploy:
     name: Deploy backend to ${{ (github.ref == 'refs/heads/test' && 'test') || inputs.target || 'production' }}
@@ -170,5 +172,18 @@ jobs:
             exit 1
           fi
           scp "${options[@]}" -P "$DEPLOY_PORT" deploy/backend-deploy.sh "$DEPLOY_USER@$DEPLOY_HOST:$deploy_root/backend-deploy.sh"
+          if [[ "$TARGET" = test ]]; then
+            scp "${options[@]}" -P "$DEPLOY_PORT" deploy/craft-prepare-test.sh "$DEPLOY_USER@$DEPLOY_HOST:$deploy_root/craft-prepare-test.sh"
+            ssh "${options[@]}" -p "$DEPLOY_PORT" "$DEPLOY_USER@$DEPLOY_HOST" "bash '$deploy_root/craft-prepare-test.sh'"
+          fi
           ssh "${options[@]}" -p "$DEPLOY_PORT" "$DEPLOY_USER@$DEPLOY_HOST" \
             "bash '$deploy_root/backend-deploy.sh' '$repo_root' '$GITHUB_REF_NAME' '$TARGET'"
+
+      - name: Apply classic craft migration and initial catalog on test
+        if: env.TARGET == 'test'
+        shell: bash
+        run: |
+          # Explicit feature migration, only in the established test checkout. No service restart.
+          options=(-i "$HOME/.ssh/deploy_key" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=yes -o UserKnownHostsFile="$HOME/.ssh/known_hosts")
+          ssh "${options[@]}" -p "$DEPLOY_PORT" "$DEPLOY_USER@$DEPLOY_HOST" \
+            "cd /var/code/ablaki && test \"\$(pwd -P)\" = /var/code/ablaki && docker-compose exec -T -e CRAFT_TEST_INSTALL=confirmed-test-checkout php php /web/yii2/yii craft-setup/install-test"
