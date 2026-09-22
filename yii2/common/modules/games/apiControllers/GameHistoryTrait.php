@@ -16,6 +16,7 @@ use yii\web\BadRequestHttpException;
 /** Shared history scope for both rows and grouped stake options. */
 trait GameHistoryTrait
 {
+    use GameStakesTrait;
     private function historyQuery(string $scope = 'history')
     {
         $query = $this->modelClass::find();

@@ -26,7 +26,7 @@ abstract class AbstractHistoryMiddleware extends AbstractMiddleware
             $model = $this->getHistoryModel();
             $model->setAttributes($values);
 
-            $model->save();
+            if (!$model->save()) throw new \RuntimeException('Could not record operation history.');
         }
 
         return parent::check();

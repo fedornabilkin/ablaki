@@ -8,6 +8,9 @@ use common\helpers\UserHelper;
 use common\models\history\HistoryRating;
 use common\models\user\Person;
 use common\models\user\User;
+use common\services\user\PresenceService;
+use common\services\user\PublicProfile;
+use common\modules\forum\services\CommentGiftSchema;
 use common\modules\exchange\models\CreditExchange;
 use common\modules\exchange\models\CreditTransfer;
 use common\modules\forum\models\ForumComment;
@@ -58,7 +61,7 @@ class StatController extends Controller
         $yesterday = $today->modify('-1 day')->getTimestamp();
         $now = time();
         // Version the payload and change the key at local midnight, even within the cache TTL.
-        $cacheKey = [self::CACHE_KEY, 'periods-v2', $timezone->getName(), $start];
+        $cacheKey = [self::CACHE_KEY, 'periods-v3', $timezone->getName(), $start];
         return Yii::$app->cache->getOrSet($cacheKey, function () use ($start, $yesterday, $now) {
             $queries = [
                 'users' => User::find(),
@@ -73,6 +76,17 @@ class StatController extends Controller
             foreach ($queries as $name => $query) {
                 $stats[$name] = $this->periodStats($query, $start, $yesterday, $now);
             }
+            $series = [];
+            foreach ($queries as $name => $query) $series[$name] = $this->dailySeries($query, $start, $now);
+            $combine = static function (array $left, array $right): array {
+                foreach ($left as $i => &$point) $point['value'] += $right[$i]['value'];
+                return $left;
+            };
+            $gifts = $this->forumCredits($start, $yesterday, $now);
+            $visitors = (int)User::find()->where(['or',
+                ['id' => PresenceService::todayIds($now)],
+                ['and', ['>=', 'last_login_at', $start], ['<=', 'last_login_at', $now]],
+            ])->count();
 
             return [
                 // Keep the original scalar fields for existing clients and API checks.
@@ -90,9 +104,17 @@ class StatController extends Controller
                 'periods' => [
                     'users' => $stats['users'],
                     'games' => ['orel' => $stats['orel'], 'saper' => $stats['saper']],
-                    'forum' => ['themes' => $stats['themes'], 'comments' => $stats['comments']],
+                    'forum' => ['themes' => $stats['themes'], 'comments' => $stats['comments'], 'credits' => $gifts],
                     'transfers' => $stats['transfers'],
                     'exchange' => $stats['exchange'],
+                ],
+                'visitors_today' => $visitors,
+                'charts' => [
+                    'users' => $series['users'],
+                    'games' => $combine($series['orel'], $series['saper']),
+                    'forum' => $combine($series['themes'], $series['comments']),
+                    'transfers' => $series['transfers'],
+                    'exchange' => $series['exchange'],
                 ],
                 'topRating' => $this->getTopRating(),
             ];
@@ -105,6 +127,35 @@ class StatController extends Controller
             'total' => (int)(clone $query)->count(),
             'today' => (int)(clone $query)->andWhere(['>=', 'created_at', $today])->andWhere(['<=', 'created_at', $now])->count(),
             'yesterday' => (int)(clone $query)->andWhere(['>=', 'created_at', $yesterday])->andWhere(['<', 'created_at', $today])->count(),
+        ];
+    }
+
+    /** One portable aggregate query for all seven Moscow calendar days. */
+    private function dailySeries(Query $query, int $today, int $now): array
+    {
+        $columns = [];
+        $points = [];
+        for ($i = 0; $i < 7; $i++) {
+            $from = $today - (6 - $i) * 86400;
+            $to = min($from + 86400, $now + 1);
+            $columns['day' . $i] = new \yii\db\Expression('COALESCE(SUM(CASE WHEN [[created_at]] >= ' . $from . ' AND [[created_at]] < ' . $to . ' THEN 1 ELSE 0 END), 0)');
+            $points[] = ['date' => gmdate('Y-m-d', $from + 10800), 'value' => 0];
+        }
+        $values = (clone $query)->select($columns)->andWhere(['>=', 'created_at', $today - 6 * 86400])->asArray()->one();
+        foreach ($points as $i => &$point) $point['value'] = (int)$values['day' . $i];
+        return $points;
+    }
+
+    private function forumCredits(int $today, int $yesterday, int $now): ?array
+    {
+        $db = Yii::$app->db;
+        if ($db->getTableSchema('forum_comment_gift') === null) return null;
+        $query = (new Query())->from(['gift' => 'forum_comment_gift']);
+        $amount = CommentGiftSchema::amountExpression($db);
+        return [
+            'total' => (int)(clone $query)->sum($amount),
+            'today' => (int)(clone $query)->where(['>=', 'gift.created_at', $today])->andWhere(['<=', 'gift.created_at', $now])->sum($amount),
+            'yesterday' => (int)(clone $query)->where(['>=', 'gift.created_at', $yesterday])->andWhere(['<', 'gift.created_at', $today])->sum($amount),
         ];
     }
 
@@ -136,6 +187,13 @@ class StatController extends Controller
         ]);
         // A ranking intentionally keeps the highest score first; explicit URL sort can override it.
         $provider->getSort()->defaultOrder = ['rating' => SORT_DESC];
+        $rows = $provider->getModels();
+        $users = User::find()->with('person')->where(['id' => array_column($rows, 'id')])->indexBy('id')->all();
+        foreach ($rows as &$row) {
+            $profile = PublicProfile::fromUser($users[$row['id']] ?? null);
+            $row = array_merge($profile ?? [], $row);
+        }
+        $provider->setModels($rows);
         if ((string)Yii::$app->request->get('envelope') === '1') {
             return $provider;
         }

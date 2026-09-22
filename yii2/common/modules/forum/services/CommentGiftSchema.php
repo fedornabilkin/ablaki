@@ -16,6 +16,7 @@ class CommentGiftSchema
 
     public static function sent(Connection $db, int $userId): int
     {
+        if ($db->getTableSchema('forum_comment_gift') === null) return 0;
         $query = (new Query())->from('forum_comment_gift')->where(['user_id' => $userId]);
         if (self::hasAmount($db)) return (int)$query->sum('amount', $db);
         return (int)(new Query())->from(['gift' => 'forum_comment_gift'])

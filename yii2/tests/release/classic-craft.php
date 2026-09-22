@@ -3,6 +3,7 @@
 define('YII_ENABLE_ERROR_HANDLER',false);
 require dirname(__DIR__,2).'/vendor/autoload.php';
 require dirname(__DIR__,2).'/vendor/yiisoft/yii2/Yii.php';
+require __DIR__ . '/worker-barrier.php';
 Yii::setAlias('@common',dirname(__DIR__,2).'/common');
 Yii::setAlias('@api',dirname(__DIR__,2).'/api');
 Yii::setAlias('@console',dirname(__DIR__,2).'/console');
@@ -32,7 +33,8 @@ $app=new \yii\web\Application(['id'=>'craft-tests','basePath'=>dirname(__DIR__,2
     ]]);
 $db=$app->db;$s=new CraftStorage($db);$catalog=new CraftCatalog($s);$engine=new Crafting($s);
 if (($argv[1]??'')==='worker') {
-    while(microtime(true)<(float)$argv[4])usleep(1000);
+    $db->open();
+    workerReady();
     try{$engine->command(9001,$argv[2],'craft',['id'=>(int)$argv[3],'quantity'=>1]);echo 'ok';}
     catch(\yii\web\HttpException $e){echo 'rejected';}
     exit;
@@ -40,12 +42,15 @@ if (($argv[1]??'')==='worker') {
 function checkCraft($condition,$message){if(!$condition)throw new RuntimeException($message);echo 'PASS '.$message.PHP_EOL;}
 function rejectsCraft(callable $call,$message){try{$call();}catch(\yii\web\HttpException $e){checkCraft(true,$message);return;}throw new RuntimeException('Expected rejection: '.$message);}
 function craftRace($id,$same){
-    $children=[];$start=microtime(true)+2;
+    $children=[];
     for($i=0;$i<6;$i++){
         $key=$same?'parallel-same-key':'parallel-unique-'.$i;
-        $cmd=escapeshellarg(PHP_BINARY).' '.escapeshellarg(__FILE__).' worker '.escapeshellarg($key).' '.(int)$id.' '.$start;
-        $pipes=[];$process=proc_open($cmd,[0=>['pipe','r'],1=>['pipe','w'],2=>['pipe','w']],$pipes);fclose($pipes[0]);$children[]=[$process,$pipes];
+        $cmd=escapeshellarg(PHP_BINARY).' '.escapeshellarg(__FILE__).' worker '.escapeshellarg($key).' '.(int)$id;
+        $pipes=[];$process=proc_open($cmd,[0=>['pipe','r'],1=>['pipe','w'],2=>['pipe','w']],$pipes);
+        if (!is_resource($process)) throw new RuntimeException('Cannot start craft worker.');
+        $children[]=[$process,$pipes];
     }
+    releaseWorkers($children);
     $results=[];foreach($children as list($process,$pipes)){$out=trim(stream_get_contents($pipes[1]));$err=stream_get_contents($pipes[2]);fclose($pipes[1]);fclose($pipes[2]);$code=proc_close($process);if($code!==0||!in_array($out,['ok','rejected'],true))throw new RuntimeException($out.$err);$results[]=$out;}return $results;
 }
 if (!$db->schema->getTableSchema('craft_command',true)) {

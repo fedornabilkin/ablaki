@@ -33,8 +33,7 @@ class DailyRewardService
     public function available(int $userId): array
     {
         $now = time();
-        $start = strtotime('today', $now);
-        $end = strtotime('+1 day', $start);
+        list($start, $end) = PresenceService::dayBounds($now);
         $items = [];
         foreach (['bonus' => HistoryBalance::tableName(), 'rating' => HistoryRating::tableName()] as $kind => $table) {
             $claimed = (new Query())->from($table)->where(['user_id' => $userId, 'type' => 'everyday'])
@@ -54,8 +53,7 @@ class DailyRewardService
             $person = $this->lockPerson($userId);
             // Calculate the day after obtaining the lock, including requests spanning midnight.
             $now = time();
-            $start = strtotime('today', $now);
-            $end = strtotime('+1 day', $start);
+            list($start, $end) = PresenceService::dayBounds($now);
             $historyTable = $counter === 'credit' ? HistoryBalance::tableName() : HistoryRating::tableName();
 
             if ((new Query())->from($historyTable)
@@ -72,10 +70,10 @@ class DailyRewardService
                 'created_at' => $now,
             ];
             if ($counter === 'credit') {
-                $history += ['balance' => $person['balance'], 'credit' => $person['credit'],
+                $history += ['balance' => $person['balance'], 'credit' => (float)$person['credit'] + $amount,
                     'balance_up' => 0, 'credit_up' => $amount];
             } else {
-                $history += ['rating' => $person['rating'], 'rating_up' => $amount];
+                $history += ['rating' => (float)$person['rating'] + $amount, 'rating_up' => $amount];
             }
 
             if ($this->db->createCommand()->insert($historyTable, $history)->execute() !== 1) {

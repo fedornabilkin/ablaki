@@ -3,6 +3,7 @@
 defined('YII_ENABLE_ERROR_HANDLER') || define('YII_ENABLE_ERROR_HANDLER', false);
 require dirname(__DIR__, 2) . '/vendor/autoload.php';
 require dirname(__DIR__, 2) . '/vendor/yiisoft/yii2/Yii.php';
+require __DIR__ . '/worker-barrier.php';
 Yii::setAlias('@common', dirname(__DIR__, 2) . '/common');
 Yii::setAlias('@console', dirname(__DIR__, 2) . '/console');
 error_reporting(E_ALL & ~E_DEPRECATED);
@@ -29,11 +30,11 @@ $app = new \yii\console\Application([
 $db=$app->db;
 $db->open();
 if (($argv[1] ?? '') === 'worker') {
-    list(,,$action,$userId,$gameId,$roundId,$start)=$argv;
+    list(,,$action,$userId,$gameId,$roundId)=$argv;
     $person=Person::findOne(['user_id'=>(int)$userId]);
     $game=$gameId ? GameFive::findOne((int)$gameId) : null;
     $app->user->setIdentity(User::findOne((int)$userId));
-    while (microtime(true)<(float)$start) usleep(1000);
+    workerReady();
     try {
         $service=new FiveService();
         if ($action==='create') $service->create(new GameFive(['kon'=>10,'ball'=>4]), $person);
@@ -42,6 +43,10 @@ if (($argv[1] ?? '') === 'worker') {
         elseif ($action==='exchange') {
             $model=new \common\modules\exchange\api\models\CreditExchange(['type'=>'buy','credit'=>10,'amount'=>1,'count'=>1]);
             (new \common\modules\exchange\service\ExchangeService())->create($model);
+        }
+        elseif ($action === 'transfer-create') {
+            (new \common\modules\exchange\service\TransferService())->create(
+                new \common\modules\exchange\api\models\CreditTransfer(['amount'=>10,'count'=>3]));
         }
         elseif ($action === 'transfer-claim' || $action === 'transfer-cancel') {
             $transfer = new \common\modules\exchange\models\CreditTransfer(['id' => (int)$gameId]);
@@ -78,14 +83,15 @@ function verifyDb(bool $condition, string $message): void {
     echo 'PASS ' . $message . PHP_EOL;
 }
 function race(array $commands): array {
-    $children=[]; $start=microtime(true)+2;
+    $children=[];
     foreach ($commands as $args) {
         $command=escapeshellarg(PHP_BINARY).' '.escapeshellarg(__FILE__).' worker';
-        foreach (array_merge($args,[$start]) as $arg) $command.=' '.escapeshellarg((string)$arg);
+        foreach ($args as $arg) $command.=' '.escapeshellarg((string)$arg);
         $pipes=[]; $process=proc_open($command,[0=>['pipe','r'],1=>['pipe','w'],2=>['pipe','w']],$pipes);
         if (!is_resource($process)) throw new RuntimeException('Cannot start DB worker.');
-        fclose($pipes[0]); $children[]=[$process,$pipes];
+        $children[]=[$process,$pipes];
     }
+    releaseWorkers($children);
     $results=[];
     foreach ($children as list($process,$pipes)) {
         $out=trim(stream_get_contents($pipes[1])); $err=stream_get_contents($pipes[2]);
@@ -154,12 +160,19 @@ $db->createCommand()->createTable('game_duel', ['id'=>'pk','user_id'=>'integer',
 $db->createCommand()->createTable('game_orel', ['id'=>'pk','user_id'=>'integer','user_gamer'=>'integer','kon'=>'decimal(18,5)','type'=>'integer','hod'=>'integer','created_at'=>'integer','updated_at'=>'integer'])->execute();
 $db->schema->refresh();
 $reset();
+$db->createCommand()->update('persone', ['credit'=>25], ['user_id'=>1])->execute();
+$results = race(array_fill(0, 8, ['transfer-create', 1, 0, 0]));
+verifyDb(count(array_filter($results, static function ($value) { return $value === 'ok'; })) === 1
+    && $count('credit_transfer') === 2 && $credit(1) === 5.0, 'parallel partial transfer batches cannot overspend');
+$db->createCommand()->delete('credit_transfer')->execute();
+$reset();
+$db->createCommand()->update('persone', ['rating' => 60], ['user_id' => 1])->execute();
 $db->createCommand()->insert('credit_transfer', ['user_id'=>1,'user_buyer'=>0,'amount'=>3,'password'=>'fixture-code','created_at'=>time()])->execute();
 $transferId=(int)$db->getLastInsertID();
 $results=race(array_fill(0,8,['transfer-claim',2,$transferId,0]));
 verifyDb(count(array_filter($results,static function($value){return $value==='ok';}))===1 && $credit(2)===103.0,
     'parallel transfer claims pay once');
-verifyDb($count('history_rating') === 1 && abs((float)$db->createCommand('SELECT rating FROM persone WHERE user_id=1')->queryScalar() - 10.006) < .000001,
+verifyDb($count('history_rating') === 1 && abs((float)$db->createCommand('SELECT rating FROM persone WHERE user_id=1')->queryScalar() - 60.001) < .000001,
     'parallel transfer claims award sender rating exactly once');
 $db->createCommand()->insert('credit_transfer', ['user_id'=>1,'user_buyer'=>0,'amount'=>3,'password'=>'fixture-code','created_at'=>time()])->execute();
 $transferId=(int)$db->getLastInsertID();

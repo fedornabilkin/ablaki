@@ -24,15 +24,18 @@ try {
         && (int)$db->createCommand('SELECT COUNT(*) FROM history_rating')->queryScalar() === 0, 'wrong transfer hash gives no rating');
     $recipientRating = (float)$db->createCommand('SELECT rating FROM persone WHERE user_id=1')->queryScalar();
     routeCheck(dispatch('PUT', 'v1/transfer/9901', true, [], ['password' => 'rating-test'])[0] === 200, 'transfer with zero sender rating succeeds');
-    $reward = round(1 / 1.9, 5);
-    routeCheck(abs((float)$db->createCommand('SELECT rating FROM persone WHERE user_id=2')->queryScalar() - $reward) < .000001
+    routeCheck((float)$db->createCommand('SELECT rating FROM persone WHERE user_id=2')->queryScalar() === 0.0
         && (float)$db->createCommand('SELECT rating FROM persone WHERE user_id=1')->queryScalar() === $recipientRating,
-        'sender receives the credit-game reward and recipient rating is unchanged');
+        'topic 68: a sender without the rating advantage receives no rating');
     dispatch('PUT', 'v1/transfer/9901', true, [], ['password' => 'rating-test']);
-    routeCheck((int)$db->createCommand('SELECT COUNT(*) FROM history_rating')->queryScalar() === 1, 'repeat transfer claim never repeats rating');
+    routeCheck((int)$db->createCommand('SELECT COUNT(*) FROM history_rating')->queryScalar() === 0, 'repeat transfer claim never repeats rating');
+    $senderRating = $recipientRating + 50;
+    $db->createCommand()->update('persone', ['rating' => $senderRating], ['user_id' => 2])->execute();
+    $db->createCommand()->update('credit_transfer', ['updated_at' => time() - 8 * 86400], ['user_buyer' => 2])->execute();
+    $reward = round(1 / $senderRating, 5);
     dispatch('PUT', 'v1/transfer/9902', true, [], ['password' => 'rating-test']);
-    routeCheck(abs((float)$db->createCommand('SELECT rating FROM persone WHERE user_id=2')->queryScalar() - ($reward + round(1 / ($reward + 1.9), 5))) < .000001,
-        'next transfer uses the updated sender rating');
+    routeCheck(abs((float)$db->createCommand('SELECT rating FROM persone WHERE user_id=2')->queryScalar() - ($senderRating + $reward)) < .000001,
+        'eligible transfer uses the updated sender rating');
     $creditBefore = $db->createCommand('SELECT credit FROM persone WHERE user_id=1')->queryScalar();
     $db->pdo->exec("CREATE TRIGGER reject_rating BEFORE INSERT ON history_rating BEGIN SELECT RAISE(ABORT, 'fixture'); END");
     try {
