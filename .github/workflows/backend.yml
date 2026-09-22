@@ -89,7 +89,7 @@ jobs:
         working-directory: yii2
         shell: bash
         run: |
-          for suite in auth-response frontend-lists frontend-api-routing game-overview five-game forum-gift daily-reward exchange-refund classic-craft classic-craft-install; do
+          for suite in auth-response frontend-lists frontend-api-routing game-overview five-game forum-gift daily-reward exchange-refund topic68-economy worker-barrier-test classic-craft classic-craft-install; do
             if ! php "tests/release/$suite.php" 2>&1 | tee "$RUNNER_TEMP/backend-$suite.log"; then
               details=$(tail -n 15 "$RUNNER_TEMP/backend-$suite.log")
               details=${details//%/%25}
@@ -108,10 +108,20 @@ jobs:
         run: |
           # PHP 7.3 requires the legacy authentication plugin in this disposable MySQL 8 service.
           docker exec "$MYSQL_CONTAINER" mysql -uroot -pci-only-root -e "ALTER USER 'ablakin_ci'@'%' IDENTIFIED WITH mysql_native_password BY 'ci-only-password';"
-          ABL_TEST_DSN='mysql:host=127.0.0.1;port=3306;dbname=ablakin_ci' php tests/release/target-database.php
-          ABL_TEST_DSN='pgsql:host=127.0.0.1;port=5432;dbname=ablakin_ci' php tests/release/target-database.php
-          ABL_TEST_DSN='mysql:host=127.0.0.1;port=3306;dbname=ablakin_ci' php tests/release/classic-craft.php
-          ABL_TEST_DSN='pgsql:host=127.0.0.1;port=5432;dbname=ablakin_ci' php tests/release/classic-craft.php
+          check_database() {
+            export ABL_TEST_DSN="$1"
+            php tests/release/target-database.php && php tests/release/classic-craft.php
+          }
+          # Independent disposable databases; keep suites sequential within each database.
+          check_database 'mysql:host=127.0.0.1;port=3306;dbname=ablakin_ci' > "$RUNNER_TEMP/mysql-checks.log" 2>&1 &
+          mysql_pid=$!
+          check_database 'pgsql:host=127.0.0.1;port=5432;dbname=ablakin_ci' > "$RUNNER_TEMP/pgsql-checks.log" 2>&1 &
+          pgsql_pid=$!
+          failed=0
+          wait "$mysql_pid" || failed=1
+          wait "$pgsql_pid" || failed=1
+          cat "$RUNNER_TEMP/mysql-checks.log" "$RUNNER_TEMP/pgsql-checks.log"
+          exit "$failed"
 
   deploy:
     name: Deploy backend to ${{ (github.ref == 'refs/heads/test' && 'test') || inputs.target || 'production' }}

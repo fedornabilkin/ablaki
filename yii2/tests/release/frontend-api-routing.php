@@ -286,6 +286,7 @@ try {
     require __DIR__ . '/forum-65-cases.php';
     require __DIR__ . '/forum-66-cases.php';
     require __DIR__ . '/forum-67-cases.php';
+    require __DIR__ . '/forum-68-cases.php';
     echo "API routing integration passed on disposable SQLite.\n";
 } finally {
     if (isset($db)) $db->close();

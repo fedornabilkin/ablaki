@@ -6,6 +6,7 @@ require dirname(__DIR__, 2) . '/vendor/yiisoft/yii2/Yii.php';
 Yii::setAlias('@common', dirname(__DIR__, 2) . '/common');
 
 use common\services\user\DailyRewardService;
+use common\services\user\PresenceService;
 use yii\db\Connection;
 
 function connection(string $file): Connection
@@ -50,13 +51,23 @@ try {
     check($service->claimRating(1, 0.01) && !$service->claimRating(1, 0.01), 'rating is independently granted once');
     check(abs((float)$db->createCommand('SELECT rating FROM persone WHERE id=1')->queryScalar() - 2.01) < 0.000001,
         'rating changes by the configured amount');
+    check((float)$db->createCommand('SELECT credit FROM history_balance WHERE user_id=1')->queryScalar() === 11.0,
+        'bonus history stores the resulting balance');
+    $ratingHistory = $db->createCommand('SELECT rating, rating_up FROM history_rating WHERE user_id=1')->queryOne();
+    check(abs((float)$ratingHistory['rating'] - 2.01) < .000001 && abs((float)$ratingHistory['rating_up'] - .01) < .000001,
+        'daily rating history stores the resulting rating and exact increment');
+    $moscowMidnight = (new DateTimeImmutable('2026-09-22 00:00:00', new DateTimeZone('Europe/Moscow')))->getTimestamp();
+    check(PresenceService::dayBounds($moscowMidnight) === [$moscowMidnight, $moscowMidnight + 86400]
+        && PresenceService::dayBounds($moscowMidnight - 1) === [$moscowMidnight - 86400, $moscowMidnight], 'reward day switches at Moscow midnight');
+    check($service->available(1)['items'] === [] && $service->available(1)['refresh_at'] === PresenceService::dayBounds()[1],
+        'availability uses the same calendar boundaries as claims');
 
     $db->createCommand("INSERT INTO history_balance (user_id, type, created_at) VALUES (3, 'everyday', :today)",
         [':today' => time()])->execute();
     check(!$service->claimCredit(3, 1), 'existing history from the old controller prevents another bonus');
 
     $db->createCommand("UPDATE history_balance SET created_at=:yesterday WHERE user_id=1",
-        [':yesterday' => strtotime('yesterday')])->execute();
+        [':yesterday' => PresenceService::dayBounds()[0] - 1])->execute();
     check($service->claimCredit(1, 1), 'previous day does not block the next reward');
 
     $db->createCommand("DELETE FROM history_balance WHERE user_id=3")->execute();
@@ -77,6 +88,13 @@ try {
         'credit failure rolls back the inserted history');
     $db->createCommand('DROP TRIGGER fail_credit')->execute();
     check($service->claimCredit(3, 1), 'failed operation can be retried successfully');
+    $db->pdo->exec("CREATE TRIGGER fail_rating BEFORE UPDATE OF rating ON persone
+        WHEN NEW.user_id = 3 BEGIN SELECT RAISE(ABORT, 'injected rating failure'); END");
+    try { $service->claimRating(3, .01); throw new RuntimeException('Expected rating failure'); }
+    catch (\yii\db\Exception $expected) {}
+    check((int)$db->createCommand('SELECT COUNT(*) FROM history_rating WHERE user_id=3')->queryScalar() === 0
+        && (float)$db->createCommand('SELECT rating FROM persone WHERE id=3')->queryScalar() === 2.0, 'rating failure rolls back its history');
+    $db->createCommand('DROP TRIGGER fail_rating')->execute();
 
     $start = microtime(true) + 1;
     for ($i = 0; $i < 8; $i++) {
