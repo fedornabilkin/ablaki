@@ -63,6 +63,7 @@ class FiveController extends ActiveController
         $query = $this->modelClass::find()->with(['user.person', 'userGamer.person']);
         if ($mine) $query->listMyGame(App::user()->identity);
         else $query->listGame(App::user()->identity);
+        $this->applyStakeFilter($query);
         return ApiList::provider($query, [], ['id', 'created_at', 'updated_at', 'kon'], static function ($query, $search) {
             $condition = ApiList::relatedUserCondition(['user_id', 'user_gamer'], $search);
             if (ctype_digit($search)) $condition[] = ['id' => $search];

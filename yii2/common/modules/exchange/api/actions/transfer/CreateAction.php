@@ -32,8 +32,9 @@ class CreateAction extends Action
         $model->load(Yii::$app->getRequest()->getBodyParams(), '');
 
         $service = App::container()->get(TransferService::class);
-        $service->create($model);
+        $result = $service->create($model);
 
         App::response()->setStatusCode(201);
+        return $result;
     }
 }

@@ -10,7 +10,7 @@ use yii\web\UnprocessableEntityHttpException;
 
 class TransferService
 {
-    public function create(CreditTransfer $model): void
+    public function create(CreditTransfer $model): array
     {
         $amount = $model->amount;
         $count = $model->count ?? 1;
@@ -20,16 +20,22 @@ class TransferService
             throw new UnprocessableEntityHttpException('Укажите целое количество кредитов и количество переводов от 1 до 100.');
         }
         $userId = (int)App::user()->id;
-        Yii::$app->db->transaction(function () use ($amount, $count, $userId): void {
+        return Yii::$app->db->transaction(function () use ($amount, $count, $userId): array {
             $ledger = new CreditLedger(Yii::$app->db);
-            $ledger->change($userId, -round((float)$amount * $count, 2), 'transfer', 'Create ' . $count . 'x' . $amount);
-            for ($i = 0; $i < $count; $i++) {
+            $sender = $ledger->lock('persone', ['user_id' => $userId]);
+            if (!$sender || !is_numeric($sender['credit']) || !is_finite((float)$sender['credit'])) throw new \RuntimeException('Account unavailable.');
+            $created = min((int)$count, (int)floor((float)$sender['credit'] / (float)$amount));
+            if ($created < 1) throw new UnprocessableEntityHttpException('Недостаточно кредитов даже для одного перевода.');
+            $total = (float)$amount * $created;
+            $ledger->change($userId, -$total, 'transfer', 'Create ' . $created . 'x' . $amount);
+            for ($i = 0; $i < $created; $i++) {
                 $written = Yii::$app->db->createCommand()->insert(CreditTransfer::tableName(), [
                     'user_id' => $userId, 'user_buyer' => 0, 'amount' => $amount,
                     'password' => Yii::$app->security->generateRandomString(32), 'created_at' => time(), 'updated_at' => time(),
                 ])->execute();
                 if ($written !== 1) throw new \RuntimeException('Could not create transfer.');
             }
+            return ['created' => $created, 'requested' => (int)$count, 'amount' => (int)$amount, 'total' => $total];
         });
     }
 
@@ -46,11 +52,12 @@ class TransferService
             $this->checkAmount($row);
             $accounts = [(int)$row['user_id'], $userId];
             sort($accounts, SORT_NUMERIC);
-            $sender = null;
+            $sender = $recipient = null;
             foreach ($accounts as $accountId) {
                 $account = $ledger->lock('persone', ['user_id' => $accountId]);
                 if (!$account) throw new \RuntimeException('Account unavailable.');
                 if ($accountId === (int)$row['user_id']) $sender = $account;
+                else $recipient = $account;
             }
             if (Yii::$app->db->createCommand()->update(CreditTransfer::tableName(), [
                 'user_buyer' => $userId, 'updated_at' => time(),
@@ -59,6 +66,13 @@ class TransferService
             }
             $ledger->change($userId, (float)$row['amount'], 'transfer', 'Confirm #' . $row['id']);
             $rating = (float)$sender['rating'];
+            // Eligibility is decided under both account locks, at receipt time.
+            $recipientRating = (float)$recipient['rating'];
+            if (!is_finite($rating) || !is_finite($recipientRating)) throw new \RuntimeException('Invalid rating.');
+            if ($rating - $recipientRating < 50) return;
+            if ((new \yii\db\Query())->from(CreditTransfer::tableName())
+                ->where(['user_buyer' => (int)$row['user_id']])->andWhere(['>=', 'updated_at', time() - 7 * 86400])
+                ->exists(Yii::$app->db)) return;
             // Same stake/current-rating formula as the credit games; reward only a received transfer.
             $denominator = $rating + ($rating < 0.99 ? 1.9 : 0);
             if (!is_finite($denominator) || $denominator <= 0) throw new \RuntimeException('Invalid rating.');

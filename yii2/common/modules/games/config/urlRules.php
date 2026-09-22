@@ -15,6 +15,7 @@ return [
         'pluralize' => false,
         'except' => ['view', 'update'],
         'extraPatterns' => [
+            'GET stakes' => 'stakes',
             'DELETE remove' => 'remove',
             'GET my' => 'my',
             'GET history' => 'history',
@@ -33,6 +34,7 @@ return [
         'pluralize' => false,
         'except' => ['view', 'update'],
         'extraPatterns' => [
+            'GET stakes' => 'stakes',
             'DELETE remove' => 'remove',
             'GET my' => 'my',
             'GET history' => 'history',
@@ -46,6 +48,7 @@ return [
         'pluralize' => false,
         'except' => ['update'],
         'extraPatterns' => [
+            'GET stakes' => 'stakes',
             'DELETE remove' => 'remove',
             'GET my' => 'my',
             'GET history' => 'history',
@@ -59,6 +62,7 @@ return [
         'pluralize' => false,
         'except' => ['view', 'update'],
         'extraPatterns' => [
+            'GET stakes' => 'stakes',
             'GET remove' => 'remove',
             'DELETE remove' => 'remove',
             'GET my' => 'my',

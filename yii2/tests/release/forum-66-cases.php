@@ -42,9 +42,10 @@ try {
     routeCheck(dispatch('GET', 'v1/bonus/available')[0] === 401, 'daily availability is private');
     $available = dispatch('GET', 'v1/bonus/available', true)[1];
     routeCheck(array_column($available['items'], 'id') === ['bonus', 'rating'] && $available['refresh_at'] > time(), 'daily availability lists unclaimed rewards and next day boundary');
-    $db->createCommand()->insert('history_balance', ['user_id' => 1, 'type' => 'everyday', 'created_at' => strtotime('today') - 1])->execute();
+    $rewardDay = \common\services\user\PresenceService::dayBounds()[0];
+    $db->createCommand()->insert('history_balance', ['user_id' => 1, 'type' => 'everyday', 'created_at' => $rewardDay - 1])->execute();
     routeCheck(count(dispatch('GET', 'v1/bonus/available', true)[1]['items']) === 2, 'yesterday reward does not hide today reward');
-    $db->createCommand()->insert('history_balance', ['user_id' => 1, 'type' => 'everyday', 'created_at' => strtotime('today')])->execute();
+    $db->createCommand()->insert('history_balance', ['user_id' => 1, 'type' => 'everyday', 'created_at' => $rewardDay])->execute();
     routeCheck(array_column(dispatch('GET', 'v1/bonus/available', true)[1]['items'], 'id') === ['rating'], 'claimed credit leaves rating available');
     $db->createCommand()->insert('history_rating', ['user_id' => 1, 'type' => 'everyday', 'created_at' => time()])->execute();
     routeCheck(dispatch('GET', 'v1/bonus/available', true)[1]['items'] === [], 'both claimed rewards disappear');

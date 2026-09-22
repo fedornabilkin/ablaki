@@ -43,10 +43,10 @@ class DuelController extends ActiveController
         $actions['history'] = $actions['index'];
 
         $actions['my']['prepareDataProvider'] = function ($action, $filter) {
+            $query = $this->lobbyQuery('my')->with('user.person');
+            $this->applyStakeFilter($query);
             return new ActiveDataProvider([
-                'query' => $this->modelClass::find()
-                    ->with('user')
-                    ->listMyGame(App::user()->identity),
+                'query' => $query,
             ]);
         };
 
@@ -55,13 +55,11 @@ class DuelController extends ActiveController
         };
 
         $actions['index']['prepareDataProvider'] = function ($action, $filter) {
+            $query = $this->lobbyQuery('available')->with('user.person');
+            $this->applyStakeFilter($query);
             return new ActiveDataProvider([
                 'pagination' => false,
-                'query' => $this->modelClass::find()
-                    ->limit(20)
-                    ->orderBy(['id' => SORT_ASC])
-                    ->with('user')
-                    ->listGame(App::user()->identity),
+                'query' => $query->limit(20)->orderBy(['id' => SORT_ASC]),
             ]);
         };
 
