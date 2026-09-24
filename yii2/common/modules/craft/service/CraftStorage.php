@@ -91,4 +91,20 @@ class CraftStorage
             }
         }
     }
+
+    /** Called under the same catalog and owner locks as every inventory writer. */
+    public function merge(int $userId,array $item,int $sourceId,int $targetId): int
+    {
+        if (!$this->db->getTransaction()) throw new \RuntimeException('Inventory transaction required.');
+        $slots=(new Query())->from('craft_inventory')->where(['user_id'=>$userId,'item_id'=>$item['id'],'id'=>[$sourceId,$targetId]])->indexBy('id')->all($this->db);
+        if($sourceId===$targetId||count($slots)!==2||(int)$slots[$sourceId]['item_quantity']<1||(int)$slots[$targetId]['item_quantity']<1)throw new ConflictHttpException('Объединять можно только свои стопки одинаковых предметов.');
+        $limit=(int)$item['stack_size'];
+        if($limit<1||$limit>10000)throw new ConflictHttpException('Неверный размер стопки.');
+        $moved=min((int)$slots[$sourceId]['item_quantity'],max(0,$limit-(int)$slots[$targetId]['item_quantity']));
+        if(!$moved)throw new ConflictHttpException('Стопка уже заполнена.');
+        $left=(int)$slots[$sourceId]['item_quantity']-$moved;
+        if($this->db->createCommand()->update('craft_inventory',['item_quantity'=>$left,'item_id'=>$left?$item['id']:null],['id'=>$sourceId,'user_id'=>$userId])->execute()!==1
+            ||$this->db->createCommand()->update('craft_inventory',['item_quantity'=>(int)$slots[$targetId]['item_quantity']+$moved],['id'=>$targetId,'user_id'=>$userId])->execute()!==1)throw new \RuntimeException('Inventory write failed.');
+        return $moved;
+    }
 }

@@ -89,7 +89,7 @@ jobs:
         working-directory: yii2
         shell: bash
         run: |
-          for suite in auth-response frontend-lists frontend-api-routing game-overview five-game forum-gift daily-reward exchange-refund topic68-economy worker-barrier-test classic-craft classic-craft-install; do
+          for suite in auth-response frontend-lists frontend-api-routing game-overview five-game forum-gift daily-reward exchange-refund topic68-economy worker-barrier-test classic-craft classic-craft-install user-activity; do
             if ! php "tests/release/$suite.php" 2>&1 | tee "$RUNNER_TEMP/backend-$suite.log"; then
               details=$(tail -n 15 "$RUNNER_TEMP/backend-$suite.log")
               details=${details//%/%25}
@@ -110,7 +110,7 @@ jobs:
           docker exec "$MYSQL_CONTAINER" mysql -uroot -pci-only-root -e "ALTER USER 'ablakin_ci'@'%' IDENTIFIED WITH mysql_native_password BY 'ci-only-password';"
           check_database() {
             export ABL_TEST_DSN="$1"
-            php tests/release/target-database.php && php tests/release/classic-craft.php
+            php tests/release/target-database.php && php tests/release/classic-craft.php && php tests/release/user-activity.php
           }
           # Independent disposable databases; keep suites sequential within each database.
           check_database 'mysql:host=127.0.0.1;port=3306;dbname=ablakin_ci' > "$RUNNER_TEMP/mysql-checks.log" 2>&1 &
@@ -189,10 +189,10 @@ jobs:
           ssh "${options[@]}" -p "$DEPLOY_PORT" "$DEPLOY_USER@$DEPLOY_HOST" \
             "bash '$deploy_root/backend-deploy.sh' '$repo_root' '$GITHUB_REF_NAME' '$TARGET'"
 
-      - name: Apply classic craft migrations and initial catalog
+      - name: Apply additive activity and craft migrations
         shell: bash
         run: |
-          # Only craft migrations, in the selected environment's established checkout.
+          # Only explicitly listed additive migrations in the established checkout.
           if [[ "$TARGET" = test ]]; then
             repo_root='/var/code/ablaki'
             install_context='CRAFT_TEST_INSTALL=confirmed-test-checkout'
@@ -207,5 +207,7 @@ jobs:
             exit 1
           fi
           options=(-i "$HOME/.ssh/deploy_key" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=yes -o UserKnownHostsFile="$HOME/.ssh/known_hosts")
+          ssh "${options[@]}" -p "$DEPLOY_PORT" "$DEPLOY_USER@$DEPLOY_HOST" \
+            "cd '$repo_root' && test \"\$(pwd -P)\" = '$repo_root' && docker-compose exec -T -e 'USER_ACTIVITY_INSTALL=confirmed-$TARGET-checkout' php php /web/yii2/yii activity-setup/install"
           ssh "${options[@]}" -p "$DEPLOY_PORT" "$DEPLOY_USER@$DEPLOY_HOST" \
             "cd '$repo_root' && test \"\$(pwd -P)\" = '$repo_root' && docker-compose exec -T -e '$install_context' php php /web/yii2/yii craft-setup/$install_action"
