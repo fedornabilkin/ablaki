@@ -28,7 +28,8 @@ $db->transaction(function()use($db,$s,$items){
 $chestId=$engine->state(9001)['containers'][0]['id'];
 $source=(int)(new Query())->select('id')->from('craft_inventory')->where(['user_id'=>9001,'item_id'=>$log])->scalar($db);
 $bodies=[];for($i=1;$i<=6;$i++)$bodies[]=['id'=>$log,'slot_id'=>$source,'quantity'=>20,'container_id'=>$chestId,'position'=>$i];
-checkCraft(storageRace('transfer',$bodies)===5,'parallel chest transfers consume the source stack only once');
+$transferred=storageRace('transfer',$bodies);
+checkCraft($transferred===5,'parallel chest transfers consume the source stack only once (successful: '.$transferred.', expected: 5)');
 $container=$engine->state(9001)['containers'][0];
 checkCraft($container['durability']===95&&array_sum(array_column($container['slots'],'quantity'))===100,'parallel deposits preserve all materials and exact wear');
 $body=['id'=>$log,'slot_id'=>$container['slots'][0]['id'],'quantity'=>20,'container_id'=>0,'position'=>1];
