@@ -27,8 +27,8 @@ try {
     putenv('CRAFT_PRODUCTION_INSTALL=confirmed-production-checkout');
     checkInstall($setup->runAction('install-production')===0,'production installer applies craft migrations and catalog');
     $versions=(new \yii\db\Query())->select('version')->from('migration')->column($db);
-    checkInstall(count($versions)===3&&in_array('m260920_190000_extend_classic_craft',$versions,true)&&in_array('m260921_100000_craft_credit_switch',$versions,true),'only the two craft migrations enter standard migration history');
-    checkInstall((int)(new \yii\db\Query())->from('craft_item')->count('*',$db)===44&&(int)(new \yii\db\Query())->from('craft_recipe')->count('*',$db)===34,'initial catalog is installed');
+    checkInstall(count($versions)===4&&in_array('m260920_190000_extend_classic_craft',$versions,true)&&in_array('m260921_100000_craft_credit_switch',$versions,true),'only the three craft migrations enter standard migration history');
+    checkInstall((int)(new \yii\db\Query())->from('craft_item')->count('*',$db)===45&&(int)(new \yii\db\Query())->from('craft_recipe')->count('*',$db)===35,'initial catalog is installed');
     checkInstall((int)$db->createCommand('SELECT charge_credits FROM craft_meta WHERE id=1')->queryScalar()===0,'new installation disables credit charges');
     $item=(int)(new \yii\db\Query())->select('id')->from('craft_item')->where(['code'=>'classic-log'])->scalar($db);
     $db->createCommand()->update('craft_item',['description'=>'Administrator edit'],['id'=>$item])->execute();

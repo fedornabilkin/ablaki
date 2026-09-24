@@ -23,7 +23,7 @@ class CronController extends Controller
 
     public function actionUserClear(): int
     {
-        // Keep the deployed daily entry point, using the owner's selected rating policy.
+        (new \common\services\user\UserClearService())->clear();
         return $this->actionInactiveRating();
     }
 
