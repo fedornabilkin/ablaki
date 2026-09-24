@@ -21,7 +21,7 @@ class CraftSetupController extends \yii\console\Controller
     }
     private function install()
     {
-        $files=['m260920_190000_extend_classic_craft.php','m260921_100000_craft_credit_switch.php'];
+        $files=['m260920_190000_extend_classic_craft.php','m260921_100000_craft_credit_switch.php','m260924_160000_craft_storage.php'];
         $directory=sys_get_temp_dir().'/ablaki-craft-migration-'.bin2hex(random_bytes(8));
         if(!mkdir($directory,0700))throw new \RuntimeException('Cannot prepare craft migrations.');
         try {
@@ -37,15 +37,23 @@ class CraftSetupController extends \yii\console\Controller
     public function actionSeed()
     {
         $db=Yii::$app->db;
-        if((new \yii\db\Query())->from('craft_recipe')->where(['code'=>'classic-plank'])->exists($db)){$this->stdout("Initial craft catalog already installed; administrator edits preserved.\n");return 0;}
+        $installed=(new \yii\db\Query())->from('craft_recipe')->where(['code'=>'classic-plank'])->exists($db);
         $catalog=new CraftCatalog(new CraftStorage($db));
         $data=require Yii::getAlias('@common/modules/craft/data/default-catalog.php');
+        if($installed) {
+            // Add new content only; an existing catalog remains under administrator control.
+            foreach(['categories'=>'craft_category','items'=>'craft_item','stations'=>'craft_station','recipes'=>'craft_recipe'] as $group=>$table) {
+                $existing=(new \yii\db\Query())->select('code')->from($table)->column($db);
+                $data[$group]=array_values(array_filter($data[$group],static function($row)use($existing){return $row['code']==='classic-space-elixir'&&!in_array($row['code'],$existing,true);}));
+            }
+            if(!$data['items']&&!$data['recipes'])return 0;
+        }
         // Legacy display names can overlap; stable codes remain distinct and existing rows stay intact.
         foreach(['categories'=>'craft_category','items'=>'craft_item','recipes'=>'craft_recipe'] as $group=>$table){
             $names=array_map('trim',(new \yii\db\Query())->select('name')->from($table)->column($db));
             foreach($data[$group] as &$row)if(in_array($row['name'],$names,true))$row['name']=mb_substr($row['name'],0,39).' (крафт)';unset($row);
         }
         $preview=$catalog->preview($data);$catalog->apply($data,$preview['digest']);
-        $this->stdout("Installed 44 craft items, 34 recipes and four stations.\n");return 0;
+        $this->stdout("Craft catalog additions installed.\n");return 0;
     }
 }

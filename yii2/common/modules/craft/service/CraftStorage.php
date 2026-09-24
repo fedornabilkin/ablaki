@@ -8,7 +8,7 @@ use yii\web\ConflictHttpException;
 /** All inventory writers hold the catalog lock, then the owner lock, for the whole transaction. */
 class CraftStorage
 {
-    public const SLOT_LIMIT=100;
+    public const SLOT_LIMIT=50;
     public $db;
     public function __construct(Connection $db) { $this->db=$db; }
     public function lock(string $table,array $where): array
@@ -38,73 +38,56 @@ class CraftStorage
     }
     public function quantities(int $userId): array
     {
-        $result=[];
-        foreach ($this->rows('craft_inventory',['user_id'=>$userId]) as $slot) if ($slot['item_id']!==null) $result[(int)$slot['item_id']]=($result[(int)$slot['item_id']]??0)+(int)$slot['item_quantity'];
+        $inventory=new CraftInventory($this);$active=$inventory->capacity($userId)['active_slots'];$result=[];
+        $filled=array_flip((new Query())->select('container_id')->distinct()->from('craft_inventory')->where(['user_id'=>$userId])->andWhere(['not',['container_id'=>null]])->andWhere(['>','item_quantity',0])->column($this->db));
+        foreach($inventory->layout($userId) as $slot)if((int)$slot['slot']<=$active&&!isset($filled[$slot['id']]))$result[(int)$slot['item_id']]=($result[(int)$slot['item_id']]??0)+(int)$slot['item_quantity'];
         return $result;
     }
     public function move(int $userId,array $item,int $delta,?int $slotId=null): void
     {
-        if (!$this->db->getTransaction()) throw new \RuntimeException('Inventory transaction required.');
-        if (!$delta) return;
-        $slots=(new Query())->from('craft_inventory')->where(['user_id'=>$userId])->orderBy(['id'=>SORT_ASC])->all($this->db);
-        if($slotId!==null) {
-            if($delta>0)throw new \InvalidArgumentException('Slot targeting is only available for consumption.');
-            $slots=array_values(array_filter($slots,static function($slot)use($slotId,$item){return (int)$slot['id']===$slotId&&(int)$slot['item_id']===(int)$item['id'];}));
-            if(!$slots)throw new ConflictHttpException('Предмет в этом слоте уже изменился.');
-        }
-        if ($delta<0) {
-            $available=array_sum(array_map(static function($s) use($item) { return (int)$s['item_id']===(int)$item['id']?(int)$s['item_quantity']:0; },$slots));
-            if ($available<-$delta) throw new ConflictHttpException('Не хватает предмета: '.trim($item['name']));
-            foreach ($slots as $slot) {
-                if ((int)$slot['item_id']!==(int)$item['id']) continue;
-                $take=min(-$delta,(int)$slot['item_quantity']);
-                if (!$take) continue;
-                $left=(int)$slot['item_quantity']-$take;
-                if ($this->db->createCommand()->update('craft_inventory',['item_quantity'=>$left,'item_id'=>$left?$item['id']:null],['id'=>$slot['id']])->execute()!==1) throw new \RuntimeException('Inventory write failed.');
-                $delta+=$take; if (!$delta) return;
+        if(!$this->db->getTransaction())throw new \RuntimeException('Inventory transaction required.');
+        if(!$delta)return;
+        $inventory=new CraftInventory($this);$inventory->synchronize($userId);
+        $active=$inventory->capacity($userId)['active_slots'];$slots=$inventory->layout($userId);
+        if($delta<0) {
+            $sources=array_filter($slots,static function($slot)use($item,$slotId,$active,$inventory){
+                return (int)$slot['item_id']===(int)$item['id']&&($slotId!==null?(int)$slot['id']===$slotId:(int)$slot['slot']<=$active)&&!$inventory->nonempty((int)$slot['id']);
+            });
+            if(array_sum(array_column($sources,'item_quantity'))<-$delta)throw new ConflictHttpException('Не хватает доступных предметов. Сначала освободите содержимое сундука.');
+            foreach($sources as $slot) {
+                $take=min(-$delta,(int)$slot['item_quantity']);$left=(int)$slot['item_quantity']-$take;
+                $inventory->write((int)$slot['id'],['item_quantity'=>$left,'item_id'=>$left?$item['id']:null]);
+                if(!$left)$this->db->createCommand()->delete('craft_container',['id'=>$slot['id'],'user_id'=>$userId])->execute();
+                $delta+=$take;if(!$delta)return;
             }
         } else {
-            $limit=(int)$item['stack_size'];
-            if ($limit<1||$limit>10000) throw new ConflictHttpException('Неверный размер стака.');
-            // Fill existing stacks before allocating cells. Empty legacy rows do not consume capacity.
-            $occupied=count(array_filter($slots,static function($slot){return $slot['item_id']!==null&&(int)$slot['item_quantity']>0;}));
-            foreach ($slots as $slot) {
-                if ((int)$slot['item_id']!==(int)$item['id']||(int)$slot['item_quantity']<1) continue;
-                $add=min($delta,max(0,$limit-(int)$slot['item_quantity']));
-                if (!$add) continue;
-                if ($this->db->createCommand()->update('craft_inventory',['item_id'=>$item['id'],'item_quantity'=>(int)$slot['item_quantity']+$add],['id'=>$slot['id']])->execute()!==1) throw new \RuntimeException('Inventory write failed.');
-                $delta-=$add; if (!$delta) return;
-            }
+            if($slotId!==null)throw new \InvalidArgumentException('Positive slot targeting is unsupported.');
+            $limit=($item['storage_kind']??'none')==='chest'?1:(int)$item['stack_size'];
+            if($limit<1||$limit>10000)throw new ConflictHttpException('Неверный размер стопки.');
+            $occupied=[];
             foreach($slots as $slot) {
-                if($slot['item_id']!==null&&(int)$slot['item_quantity']>0)continue;
-                if($occupied>=self::SLOT_LIMIT)throw new ConflictHttpException('Инвентарь заполнен (100 слотов).');
-                $add=min($delta,$limit);
-                if($this->db->createCommand()->update('craft_inventory',['item_id'=>$item['id'],'item_quantity'=>$add],['id'=>$slot['id']])->execute()!==1)throw new \RuntimeException('Inventory write failed.');
-                $occupied++;$delta-=$add;if(!$delta)return;
+                $position=(int)$slot['slot'];$occupied[$position]=true;
+                if($position>$active||(int)$slot['item_id']!==(int)$item['id'])continue;
+                $add=min($delta,max(0,$limit-(int)$slot['item_quantity']));if(!$add)continue;
+                $inventory->write((int)$slot['id'],['item_quantity'=>(int)$slot['item_quantity']+$add]);
+                $delta-=$add;if(!$delta)return;
             }
-            $label=0;
-            foreach ($slots as $slot) $label=max($label,(int)$slot['slot']);
-            while ($delta>0) {
-                if (++$occupied>self::SLOT_LIMIT) throw new ConflictHttpException('Инвентарь заполнен (100 слотов).');
-                $add=min($delta,$limit);
-                $this->insert('craft_inventory',['user_id'=>$userId,'item_id'=>$item['id'],'item_quantity'=>$add,'slot'=>++$label]); $delta-=$add;
+            for($position=1;$position<=$active&&$delta>0;$position++) {
+                if(isset($occupied[$position]))continue;$add=min($delta,$limit);
+                $empty=(new Query())->from('craft_inventory')->where(['user_id'=>$userId,'container_id'=>null,'item_id'=>null])->orderBy('id')->one($this->db);
+                $values=['item_id'=>$item['id'],'item_quantity'=>$add,'slot'=>$position];
+                if($empty)$inventory->write((int)$empty['id'],$values);else $this->insert('craft_inventory',$values+['user_id'=>$userId]);
+                $delta-=$add;
             }
+            if($delta>0)throw new ConflictHttpException('Активные слоты заполнены. Объедините предметы, используйте сундук или откройте дополнительные слоты.');
         }
     }
-
-    /** Called under the same catalog and owner locks as every inventory writer. */
     public function merge(int $userId,array $item,int $sourceId,int $targetId): int
     {
-        if (!$this->db->getTransaction()) throw new \RuntimeException('Inventory transaction required.');
-        $slots=(new Query())->from('craft_inventory')->where(['user_id'=>$userId,'item_id'=>$item['id'],'id'=>[$sourceId,$targetId]])->indexBy('id')->all($this->db);
-        if($sourceId===$targetId||count($slots)!==2||(int)$slots[$sourceId]['item_quantity']<1||(int)$slots[$targetId]['item_quantity']<1)throw new ConflictHttpException('Объединять можно только свои стопки одинаковых предметов.');
-        $limit=(int)$item['stack_size'];
-        if($limit<1||$limit>10000)throw new ConflictHttpException('Неверный размер стопки.');
-        $moved=min((int)$slots[$sourceId]['item_quantity'],max(0,$limit-(int)$slots[$targetId]['item_quantity']));
-        if(!$moved)throw new ConflictHttpException('Стопка уже заполнена.');
-        $left=(int)$slots[$sourceId]['item_quantity']-$moved;
-        if($this->db->createCommand()->update('craft_inventory',['item_quantity'=>$left,'item_id'=>$left?$item['id']:null],['id'=>$sourceId,'user_id'=>$userId])->execute()!==1
-            ||$this->db->createCommand()->update('craft_inventory',['item_quantity'=>(int)$slots[$targetId]['item_quantity']+$moved],['id'=>$targetId,'user_id'=>$userId])->execute()!==1)throw new \RuntimeException('Inventory write failed.');
-        return $moved;
+        if(!$this->db->getTransaction())throw new \RuntimeException('Inventory transaction required.');
+        $target=(new Query())->from('craft_inventory')->where(['id'=>$targetId,'user_id'=>$userId,'item_id'=>$item['id']])->one($this->db);
+        $source=(new Query())->from('craft_inventory')->where(['id'=>$sourceId,'user_id'=>$userId,'item_id'=>$item['id']])->one($this->db);
+        if(!$source||!$target||(int)$source['item_quantity']<1||(int)$target['item_quantity']<1)throw new ConflictHttpException('Выберите свои стопки одинаковых предметов.');
+        return (new CraftInventory($this))->transfer($userId,$sourceId,(int)$target['container_id'],(int)$target['slot'],(int)$source['item_quantity']);
     }
 }

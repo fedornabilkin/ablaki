@@ -35,11 +35,12 @@ $db=$app->db;$s=new CraftStorage($db);$catalog=new CraftCatalog($s);$engine=new 
 if (($argv[1]??'')==='worker') {
     $db->open();
     workerReady();
-    try{$engine->command(9001,$argv[2],'craft',['id'=>(int)$argv[3],'quantity'=>1]);echo 'ok';}
+    try{if(($argv[3]??'')==='storage')$engine->command(9001,$argv[2],$argv[4],json_decode(base64_decode($argv[5]),true));else $engine->command(9001,$argv[2],'craft',['id'=>(int)$argv[3],'quantity'=>1]);echo 'ok';}
     catch(\yii\web\HttpException $e){echo 'rejected';}
     exit;
 }
 function checkCraft($condition,$message){if(!$condition)throw new RuntimeException($message);echo 'PASS '.$message.PHP_EOL;}
+function sameCraftState(array $left,array $right): bool {unset($left['server_time'],$right['server_time']);return $left===$right;}
 function rejectsCraft(callable $call,$message){try{$call();}catch(\yii\web\HttpException $e){checkCraft(true,$message);return;}throw new RuntimeException('Expected rejection: '.$message);}
 function craftRace($id,$same){
     $children=[];
@@ -79,15 +80,17 @@ $old=$s->insert('craft_item',['name'=>'Legacy item','description'=>'','category_
 $s->insert('craft_inventory',['user_id'=>9002,'item_id'=>$old,'item_quantity'=>7,'slot'=>77]);
 require dirname(__DIR__,2).'/console/migrations/m260920_190000_extend_classic_craft.php';
 ob_start();$migration=new \m260920_190000_extend_classic_craft(['db'=>$db]);$result=$migration->up();ob_end_clean();$db->schema->refresh();
-checkCraft($result!==false&&$s->quantities(9002)[$old]===7,'real additive migration preserves legacy inventory');
+checkCraft($result!==false&&(int)(new Query())->select('item_quantity')->from('craft_inventory')->where(['user_id'=>9002])->scalar($db)===7,'real additive migration preserves legacy inventory');
 $settings=new CraftSettings($s);
 checkCraft(!$settings->chargeCredits(),'missing settings column defaults to no debit during deployment');
 require dirname(__DIR__,2).'/console/migrations/m260921_100000_craft_credit_switch.php';
 ob_start();(new \m260921_100000_craft_credit_switch(['db'=>$db]))->up();ob_end_clean();$db->schema->refresh();
+require_once dirname(__DIR__,2).'/console/migrations/m260924_160000_craft_storage.php';
+ob_start();(new \m260924_160000_craft_storage(['db'=>$db]))->up();ob_end_clean();$db->schema->refresh();
 checkCraft(!$settings->chargeCredits()&&$s->quantities(9002)[$old]===7,'credit migration defaults off and preserves inventory');
 $seed=require dirname(__DIR__,2).'/common/modules/craft/data/default-catalog.php';
 $preview=$catalog->preview($seed);$catalog->apply($seed,$preview['digest']);
-checkCraft(count($seed['items'])===44&&count($seed['recipes'])===34,'initial catalog: 44 items, 34 recipes, four stations');
+checkCraft(count($seed['items'])===45&&count($seed['recipes'])===35,'initial catalog: 45 items, 35 recipes, four stations');
 $roundtrip=$catalog->export();$preview=$catalog->preview($roundtrip);$catalog->apply($roundtrip,$preview['digest']);
 checkCraft($catalog->export()===$roundtrip,'export/import roundtrip keeps IDs, links and content');
 $bad=$seed;$bad['recipes'][0]['requires']=['classic-plank'];rejectsCraft(function()use($catalog,$bad){$catalog->preview($bad);},'self dependency rejected');
@@ -101,6 +104,7 @@ try{$brokenCatalog->apply($broken,$check['digest']);throw new LogicException('fa
 checkCraft($catalog->export()===$before,'failed import rolls back all catalog groups');
 $ids=[];foreach($s->rows('craft_recipe') as $r)$ids[trim($r['code'])]=(int)$r['id'];
 $items=[];foreach($s->rows('craft_item') as $r)$items[trim($r['code'])]=$r;
+require __DIR__.'/craft-storage-cases.php';
 $seq=0;$command=function($action,$id=0,$qty=1)use($engine,&$seq){return $engine->command(9001,'craft-check-key-'.++$seq,$action,['id'=>$id,'quantity'=>$qty]);};
 rejectsCraft(function()use($command,$ids){$command('craft',$ids['classic-plank']);},'missing ingredients rejected with empty inventory');
 $engine->command(9001,'starter-repeat-key','starter',[]);$stock=$s->quantities(9001);
@@ -146,7 +150,7 @@ class FailingCraftStorage extends CraftStorage { public function insert(string $
 $db->createCommand()->update('craft_inventory',['item_quantity'=>3],['user_id'=>9001,'item_id'=>$log])->execute();
 $before=$engine->state(9001);
 try{(new Crafting(new FailingCraftStorage($db)))->command(9001,'injected-failure-key','craft',['id'=>$ids['classic-plank']]);throw new LogicException('failure expected');}catch(RuntimeException $e){if($e->getMessage()!=='injected')throw $e;}
-checkCraft($engine->state(9001)===$before,'late write failure rolls inventory, balance and progression back');
+checkCraft(sameCraftState($engine->state(9001),$before),'late write failure rolls inventory, balance and progression back');
 $db->createCommand()->update('persone',['credit'=>0],['user_id'=>9001])->execute();
 rejectsCraft(function()use($command,$ids){$command('craft',$ids['classic-plank']);},'insufficient shared credit rejected');
 // Full inventory rollback, invalid quantities and disabled entries.
@@ -154,7 +158,7 @@ $db->createCommand()->delete('craft_inventory',['user_id'=>9001])->execute();
 for($i=1;$i<=100;$i++)$s->insert('craft_inventory',['user_id'=>9001,'item_id'=>$log,'item_quantity'=>100,'slot'=>$i]);
 $db->createCommand()->update('persone',['credit'=>100],['user_id'=>9001])->execute();
 $before=$engine->state(9001);rejectsCraft(function()use($command,$ids){$command('craft',$ids['classic-plank']);},'full inventory rejects craft');
-checkCraft($engine->state(9001)===$before,'full inventory failure restores ingredients');
+checkCraft(sameCraftState($engine->state(9001),$before),'full inventory failure restores ingredients');
 rejectsCraft(function()use($command,$ids){$command('craft',$ids['classic-plank'],-1);},'negative command quantity rejected');
 $db->createCommand()->update('craft_item',['active'=>0],['id'=>$log])->execute();
 rejectsCraft(function()use($command,$ids){$command('craft',$ids['classic-plank']);},'disabled ingredient rejected');
@@ -164,7 +168,7 @@ $db->createCommand()->update('craft_item',['active'=>1],['id'=>$log])->execute()
 function craftDispatch($method,$path,$auth,$body=[]){$app=Yii::$app;$_SERVER['REQUEST_METHOD']=$method;$app->user->setIdentity(null);$app->request->headers->removeAll();if($auth)$app->request->headers->set('Authorization','Bearer craft-test');$app->request->setPathInfo($path);$app->request->setQueryParams(['envelope'=>'1']);$app->request->setBodyParams($body);$route=$app->urlManager->parseRequest($app->request);if(!$route)return [404,null];try{return [200,$app->runAction($route[0],$route[1])];}catch(\yii\web\HttpException $e){return [$e->statusCode,null];}}
 checkCraft(craftDispatch('GET','v1/craft',false)[0]===401,'API requires authentication');
 checkCraft(craftDispatch('GET','v1/craft/command',true)[0]!==200,'GET cannot mutate craft state');
-list($status,$state)=craftDispatch('GET','v1/craft',true);checkCraft($status===200&&$state['slots_used']===100&&$state['slot_limit']===100&&count($state['inventory_slots'])===100,'API returns 100 real occupied slots for authenticated owner');
+list($status,$state)=craftDispatch('GET','v1/craft',true);checkCraft($status===200&&$state['slots_used']===100&&$state['slot_limit']===50&&$state['active_slots']===20&&count($state['inventory_slots'])===100,'API returns 100 real occupied slots for authenticated owner');
 list($status,$history)=craftDispatch('GET','v1/craft/history',true);checkCraft($status===200&&isset($history['items'],$history['_meta']),'API history envelope dispatch');
 foreach($history['items'] as $entry)checkCraft((int)$entry['user_id']===9001,'history owner enforced');
 list($status,$result)=craftDispatch('POST','v1/craft/command',true,['action'=>'discard','id'=>$log,'quantity'=>1,'user_id'=>9002,'request_key'=>'http-command-test']);
@@ -189,7 +193,7 @@ $db->createCommand()->update('craft_inventory',['item_quantity'=>250],['id'=>$se
 $engine->command(9001,'discard-large-stack','discard',['id'=>$log,'quantity'=>250,'slot_id'=>$secondSlot]);
 checkCraft($s->quantities(9001)[$log]===7,'whole stacks above 100 units can be discarded');
 $slotTx->rollBack();
-// Old empty rows and overflow remain compatible with the new 100 occupied-cell limit.
+// Old empty rows and overflow remain compatible with the new 20 active-cell limit.
 $mergeTx=$db->beginTransaction();
 $db->createCommand()->delete('craft_inventory',['user_id'=>9001])->execute();
 $db->createCommand()->delete('craft_command',['user_id'=>9001])->execute();
@@ -213,21 +217,22 @@ checkCraft($merged['state']['slots_used']===2&&$s->quantities(9001)[$log]===70,'
 $event=(new Query())->from('craft_event')->where(['user_id'=>9001,'action'=>'merge'])->orderBy(['id'=>SORT_DESC])->one($db);
 checkCraft((int)$event['quantity']===20&&(float)$event['credit_change']===0.0,'merge history records moved materials without charging credits');
 $mergeTx->rollBack();
-// Old empty rows and overflow remain compatible with the new 100 occupied-cell limit.
+// Old empty rows and overflow remain compatible with the new 20 active-cell limit.
 $slotTx=$db->beginTransaction();$db->createCommand()->delete('craft_inventory',['user_id'=>9001])->execute();
 for($i=1;$i<=150;$i++)$s->insert('craft_inventory',['user_id'=>9001,'item_id'=>null,'item_quantity'=>0,'slot'=>$i]);
-$s->move(9001,$items['classic-log'],10000);
-checkCraft($engine->state(9001)['slots_used']===100,'legacy empty rows do not reduce 100-slot capacity');
-rejectsCraft(function()use($s,$items){$s->move(9001,$items['classic-plank'],1);},'empty legacy rows cannot bypass 100-slot limit');
+$s->move(9001,$items['classic-log'],2000);
+checkCraft($engine->state(9001)['slots_used']===20,'legacy empty rows do not reduce 20-slot capacity');
+rejectsCraft(function()use($s,$items){$s->move(9001,$items['classic-plank'],1);},'empty legacy rows cannot bypass 20-slot limit');
 $s->move(9001,$items['classic-log'],-1);$s->move(9001,$items['classic-log'],1);
-checkCraft($s->quantities(9001)[$log]===10000,'existing stack can be topped up at capacity');
+checkCraft($s->quantities(9001)[$log]===2000,'existing stack can be topped up at capacity');
 $s->move(9001,$items['classic-log'],-100);$s->move(9001,$items['classic-plank'],1);
-checkCraft($engine->state(9001)['slots_used']===100,'freed slot can be reused at new limit');
+checkCraft($engine->state(9001)['slots_used']===20,'freed slot can be reused at new limit');
 $s->insert('craft_inventory',['user_id'=>9001,'item_id'=>$old,'item_quantity'=>7,'slot'=>151]);
-checkCraft($engine->state(9001)['slots_used']===101&&$s->quantities(9001)[$old]===7,'pre-existing overflow stays visible without losing items');
+checkCraft($engine->state(9001)['slots_used']===21&&!isset($s->quantities(9001)[$old]),'pre-existing overflow stays visible without losing items');
 $slotTx->rollBack();
 // Station, consumable, minimum level and an entire content tree can be exercised in a rolled-back fixture.
 $tx=$db->beginTransaction();
+$db->createCommand()->update('craft_capacity',['permanent_slots'=>50],['user_id'=>9001])->execute();
 $db->createCommand()->delete('craft_inventory',['user_id'=>9001])->execute();
 $db->createCommand()->delete('craft_command',['user_id'=>9001])->execute();
 $preview=$catalog->preview($seed);$catalog->apply($seed,$preview['digest']);
@@ -238,7 +243,7 @@ foreach($seed['recipes'] as $row){
     $command('craft',$ids[$row['code']]);
     $db->createCommand()->delete('craft_command',['user_id'=>9001])->execute();
 }
-checkCraft((int)(new Query())->from('craft_known')->where(['user_id'=>9001])->count('*',$db)===34,'all 34 recipes form a traversable dependency tree');
+checkCraft((int)(new Query())->from('craft_known')->where(['user_id'=>9001])->count('*',$db)===35,'all 35 recipes form a traversable dependency tree');
 $potion=(int)$items['classic-potion']['id'];$before=$s->quantities(9001)[$potion];$command('use',$potion);
 checkCraft(($s->quantities(9001)[$potion]??0)===$before-1,'consumable is removed on use');
 $furnace=(int)$items['classic-furnace']['id'];$db->createCommand()->delete('craft_inventory',['user_id'=>9001,'item_id'=>$furnace])->execute();
@@ -268,11 +273,11 @@ class CraftTestSession extends \yii\web\Session { public function setFlash($key,
 $app->set('session',['class'=>CraftTestSession::class]);
 $_SERVER['REQUEST_METHOD']='POST';
 $token=$app->request->getCsrfToken();
-$app->request->setBodyParams([$app->request->csrfParam=>$token,'charge_credits'=>'0']);
+$app->request->setBodyParams([$app->request->csrfParam=>$token,'charge_credits'=>'0','inventory'=>array_map('strval',$settings->inventory())]);
 checkCraft($admin->runAction('settings') instanceof \yii\web\Response&&!$settings->chargeCredits(),'admin POST with CSRF can disable charging');
 $app->request->setBodyParams([$app->request->csrfParam=>$token,'charge_credits'=>['1']]);
 rejectsCraft(function()use($admin){$admin->runAction('settings');},'settings reject malformed switch values');
-$app->request->setBodyParams([$app->request->csrfParam=>$token,'charge_credits'=>'1']);
+$app->request->setBodyParams([$app->request->csrfParam=>$token,'charge_credits'=>'1','inventory'=>array_map('strval',$settings->inventory())]);
 checkCraft($admin->runAction('settings') instanceof \yii\web\Response&&$settings->chargeCredits(),'admin POST with CSRF can explicitly enable charging');
 $app->id='app-api';
 rejectsCraft(function()use($admin){$admin->runAction('export');},'admin actions unavailable through public applications');
@@ -284,17 +289,20 @@ if($dsn){
     $db->createCommand()->update('craft_inventory',['item_quantity'=>2],['user_id'=>9001,'item_id'=>$log])->execute();$db->createCommand()->update('persone',['credit'=>3],['user_id'=>9001])->execute();
     $results=craftRace($ids['classic-plank'],true);
     checkCraft(count(array_filter($results,static function($v){return $v==='ok';}))===6&&$s->quantities(9001)[$log]===1&&(float)$engine->state(9001)['credit']===0.0,'parallel same-key requests all succeed with one debit');
+    require __DIR__.'/craft-storage-race.php';
 }
 // The allowlisted disposable database also covers installations without any legacy craft tables.
-foreach(['craft_event','craft_command','craft_known','craft_skill','craft_dependency','craft_history','craft_recipe_tool','craft_recipe_item','craft_inventory','craft_recipe','craft_station','craft_item','craft_category','craft_meta'] as $table)$db->createCommand()->dropTable($table)->execute();
+foreach(['craft_container','craft_slot_lease','craft_capacity','craft_event','craft_command','craft_known','craft_skill','craft_dependency','craft_history','craft_recipe_tool','craft_recipe_item','craft_inventory','craft_recipe','craft_station','craft_item','craft_category','craft_meta'] as $table)$db->createCommand()->dropTable($table)->execute();
 $db->schema->refresh();ob_start();$migration=new \m260920_190000_extend_classic_craft(['db'=>$db]);$result=$migration->up();ob_end_clean();$db->schema->refresh();
 checkCraft($result!==false,'migration creates only missing baseline craft tables on a fresh installation');
 ob_start();(new \m260921_100000_craft_credit_switch(['db'=>$db]))->up();ob_end_clean();$db->schema->refresh();
+require_once dirname(__DIR__,2).'/console/migrations/m260924_160000_craft_storage.php';
+ob_start();(new \m260924_160000_craft_storage(['db'=>$db]))->up();ob_end_clean();$db->schema->refresh();
 checkCraft(!$settings->chargeCredits(),'fresh installation starts with charges disabled');
 $preview=$catalog->preview($seed);$catalog->apply($seed,$preview['digest']);
 $result=$engine->command(9002,'fresh-install-starter','starter',[]);
-checkCraft(count($result['state']['items'])===44&&count($result['state']['recipes'])===34&&count($result['state']['inventory'])===10,'fresh schema imports full catalog and accepts first command');
+checkCraft(count($result['state']['items'])===45&&count($result['state']['recipes'])===35&&count($result['state']['inventory'])===10,'fresh schema imports full catalog and accepts first command');
 $app->params['remote_db']=$db;
 foreach(glob(dirname(__DIR__,2).'/console/migrations/m230317_*_create_craft_*_table.php') as $file){require_once $file;$class=basename($file,'.php');ob_start();$legacyResult=(new $class(['db'=>$db]))->up();ob_end_clean();checkCraft($legacyResult!==false,'older migration recognizes installed craft schema: '.$class);}
-checkCraft(count($catalog->export()['items'])===44,'later normal migrations preserve initialized craft data');
+checkCraft(count($catalog->export()['items'])===45,'later normal migrations preserve initialized craft data');
 echo 'Classic craft checks passed: '.$db->driverName.PHP_EOL;

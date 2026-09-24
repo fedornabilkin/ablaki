@@ -13,7 +13,7 @@ class CraftController extends Controller
     protected function verbs() { return ['index'=>['GET'],'command'=>['POST'],'history'=>['GET']]; }
     private function engine(): Crafting
     {
-        if (!Yii::$app->db->schema->getTableSchema('craft_command',true)) throw new \yii\web\HttpException(503,'Крафт готовится к запуску.');
+        if (!Yii::$app->db->schema->getTableSchema('craft_command',true)||!Yii::$app->db->schema->getTableSchema('craft_container',true)) throw new \yii\web\HttpException(503,'Мастерская обновляется. Попробуйте немного позже.');
         return new Crafting(new CraftStorage(Yii::$app->db));
     }
     public function actionIndex(): array { return $this->engine()->state((int)Yii::$app->user->id); }
