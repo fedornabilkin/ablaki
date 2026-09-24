@@ -132,7 +132,10 @@ class CraftInventory
         $stack=($item['storage_kind']??'none')==='chest'?1:(int)$item['stack_size'];
         $available=$stack-(int)($target['item_quantity']??0);$moved=min($quantity,$available);
         if($moved<1)throw new ConflictHttpException('Стопка заполнена.');
-        if(!$target&&$moved===(int)$source['item_quantity'])$this->write($sourceId,['container_id'=>$containerId?:null,'slot'=>$position]);
+        // Only chests carry an instance ID linking their contents and durability.
+        // Ordinary stacks must exhaust the old source even when the destination is empty,
+        // otherwise a queued request can follow that source ID into its new location.
+        if(!$target&&$moved===(int)$source['item_quantity']&&($item['storage_kind']??'none')==='chest')$this->write($sourceId,['container_id'=>$containerId?:null,'slot'=>$position]);
         else {
             $left=(int)$source['item_quantity']-$moved;
             $this->write($sourceId,['item_id'=>$left?$source['item_id']:null,'item_quantity'=>$left]);

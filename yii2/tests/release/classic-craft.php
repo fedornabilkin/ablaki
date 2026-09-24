@@ -105,6 +105,7 @@ checkCraft($catalog->export()===$before,'failed import rolls back all catalog gr
 $ids=[];foreach($s->rows('craft_recipe') as $r)$ids[trim($r['code'])]=(int)$r['id'];
 $items=[];foreach($s->rows('craft_item') as $r)$items[trim($r['code'])]=$r;
 require __DIR__.'/craft-storage-cases.php';
+require __DIR__.'/craft-transfer-cases.php';
 $seq=0;$command=function($action,$id=0,$qty=1)use($engine,&$seq){return $engine->command(9001,'craft-check-key-'.++$seq,$action,['id'=>$id,'quantity'=>$qty]);};
 rejectsCraft(function()use($command,$ids){$command('craft',$ids['classic-plank']);},'missing ingredients rejected with empty inventory');
 $engine->command(9001,'starter-repeat-key','starter',[]);$stock=$s->quantities(9001);
