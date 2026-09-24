@@ -190,6 +190,30 @@ $engine->command(9001,'discard-large-stack','discard',['id'=>$log,'quantity'=>25
 checkCraft($s->quantities(9001)[$log]===7,'whole stacks above 100 units can be discarded');
 $slotTx->rollBack();
 // Old empty rows and overflow remain compatible with the new 100 occupied-cell limit.
+$mergeTx=$db->beginTransaction();
+$db->createCommand()->delete('craft_inventory',['user_id'=>9001])->execute();
+$db->createCommand()->delete('craft_command',['user_id'=>9001])->execute();
+$source=$s->insert('craft_inventory',['user_id'=>9001,'item_id'=>$log,'item_quantity'=>30,'slot'=>1]);
+$target=$s->insert('craft_inventory',['user_id'=>9001,'item_id'=>$log,'item_quantity'=>90,'slot'=>2]);
+$different=$s->insert('craft_inventory',['user_id'=>9001,'item_id'=>$plank,'item_quantity'=>1,'slot'=>3]);
+$body=['action'=>'merge','id'=>$log,'quantity'=>1,'slot_id'=>$source,'target_slot_id'=>$target,'request_key'=>'merge-http-command'];
+list($status,$merged)=craftDispatch('POST','v1/craft/command',true,$body);
+checkCraft($status===200&&$merged['state']['inventory_slots'][0]['quantity']===20&&$merged['state']['inventory_slots'][1]['quantity']===100&&$s->quantities(9001)[$log]===120,'HTTP merge fills the target and preserves source overflow and total materials');
+list($status,$repeated)=craftDispatch('POST','v1/craft/command',true,$body);
+checkCraft($status===200&&$repeated['replayed']&&$repeated['state']['inventory_slots']===$merged['state']['inventory_slots'],'merge retry uses both original stack IDs without another transfer');
+$changed=$body;$changed['target_slot_id']=$different;
+checkCraft(craftDispatch('POST','v1/craft/command',true,$changed)[0]===409,'merge fingerprint binds destination stack');
+foreach([['target_slot_id'=>$foreignSlot],['target_slot_id'=>$different],['slot_id'=>$target,'target_slot_id'=>$target],['slot_id'=>$foreignSlot],['target_slot_id'=>null],['target_slot_id'=>'bad']] as $invalid) {
+    $invalid=array_merge($body,$invalid,['request_key'=>'invalid-merge-'.bin2hex(random_bytes(8))]);
+    checkCraft(craftDispatch('POST','v1/craft/command',true,$invalid)[0]>=400&&$s->quantities(9001)[$log]===120,'invalid or foreign merge preserves all inventory');
+}
+$db->createCommand()->update('craft_inventory',['item_quantity'=>50],['id'=>$target])->execute();
+$merged=$engine->command(9001,'merge-full-source','merge',['id'=>$log,'slot_id'=>$source,'target_slot_id'=>$target]);
+checkCraft($merged['state']['slots_used']===2&&$s->quantities(9001)[$log]===70,'full merge frees source slot and recomputes aggregate quantity');
+$event=(new Query())->from('craft_event')->where(['user_id'=>9001,'action'=>'merge'])->orderBy(['id'=>SORT_DESC])->one($db);
+checkCraft((int)$event['quantity']===20&&(float)$event['credit_change']===0.0,'merge history records moved materials without charging credits');
+$mergeTx->rollBack();
+// Old empty rows and overflow remain compatible with the new 100 occupied-cell limit.
 $slotTx=$db->beginTransaction();$db->createCommand()->delete('craft_inventory',['user_id'=>9001])->execute();
 for($i=1;$i<=150;$i++)$s->insert('craft_inventory',['user_id'=>9001,'item_id'=>null,'item_quantity'=>0,'slot'=>$i]);
 $s->move(9001,$items['classic-log'],10000);

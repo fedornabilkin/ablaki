@@ -20,15 +20,15 @@ function authResponseCheck(bool $condition, string $message): void
 function authWithoutPasswordWrites(Application $app, string $action, array $params = [])
 {
     $before = $app->db->createCommand('SELECT * FROM user ORDER BY id')->queryAll();
-    $protected = array_diff(array_keys($before[0]), ['last_login_at', 'auth_key']);
+    $protected = array_diff(array_keys($before[0]), ['last_login_at', 'latest_activity', 'auth_key']);
     $app->db->pdo->exec('CREATE TRIGGER reject_login_writes BEFORE UPDATE OF '
         . implode(', ', $protected) . ' ON user BEGIN SELECT RAISE(ABORT, \'login must not write passwords\'); END');
     try {
         $result = $app->runAction('site/' . $action, $params);
         $after = $app->db->createCommand('SELECT * FROM user ORDER BY id')->queryAll();
-        foreach ($before as &$row) unset($row['last_login_at'], $row['auth_key']);
+        foreach ($before as &$row) unset($row['last_login_at'], $row['latest_activity'], $row['auth_key']);
         unset($row);
-        foreach ($after as &$row) unset($row['last_login_at'], $row['auth_key']);
+        foreach ($after as &$row) unset($row['last_login_at'], $row['latest_activity'], $row['auth_key']);
         unset($row);
         authResponseCheck($before === $after, 'login preserves passwords and profile data while retaining the existing token flow');
         return $result;
@@ -69,7 +69,7 @@ $db = $app->db;
 try {
     $db->createCommand('CREATE TABLE user (id INTEGER PRIMARY KEY, username TEXT, email TEXT,
         password_hash TEXT, auth_key TEXT, created_at INTEGER, updated_at INTEGER,
-        last_login_at INTEGER, confirmed_at INTEGER, blocked_at INTEGER)')->execute();
+        last_login_at INTEGER, latest_activity DATETIME, confirmed_at INTEGER, blocked_at INTEGER)')->execute();
     $db->createCommand('CREATE TABLE persone (id INTEGER PRIMARY KEY, user_id INTEGER UNIQUE,
         bonus_count INTEGER DEFAULT 0, refovod INTEGER DEFAULT 0, rating NUMERIC DEFAULT 0,
         balance NUMERIC DEFAULT 0, credit NUMERIC DEFAULT 0)')->execute();
@@ -111,6 +111,7 @@ try {
             authResponseCheck($response['user']['person']['forum_credits_sent'] === 2,
                 'profile statistics counts sent gifts and excludes received gifts');
             authResponseCheck($response['token'] === $db->createCommand('SELECT auth_key FROM user WHERE id=1')->queryScalar(), 'returned token matches persisted credentials');
+            authResponseCheck(\common\services\user\UserActivity::timestamp($db->createCommand('SELECT latest_activity FROM user WHERE id=1')->queryScalar()) >= time() - 5, 'successful login updates persistent activity');
             if ($action === 'login-key') authResponseCheck($response['token'] !== $key, 'existing key rotation is preserved');
             else authResponseCheck($response['token'] === $key, 'password login preserves an existing key');
         }

@@ -2,13 +2,13 @@
 
 ## Контекст
 
-Фронт (`frontend/docs/plan/chat.md`) реализует чат-клиент. На бэке его поддержки сейчас **нет**:
+Фронт (`frontend/docs/plan/done/chat.md`) реализует чат-клиент. На бэке его поддержки сейчас **нет**:
 
 - В `common/modules/forum/` есть REST `v1/forum-theme` и `v1/forum-comment` (модели + UrlRule, см. `common/modules/forum/config/urlRules.php`), но это синхронный REST без real-time.
 - В `docker-compose.yaml` сервис `redis` закомментирован, хотя yii redis-cache настроен (`common/config/main.php`).
 - Никакого WebSocket-сервера в `back/yii2/` или `back/docker/` нет (vendor/* в счёт не идёт).
 
-Цель — добавить модуль `common/modules/chat/` по образцу `common/modules/forum/` плюс отдельный сервис WebSocket-брокера, чтобы фронт мог подключиться по `VITE_WS_URL` из `frontend/docs/plan/chat.md` (б.2) и получать события `MESSAGE`/`TYPING`/`ROOM_JOINED` и т.д., описанные в `frontend/docs/plan/chat.md` (б.8).
+Цель — добавить модуль `common/modules/chat/` по образцу `common/modules/forum/` плюс отдельный сервис WebSocket-брокера, чтобы фронт мог подключиться по `VITE_WS_URL` из `frontend/docs/plan/done/chat.md` (б.2) и получать события `MESSAGE`/`TYPING`/`ROOM_JOINED` и т.д., описанные в `frontend/docs/plan/done/chat.md` (б.8).
 
 ## Решение по транспорту
 
@@ -73,6 +73,6 @@
 ## Зависимости фронта от бэка
 
 Фронт ожидает:
-- `VITE_API_URL` (уже есть) и `VITE_WS_URL` (новая) — координируется с фронтом, см. `frontend/docs/plan/chat.md` (б.2).
-- Структура payload событий совпадает с константами `IN`/`OUT` из `frontend/docs/plan/chat.md` (б.8). Если на бэке выбран Centrifugo, тип события кодируется в JSON-теле публикации `{ "type": "message", "payload": {...} }`, фронт диспатчит по `type`.
+- `VITE_API_URL` (уже есть) и `VITE_WS_URL` (новая) — координируется с фронтом, см. `frontend/docs/plan/done/chat.md` (б.2).
+- Структура payload событий совпадает с константами `IN`/`OUT` из `frontend/docs/plan/done/chat.md` (б.8). Если на бэке выбран Centrifugo, тип события кодируется в JSON-теле публикации `{ "type": "message", "payload": {...} }`, фронт диспатчит по `type`.
 - REST-ответы — формат как у `forum`: на ошибки — `{errors: {...}}` в body, на успех — голый payload, заголовок `x-pagination-total-count` для списков.

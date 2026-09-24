@@ -24,6 +24,7 @@ class PresenceService
     public function touch(int $userId, int $now = null): void
     {
         $now = $now ?? time();
+        UserActivity::touch(Yii::$app->db, $userId, $now);
         if (!$this->mutex->acquire(self::KEY, 2)) {
             throw new RuntimeException('Presence storage is busy.');
         }
@@ -45,6 +46,11 @@ class PresenceService
     /** @return int[] */
     public static function onlineIds(int $now = null): array
     {
+        $now = $now ?? time();
+        if (UserActivity::available(Yii::$app->db)) {
+            return array_map('intval', (new \yii\db\Query())->select('id')->from('{{%user}}')
+                ->where(['between', 'latest_activity', UserActivity::date($now - self::WINDOW_SECONDS), UserActivity::date($now)])->column());
+        }
         return array_map('intval', array_keys((new self())->active($now ?? time())));
     }
 
@@ -53,6 +59,10 @@ class PresenceService
     {
         $now = $now ?? time();
         list($start, $end) = self::dayBounds($now);
+        if (UserActivity::available(Yii::$app->db)) {
+            return array_map('intval', (new \yii\db\Query())->select('id')->from('{{%user}}')
+                ->where(['between', 'latest_activity', UserActivity::date($start), UserActivity::date($now)])->column());
+        }
         return array_map('intval', array_keys(array_filter((new self())->recent($now), static function ($seen) use ($start, $end, $now) {
             return $seen >= $start && $seen < $end && $seen <= $now;
         })));
@@ -62,6 +72,15 @@ class PresenceService
     {
         $day = (new \DateTimeImmutable('@' . ($now ?? time())))->setTimezone(new \DateTimeZone('Europe/Moscow'))->setTime(0, 0);
         return [$day->getTimestamp(), $day->modify('+1 day')->getTimestamp()];
+    }
+
+    public static function todayCondition(int $now): array
+    {
+        $start = self::dayBounds($now)[0];
+        if (UserActivity::available(Yii::$app->db)) {
+            return ['between', 'latest_activity', UserActivity::date($start), UserActivity::date($now)];
+        }
+        return ['or', ['id' => self::todayIds($now)], ['between', 'last_login_at', $start, $now]];
     }
 
     private function recent(int $now): array

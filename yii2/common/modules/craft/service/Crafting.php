@@ -38,15 +38,18 @@ class Crafting
     public function command(int $user,string $key,string $action,array $payload): array
     {
         if($user<1||!preg_match('/^[A-Za-z0-9_-]{16,80}$/D',$key))throw new UnprocessableEntityHttpException('Нужен корректный ключ команды.');
-        if(!in_array($action,['craft','starter','gather','discard','use'],true))throw new UnprocessableEntityHttpException('Неизвестная операция.');
+        if(!in_array($action,['craft','starter','gather','discard','use','merge'],true))throw new UnprocessableEntityHttpException('Неизвестная операция.');
         $qty=$payload['quantity']??1; $id=$payload['id']??0;
         $maxQty=in_array($action,['use','discard'],true)?10000:100;
         if(!is_int($qty)||$qty<1||$qty>$maxQty||!is_int($id)||$id<0)throw new UnprocessableEntityHttpException('Количество должно быть целым от 1 до '.$maxQty.'.');
         $slotId=$payload['slot_id']??null;
-        if($slotId!==null&&(!is_int($slotId)||$slotId<1||!in_array($action,['use','discard'],true)))throw new UnprocessableEntityHttpException('Некорректный слот инвентаря.');
+        if($slotId!==null&&(!is_int($slotId)||$slotId<1||!in_array($action,['use','discard','merge'],true)))throw new UnprocessableEntityHttpException('Некорректный слот инвентаря.');
+        $targetId=$payload['target_slot_id']??null;
+        if(($targetId!==null&&($action!=='merge'||!is_int($targetId)||$targetId<1))||($action==='merge'&&($slotId===null||$targetId===null||$slotId===$targetId||$qty!==1)))throw new UnprocessableEntityHttpException('Выберите два разных слота для объединения.');
         $identity=[$action,$id,$qty];if($slotId!==null)$identity[]=$slotId;
+        if($targetId!==null)$identity[]=$targetId;
         $fingerprint=hash('sha256',json_encode($identity));
-        $result=$this->s->db->transaction(function() use($user,$key,$action,$id,$qty,$slotId,$fingerprint) {
+        $result=$this->s->db->transaction(function() use($user,$key,$action,$id,$qty,$slotId,$targetId,$fingerprint) {
             // Catalog imports and player commands use the same short, deterministic lock order.
             $meta=$this->s->lock('craft_meta',['id'=>1]); $person=$this->s->lock('persone',['user_id'=>$user]);
             $old=$this->one('craft_command',['user_id'=>$user,'request_key'=>$key]);
@@ -55,6 +58,12 @@ class Crafting
             if((int)$recent>=30)throw new \yii\web\TooManyRequestsHttpException('Слишком много операций. Попробуйте через минуту.');
             if($action==='craft')$message=$this->craft($user,$person,$id,$qty,(int)($meta['charge_credits']??0)===1);
             elseif($action==='starter'||$action==='gather')$message=$this->supplies($user,$action);
+            elseif($action==='merge') {
+                $item=$this->item($id,false);
+                $moved=$this->s->merge($user,$item,$slotId,$targetId);
+                $this->event($user,'merge',$moved,['item_id'=>$id]);
+                $message='Объединено: '.trim($item['name']).' × '.$moved;
+            }
             else {
                 $item=$this->item($id,$action!=='discard');
                 if($action==='discard'&&!(int)$item['destroyable'])throw new ConflictHttpException('Этот предмет нельзя удалить.');

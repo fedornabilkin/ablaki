@@ -27,6 +27,9 @@ class User extends \common\models\user\User
             'id',
             'created_at',
             'last_login_at',
+            'latest_activity' => static function (self $model) {
+                return \common\services\user\UserActivity::timestamp($model->getAttribute('latest_activity'));
+            },
             'username',
             'person',
             'is_online' => static function (self $model) {
