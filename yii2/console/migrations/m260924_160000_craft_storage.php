@@ -5,6 +5,22 @@ use yii\db\Query;
 /** Additive and restartable on MySQL; existing items, including overflow, are retained. */
 class m260924_160000_craft_storage extends Migration
 {
+    public function up()
+    {
+        // MySQL/MariaDB DDL commits implicitly. Start the data transaction only
+        // after all schema changes, without a stale outer Yii transaction/savepoint.
+        if ($this->db->driverName === 'mysql') return $this->safeUp();
+        return parent::up();
+    }
+
+    private function ensureIndex($name, $table, array $columns)
+    {
+        foreach ($this->db->schema->getTableIndexes($table, true) as $index) {
+            if ($index->name === $name) return;
+        }
+        $this->createIndex($name, $table, $columns);
+    }
+
     public function safeUp()
     {
         foreach (['slot_price'=>10,'elixir_slots'=>5,'elixir_days'=>7,'chest_slots'=>10,'chest_durability'=>100,'chest_wear'=>1] as $field=>$value) {
@@ -15,15 +31,16 @@ class m260924_160000_craft_storage extends Migration
         }
         if (!$this->db->schema->getTableSchema('craft_inventory',true)->getColumn('container_id')) {
             $this->addColumn('craft_inventory','container_id',$this->integer()->null());
-            $this->createIndex('idx-craft-inventory-container','craft_inventory',['user_id','container_id']);
         }
+        // A previous DDL command may have committed before an interrupted run.
+        $this->ensureIndex('idx-craft-inventory-container','craft_inventory',['user_id','container_id']);
         if (!$this->db->schema->getTableSchema('craft_capacity',true)) $this->createTable('craft_capacity',[
             'user_id'=>$this->integer()->notNull(),'permanent_slots'=>$this->integer()->notNull()->defaultValue(20),'PRIMARY KEY ([[user_id]])',
         ]);
         if (!$this->db->schema->getTableSchema('craft_slot_lease',true)) {
             $this->createTable('craft_slot_lease',['id'=>$this->primaryKey(),'user_id'=>$this->integer()->notNull(),'slots'=>$this->integer()->notNull(),'expires_at'=>$this->integer()->notNull()]);
-            $this->createIndex('idx-craft-lease-owner','craft_slot_lease',['user_id','expires_at']);
         }
+        $this->ensureIndex('idx-craft-lease-owner','craft_slot_lease',['user_id','expires_at']);
         if (!$this->db->schema->getTableSchema('craft_container',true)) $this->createTable('craft_container',[
             'id'=>$this->integer()->notNull(),'user_id'=>$this->integer()->notNull(),'capacity'=>$this->integer()->notNull(),'durability'=>$this->integer()->notNull(),'max_durability'=>$this->integer()->notNull(),'PRIMARY KEY ([[id]])',
         ]);
