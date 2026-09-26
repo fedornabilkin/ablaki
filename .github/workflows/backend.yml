@@ -184,7 +184,7 @@ jobs:
           scp "${options[@]}" -P "$DEPLOY_PORT" deploy/backend-deploy.sh "$DEPLOY_USER@$DEPLOY_HOST:$deploy_root/backend-deploy.sh"
           if [[ "$TARGET" = test ]]; then
             scp "${options[@]}" -P "$DEPLOY_PORT" deploy/craft-prepare-test.sh "$DEPLOY_USER@$DEPLOY_HOST:$deploy_root/craft-prepare-test.sh"
-            ssh "${options[@]}" -p "$DEPLOY_PORT" "$DEPLOY_USER@$DEPLOY_HOST" "bash '$deploy_root/craft-prepare-test.sh' '$deploy_root'"
+            ssh "${options[@]}" -p "$DEPLOY_PORT" "$DEPLOY_USER@$DEPLOY_HOST" "bash '$deploy_root/craft-prepare-test.sh'"
           fi
           ssh "${options[@]}" -p "$DEPLOY_PORT" "$DEPLOY_USER@$DEPLOY_HOST" \
             "bash '$deploy_root/backend-deploy.sh' '$repo_root' '$GITHUB_REF_NAME' '$TARGET'"
