@@ -14,4 +14,14 @@ use yii\db\ActiveQuery;
 class ForumThemeQuery extends ActiveQuery
 {
     use UserQueryTrait;
+
+    public function prepare($builder)
+    {
+        $query = parent::prepare($builder);
+        if (\Yii::$app instanceof \yii\web\Application && \Yii::$app->user->isGuest) {
+            list(, $alias) = $this->getTableNameAndAlias();
+            $query->andWhere([$alias . '.is_private' => 0]);
+        }
+        return $query;
+    }
 }

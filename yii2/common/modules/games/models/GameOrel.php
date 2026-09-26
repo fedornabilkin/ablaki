@@ -35,6 +35,7 @@ class GameOrel extends Orel
     {
         $arr = [
             ['count', 'integer', 'min' => 1, 'max' => 100],
+            ['count', 'required'],
             ['hod', 'in', 'range' => [1, 2], 'on' => self::SCENARIO_PLAY],
             ['hod', 'integer', 'on' => self::SCENARIO_PLAY],
         ];

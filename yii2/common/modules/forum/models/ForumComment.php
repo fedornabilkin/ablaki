@@ -28,6 +28,8 @@ class ForumComment extends ActiveRecord implements UserRelationInterface
 {
     use ModelQueryTrait;
 
+    public static function find(): ActiveQuery { return new ForumCommentQuery(static::class); }
+
     /**
      * {@inheritdoc}
      */

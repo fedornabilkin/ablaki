@@ -27,6 +27,7 @@ class ThemeController extends ActiveController
 
     public function actionVisit(int $id): array
     {
+        if (!\common\modules\forum\models\ForumTheme::find()->where(['forum_theme.id' => $id])->exists()) throw new \yii\web\NotFoundHttpException();
         $changed = Yii::$app->db->createCommand()->update('forum_theme', [
             'view' => new \yii\db\Expression('COALESCE([[view]], 0) + 1'),
         ], ['id' => $id])->execute();
@@ -59,8 +60,8 @@ class ThemeController extends ActiveController
         parent::checkAccess($action, $model, $params);
 
         if (
-            ($action === 'delete' && $model->user_id !== App::user()->id)
-            || ($action === 'update' && $model->user_id !== App::user()->id)
+            ($action === 'delete' && (int)$model->user_id !== (int)App::user()->id)
+            || ($action === 'update' && (int)$model->user_id !== (int)App::user()->id)
         ) {
             throw new ForbiddenHttpException(
                 Yii::t('forum', sprintf('The %s action is not available.', $action)),

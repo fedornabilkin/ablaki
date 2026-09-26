@@ -91,7 +91,7 @@ class GameFive extends AbstractGame implements HistorySaveInterface
         return [
             [['user_id', 'user_gamer', 'user_amount', 'gamer_amount', 'updated_at', 'created_at'], 'integer'],
             [['kon'], 'required'],
-            [['kon'], 'number', 'min' => 1],
+            [['kon'], 'number', 'min' => 1, 'max' => 1000000000],
             [['status'], 'string', 'max' => 50],
             [['ball'], 'required'],
             [['ball'], 'integer', 'min' => self::MIN_BALL, 'max' => self::MAX_BALL],

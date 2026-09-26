@@ -222,6 +222,14 @@ $db->createCommand()->insert('forum_comment',['comment'=>$text])->execute();
 (new \console\migrations\m260911_130000_normalize_forum_utf8(['db'=>$db]))->up();
 verifyDb($db->createCommand('SELECT title FROM forum_theme')->queryScalar()===$text
     && $db->createCommand('SELECT comment FROM forum_comment')->queryScalar()===$text,'UTF-8 migrations preserve Cyrillic text');
+require dirname(__DIR__,2).'/console/migrations/m260926_110000_forum_privacy.php';
+$privacyMigration=new \m260926_110000_forum_privacy(['db'=>$db]);
+$privacyMigration->up();
+verifyDb((int)$db->createCommand('SELECT is_private FROM forum_theme')->queryScalar()===0,'privacy migration keeps existing themes public');
+$db->createCommand()->update('forum_theme',['is_private'=>1])->execute();
+$privacyMigration->up();
+verifyDb((int)$db->createCommand('SELECT is_private FROM forum_theme')->queryScalar()===1
+    && $db->createCommand('SELECT title FROM forum_theme')->queryScalar()===$text,'repeated privacy migration preserves visibility and text');
 $db->createCommand()->addColumn('forum_theme', 'view', 'integer')->execute();
 foreach (['user_id' => 'integer', 'active' => 'integer', 'created_at' => 'integer'] as $column => $type) $db->createCommand()->addColumn('forum_comment', $column, $type)->execute();
 $db->createCommand()->createTable('forum_comment_gift', ['id'=>'pk','comment_id'=>'integer','user_id'=>'integer','recipient_id'=>'integer','created_at'=>'integer'])->execute();

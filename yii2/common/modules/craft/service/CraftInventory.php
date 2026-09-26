@@ -23,7 +23,7 @@ class CraftInventory
             if(!isset($chestItems[$slot['item_id']]))continue;
             $container=$this->container($user,(int)$slot['id']);$contents=[];
             foreach($this->s->rows('craft_inventory',['user_id'=>$user,'container_id'=>$slot['id']]) as $row)if($row['item_id']&&(int)$row['item_quantity']>0)$contents[]=$dto($row);
-            $containers[]=['id'=>(int)$slot['id'],'capacity'=>(int)$container['capacity'],'durability'=>(int)$container['durability'],'max_durability'=>(int)$container['max_durability'],'slots'=>$contents];
+            $containers[]=['id'=>(int)$slot['id'],'capacity'=>(int)$container['capacity'],'durability'=>(int)$container['durability'],'max_durability'=>(int)$container['max_durability'],'slots'=>$contents,'repair'=>(new ChestRepair($this->s))->quote($user,(int)$slot['id'])];
         }
         return $capacity+['slot_limit'=>self::LIMIT,'slots_used'=>count($slots),'inventory_slots'=>$slots,'containers'=>$containers,'inventory_settings'=>$this->settings(),'server_time'=>time()];
     }
@@ -89,6 +89,7 @@ class CraftInventory
     }
     public function buy(int $user,int $quantity,int $quotedPrice): int
     {
+        if($quantity<1||$quantity>self::LIMIT)throw new ConflictHttpException('Некорректное количество слотов.');
         $price=$this->settings()['slot_price'];if($quotedPrice!==$price)throw new ConflictHttpException('Цена слота изменилась. Обновите мастерскую.');
         $capacity=$this->capacity($user);$next=$capacity['permanent_slots']+$quantity;
         if($next>self::LIMIT)throw new ConflictHttpException('Все постоянные слоты уже открыты.');
@@ -110,6 +111,7 @@ class CraftInventory
     }
     public function unlock(int $user,int $quantity): void
     {
+        if($quantity<1||$quantity>10000)throw new ConflictHttpException('Некорректное количество эликсира.');
         $settings=$this->settings();$slots=$settings['elixir_slots']*$quantity;
         if($this->capacity($user)['active_slots']+$slots>self::LIMIT)throw new ConflictHttpException('Для этого количества эликсира недостаточно закрытых слотов.');
         $this->s->insert('craft_slot_lease',['user_id'=>$user,'slots'=>$slots,'expires_at'=>time()+$settings['elixir_days']*86400]);
@@ -117,6 +119,7 @@ class CraftInventory
     /** Target container 0 means backpack; target position is stable, including empty cells. */
     public function transfer(int $user,int $sourceId,int $containerId,int $position,int $quantity): int
     {
+        if($quantity<1||$quantity>10000||$containerId<0)throw new ConflictHttpException('Некорректное количество предметов.');
         $source=$this->one('craft_inventory',['id'=>$sourceId,'user_id'=>$user]);
         if(!$source||!$source['item_id']||(int)$source['item_quantity']<$quantity)throw new ConflictHttpException('Предмет в исходном слоте изменился.');
         $item=$this->one('craft_item',['id'=>$source['item_id']]);

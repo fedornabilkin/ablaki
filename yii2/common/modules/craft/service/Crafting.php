@@ -38,12 +38,14 @@ class Crafting
     public function command(int $user,string $key,string $action,array $payload): array
     {
         if($user<1||!preg_match('/^[A-Za-z0-9_-]{16,80}$/D',$key))throw new UnprocessableEntityHttpException('Нужен корректный ключ команды.');
-        if(!in_array($action,['craft','starter','gather','discard','use','merge','transfer','buy_slots'],true))throw new UnprocessableEntityHttpException('Неизвестная операция.');
-        $qty=$payload['quantity']??1; $id=$payload['id']??0;
+        if(!in_array($action,['craft','starter','gather','discard','use','merge','transfer','buy_slots','repair'],true))throw new UnprocessableEntityHttpException('Неизвестная операция.');
+        $qty=array_key_exists('quantity',$payload)?$payload['quantity']:1; $id=$payload['id']??0;
         $maxQty=in_array($action,['use','discard','transfer'],true)?10000:100;
         if(!is_int($qty)||$qty<1||$qty>$maxQty||!is_int($id)||$id<0)throw new UnprocessableEntityHttpException('Количество должно быть целым от 1 до '.$maxQty.'.');
         $slotId=$payload['slot_id']??null;
-        if($slotId!==null&&(!is_int($slotId)||$slotId<1||!in_array($action,['use','discard','merge','transfer'],true)))throw new UnprocessableEntityHttpException('Некорректный слот инвентаря.');
+        if($slotId!==null&&(!is_int($slotId)||$slotId<1||!in_array($action,['use','discard','merge','transfer','repair'],true)))throw new UnprocessableEntityHttpException('Некорректный слот инвентаря.');
+        if(in_array($action,['starter','gather','repair'],true)&&$qty!==1)throw new UnprocessableEntityHttpException('Для этой операции количество должно быть равно 1.');
+        if($action==='repair'&&$slotId===null)throw new UnprocessableEntityHttpException('Выберите сундук для ремонта.');
         $targetId=$payload['target_slot_id']??null;
         if(($targetId!==null&&($action!=='merge'||!is_int($targetId)||$targetId<1))||($action==='merge'&&($slotId===null||$targetId===null||$slotId===$targetId||$qty!==1)))throw new UnprocessableEntityHttpException('Выберите два разных слота для объединения.');
         $identity=[$action,$id,$qty];if($slotId!==null)$identity[]=$slotId;
@@ -66,7 +68,10 @@ class Crafting
             $inventory=new CraftInventory($this->s);$inventory->synchronize($user);
             $recent=(new Query())->from('craft_command')->where(['user_id'=>$user])->andWhere(['>=','created_at',time()-60])->count('*',$this->s->db);
             if((int)$recent>=30)throw new \yii\web\TooManyRequestsHttpException('Слишком много операций. Попробуйте через минуту.');
-            if($action==='buy_slots') {
+            if($action==='repair') {
+                (new ChestRepair($this->s))->repair($user,$slotId,$id);
+                $this->event($user,'repair',1,['item_id'=>$id]);$message='Сундук починен.';
+            } elseif($action==='buy_slots') {
                 $cost=$inventory->buy($user,$qty,$price);$this->event($user,$action,$qty,['credit_change'=>-$cost]);$message='Открыто постоянных слотов: '.$qty;
             } elseif($action==='transfer') {
                 $source=$this->one('craft_inventory',['id'=>$slotId,'user_id'=>$user,'item_id'=>$id]);
@@ -164,7 +169,7 @@ class Crafting
         $inventory=[]; foreach($s->quantities($user) as $id=>$qty)if($qty>0)$inventory[]=['item_id'=>$id,'quantity'=>$qty];
         $storage=(new CraftInventory($s))->state($user);
         $today=(new \DateTimeImmutable('today',new \DateTimeZone('Europe/Moscow')))->getTimestamp();
-        $settings=['charge_credits'=>(new CraftSettings($s))->chargeCredits()];
+        $settings=['charge_credits'=>(new CraftSettings($s))->chargeCredits(),'gather_available_at'=>$today+86400];
         return $settings+$storage+['items'=>$items,'categories'=>$categories,'recipes'=>$recipes,'stations'=>$stations,'skills'=>$skills,'inventory'=>$inventory,'credit'=>(float)$person['credit'],'starter_available'=>!$this->one('craft_event',['user_id'=>$user,'action'=>'starter']),'gather_available'=>!(new Query())->from('craft_event')->where(['user_id'=>$user,'action'=>'gather'])->andWhere(['>=','created_at',$today])->exists($s->db)];
     }
 }

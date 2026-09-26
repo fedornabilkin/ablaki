@@ -118,7 +118,7 @@ class Theme extends ForumTheme
 
     public function scenarios(): array
     {
-        return array_merge(parent::scenarios(), ['create' => ['title'], 'update' => ['title']]);
+        return array_merge(parent::scenarios(), ['create' => ['title', 'is_private'], 'update' => ['title', 'is_private']]);
     }
 
 }

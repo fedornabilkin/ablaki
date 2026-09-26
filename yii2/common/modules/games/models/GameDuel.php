@@ -80,7 +80,7 @@ class GameDuel extends AbstractGame implements HistorySaveInterface
         return [
             [['user_id', 'user_gamer', 'updated_at', 'created_at'], 'integer'],
             [['kon'], 'required'],
-            [['kon'], 'number', 'min' => 1],
+            [['kon'], 'number', 'min' => 1, 'max' => 1000000000],
             [['u1', 'b1'], 'required'],
             [['u2', 'b2'], 'required', 'on' => self::SCENARIO_PLAY],
             [['u1', 'u2', 'b1', 'b2'], 'integer', 'min' => self::ZONE_HEAD, 'max' => self::ZONE_LEGS],
