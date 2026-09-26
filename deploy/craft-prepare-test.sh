@@ -1,19 +1,23 @@
 #!/usr/bin/env bash
-# Preserve the owner's untracked design documents before git pull starts tracking them.
+# Stash the owner's untracked design documents before git pull starts tracking them.
 set -Eeuo pipefail
+die() { printf '::error title=Test document preparation failed::%s\n' "$*" >&2; exit 1; }
 cd /var/code/ablaki
 [[ "$(pwd -P)" = /var/code/ablaki ]]
+documents=()
 for document in docs/plan/mvp-ablaki-craft.md docs/tz/world.md; do
-  if [[ -f "$document" ]] && ! git -c safe.directory=/var/code/ablaki ls-files --error-unmatch -- "$document" >/dev/null 2>&1; then
-    [[ ! -L "$document" ]]
-    git_directory=$(git -c safe.directory=/var/code/ablaki rev-parse --absolute-git-dir)
-    backup_directory="$git_directory/craft-plan-backups"
-    mkdir -p "$backup_directory"
-    document_name=${document##*/}
-    backup="$backup_directory/${document_name%.md}-$(date -u +%Y%m%dT%H%M%S)-$$.md"
-    [[ ! -e "$backup" ]]
-    mv -- "$document" "$backup"
-    [[ -f "$backup" && ! -e "$document" ]]
-    echo "Preserved $document in $backup"
-  fi
+  [[ -f "$document" ]] || continue
+  [[ ! -L "$document" && "$(readlink -f -- "$document")" = "/var/code/ablaki/$document" ]] || die "Unexpected document path: $document"
+  tracked=$(git -c safe.directory=/var/code/ablaki ls-files -- "$document")
+  [[ -z "$tracked" ]] || continue
+  documents+=("$document")
 done
+if (( ${#documents[@]} )); then
+  stash_message="deploy: test untracked design documents $(date -u '+%Y-%m-%d %H:%M:%S UTC')"
+  git -c safe.directory=/var/code/ablaki -c user.name='Ablaki deploy' -c user.email='deploy@ablaki.ru' \
+    stash push --include-untracked -m "$stash_message" -- "${documents[@]}"
+  for document in "${documents[@]}"; do
+    [[ ! -e "$document" ]] || die "Git stash did not clear $document; check write permission on its parent directory"
+  done
+  printf 'Preserved untracked design documents in Git stash: %s\n' "$stash_message"
+fi
