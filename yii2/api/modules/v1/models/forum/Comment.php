@@ -44,6 +44,12 @@ class Comment extends ForumComment
         return array_merge(parent::scenarios(), ['create' => ['comment', 'theme_id'], 'update' => ['comment']]);
     }
 
+    public function beforeValidate()
+    {
+        if ($this->isNewRecord) $this->active = 1;
+        return parent::beforeValidate();
+    }
+
     public function rules(): array
     {
         return array_merge(parent::rules(), [[['theme_id'], 'required', 'on' => 'create']]);

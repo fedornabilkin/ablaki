@@ -87,6 +87,8 @@ require dirname(__DIR__,2).'/console/migrations/m260921_100000_craft_credit_swit
 ob_start();(new \m260921_100000_craft_credit_switch(['db'=>$db]))->up();ob_end_clean();$db->schema->refresh();
 require_once dirname(__DIR__,2).'/console/migrations/m260924_160000_craft_storage.php';
 ob_start();(new \m260924_160000_craft_storage(['db'=>$db]))->up();ob_end_clean();$db->schema->refresh();
+require_once dirname(__DIR__,2).'/console/migrations/m260926_100000_craft_repair.php';
+ob_start();(new \m260926_100000_craft_repair(['db'=>$db]))->up();ob_end_clean();$db->schema->refresh();
 checkCraft(!$settings->chargeCredits()&&$s->quantities(9002)[$old]===7,'credit migration defaults off and preserves inventory');
 $seed=require dirname(__DIR__,2).'/common/modules/craft/data/default-catalog.php';
 $preview=$catalog->preview($seed);$catalog->apply($seed,$preview['digest']);
@@ -106,6 +108,7 @@ $ids=[];foreach($s->rows('craft_recipe') as $r)$ids[trim($r['code'])]=(int)$r['i
 $items=[];foreach($s->rows('craft_item') as $r)$items[trim($r['code'])]=$r;
 require __DIR__.'/craft-storage-cases.php';
 require __DIR__.'/craft-transfer-cases.php';
+require __DIR__.'/craft-repair-cases.php';
 $seq=0;$command=function($action,$id=0,$qty=1)use($engine,&$seq){return $engine->command(9001,'craft-check-key-'.++$seq,$action,['id'=>$id,'quantity'=>$qty]);};
 rejectsCraft(function()use($command,$ids){$command('craft',$ids['classic-plank']);},'missing ingredients rejected with empty inventory');
 $engine->command(9001,'starter-repeat-key','starter',[]);$stock=$s->quantities(9001);
@@ -293,12 +296,14 @@ if($dsn){
     require __DIR__.'/craft-storage-race.php';
 }
 // The allowlisted disposable database also covers installations without any legacy craft tables.
-foreach(['craft_container','craft_slot_lease','craft_capacity','craft_event','craft_command','craft_known','craft_skill','craft_dependency','craft_history','craft_recipe_tool','craft_recipe_item','craft_inventory','craft_recipe','craft_station','craft_item','craft_category','craft_meta'] as $table)$db->createCommand()->dropTable($table)->execute();
+foreach(['craft_tool_wear','craft_container','craft_slot_lease','craft_capacity','craft_event','craft_command','craft_known','craft_skill','craft_dependency','craft_history','craft_recipe_tool','craft_recipe_item','craft_inventory','craft_recipe','craft_station','craft_item','craft_category','craft_meta'] as $table)$db->createCommand()->dropTable($table)->execute();
 $db->schema->refresh();ob_start();$migration=new \m260920_190000_extend_classic_craft(['db'=>$db]);$result=$migration->up();ob_end_clean();$db->schema->refresh();
 checkCraft($result!==false,'migration creates only missing baseline craft tables on a fresh installation');
 ob_start();(new \m260921_100000_craft_credit_switch(['db'=>$db]))->up();ob_end_clean();$db->schema->refresh();
 require_once dirname(__DIR__,2).'/console/migrations/m260924_160000_craft_storage.php';
 ob_start();(new \m260924_160000_craft_storage(['db'=>$db]))->up();ob_end_clean();$db->schema->refresh();
+require_once dirname(__DIR__,2).'/console/migrations/m260926_100000_craft_repair.php';
+ob_start();(new \m260926_100000_craft_repair(['db'=>$db]))->up();ob_end_clean();$db->schema->refresh();
 checkCraft(!$settings->chargeCredits(),'fresh installation starts with charges disabled');
 $preview=$catalog->preview($seed);$catalog->apply($seed,$preview['digest']);
 $result=$engine->command(9002,'fresh-install-starter','starter',[]);

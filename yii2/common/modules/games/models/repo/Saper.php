@@ -81,7 +81,7 @@ class Saper extends ActiveRecord implements UserRelationInterface, HistorySaveIn
                 'time_start_at', 'time_over_at', 'created_at'
             ], 'integer'],
             [['kon'], 'required'],
-            [['kon'], 'number', 'min' => 0.01],
+            [['kon'], 'number', 'min' => 0.01, 'max' => 1000000000],
             [['user_id'], 'exist', 'skipOnError' => true, 'targetClass' => User::class, 'targetAttribute' => ['user_id' => 'id']],
         ];
     }

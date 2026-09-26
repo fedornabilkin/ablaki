@@ -23,6 +23,16 @@ class ThemeController extends Controller
         return array_merge(
             parent::behaviors(),
             [
+                'access' => [
+                    'class' => \yii\filters\AccessControl::class,
+                    'only' => ['create', 'update', 'delete'],
+                    'rules' => [
+                        ['allow' => true, 'actions' => ['create'], 'roles' => ['@']],
+                        ['allow' => true, 'actions' => ['update', 'delete'], 'roles' => ['@'], 'matchCallback' => function () {
+                            return (int)$this->findModel(Yii::$app->request->get('id'))->user_id === (int)Yii::$app->user->id;
+                        }],
+                    ],
+                ],
                 'verbs' => [
                     'class' => VerbFilter::class,
                     'actions' => [
@@ -72,7 +82,10 @@ class ThemeController extends Controller
         $model = new ForumTheme();
 
         if ($this->request->isPost) {
-            if ($model->load($this->request->post()) && $model->save()) {
+            $model->view = 0;
+            $input = $this->request->post($model->formName(), []);
+            $model->setAttributes(array_intersect_key((array)$input, array_flip(['title', 'is_private'])));
+            if ($model->save()) {
                 return $this->redirect(['view', 'id' => $model->id]);
             }
         } else {
@@ -95,8 +108,10 @@ class ThemeController extends Controller
     {
         $model = $this->findModel($id);
 
-        if ($this->request->isPost && $model->load($this->request->post()) && $model->save()) {
-            return $this->redirect(['view', 'id' => $model->id]);
+        if ($this->request->isPost) {
+            $input = $this->request->post($model->formName(), []);
+            $model->setAttributes(array_intersect_key((array)$input, array_flip(['title', 'is_private'])));
+            if ($model->save()) return $this->redirect(['view', 'id' => $model->id]);
         }
 
         return $this->render('update', [

@@ -21,7 +21,7 @@ class CraftSetupController extends \yii\console\Controller
     }
     private function install()
     {
-        $files=['m260920_190000_extend_classic_craft.php','m260921_100000_craft_credit_switch.php','m260924_160000_craft_storage.php'];
+        $files=['m260920_190000_extend_classic_craft.php','m260921_100000_craft_credit_switch.php','m260924_160000_craft_storage.php','m260926_100000_craft_repair.php'];
         $directory=sys_get_temp_dir().'/ablaki-craft-migration-'.bin2hex(random_bytes(8));
         if(!mkdir($directory,0700))throw new \RuntimeException('Cannot prepare craft migrations.');
         try {

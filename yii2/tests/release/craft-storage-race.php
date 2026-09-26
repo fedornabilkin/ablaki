@@ -34,3 +34,24 @@ $container=$engine->state(9001)['containers'][0];
 checkCraft($container['durability']===95&&array_sum(array_column($container['slots'],'quantity'))===100,'parallel deposits preserve all materials and exact wear');
 $body=['id'=>$log,'slot_id'=>$container['slots'][0]['id'],'quantity'=>20,'container_id'=>0,'position'=>1];
 checkCraft(storageRace('transfer',array_fill(0,6,$body),true)===6&&$s->quantities(9001)[$log]===20,'same-key parallel withdrawal replays without duplicate materials');
+$db->transaction(function()use($db,$s,$items,$chestId){
+    $s->lock('craft_meta',['id'=>1]);$s->lock('persone',['user_id'=>9001]);
+    foreach(['classic-plank'=>12,'classic-nails'=>12,'classic-saw'=>1,'classic-bench'=>1] as $code=>$quantity)$s->move(9001,$items[$code],$quantity);
+    $db->createCommand()->update('craft_container',['durability'=>0],['id'=>$chestId])->execute();
+});
+$repairBody=['id'=>(int)$items['classic-chest']['id'],'slot_id'=>$chestId,'quantity'=>1];
+$beforeRepair=$s->quantities(9001);
+$contents=$engine->state(9001)['containers'][0]['slots'];
+checkCraft(storageRace('repair',array_fill(0,6,$repairBody))===1,'parallel distinct repairs restore a damaged chest once');
+$afterRepair=$s->quantities(9001);
+$fixed=$engine->state(9001)['containers'][0];
+checkCraft($beforeRepair[$items['classic-plank']['id']]-$afterRepair[$items['classic-plank']['id']]===4
+    && $beforeRepair[$items['classic-nails']['id']]-$afterRepair[$items['classic-nails']['id']]===4
+    && $fixed['durability']===100 && $fixed['repair']['tools'][0]['durability']===99 && $fixed['slots']===$contents,
+    'parallel repair spends one set of materials and preserves stored items');
+$db->createCommand()->update('craft_container',['durability'=>50],['id'=>$chestId])->execute();
+checkCraft(storageRace('repair',array_fill(0,6,$repairBody),true)===6,'parallel same-key repairs all replay the successful result');
+$replayed=$engine->state(9001)['containers'][0];
+checkCraft($afterRepair[$items['classic-plank']['id']]-$s->quantities(9001)[$items['classic-plank']['id']]===2
+    && $replayed['durability']===100 && $replayed['repair']['tools'][0]['durability']===98,
+    'parallel repair retries spend materials and tool wear once');

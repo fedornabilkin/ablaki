@@ -20,7 +20,9 @@ $config = [
             'username' => getenv('PG_DB_USER'),
             'password' => getenv('PG_DB_PASSWORD'),
             'charset' => 'utf8',
-            'enableSchemaCache' => true,
+            // Each web application has its own cache; CLI migrations cannot invalidate all of them.
+            // Read the current schema on each request so newly migrated tables are immediately visible.
+            'enableSchemaCache' => false,
         ],
         'cache' => [
             'class' => 'yii\caching\FileCache',
@@ -83,7 +85,7 @@ if (getenv('MYSQL_DB_HOST') && getenv('MYSQL_DB_NAME')) {
         'password' => getenv('MYSQL_DB_PASSWORD'),
         'charset' => 'utf8mb4',
         'attributes' => [\PDO::MYSQL_ATTR_INIT_COMMAND => 'SET NAMES utf8mb4'],
-        'enableSchemaCache' => true,
+        'enableSchemaCache' => false,
     ];
 }
 

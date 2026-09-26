@@ -43,6 +43,8 @@ class ExchangeService
      */
     public function create(CreditExchange $model): void
     {
+        $model->scenario = CreditExchange::SCENARIO_CREATE;
+        if (!$model->validate()) throw new \yii\web\UnprocessableEntityHttpException(implode(' ', $model->getFirstErrors()));
         Yii::$app->db->transaction(function () use ($model): void {
             $container = App::container();
             $identity = App::user()->identity;

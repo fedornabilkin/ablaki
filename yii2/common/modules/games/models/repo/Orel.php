@@ -59,7 +59,7 @@ class Orel extends ActiveRecord implements UserRelationInterface, HistorySaveInt
         return [
             [['user_id', 'user_gamer', 'type', 'updated_at', 'created_at'], 'integer'],
             [['kon'], 'required'],
-            [['kon'], 'number', 'min' => 1],
+            [['kon'], 'number', 'min' => 1, 'max' => 1000000000],
             [['user_id'], 'exist', 'skipOnError' => true, 'targetClass' => User::class, 'targetAttribute' => ['user_id' => 'id']],
         ];
     }
