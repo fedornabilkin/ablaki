@@ -16,13 +16,19 @@ $inventoryTotal=static function()use($db){return (int)(new Query())->from('craft
 $inv->synchronize(9001);
 $state=$engine->state(9001);
 checkCraft($state['slot_limit']===50&&$state['active_slots']===20&&$state['permanent_slots']===20,'new backpack has 50 cells, 20 active');
-$bought=$engine->command(9001,'buy-inventory-slot','buy_slots',['quantity'=>2,'unit_price'=>10]);
-checkCraft($bought['state']['credit']===80.0&&$bought['state']['permanent_slots']===22,'permanent slots debit unified credit at configured price');
-$again=$engine->command(9001,'buy-inventory-slot','buy_slots',['quantity'=>2,'unit_price'=>10]);
-checkCraft($again['replayed']&&$again['state']['credit']===80.0&&$again['state']['permanent_slots']===22,'slot purchase retry cannot charge twice');
+$bought=$engine->command(9001,'buy-inventory-slot','buy_slots',['quantity'=>2,'unit_price'=>10,'total_price'=>30]);
+checkCraft($bought['state']['credit']===70.0&&$bought['state']['permanent_slots']===22&&$bought['state']['slot_pricing']==='linear','batch slots cost the sum of increasing individual prices');
+$again=$engine->command(9001,'buy-inventory-slot','buy_slots',['quantity'=>2,'unit_price'=>10,'total_price'=>30]);
+checkCraft($again['replayed']&&$again['state']['credit']===70.0&&$again['state']['permanent_slots']===22,'slot purchase retry cannot charge twice');
 class FailedSlotStorage extends \common\modules\craft\service\CraftStorage { public function insert(string $table,array $values): int {if($table==='craft_command')throw new \RuntimeException('slot failure');return parent::insert($table,$values);} }
-try{(new \common\modules\craft\service\Crafting(new FailedSlotStorage($db)))->command(9001,'failed-slot-purchase','buy_slots',['quantity'=>1,'unit_price'=>10]);throw new \LogicException('failure expected');}catch(\RuntimeException $error){if($error->getMessage()!=='slot failure')throw $error;}
-checkCraft($engine->state(9001)['credit']===80.0&&$engine->state(9001)['permanent_slots']===22&&(int)(new Query())->from('history_balance')->where(['user_id'=>9001,'type'=>'craft_slots'])->count('*',$db)===1,'late purchase failure rolls back credit, slots and balance history');
+try{(new \common\modules\craft\service\Crafting(new FailedSlotStorage($db)))->command(9001,'failed-slot-purchase','buy_slots',['quantity'=>1,'unit_price'=>30,'total_price'=>30]);throw new \LogicException('failure expected');}catch(\RuntimeException $error){if($error->getMessage()!=='slot failure')throw $error;}
+checkCraft($engine->state(9001)['credit']===70.0&&$engine->state(9001)['permanent_slots']===22&&(int)(new Query())->from('history_balance')->where(['user_id'=>9001,'type'=>'craft_slots'])->count('*',$db)===1,'late purchase failure rolls back credit, slots and balance history');
+foreach ([['quantity'=>2,'unit_price'=>30],['quantity'=>2,'unit_price'=>30,'total_price'=>60],['quantity'=>2,'unit_price'=>10,'total_price'=>70],['quantity'=>2,'unit_price'=>30,'total_price'=>null]] as $badQuote) rejectsCraft(function()use($engine,$badQuote){$engine->command(9001,'reject-old-slot-quote','buy_slots',$badQuote);},'old or inconsistent batch quote cannot debit an unexpected total');
+$priceTx=$db->beginTransaction();
+$single=$engine->command(9001,'buy-next-slot-key','buy_slots',['quantity'=>1,'unit_price'=>30]);
+checkCraft($single['state']['credit']===40.0&&$single['state']['permanent_slots']===23,'next slot uses its ordinal and accepts an exact legacy single-slot quote');
+rejectsCraft(function()use($engine){$engine->command(9001,'buy-unaffordable-slots','buy_slots',['quantity'=>2,'unit_price'=>40,'total_price'=>90]);},'increasing batch cost cannot overspend the balance');
+$priceTx->rollBack();
 rejectsCraft(function()use($engine){$engine->command(9001,'buy-stale-price-key','buy_slots',['quantity'=>1,'unit_price'=>0]);},'stale or manipulated slot price rejected');
 rejectsCraft(function()use($engine){$engine->command(9001,'buy-over-limit-key','buy_slots',['quantity'=>29,'unit_price'=>10]);},'cannot purchase beyond 50 permanent cells');
 $material=$items['classic-log'];$chestItem=$items['classic-chest'];$elixir=$items['classic-space-elixir'];

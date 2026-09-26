@@ -50,7 +50,7 @@ class Crafting
         if(($targetId!==null&&($action!=='merge'||!is_int($targetId)||$targetId<1))||($action==='merge'&&($slotId===null||$targetId===null||$slotId===$targetId||$qty!==1)))throw new UnprocessableEntityHttpException('Выберите два разных слота для объединения.');
         $identity=[$action,$id,$qty];if($slotId!==null)$identity[]=$slotId;
         if($targetId!==null)$identity[]=$targetId;
-        $destination=$payload['container_id']??0;$position=$payload['position']??0;$price=$payload['unit_price']??null;
+        $destination=$payload['container_id']??0;$position=$payload['position']??0;$price=$payload['unit_price']??null;$total=$payload['total_price']??null;
         if($action==='transfer') {
             if($slotId===null||!is_int($destination)||$destination<0||!is_int($position)||$position<1||$position>100)throw new UnprocessableEntityHttpException('Выберите исходный предмет и целевой слот.');
             $identity[]=['container_id'=>$destination,'position'=>$position];
@@ -58,9 +58,14 @@ class Crafting
         if($action==='buy_slots') {
             if(!is_int($price)||$price<0)throw new UnprocessableEntityHttpException('Подтвердите цену слота.');
             $identity[]=['unit_price'=>$price];
+            if(array_key_exists('total_price',$payload)) {
+                if(!is_int($total)||$total<0)throw new UnprocessableEntityHttpException('Подтвердите полную стоимость слотов.');
+                $identity[]=['total_price'=>$total];
+            }
         } elseif($price!==null)throw new UnprocessableEntityHttpException('Цена не поддерживается этой операцией.');
+        if($action!=='buy_slots'&&array_key_exists('total_price',$payload))throw new UnprocessableEntityHttpException('Стоимость не поддерживается этой операцией.');
         $fingerprint=hash('sha256',json_encode($identity));
-        $result=$this->s->db->transaction(function() use($user,$key,$action,$id,$qty,$slotId,$targetId,$fingerprint,$destination,$position,$price) {
+        $result=$this->s->db->transaction(function() use($user,$key,$action,$id,$qty,$slotId,$targetId,$fingerprint,$destination,$position,$price,$total) {
             // Catalog imports and player commands use the same short, deterministic lock order.
             $meta=$this->s->lock('craft_meta',['id'=>1]); $person=$this->s->lock('persone',['user_id'=>$user]);
             $old=$this->one('craft_command',['user_id'=>$user,'request_key'=>$key]);
@@ -72,7 +77,7 @@ class Crafting
                 (new ChestRepair($this->s))->repair($user,$slotId,$id);
                 $this->event($user,'repair',1,['item_id'=>$id]);$message='Сундук починен.';
             } elseif($action==='buy_slots') {
-                $cost=$inventory->buy($user,$qty,$price);$this->event($user,$action,$qty,['credit_change'=>-$cost]);$message='Открыто постоянных слотов: '.$qty;
+                $cost=$inventory->buy($user,$qty,$price,$total);$this->event($user,$action,$qty,['credit_change'=>-$cost]);$message='Открыто постоянных слотов: '.$qty;
             } elseif($action==='transfer') {
                 $source=$this->one('craft_inventory',['id'=>$slotId,'user_id'=>$user,'item_id'=>$id]);
                 if(!$source)throw new ConflictHttpException('Предмет в исходном слоте изменился.');

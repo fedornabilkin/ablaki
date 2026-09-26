@@ -11,6 +11,13 @@ class ChestRepair
     private $store;
     public function __construct(CraftStorage $store) { $this->store = $store; }
 
+    private function equipment(int $user, int $itemId): array
+    {
+        // Tools and owned stations share the wear of their current inventory item.
+        $wear = (int)(new Query())->select('wear')->from('craft_tool_wear')->where(['user_id' => $user, 'item_id' => $itemId])->scalar($this->store->db);
+        return ['item_id' => $itemId, 'durability' => self::TOOL_DURABILITY - $wear, 'max_durability' => self::TOOL_DURABILITY];
+    }
+
     public function quote(int $user, int $slotId): array
     {
         $db = $this->store->db;
@@ -50,15 +57,17 @@ class ChestRepair
             $id = (int)$tool['item_id'];
             if (isset($reserve[$id])) continue;
             $reserve[$id] = 1;
-            $wear = (int)(new Query())->select('wear')->from('craft_tool_wear')->where(['user_id' => $user, 'item_id' => $id])->scalar($db);
-            $result['tools'][] = ['item_id' => $id, 'durability' => self::TOOL_DURABILITY - $wear, 'max_durability' => self::TOOL_DURABILITY];
+            $result['tools'][] = $this->equipment($user, $id);
         }
         if ($recipe['station_id'] !== null) {
             $station = (new Query())->from('craft_station')->where(['id' => $recipe['station_id'], 'active' => 1])->one($db);
             if (!$station) $result['reasons'][] = 'Станция недоступна.';
             else {
                 $result['station'] = ['id' => (int)$station['id'], 'name' => trim($station['name']), 'item_id' => $station['item_id'] === null ? null : (int)$station['item_id']];
-                if ($station['item_id'] !== null) $reserve[(int)$station['item_id']] = 1;
+                if ($station['item_id'] !== null) {
+                    $reserve[(int)$station['item_id']] = 1;
+                    $result['station'] += $this->equipment($user, (int)$station['item_id']);
+                }
             }
         }
         foreach ($reserve as $id => $amount) $required[$id] = ($required[$id] ?? 0) + $amount;
@@ -66,6 +75,13 @@ class ChestRepair
             if (empty($items[$id]['active'])) $result['reasons'][] = 'Предмет недоступен: '.trim($items[$id]['name'] ?? '#'.$id);
             elseif (($stock[$id] ?? 0) < $amount) $result['reasons'][] = 'Не хватает: '.trim($items[$id]['name']);
         }
+        $available = static function (int $id) use ($items, $stock, $required): bool { return !empty($items[$id]['active']) && ($stock[$id] ?? 0) >= ($required[$id] ?? 1); };
+        foreach (['materials', 'tools'] as $group) foreach ($result[$group] as &$entry) {
+            $entry['available'] = $available($entry['item_id']);
+            $entry['have'] = $stock[$entry['item_id']] ?? 0;
+        }
+        unset($entry);
+        if ($result['station']) $result['station']['available'] = $result['station']['item_id'] === null || $available($result['station']['item_id']);
         return $result;
     }
 
@@ -82,7 +98,10 @@ class ChestRepair
             $item = (new Query())->from('craft_item')->where(['id' => $material['item_id']])->one($db);
             $this->store->move($user, $item, -$material['quantity']);
         }
-        foreach ($quote['tools'] as $tool) {
+        $equipment = [];
+        foreach ($quote['tools'] as $tool) $equipment[$tool['item_id']] = $tool;
+        if ($quote['station'] && $quote['station']['item_id'] !== null) $equipment[$quote['station']['item_id']] = $quote['station'];
+        foreach ($equipment as $tool) {
             $where = ['user_id' => $user, 'item_id' => $tool['item_id']];
             $wear = self::TOOL_DURABILITY - $tool['durability'] + 1;
             if ($wear >= self::TOOL_DURABILITY) {
