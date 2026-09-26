@@ -47,5 +47,11 @@ $recipe('ink','Чернила','alchemy','material',['coal'=>1,'extract'=>1,'wat
 $recipe('paper','Бумага','wood','material',['plank'=>1,'water'=>2],['bench'],'bench',[],0,1,3);
 $recipe('manual','Учебник ремесленника','wood','consumable',['paper'=>6,'ink'=>2,'leather'=>1],['paper','ink','leather'],'bench',[],2,2,1,30,50);
 $recipe('lantern','Фонарь','metal','product',['ingot'=>2,'glass'=>2,'coal'=>1],['glass','anvil'],'anvil',['hammer'],1,2);
+$recipe('space-elixir','Эликсир пространства','alchemy','consumable',['extract'=>2,'bottle'=>1,'water'=>2],['extract','bottle'],'alchemy');
+foreach($data['items'] as &$entry) {
+    $entry['storage_kind']=$entry['code']==='classic-chest'?'chest':($entry['code']==='classic-space-elixir'?'elixir':'none');
+    if($entry['storage_kind']==='chest'){$entry['stack_size']=1;$entry['icon']='box';$entry['description']='Хранит предметы в отдельных слотах. Износ не удаляет содержимое.';}
+    if($entry['storage_kind']==='elixir')$entry['description']='Временно открывает дополнительные слоты инвентаря.';
+}unset($entry);
 foreach (['bench'=>'Верстак','furnace'=>'Плавильня','anvil'=>'Наковальня','alchemy'=>'Алхимический стол'] as $code=>$name) $data['stations'][]=['code'=>'classic-'.$code,'name'=>$name,'item'=>'classic-'.$code,'active'=>1];
 return $data;

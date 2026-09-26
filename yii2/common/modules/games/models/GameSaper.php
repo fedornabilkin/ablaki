@@ -48,7 +48,8 @@ class GameSaper extends Saper
     public function rules(): array
     {
         $arr = [
-            [['count'], 'integer'],
+            [['count'], 'integer', 'min' => 1, 'max' => 100],
+            [['count'], 'required'],
 
             [['col'], 'integer', 'min' => 1, 'max' => 7, 'on' => self::SCENARIO_PLAY, 'message' => Yii::t('games', 'Invalid value col')],
             [['row'], 'integer', 'min' => 1, 'max' => 5, 'on' => self::SCENARIO_PLAY, 'message' => Yii::t('games', 'Invalid value row')],

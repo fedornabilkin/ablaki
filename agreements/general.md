@@ -13,7 +13,7 @@
 - Git-репозиторий — back; приложения и Composer находятся в yii2.
 - api — JSON API, backend — админка, frontend — серверный UI, console — команды и миграции.
 - Общие домены находятся в common/modules; общие прикладные сервисы — common/services.
-- Планы хранить в plans по [plans.md](plans.md); существующие docs/plan сохранять.
+- Планы хранить в `docs/plan` по [plans.md](plans.md), завершённые — в `docs/plan/done`.
 - Архитектура: [architecture.md](architecture.md). Ограничения релиза: [deployment.md](deployment.md).
 
 ## Совместимость и качество

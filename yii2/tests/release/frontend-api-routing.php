@@ -73,19 +73,19 @@ try {
     $db = $app->db;
     $db->createCommand('CREATE TABLE user (id INTEGER PRIMARY KEY, username TEXT, email TEXT, created_at INTEGER, last_login_at INTEGER)')->execute();
     $db->createCommand('CREATE TABLE persone (id INTEGER PRIMARY KEY, user_id INTEGER UNIQUE, balance NUMERIC, credit NUMERIC, rating NUMERIC, description TEXT, refovod INTEGER, bonus_count INTEGER)')->execute();
-    $db->createCommand('CREATE TABLE forum_theme (id INTEGER PRIMARY KEY, user_id INTEGER, title TEXT, created_at INTEGER, last_post INTEGER, view INTEGER)')->execute();
+    $db->createCommand('CREATE TABLE forum_theme (id INTEGER PRIMARY KEY, user_id INTEGER, title TEXT, created_at INTEGER, last_post INTEGER, view INTEGER, is_private INTEGER NOT NULL DEFAULT 0)')->execute();
     $db->createCommand('CREATE TABLE forum_comment (id INTEGER PRIMARY KEY, user_id INTEGER, theme_id INTEGER, comment TEXT, active INTEGER, created_at INTEGER)')->execute();
     $db->createCommand('CREATE TABLE forum_comment_gift (id INTEGER PRIMARY KEY, amount INTEGER NOT NULL DEFAULT 1, comment_id INTEGER, user_id INTEGER, recipient_id INTEGER, created_at INTEGER, UNIQUE(comment_id,user_id))')->execute();
     $db->createCommand('CREATE TABLE history_balance (id INTEGER PRIMARY KEY, user_id INTEGER, balance NUMERIC, credit NUMERIC, balance_up NUMERIC, credit_up NUMERIC, type TEXT, comment TEXT, created_at INTEGER)')->execute();
     $db->createCommand('CREATE TABLE history_rating (id INTEGER PRIMARY KEY, user_id INTEGER, rating NUMERIC, rating_up NUMERIC, type TEXT, comment TEXT, created_at INTEGER)')->execute();
     $db->createCommand('CREATE TABLE game_orel (id INTEGER PRIMARY KEY, user_id INTEGER, user_gamer INTEGER, kon NUMERIC, type INTEGER, hod INTEGER, created_at INTEGER, updated_at INTEGER)')->execute();
-    $db->createCommand('CREATE TABLE game_saper (id INTEGER PRIMARY KEY, user_id INTEGER, user_gamer INTEGER, kon NUMERIC, etap INTEGER, created_at INTEGER, time_over_at INTEGER)')->execute();
+    $db->createCommand('CREATE TABLE game_saper (id INTEGER PRIMARY KEY, user_id INTEGER, user_gamer INTEGER, kon NUMERIC, kon_double INTEGER, etap INTEGER, pole1 INTEGER, pole2 INTEGER, pole3 INTEGER, pole4 INTEGER, pole5 INTEGER, hod1 INTEGER, hod2 INTEGER, hod3 INTEGER, hod4 INTEGER, hod5 INTEGER, created_at INTEGER, time_start_at INTEGER, time_over_at INTEGER)')->execute();
     $db->createCommand('CREATE TABLE credit_transfer (id INTEGER PRIMARY KEY, user_id INTEGER, user_buyer INTEGER, amount NUMERIC, password TEXT, created_at INTEGER, updated_at INTEGER)')->execute();
     $db->createCommand('CREATE TABLE credit_exchange (id INTEGER PRIMARY KEY, user_id INTEGER, user_buyer INTEGER, amount NUMERIC, credit NUMERIC, type TEXT, created_at INTEGER, updated_at INTEGER)')->execute();
     $db->createCommand('CREATE TABLE fact (id INTEGER PRIMARY KEY, title TEXT, type TEXT, hide INTEGER)')->execute();
     $db->createCommand("INSERT INTO user VALUES (1,'Donor','private1',1,1),(2,'Author','private2',2,2)")->execute();
     $db->createCommand("INSERT INTO persone VALUES (1,1,10,2,1,'',0,0),(2,2,10,1,2,'',1,0)")->execute();
-    $db->createCommand("INSERT INTO forum_theme VALUES (1,2,'Topic',1,1,0)")->execute();
+    $db->createCommand("INSERT INTO forum_theme (id,user_id,title,created_at,last_post,view) VALUES (1,2,'Topic',1,1,0)")->execute();
     $db->createCommand("INSERT INTO forum_comment VALUES (1,2,1,'Message',1,1)")->execute();
     $db->createCommand("INSERT INTO forum_comment VALUES (2,2,1,'Hidden message',0,2)")->execute();
     list($themeStatus, $themeList) = dispatch('GET', 'v1/forum-theme', false, ['envelope' => '1']);
@@ -108,7 +108,7 @@ try {
             'game_orel' => ['user_id' => 1, 'user_gamer' => 2],
             'game_saper' => ['user_id' => 1, 'user_gamer' => 2, 'etap' => 0],
             'forum_theme' => ['user_id' => 1],
-            'forum_comment' => ['user_id' => 1, 'active' => 1],
+            'forum_comment' => ['user_id' => 1, 'active' => 1, 'theme_id' => 1],
             'credit_transfer' => ['user_id' => 1, 'user_buyer' => 2],
             'credit_exchange' => ['user_id' => 1, 'user_buyer' => 2],
         ];
@@ -216,7 +216,7 @@ try {
     routeCheck(dispatch('POST', 'v1/users/heartbeat', true)[1]['count'] === 1, 'heartbeat activity is visible in online count');
     routeCheck((int)$db->createCommand('SELECT COUNT(*) FROM history_balance')->queryScalar() === 2, 'full dispatch retry produced one exact gift history pair');
 
-    $db->createCommand("INSERT INTO forum_theme VALUES (2,1,'Own topic',2,2,0)")->execute();
+    $db->createCommand("INSERT INTO forum_theme (id,user_id,title,created_at,last_post,view) VALUES (2,1,'Own topic',2,2,0)")->execute();
     routeCheck(dispatch('POST', 'v1/users/heartbeat')[0] === 401, 'legacy heartbeat still requires authentication');
     list($status, $heartbeat) = dispatch('POST', 'v1/users/heartbeat', true);
     routeCheck($status === 200 && $heartbeat === ['count' => 1, 'windowSeconds' => 300],
@@ -287,6 +287,7 @@ try {
     require __DIR__ . '/forum-66-cases.php';
     require __DIR__ . '/forum-67-cases.php';
     require __DIR__ . '/forum-68-cases.php';
+    require __DIR__ . '/forum-72-cases.php';
     echo "API routing integration passed on disposable SQLite.\n";
 } finally {
     if (isset($db)) $db->close();

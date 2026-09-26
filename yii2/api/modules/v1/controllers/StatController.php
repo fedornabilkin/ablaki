@@ -83,10 +83,7 @@ class StatController extends Controller
                 return $left;
             };
             $gifts = $this->forumCredits($start, $yesterday, $now);
-            $visitors = (int)User::find()->where(['or',
-                ['id' => PresenceService::todayIds($now)],
-                ['and', ['>=', 'last_login_at', $start], ['<=', 'last_login_at', $now]],
-            ])->count();
+            $visitors = (int)User::find()->where(PresenceService::todayCondition($now))->count();
 
             return [
                 // Keep the original scalar fields for existing clients and API checks.

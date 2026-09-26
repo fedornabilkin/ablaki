@@ -19,6 +19,7 @@ class CraftCatalog
         foreach($items as $r) {
             $entry=['code'=>trim($r['code']),'name'=>trim($r['name']),'description'=>trim((string)$r['description']),'category'=>$cat[$r['category_id']]];
             foreach(['kind','rarity','icon'] as $field) $entry[$field]=trim($r[$field]);
+            $entry['storage_kind']=trim($r['storage_kind']??'none');
             foreach(['stack_size','destroyable','use_xp','gather_quantity','active'] as $field) $entry[$field]=(int)$r[$field];
             $out['items'][]=$entry;
         }
@@ -56,6 +57,8 @@ class CraftCatalog
             foreach(['stack_size'=>[1,10000],'destroyable'=>[0,1],'use_xp'=>[0,1000],'gather_quantity'=>[0,100],'active'=>[0,1]] as $field=>$bounds) $number($r,$field,$bounds[0],$bounds[1]);
             if ($r['use_xp']>0&&$r['kind']!=='consumable') $this->fail('Использование доступно только расходникам.');
             if ($r['gather_quantity']>0&&$r['kind']!=='material') $this->fail('Собирать можно только сырьё.');
+            $storage=$r['storage_kind']??'none';
+            if(!in_array($storage,['none','chest','elixir'],true)||($storage==='chest'&&$r['stack_size']!==1)||($storage==='elixir'&&$r['kind']!=='consumable'))$this->fail('Для сундука нужна стопка 1; эликсир должен быть расходником.');
         }
         foreach($sets['stations'] as $r) { if (($r['item']??null)!==null) $ref('items',$r['item']); $number($r,'active',0,1); }
         foreach($sets['recipes'] as $r) {
@@ -86,7 +89,7 @@ class CraftCatalog
         foreach(['categories','items','stations','recipes'] as $group) {
             if (!isset($patch[$group])||!is_array($patch[$group])||count($patch[$group])>2000) $this->fail('Неверная группа '.$group);
             $map=[]; foreach($data[$group] as $r)$map[$r['code']]=$r;
-            $seen=[]; foreach($patch[$group] as $r) { if(!is_array($r)||!isset($r['code'])||!is_string($r['code'])||isset($seen[$r['code']]))$this->fail('Неверный или повторный код.'); $seen[$r['code']]=true; $map[$r['code']]=$r; }
+            $seen=[]; foreach($patch[$group] as $r) { if(!is_array($r)||!isset($r['code'])||!is_string($r['code'])||isset($seen[$r['code']]))$this->fail('Неверный или повторный код.'); $seen[$r['code']]=true; if($group==='items')$r['storage_kind']=$r['storage_kind']??($map[$r['code']]['storage_kind']??'none'); $map[$r['code']]=$r; }
             $data[$group]=array_values($map); $counts[$group]=count($patch[$group]);
         }
         $this->validate($data);
@@ -100,7 +103,11 @@ class CraftCatalog
             $data=$preview['catalog']; $s=$this->store; $maps=[];
             $upsert=function($table,$r) use($s) { $old=(new \yii\db\Query())->from($table)->where(['code'=>$r['code']])->one($s->db); if($old){$s->db->createCommand()->update($table,$r,['id'=>$old['id']])->execute();return (int)$old['id'];} return $s->insert($table,$r); };
             foreach($data['categories'] as $r) $maps['categories'][$r['code']]=$upsert('craft_category',['code'=>$r['code'],'name'=>$r['name'],'description'=>$r['description']??'']);
-            foreach($data['items'] as $r) { $row=array_intersect_key($r,array_flip(['code','name','description','kind','rarity','icon','stack_size','destroyable','use_xp','gather_quantity','active'])); $row['category_id']=$maps['categories'][$r['category']]; $maps['items'][$r['code']]=$upsert('craft_item',$row); }
+            foreach($data['items'] as $r) {
+                $old=(new \yii\db\Query())->from('craft_item')->where(['code'=>$r['code']])->one($s->db);
+                if($old&&($old['storage_kind']??'none')!==($r['storage_kind']??'none')&&(new \yii\db\Query())->from('craft_inventory')->where(['item_id'=>$old['id']])->andWhere(['>','item_quantity',0])->exists($s->db))$this->fail('Нельзя менять назначение хранилища у предметов в инвентарях. Создайте новый предмет.');
+                $row=array_intersect_key($r,array_flip(['code','name','description','kind','rarity','icon','stack_size','destroyable','use_xp','gather_quantity','active','storage_kind']));$row['category_id']=$maps['categories'][$r['category']];$maps['items'][$r['code']]=$upsert('craft_item',$row);
+            }
             foreach($data['stations'] as $r) $maps['stations'][$r['code']]=$upsert('craft_station',['code'=>$r['code'],'name'=>$r['name'],'active'=>$r['active'],'item_id'=>empty($r['item'])?null:$maps['items'][$r['item']]]);
             foreach($data['recipes'] as $r) {
                 $row=array_intersect_key($r,array_flip(['code','name','description','output_quantity','cost_credits','experience','min_level','active']));

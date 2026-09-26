@@ -20,6 +20,7 @@ class PublicProfile
             'username' => $user->username,
             'created_at' => $user->getAttribute('created_at'),
             'last_login_at' => $user->getAttribute('last_login_at'),
+            'latest_activity' => UserActivity::timestamp($user->getAttribute('latest_activity')),
             'is_online' => $online,
             'person' => $profile === null ? null : [
                 'id' => (int)$profile->id,

@@ -12,12 +12,17 @@ class CatalogController extends AdminController
     public function behaviors() { return ['verbs'=>['class'=>\yii\filters\VerbFilter::class,'actions'=>['preview'=>['POST'],'import'=>['POST'],'settings'=>['POST'],'edit'=>['GET','POST'],'export'=>['GET']]]]; }
     private function catalog(): CraftCatalog { return new CraftCatalog(new CraftStorage(Yii::$app->db)); }
     private function settings(): CraftSettings { return new CraftSettings(new CraftStorage(Yii::$app->db)); }
-    public function actionIndex() { return $this->render('index',['catalog'=>$this->catalog()->export(),'error'=>'','chargeCredits'=>$this->settings()->chargeCredits()]); }
+    public function actionIndex() { return $this->render('index',['catalog'=>$this->catalog()->export(),'error'=>'','chargeCredits'=>$this->settings()->chargeCredits(),'inventorySettings'=>$this->settings()->inventory()]); }
     public function actionSettings()
     {
         $enabled=Yii::$app->request->post('charge_credits');
         if(!in_array($enabled,['0','1'],true))throw new UnprocessableEntityHttpException('Неверное значение переключателя.');
-        $this->settings()->setChargeCredits($enabled==='1',(int)Yii::$app->user->id);
+        $inventory=Yii::$app->request->post('inventory',[]);
+        if(!is_array($inventory))throw new UnprocessableEntityHttpException('Некорректные настройки инвентаря.');
+        Yii::$app->db->transaction(function()use($enabled,$inventory){
+            $this->settings()->setInventory($inventory,(int)Yii::$app->user->id);
+            $this->settings()->setChargeCredits($enabled==='1',(int)Yii::$app->user->id);
+        });
         Yii::info(['actor'=>Yii::$app->user->id,'charge_credits'=>$enabled==='1'],'craft.settings');
         Yii::$app->session->setFlash('success',$enabled==='1'?'Списание кредитов за крафт включено.':'Списание кредитов за крафт выключено.');
         return $this->redirect(['index']);
@@ -43,7 +48,7 @@ class CatalogController extends AdminController
     public function actionPreview()
     {
         try { $data=$this->document(); $preview=$this->catalog()->preview($data); return $this->render('preview',['document'=>json_encode($data,JSON_UNESCAPED_UNICODE),'preview'=>$preview]); }
-        catch(\yii\web\HttpException $e) { Yii::$app->response->statusCode=$e->statusCode; return $this->render('index',['catalog'=>$this->catalog()->export(),'error'=>$e->getMessage(),'chargeCredits'=>$this->settings()->chargeCredits()]); }
+        catch(\yii\web\HttpException $e) { Yii::$app->response->statusCode=$e->statusCode; return $this->render('index',['catalog'=>$this->catalog()->export(),'error'=>$e->getMessage(),'chargeCredits'=>$this->settings()->chargeCredits(),'inventorySettings'=>$this->settings()->inventory()]); }
     }
     public function actionImport()
     {
@@ -57,7 +62,7 @@ class CatalogController extends AdminController
     {
         $fields=[
             'categories'=>['code'=>'','name'=>'','description'=>''],
-            'items'=>['code'=>'','name'=>'','description'=>'','category'=>'','kind'=>'material','rarity'=>'common','icon'=>'cube','stack_size'=>100,'destroyable'=>1,'use_xp'=>0,'gather_quantity'=>0,'active'=>1],
+            'items'=>['code'=>'','name'=>'','description'=>'','category'=>'','kind'=>'material','rarity'=>'common','icon'=>'cube','stack_size'=>100,'destroyable'=>1,'use_xp'=>0,'gather_quantity'=>0,'active'=>1,'storage_kind'=>'none'],
             'stations'=>['code'=>'','name'=>'','item'=>null,'active'=>1],
             'recipes'=>['code'=>'','name'=>'','description'=>'','category'=>'','output'=>'','output_quantity'=>1,'cost_credits'=>0,'experience'=>10,'min_level'=>1,'station'=>null,'active'=>1,'ingredients'=>[],'tools'=>[],'requires'=>[]],
         ];

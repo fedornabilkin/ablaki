@@ -1,14 +1,14 @@
 # План: крафт на бэкенде (REST для интерфейса крафта)
 
-> Актуализация 20.09.2026: ниже сохранён исторический план. Модуль craft и таблицы craft_* уже существуют в master; не создавать их повторно. Активный план: [классический крафт](../../plans/2026-09-20-classic-crafting.md). Используем user и persone.credit; крафт мгновенный. Таймер и биржа отложены владельцем. Старые REST-контракты и отметки ниже не подтверждают готовность серверных операций.
+> Актуализация 20.09.2026: ниже сохранён исторический план. Модуль craft и таблицы craft_* уже существуют в master; не создавать их повторно. Активный план: [классический крафт](2026-09-20-classic-crafting.md). Используем user и persone.credit; крафт мгновенный. Таймер и биржа отложены владельцем. Старые REST-контракты и отметки ниже не подтверждают готовность серверных операций.
 
 ## Контекст
 
-Фронт (`frontend/docs/plan/craft.md`) реализует UI крафта (страница `/craft`, инвентарь + рецепты + кнопка «Скрафтить»). На бэке этого ничего нет: модули `common/modules/` сегодня — `exchange`, `forum`, `games`; никакого `craft`, `recipe`, `item`, `inventory` в моделях/миграциях/контроллерах.
+Фронт (`frontend/docs/plan/done/craft.md`) реализует UI крафта (страница `/craft`, инвентарь + рецепты + кнопка «Скрафтить»). На бэке этого ничего нет: модули `common/modules/` сегодня — `exchange`, `forum`, `games`; никакого `craft`, `recipe`, `item`, `inventory` в моделях/миграциях/контроллерах.
 
 Цель — добавить модуль `common/modules/craft/` по образцу `common/modules/forum/`. После выполнения REST-эндпоинты появятся под `v1/craft-*`, и фронт без правок переключится с in-memory мока на боевой бэк — там же та же модель данных.
 
-Контракт REST согласован с `frontend/docs/plan/craft.md`:
+Контракт REST согласован с `frontend/docs/plan/done/craft.md`:
 
 - `GET v1/craft-item` — список всех предметов справочника.
 - `GET v1/craft-recipe` — список всех рецептов с `ingredients[]` и `output`.
@@ -29,7 +29,7 @@
 - [ ] **д.2** — Миграция `m_create_craft_recipe`: таблица `craft_recipe` (`id SERIAL`, `name VARCHAR(120)`, `description TEXT NULL`, `output_item_id INT REFERENCES craft_item(id)`, `output_qty INT DEFAULT 1`, `cost_credits NUMERIC(10,2) DEFAULT 0`, `time_seconds INT DEFAULT 0`, `category VARCHAR(32) NULL`, `active BOOL DEFAULT TRUE`, `created_at`, `updated_at`).
 - [ ] **д.3** — Миграция `m_create_craft_recipe_ingredient`: таблица `craft_recipe_ingredient` (`recipe_id INT REFERENCES craft_recipe(id) ON DELETE CASCADE`, `item_id INT REFERENCES craft_item(id)`, `qty INT NOT NULL`, PRIMARY KEY `(recipe_id, item_id)`).
 - [ ] **д.4** — Миграция `m_create_craft_inventory`: таблица `craft_inventory` (`user_id INT REFERENCES user(id) ON DELETE CASCADE`, `item_id INT REFERENCES craft_item(id)`, `qty INT NOT NULL DEFAULT 0`, `updated_at`, PRIMARY KEY `(user_id, item_id)`). CHECK `qty >= 0`.
-- [ ] **д.5** — Сид-миграция `m_seed_craft_defaults`: добавить 9 предметов (5 материалов: Дерево/Камень/Верёвка/Ткань/Серебро; 4 продукта: Факел/Корзина/Амулет/Лук) и 4 стартовых рецепта (Факел, Корзина, Амулет, Лук) с ингредиентами. Иконки/имена — те же, что в `frontend/docs/plan/craft.md` (г.16).
+- [ ] **д.5** — Сид-миграция `m_seed_craft_defaults`: добавить 9 предметов (5 материалов: Дерево/Камень/Верёвка/Ткань/Серебро; 4 продукта: Факел/Корзина/Амулет/Лук) и 4 стартовых рецепта (Факел, Корзина, Амулет, Лук) с ингредиентами. Иконки/имена — те же, что в `frontend/docs/plan/done/craft.md` (г.16).
 
 ## Группа 2: модели и query (требует д.1–д.4)
 
@@ -94,7 +94,7 @@
 ## Зависимости фронта от бэка
 
 Фронт ожидает:
-- Те же поля `Item`/`Recipe`/`InventoryEntry`, что в `frontend/docs/plan/craft.md` (Контекст). Если поле переименовано — менять надо здесь, чтобы фронт-код остался.
+- Те же поля `Item`/`Recipe`/`InventoryEntry`, что в `frontend/docs/plan/done/craft.md` (Контекст). Если поле переименовано — менять надо здесь, чтобы фронт-код остался.
 - Формат ошибок — `{errors: {reason: '...'}}` в body при HTTP 400 (стандарт проекта).
 - При успешном `POST /v1/craft-recipe/{id}/craft` — JSON `{result_item, qty, inventory}` (как в `г.18` фронт-плана). `inventory` — массив `[{item, qty}]`.
 - `craft_item.price_credits` (NUMERIC) — цена покупки за 1 шт. на бирже материалов. `0` или `NULL` означает «нельзя купить» (это все `category='product'`).

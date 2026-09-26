@@ -9,7 +9,6 @@
 namespace console\controllers;
 
 use common\services\game\GameCreateService;
-use common\services\user\UserClearService;
 use Yii;
 use yii\console\Controller;
 use yii\console\ExitCode;
@@ -24,13 +23,20 @@ class CronController extends Controller
 
     public function actionUserClear(): int
     {
-        (new UserClearService())->clear();
-        return ExitCode::OK;
+        (new \common\services\user\UserClearService())->clear();
+        return $this->actionInactiveRating();
     }
 
     public function actionGameCreate(): int
     {
         (new GameCreateService())->execute();
+        return ExitCode::OK;
+    }
+
+    public function actionInactiveRating(): int
+    {
+        $count = (new \common\services\user\InactiveRatingService(Yii::$app->db))->run();
+        $this->stdout('Обработано неактивных пользователей: ' . $count . PHP_EOL);
         return ExitCode::OK;
     }
 }

@@ -16,7 +16,7 @@ return [
 //    'timeZone' => 'Europe/Moscow',
 
     'basePath' => dirname(__DIR__),
-    'bootstrap' => ['log'],
+    'bootstrap' => ['log', \common\services\user\ActivityBootstrap::class],
     'controllerNamespace' => 'frontend\controllers',
     'components' => [
         'request' => [
