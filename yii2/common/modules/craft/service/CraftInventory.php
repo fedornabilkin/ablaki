@@ -25,7 +25,7 @@ class CraftInventory
             foreach($this->s->rows('craft_inventory',['user_id'=>$user,'container_id'=>$slot['id']]) as $row)if($row['item_id']&&(int)$row['item_quantity']>0)$contents[]=$dto($row);
             $containers[]=['id'=>(int)$slot['id'],'capacity'=>(int)$container['capacity'],'durability'=>(int)$container['durability'],'max_durability'=>(int)$container['max_durability'],'slots'=>$contents,'repair'=>(new ChestRepair($this->s))->quote($user,(int)$slot['id'])];
         }
-        return $capacity+['slot_limit'=>self::LIMIT,'slots_used'=>count($slots),'inventory_slots'=>$slots,'containers'=>$containers,'inventory_settings'=>$this->settings(),'server_time'=>time()];
+        return $capacity+['slot_limit'=>self::LIMIT,'slots_used'=>count($slots),'inventory_slots'=>$slots,'containers'=>$containers,'inventory_settings'=>$this->settings(),'slot_pricing'=>'linear','server_time'=>time()];
     }
     public function capacity(int $user): array
     {
@@ -87,13 +87,16 @@ class CraftInventory
     {
         return (new Query())->from('craft_inventory')->where(['container_id'=>$id])->andWhere(['>','item_quantity',0])->exists($this->s->db);
     }
-    public function buy(int $user,int $quantity,int $quotedPrice): int
+    public function buy(int $user,int $quantity,int $quotedPrice,?int $quotedTotal=null): int
     {
         if($quantity<1||$quantity>self::LIMIT)throw new ConflictHttpException('Некорректное количество слотов.');
-        $price=$this->settings()['slot_price'];if($quotedPrice!==$price)throw new ConflictHttpException('Цена слота изменилась. Обновите мастерскую.');
         $capacity=$this->capacity($user);$next=$capacity['permanent_slots']+$quantity;
         if($next>self::LIMIT)throw new ConflictHttpException('Все постоянные слоты уже открыты.');
-        $cost=$price*$quantity;
+        $basePrice=$this->settings()['slot_price'];$ordinal=$capacity['permanent_slots']-self::BASE+1;
+        $price=$basePrice*$ordinal;
+        $cost=$basePrice*intdiv($quantity*(2*$ordinal+$quantity-1),2);
+        // Old clients only confirm a flat total; never debit more than the amount they displayed.
+        if($quotedPrice!==$price||($quotedTotal??$quotedPrice*$quantity)!==$cost)throw new ConflictHttpException('Цена слотов изменилась. Обновите мастерскую и подтвердите сумму.');
         if($cost) {
             $this->requireTransactionalBalance();
             (new \common\services\user\CreditLedger($this->s->db))->change($user,-$cost,'craft_slots','Покупка слотов инвентаря: '.$quantity);

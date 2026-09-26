@@ -19,7 +19,8 @@ function storageRace(string $action,array $payloads,bool $same=false): int {
 $db->createCommand()->delete('craft_command',['user_id'=>9001])->execute();
 $db->createCommand()->update('craft_capacity',['permanent_slots'=>20],['user_id'=>9001])->execute();
 $db->createCommand()->update('persone',['credit'=>20],['user_id'=>9001])->execute();
-checkCraft(storageRace('buy_slots',array_fill(0,6,['quantity'=>1,'unit_price'=>10]))===2&&$engine->state(9001)['permanent_slots']===22&&$engine->state(9001)['credit']===0.0,'parallel purchases cannot overspend shared balance');
+checkCraft(storageRace('buy_slots',array_fill(0,6,['quantity'=>1,'unit_price'=>10,'total_price'=>10]))===1&&$engine->state(9001)['permanent_slots']===21&&$engine->state(9001)['credit']===10.0,'parallel purchases reject stale prices after the first slot');
+rejectsCraft(function()use($engine){$engine->command(9001,'race-next-slot-no-credit','buy_slots',['quantity'=>1,'unit_price'=>20,'total_price'=>20]);},'next rising price cannot overspend the remaining balance');
 $db->transaction(function()use($db,$s,$items){
     $s->lock('craft_meta',['id'=>1]);$s->lock('persone',['user_id'=>9001]);
     $db->createCommand()->delete('craft_inventory',['user_id'=>9001])->execute();$db->createCommand()->delete('craft_container',['user_id'=>9001])->execute();
@@ -47,11 +48,11 @@ $afterRepair=$s->quantities(9001);
 $fixed=$engine->state(9001)['containers'][0];
 checkCraft($beforeRepair[$items['classic-plank']['id']]-$afterRepair[$items['classic-plank']['id']]===4
     && $beforeRepair[$items['classic-nails']['id']]-$afterRepair[$items['classic-nails']['id']]===4
-    && $fixed['durability']===100 && $fixed['repair']['tools'][0]['durability']===99 && $fixed['slots']===$contents,
+    && $fixed['durability']===100 && $fixed['repair']['tools'][0]['durability']===99 && $fixed['repair']['station']['durability']===99 && $fixed['slots']===$contents,
     'parallel repair spends one set of materials and preserves stored items');
 $db->createCommand()->update('craft_container',['durability'=>50],['id'=>$chestId])->execute();
 checkCraft(storageRace('repair',array_fill(0,6,$repairBody),true)===6,'parallel same-key repairs all replay the successful result');
 $replayed=$engine->state(9001)['containers'][0];
 checkCraft($afterRepair[$items['classic-plank']['id']]-$s->quantities(9001)[$items['classic-plank']['id']]===2
-    && $replayed['durability']===100 && $replayed['repair']['tools'][0]['durability']===98,
+    && $replayed['durability']===100 && $replayed['repair']['tools'][0]['durability']===98 && $replayed['repair']['station']['durability']===98,
     'parallel repair retries spend materials and tool wear once');
