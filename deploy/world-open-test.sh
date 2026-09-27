@@ -4,7 +4,7 @@
 set -euo pipefail
 cd /var/code/ablaki
 [[ "$(pwd -P)" = /var/code/ablaki ]]
-[[ "$(git branch --show-current)" = test ]]
+[[ "$(git symbolic-ref --quiet --short HEAD)" = test ]]
 [[ -f .env && ! -L .env && -w .env ]]
 exec 9>/opt/ablaki-backend-test/world-setup.lock
 flock -n 9
