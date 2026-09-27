@@ -1,0 +1,1907 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "World shelter and lodging assignment",
+    "version": "1.0.0"
+  },
+  "servers": [
+    {
+      "url": "/v1"
+    }
+  ],
+  "security": [
+    {
+      "bearerAuth": []
+    }
+  ],
+  "paths": {
+    "/world/nodes/{id}/shelter": {
+      "get": {
+        "operationId": "worldShelterState",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/State"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "World error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "World error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "World error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "World error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "World error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "World error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "World error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "description": "Owned starter campsite ID",
+          "schema": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          }
+        }
+      ]
+    },
+    "/world/nodes/{id}/shelter-claim-preview": {
+      "post": {
+        "operationId": "worldShelterClaimPreview",
+        "description": "Account-wide shelter lifecycle. direct_deploy=true only for claim; end_lodging=true only for fold. Repair consumes the quoted raw materials from active backpack slots at zero credits, preserving the instance, deployment and lodging. Protection resumes at repair time without changing past nights. Night illness requires a separately published calendar.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Input"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Quote"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "World error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "World error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "World error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "World error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "World error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "World error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "World error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "description": "Owned starter campsite ID",
+          "schema": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          }
+        }
+      ]
+    },
+    "/world/nodes/{id}/shelter-claim": {
+      "post": {
+        "operationId": "worldShelterClaim",
+        "description": "Account-wide shelter lifecycle. direct_deploy=true only for claim; end_lodging=true only for fold. Repair consumes the quoted raw materials from active backpack slots at zero credits, preserving the instance, deployment and lodging. Protection resumes at repair time without changing past nights. Night illness requires a separately published calendar.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Commit"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./world.openapi.json#/components/schemas/CommandResult"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "World error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "World error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "World error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "World error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "World error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "World error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "World error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "description": "Owned starter campsite ID",
+          "schema": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          }
+        }
+      ]
+    },
+    "/world/nodes/{id}/shelter-deploy-preview": {
+      "post": {
+        "operationId": "worldShelterDeployPreview",
+        "description": "Account-wide shelter lifecycle. direct_deploy=true only for claim; end_lodging=true only for fold. Repair consumes the quoted raw materials from active backpack slots at zero credits, preserving the instance, deployment and lodging. Protection resumes at repair time without changing past nights. Night illness requires a separately published calendar.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Input"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Quote"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "World error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "World error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "World error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "World error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "World error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "World error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "World error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "description": "Owned starter campsite ID",
+          "schema": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          }
+        }
+      ]
+    },
+    "/world/nodes/{id}/shelter-deploy": {
+      "post": {
+        "operationId": "worldShelterDeploy",
+        "description": "Account-wide shelter lifecycle. direct_deploy=true only for claim; end_lodging=true only for fold. Repair consumes the quoted raw materials from active backpack slots at zero credits, preserving the instance, deployment and lodging. Protection resumes at repair time without changing past nights. Night illness requires a separately published calendar.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Commit"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./world.openapi.json#/components/schemas/CommandResult"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "World error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "World error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "World error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "World error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "World error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "World error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "World error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "description": "Owned starter campsite ID",
+          "schema": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          }
+        }
+      ]
+    },
+    "/world/nodes/{id}/shelter-fold-preview": {
+      "post": {
+        "operationId": "worldShelterFoldPreview",
+        "description": "Account-wide shelter lifecycle. direct_deploy=true only for claim; end_lodging=true only for fold. Repair consumes the quoted raw materials from active backpack slots at zero credits, preserving the instance, deployment and lodging. Protection resumes at repair time without changing past nights. Night illness requires a separately published calendar.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Input"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Quote"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "World error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "World error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "World error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "World error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "World error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "World error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "World error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "description": "Owned starter campsite ID",
+          "schema": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          }
+        }
+      ]
+    },
+    "/world/nodes/{id}/shelter-fold": {
+      "post": {
+        "operationId": "worldShelterFold",
+        "description": "Account-wide shelter lifecycle. direct_deploy=true only for claim; end_lodging=true only for fold. Repair consumes the quoted raw materials from active backpack slots at zero credits, preserving the instance, deployment and lodging. Protection resumes at repair time without changing past nights. Night illness requires a separately published calendar.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Commit"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./world.openapi.json#/components/schemas/CommandResult"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "World error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "World error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "World error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "World error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "World error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "World error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "World error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "description": "Owned starter campsite ID",
+          "schema": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          }
+        }
+      ]
+    },
+    "/world/nodes/{id}/shelter-lodge-preview": {
+      "post": {
+        "operationId": "worldShelterLodgePreview",
+        "description": "Account-wide shelter lifecycle. direct_deploy=true only for claim; end_lodging=true only for fold. Repair consumes the quoted raw materials from active backpack slots at zero credits, preserving the instance, deployment and lodging. Protection resumes at repair time without changing past nights. Night illness requires a separately published calendar.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Input"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Quote"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "World error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "World error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "World error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "World error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "World error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "World error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "World error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "description": "Owned starter campsite ID",
+          "schema": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          }
+        }
+      ]
+    },
+    "/world/nodes/{id}/shelter-lodge": {
+      "post": {
+        "operationId": "worldShelterLodge",
+        "description": "Account-wide shelter lifecycle. direct_deploy=true only for claim; end_lodging=true only for fold. Repair consumes the quoted raw materials from active backpack slots at zero credits, preserving the instance, deployment and lodging. Protection resumes at repair time without changing past nights. Night illness requires a separately published calendar.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Commit"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./world.openapi.json#/components/schemas/CommandResult"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "World error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "World error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "World error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "World error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "World error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "World error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "World error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "description": "Owned starter campsite ID",
+          "schema": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          }
+        }
+      ]
+    },
+    "/world/nodes/{id}/shelter-leave-preview": {
+      "post": {
+        "operationId": "worldShelterLeavePreview",
+        "description": "Account-wide shelter lifecycle. direct_deploy=true only for claim; end_lodging=true only for fold. Repair consumes the quoted raw materials from active backpack slots at zero credits, preserving the instance, deployment and lodging. Protection resumes at repair time without changing past nights. Night illness requires a separately published calendar.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Input"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Quote"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "World error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "World error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "World error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "World error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "World error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "World error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "World error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "description": "Owned starter campsite ID",
+          "schema": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          }
+        }
+      ]
+    },
+    "/world/nodes/{id}/shelter-leave": {
+      "post": {
+        "operationId": "worldShelterLeave",
+        "description": "Account-wide shelter lifecycle. direct_deploy=true only for claim; end_lodging=true only for fold. Repair consumes the quoted raw materials from active backpack slots at zero credits, preserving the instance, deployment and lodging. Protection resumes at repair time without changing past nights. Night illness requires a separately published calendar.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Commit"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./world.openapi.json#/components/schemas/CommandResult"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "World error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "World error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "World error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "World error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "World error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "World error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "World error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "description": "Owned starter campsite ID",
+          "schema": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          }
+        }
+      ]
+    },
+    "/world/nodes/{id}/shelter-repair-preview": {
+      "post": {
+        "operationId": "worldShelterRepairPreview",
+        "description": "Account-wide shelter lifecycle. direct_deploy=true only for claim; end_lodging=true only for fold. Repair consumes the quoted raw materials from active backpack slots at zero credits, preserving the instance, deployment and lodging. Protection resumes at repair time without changing past nights. Night illness requires a separately published calendar.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Input"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Quote"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "World error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "World error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "World error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "World error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "World error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "World error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "World error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "description": "Owned starter campsite ID",
+          "schema": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          }
+        }
+      ]
+    },
+    "/world/nodes/{id}/shelter-repair": {
+      "post": {
+        "operationId": "worldShelterRepair",
+        "description": "Account-wide shelter lifecycle. direct_deploy=true only for claim; end_lodging=true only for fold. Repair consumes the quoted raw materials from active backpack slots at zero credits, preserving the instance, deployment and lodging. Protection resumes at repair time without changing past nights. Night illness requires a separately published calendar.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Commit"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./world.openapi.json#/components/schemas/CommandResult"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "World error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "World error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "World error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "World error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "World error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "World error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "World error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "description": "Owned starter campsite ID",
+          "schema": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          }
+        }
+      ]
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer"
+      }
+    },
+    "schemas": {
+      "Input": {
+        "type": "object",
+        "properties": {
+          "direct_deploy": {
+            "type": "boolean"
+          },
+          "end_lodging": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "direct_deploy",
+          "end_lodging"
+        ],
+        "additionalProperties": false
+      },
+      "Commit": {
+        "type": "object",
+        "properties": {
+          "direct_deploy": {
+            "type": "boolean"
+          },
+          "end_lodging": {
+            "type": "boolean"
+          },
+          "request_key": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_-]{16,80}$"
+          },
+          "quote_id": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{32}$"
+          },
+          "expected_revisions": {
+            "$ref": "./world.openapi.json#/components/schemas/Revisions"
+          }
+        },
+        "required": [
+          "direct_deploy",
+          "end_lodging",
+          "request_key",
+          "quote_id",
+          "expected_revisions"
+        ],
+        "additionalProperties": false
+      },
+      "State": {
+        "type": "object",
+        "properties": {
+          "node_id": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          },
+          "claimed": {
+            "type": "boolean"
+          },
+          "claimed_at": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991,
+            "nullable": true
+          },
+          "instance_id": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647,
+            "nullable": true
+          },
+          "inventory_id": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647,
+            "nullable": true
+          },
+          "durability": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991,
+            "nullable": true
+          },
+          "max_durability": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991,
+            "nullable": true
+          },
+          "deployment": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 2147483647
+              },
+              "node_id": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 2147483647
+              },
+              "plot_id": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 2147483647
+              },
+              "started_at": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              "protected_until": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              }
+            },
+            "required": [
+              "id",
+              "node_id",
+              "plot_id",
+              "started_at",
+              "protected_until"
+            ],
+            "additionalProperties": false,
+            "nullable": true
+          },
+          "lodging": {
+            "type": "object",
+            "properties": {
+              "assigned_at": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              "protects_now": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "assigned_at",
+              "protects_now"
+            ],
+            "additionalProperties": false,
+            "nullable": true
+          },
+          "writable": {
+            "type": "boolean"
+          },
+          "night_resolution_enabled": {
+            "type": "boolean"
+          },
+          "server_time": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "current_assignment": {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "shelter",
+                  "house"
+                ]
+              },
+              "node_id": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 2147483647
+              },
+              "interval_id": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 2147483647
+              },
+              "started_at": {
+                "type": "integer",
+                "minimum": 0
+              }
+            },
+            "required": [
+              "kind",
+              "node_id",
+              "interval_id",
+              "started_at"
+            ],
+            "additionalProperties": false,
+            "nullable": true
+          }
+        },
+        "required": [
+          "node_id",
+          "claimed",
+          "claimed_at",
+          "instance_id",
+          "inventory_id",
+          "durability",
+          "max_durability",
+          "deployment",
+          "lodging",
+          "writable",
+          "night_resolution_enabled",
+          "server_time",
+          "current_assignment"
+        ],
+        "additionalProperties": false
+      },
+      "Terms": {
+        "type": "object",
+        "properties": {
+          "node_id": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          },
+          "direct_deploy": {
+            "type": "boolean"
+          },
+          "end_lodging": {
+            "type": "boolean"
+          },
+          "item_id": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          },
+          "price": {
+            "type": "string",
+            "enum": [
+              "0.0000"
+            ]
+          },
+          "instance_id": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647,
+            "nullable": true
+          },
+          "deployment_id": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647,
+            "nullable": true
+          },
+          "lodging_id": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647,
+            "nullable": true
+          },
+          "protection_id": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647,
+            "nullable": true
+          },
+          "backpack_position": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 50,
+            "nullable": true
+          },
+          "actor_id": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          },
+          "repair": {
+            "$ref": "#/components/schemas/Repair"
+          }
+        },
+        "required": [
+          "node_id",
+          "direct_deploy",
+          "end_lodging",
+          "item_id",
+          "price",
+          "instance_id",
+          "deployment_id",
+          "lodging_id",
+          "protection_id",
+          "backpack_position"
+        ],
+        "additionalProperties": false
+      },
+      "Repair": {
+        "type": "object",
+        "properties": {
+          "version": {
+            "type": "integer",
+            "enum": [
+              1
+            ]
+          },
+          "recipes": {
+            "type": "array",
+            "minItems": 2,
+            "maxItems": 2,
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 2147483647
+                },
+                "code": {
+                  "type": "string",
+                  "enum": [
+                    "classic-plank",
+                    "classic-rope"
+                  ]
+                }
+              },
+              "required": [
+                "id",
+                "code"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "durability_before": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 100000
+          },
+          "durability_after": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100000
+          },
+          "restore": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 100000
+          },
+          "materials": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 20,
+            "items": {
+              "type": "object",
+              "properties": {
+                "item_id": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 2147483647
+                },
+                "name": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "icon": {
+                  "type": "string"
+                },
+                "full_quantity": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 20000
+                },
+                "quantity": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 20000
+                },
+                "have": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991
+                },
+                "available": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "item_id",
+                "name",
+                "icon",
+                "full_quantity",
+                "quantity",
+                "have",
+                "available"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "tools": {
+            "type": "array",
+            "maxItems": 0,
+            "items": {}
+          },
+          "station": {
+            "type": "object",
+            "nullable": true,
+            "enum": [
+              null
+            ]
+          },
+          "price": {
+            "type": "string",
+            "enum": [
+              "0.0000"
+            ]
+          },
+          "available": {
+            "type": "boolean"
+          },
+          "reasons": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        },
+        "required": [
+          "version",
+          "recipes",
+          "durability_before",
+          "durability_after",
+          "restore",
+          "materials",
+          "tools",
+          "station",
+          "price",
+          "available",
+          "reasons"
+        ],
+        "additionalProperties": false
+      },
+      "Quote": {
+        "allOf": [
+          {
+            "$ref": "./world.openapi.json#/components/schemas/Quote"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "terms": {
+                "$ref": "#/components/schemas/Terms"
+              }
+            }
+          }
+        ]
+      }
+    }
+  }
+}

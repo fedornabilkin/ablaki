@@ -13,8 +13,10 @@ class WorldSeeder
     public function seed(): array
     {
         return $this->db->transaction(function () {
+            (new Locks($this->db))->row('craft_meta', ['id' => 1]);
             (new Locks($this->db))->row('world_registry', ['id' => 1]);
             \common\modules\craft\service\StorageMaintenance::writable($this->db);
+            ShelterCatalog::seed($this->db);
             $tree = new WorldTree($this->db); $ids = [];
             $nodes = [
                 ['ablaki', null, 'WORLD', 'Мир Аблаки', 0, 0, []],

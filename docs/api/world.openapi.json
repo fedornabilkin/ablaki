@@ -1272,6 +1272,42 @@
     },
     "/world/nodes/{id}/order-cancel": {
       "$ref": "world-orders.openapi.json#/paths/~1world~1nodes~1{id}~1order-cancel"
+    },
+    "/world/nodes/{id}/premises": {
+      "$ref": "world-premises.openapi.json#/paths/~1world~1nodes~1{id}~1premises"
+    },
+    "/world/nodes/{id}/premises-publish-preview": {
+      "$ref": "world-premises.openapi.json#/paths/~1world~1nodes~1{id}~1premises-publish-preview"
+    },
+    "/world/nodes/{id}/premises-publish": {
+      "$ref": "world-premises.openapi.json#/paths/~1world~1nodes~1{id}~1premises-publish"
+    },
+    "/world/nodes/{id}/premises-buy-preview": {
+      "$ref": "world-premises.openapi.json#/paths/~1world~1nodes~1{id}~1premises-buy-preview"
+    },
+    "/world/nodes/{id}/premises-buy": {
+      "$ref": "world-premises.openapi.json#/paths/~1world~1nodes~1{id}~1premises-buy"
+    },
+    "/world/nodes/{id}/premises-withdraw-preview": {
+      "$ref": "world-premises.openapi.json#/paths/~1world~1nodes~1{id}~1premises-withdraw-preview"
+    },
+    "/world/nodes/{id}/premises-withdraw": {
+      "$ref": "world-premises.openapi.json#/paths/~1world~1nodes~1{id}~1premises-withdraw"
+    },
+    "/world/nodes/{id}/housing": {
+      "$ref": "world-housing.openapi.json#/paths/~1world~1nodes~1{id}~1housing"
+    },
+    "/world/nodes/{id}/housing-lodge-preview": {
+      "$ref": "world-housing.openapi.json#/paths/~1world~1nodes~1{id}~1housing-lodge-preview"
+    },
+    "/world/nodes/{id}/housing-lodge": {
+      "$ref": "world-housing.openapi.json#/paths/~1world~1nodes~1{id}~1housing-lodge"
+    },
+    "/world/nodes/{id}/housing-leave-preview": {
+      "$ref": "world-housing.openapi.json#/paths/~1world~1nodes~1{id}~1housing-leave-preview"
+    },
+    "/world/nodes/{id}/housing-leave": {
+      "$ref": "world-housing.openapi.json#/paths/~1world~1nodes~1{id}~1housing-leave"
     }
   },
   "components": {
@@ -1927,6 +1963,16 @@
             "enum": [
               "Cr"
             ]
+          },
+          "building_id": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          },
+          "room_id": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
           }
         },
         "required": [

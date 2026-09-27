@@ -21,6 +21,7 @@ class WorldTree
     }
     public function assertParent(string $type, ?array $parent): void
     {
+        if ($parent && $this->isShelter((int)$parent['id'])) throw new GameError('SHELTER_NOT_A_ROOM', 'В шалаше нельзя создавать помещения или места оборудования.');
         $allowed = ['WORLD' => ['REGION'], 'REGION' => ['SETTLEMENT'], 'SETTLEMENT' => ['BUILDING', 'PLOT'], 'BUILDING' => ['ROOM', 'PLOT'], 'PLOT' => ['BUILDING', 'BED'], 'ROOM' => [], 'BED' => []];
         if (!in_array($type, self::TYPES, true) || (!$parent && $type !== 'WORLD') || ($parent && !in_array($type, $allowed[$parent['node_type']] ?? [], true))) throw new GameError('INVALID_PARENT', 'Здесь нельзя разместить такой объект.', 422);
         if (!$parent) return;
@@ -64,6 +65,11 @@ class WorldTree
     public function previewMove(int $id, int $parentId): array
     {
         $node = $this->get($id); $parent = $this->get($parentId);
+        if ($this->db->schema->getTableSchema('world_housing_place') && (new Query())->from(['p' => 'world_housing_place'])->innerJoin(['c' => 'world_node_closure'], '[[c.descendant_id]]=[[p.room_id]]')->where(['c.ancestor_id' => $id])->exists($this->db)) throw new GameError('HOUSING_MOVE_REQUIRED', 'Жильё закреплено за стоянкой. Для переноса территории нужен отдельный перенос жилья и истории ночлега.');
+        if ($this->db->schema->getTableSchema('world_garden_purchase') && (new Query())->from('world_garden_purchase')->where(['node_id' => $id])->exists($this->db)) throw new GameError('FIXED_GARDEN', 'Огород закреплён за поселением. Перенос с сохранением прав и обязательств требует отдельной операции.');
+        if ($this->isShelter($id)) throw new GameError('SHELTER_MOVE_REQUIRED', 'Для переноса сначала сложите шалаш на его стоянке.');
+        if ($this->db->schema->getTableSchema('world_shelter_deployment') && (new Query())->from(['s' => 'world_shelter_deployment'])->innerJoin(['c' => 'world_node_closure'], '[[c.descendant_id]]=[[s.node_id]]')->where(['c.ancestor_id' => $id, 's.ended_at' => null])->exists($this->db)) throw new GameError('SHELTER_MOVE_REQUIRED', 'Перед переносом территории сложите размещённые шалаши: назначенный ночлег закреплён за местом.');
+        if ($this->db->schema->getTableSchema('world_premises_purchase') && (new Query())->from('world_premises_purchase')->where(['or', ['building_id' => $id], ['room_id' => $id]])->exists($this->db)) throw new GameError('FIXED_PREMISES', 'Купленное помещение закреплено за площадкой. Для переезда нужна отдельная операция.');
         if ($node['status'] !== 'active') throw new GameError('NODE_INACTIVE', 'Объект недоступен.');
         if ((int)$node['parent_id'] === $parentId) throw new GameError('SAME_PARENT', 'Объект уже находится здесь.');
         if ($node['node_type'] === 'WORLD' || (int)$node['root_id'] !== (int)$parent['root_id']) throw new GameError('CROSS_WORLD_MOVE', 'Перенос между мирами недоступен.');
@@ -114,6 +120,20 @@ class WorldTree
         $this->db->createCommand()->update('world_node', ['status' => 'archived', 'revision' => new Expression('[[revision]] + 1'), 'updated_at' => time()], ['id' => $id])->execute();
         $this->touchAncestors($id);
         return $this->get($id);
+    }
+    public function isShelter(int $id): bool
+    {
+        return $this->db->schema->getTableSchema('world_shelter_deployment') && (new Query())->from('world_shelter_deployment')->where(['node_id' => $id])->exists($this->db);
+    }
+    /** Only after the canonical unit has left its retired deployment storage. */
+    public function foldShelter(int $id): void
+    {
+        if (!$this->db->getTransaction()) throw new \LogicException('Shelter folding requires a transaction.');
+        $deployment = (new Query())->from('world_shelter_deployment')->where(['node_id' => $id, 'active_instance_id' => null])->andWhere(['not', ['ended_at' => null]])->one($this->db);
+        $storage = (new Query())->from('craft_storage')->where(['node_id' => $id, 'kind' => 'shelter', 'status' => 'retired'])->one($this->db);
+        if (!$deployment || !$storage || (new Query())->from('craft_inventory')->where(['storage_id' => $storage['id']])->andWhere(['>', 'item_quantity', 0])->exists($this->db)) throw new \LogicException('Shelter still contains an asset.');
+        $this->db->createCommand()->update('world_node', ['status' => 'archived', 'revision' => new Expression('[[revision]]+1'), 'updated_at' => time()], ['id' => $id])->execute();
+        $this->touchAncestors($id);
     }
     private function touchAncestors(int $id): void
     {

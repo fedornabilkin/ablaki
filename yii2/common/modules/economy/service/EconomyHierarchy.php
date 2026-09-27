@@ -22,6 +22,7 @@ class EconomyHierarchy
     public function provision(int $node, string $operation): array
     {
         if (!$this->db->getTransaction()) throw new \LogicException('Economy provisioning requires a world command transaction.');
+        if ((new \common\modules\world\service\WorldTree($this->db))->isShelter($node)) throw new \common\services\game\GameError('SHELTER_HAS_NO_BUDGET', 'Переносной шалаш не имеет отдельного бюджета. Для развития используйте бюджет стоянки.');
         WalletMaintenance::writable($this->db);
         if (!(new Locks($this->db))->row('world_registry', ['id' => 1])) throw new \RuntimeException('World registry unavailable.');
         if (!(new Query())->from('game_operation')->where(['id' => $operation])->exists($this->db)) throw new \LogicException('Economy provisioning requires an existing operation.');

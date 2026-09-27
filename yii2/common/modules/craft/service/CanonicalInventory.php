@@ -14,6 +14,30 @@ class CanonicalInventory
     public function __construct(CraftStorage $store) { $this->s = $store; $this->db = $store->db; $this->equipment = new EquipmentInstances($this->db); }
     private function transaction(): void { if (!$this->db->getTransaction()) throw new \LogicException('Inventory writes require a transaction.'); }
     public function backpack(int $user): ?array { return (new Query())->from('craft_storage')->where(['identity_key' => 'backpack:user:' . $user, 'owner_user_id' => $user, 'status' => 'active'])->one($this->db) ?: null; }
+    /** Dedicated lifecycle writer. Generic storage routes cannot access kind=shelter. */
+    public function shelter(int $user, array $item, array $target, int $position, ?array $source = null): array
+    {
+        $this->transaction();
+        if (($item['code'] ?? '') !== \common\modules\world\service\ShelterCatalog::CODE || (int)$target['owner_user_id'] !== $user || $target['status'] !== 'active' || !in_array($target['kind'], ['backpack', 'shelter'], true)) throw new \LogicException('Invalid shelter destination.');
+        $capacity = $target['kind'] === 'backpack' ? (new CraftInventory($this->s))->capacity($user)['active_slots'] : 1;
+        if ($position < 1 || $position > $capacity || (new Query())->from('craft_inventory')->where(['storage_id' => $target['id'], 'slot' => $position])->andWhere(['>', 'item_quantity', 0])->exists($this->db)) throw new ConflictHttpException('Для шалаша нет свободного места.');
+        if ($source) {
+            if ((int)$source['user_id'] !== $user || (int)$source['item_id'] !== (int)$item['id'] || (int)$source['item_quantity'] !== 1) throw new \LogicException('Invalid shelter source.');
+            $units = $this->equipment->units((int)$source['id']);
+            if (count($units) !== 1) throw new ConflictHttpException('Экземпляр шалаша требует сверки.');
+            $this->write((int)$source['id'], ['storage_id' => $target['id'], 'slot' => $position, 'container_id' => null]);
+            $row = array_merge($source, ['storage_id' => $target['id'], 'slot' => $position]);
+            $this->touch([(int)$source['storage_id']]);
+        } else {
+            $row = $this->insert($user, $target, $item, 1, $position);
+            $this->equipment->create($row, $item, 1); $units = $this->equipment->units((int)$row['id']);
+        }
+        (new EquipmentExposure($this->db))->location([(int)$units[0]['id']], $target, $position);
+        $this->equipment->move([(int)$units[0]['id']], (int)$row['id']);
+        $this->record($user, $row, 1, $source ? (int)$source['storage_id'] : null, (int)$target['id'], 'shelter.lifecycle');
+        $this->touch([(int)$target['id']]);
+        return ['inventory_id' => (int)$row['id'], 'instance_id' => (int)$units[0]['id']];
+    }
     public function rows(int $storage): array
     {
         return (new Query())->from('craft_inventory')->where(['storage_id' => $storage])->andWhere(['>', 'item_quantity', 0])->orderBy(['slot' => SORT_ASC, 'id' => SORT_ASC])->all($this->db);
@@ -83,6 +107,7 @@ class CanonicalInventory
     public function change(int $user, array $item, int $delta, ?int $slot = null): void
     {
         $this->transaction(); if (!$delta) return;
+        if (($item['code'] ?? '') === \common\modules\world\service\ShelterCatalog::CODE) throw new ConflictHttpException('Используйте действие получения или размещения шалаша.');
         $this->synchronize($user);
         $backpack = $this->backpack($user); $storage = (new StorageAccessPolicy($this->db))->storage($user, (int)$backpack['id'], $delta > 0);
         if ($delta < 0) {
@@ -150,6 +175,7 @@ class CanonicalInventory
     /** Read-only, deterministic allocation. Storage access and location are checked by the workspace. */
     public function planCraft(array $sources, array $target, array $required, array $items, array $output, int $quantity): array
     {
+        foreach (array_merge([$output], array_intersect_key($items, $required)) as $definition) if (($definition['code'] ?? '') === \common\modules\world\service\ShelterCatalog::CODE) throw new ConflictHttpException('Шалаш не участвует в рецептах.');
         $consumed = []; $materials = []; $blocked = [];
         foreach (array_merge($sources, [$target]) as $storage) if ($storage['kind'] === 'chest') $blocked[(int)$storage['container_inventory_id']] = true;
         foreach ($required as $itemId => $needed) {

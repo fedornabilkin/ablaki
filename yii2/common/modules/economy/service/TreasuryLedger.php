@@ -214,12 +214,13 @@ class TreasuryLedger
         if ($policy['loss_policy']['loss_rate_bps'] > 0) $this->scheduleLoss($receipt, 1, $protection + $policy['loss_policy']['loss_period_seconds']);
     }
     /** Funded domain payment; caller checks the purpose, permission and budget commitment. */
-    public function receiveBudgetPayment(int $budget, int $recipientNode, Money $amount, string $operation, string $purpose): int
+    public function receiveBudgetPayment(int $budget, int $recipientNode, Money $amount, string $operation, string $purpose, string $kind = 'order_payment'): int
     {
         $this->writable();
+        if (!in_array($kind, ['order_payment', 'premises_purchase', 'garden_purchase', 'garden_expansion', 'equipment_expansion'], true)) throw new \LogicException('Unsupported budget payment kind.');
         if ($this->account($budget)['role'] !== 'budget') throw new \LogicException('Expected a budget source.');
         $policy = $this->published($recipientNode); $accounts = (new EconomyHierarchy($this->db))->accounts($recipientNode);
-        $transfer = $this->transfer($budget, (int)$accounts['treasury']['id'], $amount, $operation, 'budget-payment', 'order_payment', $purpose);
+        $transfer = $this->transfer($budget, (int)$accounts['treasury']['id'], $amount, $operation, 'budget-payment', $kind, $purpose);
         $this->receipt((int)$accounts['treasury']['id'], $transfer, $amount, $policy, time());
         return $transfer;
     }

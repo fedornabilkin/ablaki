@@ -1,0 +1,649 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "World nights and actor health",
+    "version": "1.0.0"
+  },
+  "servers": [
+    {
+      "url": "/v1"
+    }
+  ],
+  "security": [
+    {
+      "bearerAuth": []
+    }
+  ],
+  "paths": {
+    "/world/nodes/{id}/nights": {
+      "get": {
+        "operationId": "worldNightsState",
+        "description": "Owner-only starter campsite state. GET never resolves a night. History is pinned to the returned health checkpoint. Publication and worker execution are separate CLI operations.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 2147483647
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 1000000,
+              "default": 1
+            }
+          },
+          {
+            "name": "outcome",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "",
+                "protected",
+                "unprotected"
+              ],
+              "default": ""
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Calendar, health and filtered history",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/State"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "World error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "World error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "World error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "World error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "World error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer"
+      }
+    },
+    "schemas": {
+      "Night": {
+        "type": "object",
+        "properties": {
+          "sequence": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "started_at": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "ended_at": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          }
+        },
+        "required": [
+          "sequence",
+          "started_at",
+          "ended_at"
+        ],
+        "additionalProperties": false
+      },
+      "Policy": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          },
+          "version": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 9007199254740991
+          },
+          "activated_at": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "day_seconds": {
+            "type": "integer",
+            "minimum": 3600,
+            "maximum": 604800
+          },
+          "night_offset": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 604799
+          },
+          "night_seconds": {
+            "type": "integer",
+            "minimum": 60,
+            "maximum": 604799
+          },
+          "max_severity": {
+            "type": "integer",
+            "minimum": 2,
+            "maximum": 10
+          },
+          "recovery_nights": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 30
+          },
+          "mild_efficiency_bps": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 9999
+          },
+          "severe_efficiency_bps": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 9999
+          }
+        },
+        "required": [
+          "id",
+          "version",
+          "activated_at",
+          "day_seconds",
+          "night_offset",
+          "night_seconds",
+          "max_severity",
+          "recovery_nights",
+          "mild_efficiency_bps",
+          "severe_efficiency_bps"
+        ],
+        "additionalProperties": false
+      },
+      "Health": {
+        "type": "object",
+        "properties": {
+          "severity": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 10
+          },
+          "recovery_progress": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 29
+          },
+          "exposure_nights": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "onset_at": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991,
+            "nullable": true
+          },
+          "processed_until": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991,
+            "nullable": true
+          },
+          "next_sequence": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "revision": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 9007199254740991
+          },
+          "work_efficiency_bps": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 10000
+          },
+          "work_penalty_applied": {
+            "type": "boolean",
+            "enum": [
+              false
+            ],
+            "description": "Reserved for future timed work. Immediate craft rewards and costs are unchanged."
+          }
+        },
+        "required": [
+          "severity",
+          "recovery_progress",
+          "exposure_nights",
+          "onset_at",
+          "processed_until",
+          "next_sequence",
+          "revision",
+          "work_efficiency_bps",
+          "work_penalty_applied"
+        ],
+        "additionalProperties": false
+      },
+      "Entry": {
+        "type": "object",
+        "properties": {
+          "sequence": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "started_at": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "ended_at": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "id": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          },
+          "outcome": {
+            "type": "string",
+            "enum": [
+              "protected",
+              "unprotected"
+            ]
+          },
+          "severity_before": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 10
+          },
+          "severity_after": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 10
+          },
+          "recovery_progress": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 29
+          },
+          "resolved_at": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          }
+        },
+        "required": [
+          "sequence",
+          "started_at",
+          "ended_at",
+          "id",
+          "outcome",
+          "severity_before",
+          "severity_after",
+          "recovery_progress",
+          "resolved_at"
+        ],
+        "additionalProperties": false
+      },
+      "State": {
+        "type": "object",
+        "properties": {
+          "node_id": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "processing_available": {
+            "type": "boolean"
+          },
+          "enrollment_pending": {
+            "type": "boolean"
+          },
+          "catching_up": {
+            "type": "boolean"
+          },
+          "policy": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 2147483647
+              },
+              "version": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 9007199254740991
+              },
+              "activated_at": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              "day_seconds": {
+                "type": "integer",
+                "minimum": 3600,
+                "maximum": 604800
+              },
+              "night_offset": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 604799
+              },
+              "night_seconds": {
+                "type": "integer",
+                "minimum": 60,
+                "maximum": 604799
+              },
+              "max_severity": {
+                "type": "integer",
+                "minimum": 2,
+                "maximum": 10
+              },
+              "recovery_nights": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 30
+              },
+              "mild_efficiency_bps": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 9999
+              },
+              "severe_efficiency_bps": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 9999
+              }
+            },
+            "required": [
+              "id",
+              "version",
+              "activated_at",
+              "day_seconds",
+              "night_offset",
+              "night_seconds",
+              "max_severity",
+              "recovery_nights",
+              "mild_efficiency_bps",
+              "severe_efficiency_bps"
+            ],
+            "additionalProperties": false,
+            "nullable": true
+          },
+          "grace_until": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991,
+            "nullable": true
+          },
+          "first_eligible_night": {
+            "type": "object",
+            "properties": {
+              "sequence": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              "started_at": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              "ended_at": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              }
+            },
+            "required": [
+              "sequence",
+              "started_at",
+              "ended_at"
+            ],
+            "additionalProperties": false,
+            "nullable": true
+          },
+          "current_or_next_night": {
+            "type": "object",
+            "properties": {
+              "sequence": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              "started_at": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              "ended_at": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              }
+            },
+            "required": [
+              "sequence",
+              "started_at",
+              "ended_at"
+            ],
+            "additionalProperties": false,
+            "nullable": true
+          },
+          "protection_forecast": {
+            "type": "boolean",
+            "nullable": true
+          },
+          "health": {
+            "type": "object",
+            "properties": {
+              "severity": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 10
+              },
+              "recovery_progress": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 29
+              },
+              "exposure_nights": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              "onset_at": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991,
+                "nullable": true
+              },
+              "processed_until": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991,
+                "nullable": true
+              },
+              "next_sequence": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              "revision": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 9007199254740991
+              },
+              "work_efficiency_bps": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 10000
+              },
+              "work_penalty_applied": {
+                "type": "boolean",
+                "enum": [
+                  false
+                ],
+                "description": "Reserved for future timed work. Immediate craft rewards and costs are unchanged."
+              }
+            },
+            "required": [
+              "severity",
+              "recovery_progress",
+              "exposure_nights",
+              "onset_at",
+              "processed_until",
+              "next_sequence",
+              "revision",
+              "work_efficiency_bps",
+              "work_penalty_applied"
+            ],
+            "additionalProperties": false,
+            "nullable": true
+          },
+          "history": {
+            "type": "object",
+            "properties": {
+              "items": {
+                "type": "array",
+                "maxItems": 20,
+                "items": {
+                  "$ref": "#/components/schemas/Entry"
+                }
+              },
+              "_meta": {
+                "type": "object",
+                "properties": {
+                  "totalCount": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  "pageCount": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  "currentPage": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 1000000
+                  },
+                  "perPage": {
+                    "type": "integer",
+                    "enum": [
+                      20
+                    ]
+                  }
+                },
+                "required": [
+                  "totalCount",
+                  "pageCount",
+                  "currentPage",
+                  "perPage"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "required": [
+              "items",
+              "_meta"
+            ],
+            "additionalProperties": false
+          },
+          "server_time": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          }
+        },
+        "required": [
+          "node_id",
+          "enabled",
+          "processing_available",
+          "enrollment_pending",
+          "catching_up",
+          "policy",
+          "grace_until",
+          "first_eligible_night",
+          "current_or_next_night",
+          "protection_forecast",
+          "health",
+          "history",
+          "server_time"
+        ],
+        "additionalProperties": false
+      }
+    }
+  }
+}
