@@ -58,6 +58,7 @@ class EquipmentExposure
     }
     public function location(array $ids, array $storage, int $position): void
     {
+        (new ProductionReservations($this->db))->assertEquipment($ids);
         $class = 'carried';
         if ($storage['kind'] === 'shelter') $class = 'outdoor';
         if ($storage['kind'] === 'placement') {
@@ -85,6 +86,7 @@ class EquipmentExposure
     /** Caller has paid the approved material plan under owner/catalog/registry locks. */
     public function restore(int $id, int $damage, int $at): array
     {
+        (new ProductionReservations($this->db))->assertEquipment([$id]);
         $unit = $this->settle($id, $at);
         if ($damage < 1 || (int)$unit['max_durability'] - (int)$unit['durability'] !== $damage) throw new ConflictHttpException('Повреждение изменилось. Повторите расчёт ремонта.');
         if ($this->db->createCommand()->update('craft_equipment_instance', ['durability' => (int)$unit['max_durability'], 'revision' => new Expression('[[revision]]+1')], ['id' => $id, 'status' => 'active'])->execute() !== 1) throw new \RuntimeException('Equipment repair failed.');
@@ -93,6 +95,7 @@ class EquipmentExposure
     }
     public function use(int $id, int $base, int $batches, bool $station): void
     {
+        (new ProductionReservations($this->db))->assertEquipment([$id]);
         $unit = $this->settle($id); $cost = $this->cost($unit, $base, $batches, $station);
         if ((int)$unit['durability'] < max(1, $cost)) throw new ConflictHttpException('Прочности оборудования недостаточно для работы.');
         if ($cost) {

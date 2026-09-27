@@ -58,6 +58,8 @@ class CanonicalInventory
             if ((int)$old !== (int)$row['slot']) $changed[] = $row;
         }
         if (!$changed) return;
+        $reservations = new ProductionReservations($this->db);
+        foreach ($changed as $row) $reservations->assertWrite((int)$row['id'], ['slot' => $row['slot']]);
         // Vacate first: no temporary collision with UNIQUE(storage_id,slot).
         $this->db->createCommand()->update('craft_inventory', ['slot' => null], ['id' => array_column($changed, 'id')])->execute();
         foreach ($changed as $row) $this->write((int)$row['id'], ['slot' => $row['slot']]);
@@ -65,6 +67,7 @@ class CanonicalInventory
     }
     private function write(int $id, array $values): void
     {
+        (new ProductionReservations($this->db))->assertWrite($id, $values);
         $values['revision'] = new Expression('[[revision]]+1');
         if ($this->db->createCommand()->update('craft_inventory', $values, ['id' => $id])->execute() !== 1) throw new \RuntimeException('Inventory row write failed.');
     }
@@ -111,14 +114,14 @@ class CanonicalInventory
         $this->synchronize($user);
         $backpack = $this->backpack($user); $storage = (new StorageAccessPolicy($this->db))->storage($user, (int)$backpack['id'], $delta > 0);
         if ($delta < 0) {
-            $needed = -$delta;
+            $needed = -$delta; $reservations = new ProductionReservations($this->db);
             foreach ($this->rows((int)$storage['id']) as $row) {
                 if ((int)$row['item_id'] !== (int)$item['id'] || ($slot !== null && (int)$row['id'] !== $slot) || ($slot === null && (int)$row['slot'] > (int)$storage['capacity']) || $this->nonempty((int)$row['id'])) continue;
                 $units = $this->equipment->units((int)$row['id']);
                 $tracked = $this->equipment->tracked($item);
                 if ($tracked && count($units) !== (int)$row['item_quantity']) throw new ConflictHttpException('Экземпляры оборудования требуют сверки.');
-                $available = array_values(array_filter($units, function ($unit) { return !in_array((int)$unit['id'], $this->s->protectedInstances, true); }));
-                $take = min($needed, $tracked ? count($available) : (int)$row['item_quantity']);
+                $available = array_values(array_filter($reservations->freeEquipment($units), function ($unit) { return !in_array((int)$unit['id'], $this->s->protectedInstances, true); }));
+                $take = min($needed, $tracked ? count($available) : (int)$row['item_quantity'], max(0, (int)$row['item_quantity'] - $reservations->quantity((int)$row['id'])));
                 if (!$take) continue;
                 $this->equipment->consume(array_map('intval', array_column(array_slice($available, 0, $take), 'id')));
                 $left = (int)$row['item_quantity'] - $take;
@@ -242,10 +245,18 @@ class CanonicalInventory
     }
     public function deliverOrder(int $user, int $inventory, int $item, int $quantity): int
     {
+        return $this->consumeRawMaterial($user, $inventory, $item, $quantity, 'order.consumed');
+    }
+    public function consumeBuildingRepair(int $user, int $inventory, int $item, int $quantity): int
+    {
+        return $this->consumeRawMaterial($user, $inventory, $item, $quantity, 'building.repair');
+    }
+    private function consumeRawMaterial(int $user, int $inventory, int $item, int $quantity, string $reason): int
+    {
         $this->transaction(); $selection = $this->inspectOrderDelivery($user, $inventory, $item, $quantity); $row = $selection['row'];
         $left = (int)$row['item_quantity'] - $quantity;
         $this->write($inventory, ['item_quantity' => $left, 'item_id' => $left ? $item : null, 'slot' => $left ? $row['slot'] : null]);
-        $this->record($user, $row, $quantity, (int)$row['storage_id'], null, 'order.consumed');
+        $this->record($user, $row, $quantity, (int)$row['storage_id'], null, $reason);
         $this->touch([(int)$row['storage_id']]);
         return (int)$row['storage_id'];
     }
@@ -253,7 +264,7 @@ class CanonicalInventory
     public function planCraft(array $sources, array $target, array $required, array $items, array $output, int $quantity): array
     {
         foreach (array_merge([$output], array_intersect_key($items, $required)) as $definition) if (($definition['code'] ?? '') === \common\modules\world\service\ShelterCatalog::CODE) throw new ConflictHttpException('Шалаш не участвует в рецептах.');
-        $consumed = []; $materials = []; $blocked = [];
+        $consumed = []; $materials = []; $blocked = []; $reservations = new ProductionReservations($this->db);
         foreach (array_merge($sources, [$target]) as $storage) if ($storage['kind'] === 'chest') $blocked[(int)$storage['container_inventory_id']] = true;
         foreach ($required as $itemId => $needed) {
             $have = 0; $remaining = $needed;
@@ -261,8 +272,8 @@ class CanonicalInventory
                 if ((int)$row['item_id'] !== (int)$itemId || (int)$row['slot'] > (int)$storage['capacity'] || isset($blocked[(int)$row['id']]) || $this->nonempty((int)$row['id'])) continue;
                 $units = $this->equipment->units((int)$row['id']); $tracked = $this->equipment->tracked($items[$itemId]);
                 if ($tracked && count($units) !== (int)$row['item_quantity']) throw new ConflictHttpException('Экземпляры оборудования требуют сверки.');
-                $units = array_values(array_filter($units, function ($unit) { return !in_array((int)$unit['id'], $this->s->protectedInstances, true); }));
-                $available = $tracked ? count($units) : (int)$row['item_quantity']; $have += $available;
+                $units = array_values(array_filter($reservations->freeEquipment($units), function ($unit) { return !in_array((int)$unit['id'], $this->s->protectedInstances, true); }));
+                $available = min($tracked ? count($units) : (int)$row['item_quantity'], max(0, (int)$row['item_quantity'] - $reservations->quantity((int)$row['id']))); $have += $available;
                 $take = min($remaining, $available); if (!$take) continue;
                 $consumed[] = ['inventory_id' => (int)$row['id'], 'storage_id' => (int)$storage['id'], 'item_id' => (int)$itemId, 'quantity' => $take,
                     'instance_ids' => array_map('intval', array_column(array_slice($units, 0, $take), 'id'))];
@@ -292,7 +303,7 @@ class CanonicalInventory
         return ['materials' => $materials, 'consume' => $consumed, 'grant' => $grants, 'output_fits' => $left === 0, 'output_missing_quantity' => $left];
     }
     /** Apply a freshly recomputed plan under the command bus locks, never a client-supplied plan. */
-    public function applyCraft(int $user, array $plan, array $target, array $items, array $output): void
+    public function applyCraft(int $user, array $plan, array $target, array $items, array $output, string $reason = 'craft'): void
     {
         $this->transaction();
         if (!$plan['output_fits']) throw new ConflictHttpException('Недостаточно места для результата.');
@@ -305,7 +316,7 @@ class CanonicalInventory
             $this->equipment->consume($take['instance_ids']);
             $this->write((int)$row['id'], ['item_quantity' => $left, 'item_id' => $left ? $row['item_id'] : null, 'slot' => $left ? $row['slot'] : null]);
             if (!$left && ($items[$take['item_id']]['storage_kind'] ?? '') === 'chest') $this->db->createCommand()->update('craft_storage', ['status' => 'retired', 'revision' => new Expression('[[revision]]+1')], ['container_inventory_id' => $row['id']])->execute();
-            $this->record($user, $row, $take['quantity'], $take['storage_id'], null, 'craft.consume'); $changed[] = $take['storage_id'];
+            $this->record($user, $row, $take['quantity'], $take['storage_id'], null, $reason . '.consume'); $changed[] = $take['storage_id'];
         }
         foreach ($plan['grant'] as $grant) {
             if ($grant['inventory_id'] === null) {
@@ -317,7 +328,7 @@ class CanonicalInventory
                 $this->write((int)$row['id'], ['item_quantity' => (int)$row['item_quantity'] + $grant['quantity']]);
             }
             $this->equipment->create($row, $output, $grant['quantity']);
-            $this->record($user, $row, $grant['quantity'], null, (int)$target['id'], 'craft.output');
+            $this->record($user, $row, $grant['quantity'], null, (int)$target['id'], $reason . '.output');
         }
         // One deposit operation wears the receiving chest once, including a multi-batch recipe.
         if ($target['kind'] === 'chest') {
@@ -354,9 +365,11 @@ class CanonicalInventory
         $room = max(0, $stack - (int)($occupied['item_quantity'] ?? 0));
         if (!$room || (!$partial && $quantity > $room)) throw new ConflictHttpException('В целевом слоте недостаточно места.');
         $quantity = min($quantity, $room);
+        $reservations = new ProductionReservations($this->db);
+        if ($quantity > (int)$row['item_quantity'] - $reservations->quantity($inventory)) throw new ConflictHttpException('Предметы зарезервированы производством.');
         $units = $this->equipment->units($inventory); $tracked = $this->equipment->tracked($item);
         if ($tracked && count($units) !== (int)$row['item_quantity']) throw new ConflictHttpException('Экземпляры оборудования требуют сверки.');
-        $units = array_values(array_filter($units, function ($unit) use ($instance) { return !in_array((int)$unit['id'], $this->s->protectedInstances, true) && ($instance === null || (int)$unit['id'] === $instance); }));
+        $units = array_values(array_filter($reservations->freeEquipment($units), function ($unit) use ($instance) { return !in_array((int)$unit['id'], $this->s->protectedInstances, true) && ($instance === null || (int)$unit['id'] === $instance); }));
         if (($tracked && count($units) < $quantity) || ($instance !== null && (!$tracked || $quantity !== 1))) throw new ConflictHttpException('Выбранный экземпляр недоступен.');
         return ['row' => $row, 'source' => $source, 'target' => $target, 'item' => $item, 'occupied' => $occupied ?: null, 'quantity' => $quantity, 'position' => $position, 'unit_ids' => array_map('intval', array_column(array_slice($units, 0, $quantity), 'id'))];
     }

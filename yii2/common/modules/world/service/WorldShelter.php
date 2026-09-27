@@ -74,6 +74,7 @@ class WorldShelter
         $revisions = ['node:' . $site['id'] => $site['revision'], 'catalog' => (int)$this->one('craft_meta', ['id' => 1])['revision']];
         if ($action === 'claim') {
             if ($a['grant']) throw new GameError('SHELTER_ALREADY_CLAIMED', 'Разовый шалаш уже получен. Смена мира не восстанавливает право.');
+            $terms['grant_revision_id'] = StarterGrantCatalog::shelter($this->db, (int)$item['id']);
         } else {
             if (!$a['unit'] || !$a['row'] || (int)$a['row']['item_id'] !== (int)$item['id']) throw new GameError('SHELTER_UNAVAILABLE', 'Ваш экземпляр шалаша недоступен.');
             $revisions['instance:' . $a['unit']['id']] = (int)$a['unit']['revision'];
@@ -141,7 +142,7 @@ class WorldShelter
                 }
                 $moved = $inventory->shelter($user, $p['item'], $target, $position, $a['row']);
                 $storages[] = (int)$target['id']; if ($a['row']) $storages[] = (int)$a['row']['storage_id'];
-                if ($action === 'claim') $this->db->createCommand()->insert('world_starter_grant', ['user_id' => $user, 'grant_code' => ShelterCatalog::CODE, 'instance_id' => $moved['instance_id'], 'operation_id' => $operation, 'claimed_at' => $now])->execute();
+                if ($action === 'claim') $this->db->createCommand()->insert('world_starter_grant', ['user_id' => $user, 'grant_code' => ShelterCatalog::CODE, 'grant_revision_id' => $terms['grant_revision_id'], 'instance_id' => $moved['instance_id'], 'operation_id' => $operation, 'claimed_at' => $now])->execute();
                 if ($deploy) {
                     $unit = $this->one('craft_equipment_instance', ['id' => $moved['instance_id']]); $wear = $this->one('craft_equipment_exposure', ['instance_id' => $moved['instance_id']]);
                     if ((int)$unit['durability'] < 1) throw new GameError('SHELTER_BROKEN', 'Шалаш износился. Размещение отменено.');

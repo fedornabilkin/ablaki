@@ -17,6 +17,8 @@ class WorldSeeder
             (new Locks($this->db))->row('world_registry', ['id' => 1]);
             \common\modules\craft\service\StorageMaintenance::writable($this->db);
             ShelterCatalog::seed($this->db);
+            StarterGrantCatalog::seed($this->db);
+            CultivationCatalog::seed($this->db);
             $tree = new WorldTree($this->db); $ids = [];
             $nodes = [
                 ['ablaki', null, 'WORLD', 'Мир Аблаки', 0, 0, []],

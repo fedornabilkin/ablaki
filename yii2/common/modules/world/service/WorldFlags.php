@@ -8,6 +8,7 @@ use yii\db\Query;
 
 class WorldFlags
 {
+    public const SCHEMA_VERSION = 33;
     private $db;
     private $module;
     public function __construct(Connection $db, Module $module) { $this->db = $db; $this->module = $module; }
@@ -15,7 +16,7 @@ class WorldFlags
     {
         $ready = $this->db->schema->getTableSchema('world_registry') !== null;
         $registry = $ready ? (new Query())->from('world_registry')->where(['id' => 1])->one($this->db) : false;
-        $installed = $registry && (int)$registry['schema_version'] >= 19;
+        $installed = $registry && (int)$registry['schema_version'] >= self::SCHEMA_VERSION;
         $result = ['schema_ready' => (bool)$installed, 'contract_version' => $this->module->contractVersion];
         foreach (['world_read', 'world_write', 'storage_v2', 'economy_tick'] as $flag) {
             $result[$flag] = (bool)$installed && !empty($registry[$flag]) && !empty($this->module->flags[$flag]);

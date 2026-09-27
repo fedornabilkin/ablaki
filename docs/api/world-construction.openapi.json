@@ -2,7 +2,7 @@
   "openapi": "3.0.3",
   "info": {
     "title": "Ablaki timed construction",
-    "version": "1.0.0",
+    "version": "1.1.0",
     "description": "Schema marker 19. Code only, migrations and behavioral acceptance deferred. Start uses premises-buy on a construction offer. Fixed refund policy returns materials to backpack and releases credits, never recovery storage."
   },
   "servers": [
@@ -905,6 +905,10 @@
               },
               "additionalProperties": false
             }
+          },
+          "demolished": {
+            "type": "boolean",
+            "description": "Completed building was later demolished. Keep room_id as history, do not link to archived building/room."
           }
         },
         "required": [
@@ -919,7 +923,8 @@
           "remaining_seconds",
           "room_id",
           "price",
-          "materials"
+          "materials",
+          "demolished"
         ]
       },
       "State": {

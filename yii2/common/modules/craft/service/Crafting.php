@@ -186,6 +186,17 @@ class Crafting
         $this->xp($user,(int)$recipe['category_id'],(int)$recipe['experience']*$qty);
         $this->s->insert('craft_history',['user_id'=>$user,'recipe_id'=>$id,'item_id'=>$output['id'],'created_at'=>time()]);
         $this->event($user,'craft',(int)$recipe['output_quantity']*$qty,['recipe_id'=>$id,'item_id'=>$output['id'],'credit_change'=>-$cost]);
+        $module = \Yii::$app->getModule('world');
+        if ($module instanceof \common\modules\world\Module) {
+            $flags = new \common\modules\world\service\WorldFlags($this->s->db, $module);
+            if ($flags->capabilities()['world_write']) {
+                if (!$this->s->operationId) {
+                    $this->s->operationId = bin2hex(random_bytes(16));
+                    $this->s->db->createCommand()->insert('game_operation', ['id' => $this->s->operationId, 'user_id' => $user, 'type' => 'craft.completed', 'created_at' => time()])->execute();
+                }
+                (new \common\services\game\CommandBus($this->s->db, $flags))->emit($this->s->operationId, $user, 'craft.completed', ['node_id' => $this->s->workspaceNodeId, 'recipe_id' => $id, 'batches' => $qty, 'output' => ['item_id' => (int)$output['id'], 'quantity' => (int)$recipe['output_quantity'] * $qty]]);
+            }
+        }
         return 'Создано: '.trim($output['name']).' × '.((int)$recipe['output_quantity']*$qty);
     }
     public function state(int $user): array

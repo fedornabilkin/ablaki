@@ -22,6 +22,7 @@ class StationResolver
             ->where(['e.item_id' => $item, 'e.status' => 'active', 's.owner_user_id' => $user, 's.status' => 'active', 's.kind' => $joined ? 'placement' : 'backpack'])
             ->andWhere(['definition.active' => 1])->andWhere(['>', 'i.item_quantity', 0])->orderBy(['e.id' => SORT_ASC]);
         if ($instance !== null) $query->andWhere(['e.id' => $instance]);
+        if ((new ProductionReservations($this->s->db))->installed()) $query->andWhere(['not in', 'e.id', (new Query())->select('instance_id')->from('equipment_reservation_guard')]);
         $result = []; $exposure = new EquipmentExposure($this->s->db);
         $active = (new CraftInventory($this->s))->capacity($user)['active_slots'];
         foreach ($query->each(100, $this->s->db) as $unit) {

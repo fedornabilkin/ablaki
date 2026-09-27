@@ -22,7 +22,7 @@ class WorldSetupController extends \yii\console\Controller
         $exit = $this->actionSeed();
         if ($exit === 0) Yii::$app->db->transaction(function () {
             (new Locks(Yii::$app->db))->row('world_registry', ['id' => 1]);
-            Yii::$app->db->createCommand()->update('world_registry', ['schema_version' => 19], ['id' => 1])->execute();
+            Yii::$app->db->createCommand()->update('world_registry', ['schema_version' => \common\modules\world\service\WorldFlags::SCHEMA_VERSION], ['id' => 1])->execute();
         });
         return $exit;
     }
@@ -41,7 +41,7 @@ class WorldSetupController extends \yii\console\Controller
         if ($enabled && $name === 'economy_tick') throw new \RuntimeException('The economy rollout gate is not implemented yet.');
         Yii::$app->db->transaction(function () use ($name, $enabled) {
             $registry = (new Locks(Yii::$app->db))->row('world_registry', ['id' => 1]);
-            if (!$registry || ($enabled && (!$registry['active_world_id'] || (int)$registry['schema_version'] < 19))) throw new \RuntimeException('Complete world-setup/install before activation.');
+            if (!$registry || ($enabled && (!$registry['active_world_id'] || (int)$registry['schema_version'] < \common\modules\world\service\WorldFlags::SCHEMA_VERSION))) throw new \RuntimeException('Complete world-setup/install before activation.');
             if ($name === 'storage_v2' && !$enabled && !empty($registry['storage_v2'])) throw new \RuntimeException('Canonical inventory cannot revert to the legacy interpretation. Disable WORLD storage actions instead.');
             if ($name === 'world_write' && $enabled && !$registry['world_read']) throw new \RuntimeException('Enable reading before writing.');
             $values = [$name => $enabled];
@@ -103,4 +103,7 @@ class WorldSetupController extends \yii\console\Controller
     public function actionWalletVerify(): int { return $this->rolloutOutput((new \common\modules\economy\service\WalletRollout(Yii::$app->db))->verify()); }
     public function actionWalletCancel(): int { return $this->rolloutOutput((new \common\modules\economy\service\WalletRollout(Yii::$app->db))->cancel()); }
     public function actionWalletActivate(): int { return $this->rolloutOutput((new \common\modules\economy\service\WalletRollout(Yii::$app->db))->activate()); }
+    public function actionAccountsBegin(int $world): int { return $this->rolloutOutput((new \common\modules\economy\service\EconomyAccountBackfill(Yii::$app->db))->begin($world)); }
+    public function actionAccountsBackfill(int $run, int $limit = 50): int { return $this->rolloutOutput((new \common\modules\economy\service\EconomyAccountBackfill(Yii::$app->db))->batch($run, $limit)); }
+    public function actionAccountsStatus(int $run): int { return $this->rolloutOutput((new \common\modules\economy\service\EconomyAccountBackfill(Yii::$app->db))->status($run)); }
 }

@@ -27,7 +27,7 @@ class WorldHousing
         $this->flags->requireFlag('world_read');
         $room = (new WorldQuery($this->db, new WorldAccessPolicy($user)))->node($node);
         if ($room['type'] !== 'ROOM' || !$room['permissions']['storage']) throw new GameError('HOUSING_OWNER_REQUIRED', 'Откройте комнату собственного дома.', 403);
-        $place = $this->one('world_housing_place', ['room_id' => $node]);
+        $place = $this->one('world_housing_place', ['room_id' => $node, 'ordinal' => 1]);
         $actor = $this->one('game_actor', ['user_id' => $user, 'kind' => 'player']);
         $current = $actor ? (new LodgingAssignments($this->db))->current((int)$actor['id']) : null;
         $active = false; $lodging = null;

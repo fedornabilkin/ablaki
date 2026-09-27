@@ -15,6 +15,11 @@ class WorldWorkerController extends \yii\console\Controller
         $consumers = $module->params['consumers'] ?? [];
         $handlers = $module->params['jobHandlers'] ?? [];
         $flags = new \common\modules\world\service\WorldFlags(Yii::$app->db, $module);
+        if ($flags->capabilities()['world_read']) {
+            $notifications = new \common\modules\world\service\WorldNotifications(Yii::$app->db, $flags);
+            foreach (array_keys(\common\modules\world\service\WorldNotifications::EVENTS) as $type) $subscriptions[$type] = array_values(array_unique(array_merge($subscriptions[$type] ?? [], ['world.notifications.v1'])));
+            $consumers['world.notifications.v1'] = function (array $payload, array $event) use ($notifications) { $notifications->consume($payload, $event); };
+        }
         if ($flags->capabilities()['world_write'] && $flags->capabilities()['storage_v2']) {
             $construction = new \common\modules\world\service\WorldConstruction(Yii::$app->db, $flags);
             $handlers['world.construction.finish'] = function (array $payload, array $job) use ($construction) { $construction->finish($payload, $job); };

@@ -1,0 +1,351 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Ablaki treasury receipt history",
+    "version": "1.0.0",
+    "description": "Code prepared, no tests/build/deployment. No new migration; branch requires existing marker 21. Read-only owner receipt history using stored policy revisions and ledger totals. GET never collects, charges losses, changes checkpoints or schedules jobs."
+  },
+  "servers": [
+    {
+      "url": "/v1"
+    }
+  ],
+  "security": [
+    {
+      "bearerAuth": []
+    }
+  ],
+  "paths": {
+    "/world/nodes/{id}/treasury-receipts": {
+      "get": {
+        "summary": "Owner treasury receipts, protection and next-period loss forecast",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 2147483647
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 1000000,
+              "default": 1
+            }
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "maxLength": 120
+            },
+            "description": "Trimmed substring search of incoming transfer purpose; applied before count/pagination."
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "all",
+                "open",
+                "closed",
+                "catching_up"
+              ],
+              "default": "open"
+            },
+            "description": "catching_up uses open + positive stored loss rate + next_loss_at <= server_time. Fixed ordering: descending receipt ID."
+          }
+        ],
+        "description": "world_read required; no wallet/storage activation needed for reading. One REPEATABLE READ transaction without write/registry locks provides coherent rows and aggregate collected/lost amounts for up to 20 receipts. Receipt original = remaining + collected + lost; recorded losses are not projected losses. Published new policies do not change old receipt rules. Projection covers one period only; delayed worker may owe multiple periods. No cross-world financial totals or revenue classification is provided.",
+        "responses": {
+          "200": {
+            "description": "Read snapshot. No accounts means an empty list; no accounts are created.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Listing"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Actual owner required; management permission does not override ownership",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Node not found or hidden by world access policy",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Invalid page/search/status",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "World schema/read disabled, or receipt history requires reconciliation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer"
+      }
+    },
+    "schemas": {
+      "Receipt": {
+        "type": "object",
+        "required": [
+          "id",
+          "kind",
+          "purpose",
+          "state",
+          "original_amount",
+          "remaining_amount",
+          "collected_amount",
+          "lost_amount",
+          "received_at",
+          "protected_until",
+          "age_seconds",
+          "processed_periods",
+          "pending_periods",
+          "closed_at",
+          "policy_revision",
+          "protected_seconds",
+          "loss_rate_bps",
+          "loss_period_seconds",
+          "next_loss_at",
+          "next_loss_amount"
+        ],
+        "properties": {
+          "id": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          },
+          "kind": {
+            "type": "string",
+            "maxLength": 32
+          },
+          "purpose": {
+            "type": "string",
+            "maxLength": 255
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "protected",
+              "waiting",
+              "catching_up",
+              "exempt",
+              "closed"
+            ]
+          },
+          "original_amount": {
+            "type": "string",
+            "pattern": "^(0|[1-9][0-9]{0,14})\\.[0-9]{4}$",
+            "description": "Exact nonnegative Cr string, at most 900000000000000.0000; never a JSON float."
+          },
+          "remaining_amount": {
+            "type": "string",
+            "pattern": "^(0|[1-9][0-9]{0,14})\\.[0-9]{4}$",
+            "description": "Exact nonnegative Cr string, at most 900000000000000.0000; never a JSON float."
+          },
+          "collected_amount": {
+            "type": "string",
+            "pattern": "^(0|[1-9][0-9]{0,14})\\.[0-9]{4}$",
+            "description": "Exact nonnegative Cr string, at most 900000000000000.0000; never a JSON float."
+          },
+          "lost_amount": {
+            "type": "string",
+            "pattern": "^(0|[1-9][0-9]{0,14})\\.[0-9]{4}$",
+            "description": "Exact nonnegative Cr string, at most 900000000000000.0000; never a JSON float."
+          },
+          "received_at": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "protected_until": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "age_seconds": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991,
+            "description": "Seconds from received_at to server_time while open; frozen at closed_at when closed. Never reset by reading."
+          },
+          "processed_periods": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "pending_periods": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991,
+            "description": "Due periods at server_time from the persisted checkpoint, not an amount or number of jobs. Zero for closed or zero-rate receipts."
+          },
+          "closed_at": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991,
+            "nullable": true
+          },
+          "policy_revision": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          },
+          "protected_seconds": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 31536000
+          },
+          "loss_rate_bps": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 10000
+          },
+          "loss_period_seconds": {
+            "type": "integer",
+            "minimum": 3600,
+            "maximum": 2592000
+          },
+          "next_loss_at": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991,
+            "nullable": true,
+            "description": "Stored next unprocessed deadline, possibly in the past. Null for closed or zero-rate receipts."
+          },
+          "next_loss_amount": {
+            "type": "string",
+            "pattern": "^(0|[1-9][0-9]{0,14})\\.[0-9]{4}$",
+            "description": "Exact forecast for ONE next unprocessed period from remaining_amount and stored loss_fraction. Includes carry, floors to 0.0001 Cr. Not total catch-up loss. Null when closed or loss rate is zero.",
+            "nullable": true
+          }
+        }
+      },
+      "Listing": {
+        "type": "object",
+        "required": [
+          "node_id",
+          "currency",
+          "server_time",
+          "treasury_catching_up",
+          "items",
+          "_meta"
+        ],
+        "properties": {
+          "node_id": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          },
+          "currency": {
+            "type": "string",
+            "enum": [
+              "Cr"
+            ]
+          },
+          "server_time": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "treasury_catching_up": {
+            "type": "boolean",
+            "description": "Any overdue open positive-rate receipt for this treasury, independent of page/search/status filters."
+          },
+          "items": {
+            "type": "array",
+            "maxItems": 20,
+            "items": {
+              "$ref": "#/components/schemas/Receipt"
+            }
+          },
+          "_meta": {
+            "type": "object",
+            "required": [
+              "totalCount",
+              "pageCount",
+              "currentPage",
+              "perPage"
+            ],
+            "properties": {
+              "totalCount": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              "pageCount": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              "currentPage": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 1000000
+              },
+              "perPage": {
+                "type": "integer",
+                "minimum": 20,
+                "maximum": 20
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
