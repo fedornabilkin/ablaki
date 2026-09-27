@@ -18,7 +18,12 @@ class StorageBaseline
     /** PDO may return different numeric scalar types; normalize leaves without float arithmetic. */
     private function normalize($value)
     {
-        if (is_array($value)) return array_map(function ($entry) { return $this->normalize($entry); }, $value);
+        if (is_array($value)) {
+            // Stored CanonicalJson sorts object keys; PDO SELECT * follows column order.
+            // Keep list/row order and scalar values strict, but compare object keys canonically.
+            if ($value !== [] && array_keys($value) !== range(0, count($value) - 1)) ksort($value, SORT_STRING);
+            return array_map(function ($entry) { return $this->normalize($entry); }, $value);
+        }
         return $value === null ? null : (string)$value;
     }
     public function hash(array $value): string { return hash('sha256', CanonicalJson::encode($this->normalize($value))); }
@@ -59,6 +64,7 @@ class StorageBaseline
     /** Known, narrowly defined normalization only; no deletion or arbitrary item substitution. */
     public function compare(array $before, array $after): void
     {
+        $before = $this->normalize($before); $after = $this->normalize($after);
         foreach (['credit', 'craft_slot_lease', 'craft_tool_wear', 'craft_skill', 'craft_known', 'craft_command', 'craft_history', 'craft_event'] as $field) {
             if ($before[$field] !== $after[$field]) throw new \RuntimeException('Baseline mismatch: ' . $field);
         }
