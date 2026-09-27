@@ -6,8 +6,8 @@ class m260927_105000_economy_accounts extends WorldMigration
 {
     public function safeUp()
     {
-        $this->table('economy_registry', ['id' => $this->integer()->notNull(), 'wallet_ready' => $this->boolean()->notNull()->defaultValue(0), 'PRIMARY KEY ([[id]])']);
-        if (!(new \yii\db\Query())->from('economy_registry')->where(['id' => 1])->exists($this->db)) $this->insert('economy_registry', ['id' => 1, 'wallet_ready' => 0]);
+        $this->table('economy_registry', ['id' => $this->integer()->notNull(), 'wallet_ready' => $this->boolean()->notNull()->defaultValue(false), 'PRIMARY KEY ([[id]])']);
+        if (!(new \yii\db\Query())->from('economy_registry')->where(['id' => 1])->exists($this->db)) $this->insert('economy_registry', ['id' => 1, 'wallet_ready' => false]);
         $this->table('economy_subject', ['id' => $this->primaryKey(), 'node_id' => $this->integer(), 'actor_id' => $this->integer(), 'asset_instance_id' => $this->integer(), 'created_at' => $this->integer()->notNull()]);
         foreach (['node_id' => 'world_node', 'actor_id' => 'game_actor', 'asset_instance_id' => 'craft_equipment_instance'] as $column => $parent) {
             $this->index('ux_economy_subject_' . $column, 'economy_subject', [$column], true);
