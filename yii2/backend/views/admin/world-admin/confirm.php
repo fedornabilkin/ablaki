@@ -19,6 +19,8 @@ $values = ['canopy' => 'Навес', 'workroom' => 'Мастерская', 'hous
             <dt><?= Html::encode($label) ?></dt><dd><?= Html::encode($value === null ? 'Нет' : ($values[(string)$value] ?? (string)$value)) ?></dd>
         <?php endforeach ?>
         </dl>
+        <p>Требования к покупателю:</p>
+        <pre><?= Html::encode(json_encode($terms['config']['requirements'] ?? ['all' => []], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE)) ?></pre>
         <?php if (($terms['config']['delivery'] ?? 'ready') === 'construction'): ?>
             <p>Срок: <?= (int)$terms['config']['duration_seconds'] ?> секунд. До завершения Cr резервируются, материалы хранятся отдельно.
                 Отмена освобождает весь резерв Cr и возвращает материалы в рюкзак; для возврата нужно свободное место. Пауза сохраняет резервы.</p>

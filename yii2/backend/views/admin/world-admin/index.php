@@ -5,7 +5,14 @@ $this->title = 'Управление миром';
 $this->params['breadcrumbs'][] = $this->title;
 ?>
 <div class="box box-primary"><div class="box-body">
-    <p>Выберите поселение для управления каталогом построек или откройте объект для просмотра его состава.</p>
+    <p>Разделы меню «Мир» позволяют создавать, просматривать, изменять и удалять объекты. В карточке поселения доступен каталог построек.</p>
+    <p>
+        <?php foreach (\common\modules\world\model\WorldNodeForm::ROUTES as $nodeType => $route): ?>
+            <?php if (\mdm\admin\components\Helper::checkRoute('/' . $route . '/index')): ?>
+                <?= Html::a(\common\modules\world\model\WorldNodeForm::TYPES[$nodeType], ['/' . $route . '/index'], ['class' => 'btn btn-default']) ?>
+            <?php endif ?>
+        <?php endforeach ?>
+    </p>
     <dl class="dl-horizontal">
         <?php foreach (['schema_ready' => 'Подготовка данных', 'world_read' => 'Просмотр мира', 'world_write' => 'Действия в мире',
             'storage_v2' => 'Размещение имущества', 'economy_tick' => 'Экономические расчёты'] as $flag => $label): ?>

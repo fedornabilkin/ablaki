@@ -75,7 +75,7 @@ class WorldSetupController extends \yii\console\Controller
     {
         $this->requireInstall();
         $auth = Yii::$app->authManager;
-        if (!$auth->checkAccess($user, 'p-admin')) throw new \InvalidArgumentException('The user must already have p-admin.');
+        if (!(new \yii\db\Query())->from('user')->where(['id' => $user, 'blocked_at' => null])->exists(Yii::$app->db)) throw new \InvalidArgumentException('An active user is required.');
         $permission = $auth->getPermission('world-manage');
         if (!$permission) {
             $permission = $auth->createPermission('world-manage');
@@ -83,7 +83,7 @@ class WorldSetupController extends \yii\console\Controller
             $auth->add($permission);
         }
         if (!$auth->getAssignment('world-manage', $user)) $auth->assign($permission, $user);
-        $this->stdout("World management permission assigned to the existing administrator.\n");
+        $this->stdout("World API management permission assigned. Configure backend route permissions separately in RBAC.\n");
         return 0;
     }
     public function actionStorageIndex(): int

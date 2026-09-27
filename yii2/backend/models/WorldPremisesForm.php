@@ -17,6 +17,7 @@ class WorldPremisesForm extends Model
     public $delivery = 'ready';
     public $duration_seconds = 0;
     public $materials_json = '[]';
+    public $requirements_json = '{"all":[]}';
 
     public function rules(): array
     {
@@ -24,6 +25,7 @@ class WorldPremisesForm extends Model
             ['delivery', 'in', 'range' => ['ready', 'construction']],
             ['duration_seconds', 'integer', 'min' => 0, 'max' => 604800],
             ['materials_json', 'string', 'max' => 4000],
+            ['requirements_json', 'string', 'max' => 8000],
             [['name', 'kind', 'area', 'slots', 'price', 'expansion_limit', 'reason'], 'required'],
             [['name', 'price', 'reason', 'expansion_base_price'], 'string', 'max' => 500],
             ['reason', 'string', 'max' => 255],
@@ -40,15 +42,19 @@ class WorldPremisesForm extends Model
             'slots' => 'Мест оборудования при покупке', 'price' => 'Цена покупки, Cr',
             'expansion_limit' => 'Предельное число мест оборудования',
             'expansion_base_price' => 'Базовая цена расширения, Cr', 'reason' => 'Причина публикации',
-            'delivery' => 'Способ получения', 'duration_seconds' => 'Срок строительства, секунд', 'materials_json' => 'Материалы строительства'];
+            'delivery' => 'Способ получения', 'duration_seconds' => 'Срок строительства, секунд', 'materials_json' => 'Материалы строительства',
+            'requirements_json' => 'Требования к покупателю'];
     }
 
     public function payload(WorldPremises $service, int $node): array
     {
         try { $materials = json_decode($this->materials_json, true, 512, JSON_THROW_ON_ERROR); }
         catch (\Exception $e) { throw new \common\services\game\GameError('INVALID_CONSTRUCTION', 'Укажите материалы в формате JSON: [{"item_id": 1, "quantity": 10}].', 422); }
+        try { $requirements = json_decode($this->requirements_json, true, 16, JSON_THROW_ON_ERROR); }
+        catch (\Exception $e) { throw new \common\services\game\GameError('INVALID_REQUIREMENTS', 'Укажите требования в формате JSON.', 422); }
         return ['node_id' => $node, 'admin_reason' => trim($this->reason)] + $service->publication([
             'delivery' => $this->delivery, 'duration_seconds' => (int)$this->duration_seconds, 'materials' => $materials,
+            'requirements' => $requirements,
             'name' => $this->name, 'kind' => $this->kind, 'area' => (int)$this->area,
             'slots' => (int)$this->slots, 'price' => trim($this->price),
             'expansion_limit' => (int)$this->expansion_limit,

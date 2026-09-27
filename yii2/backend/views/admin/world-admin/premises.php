@@ -32,6 +32,7 @@ $kinds = ['canopy' => 'Навес', 'workroom' => 'Мастерская', 'house
             if (!empty($c['expansion_base_price'])) $parts[] = 'Расширение: ' . $c['expansion_base_price'] . ' Cr × номер покупки';
             $parts[] = ($c['delivery'] ?? 'ready') === 'construction' ? 'Строительство: ' . $c['duration_seconds'] . ' сек.' : 'Готовая постройка';
             foreach ($c['materials'] ?? [] as $material) $parts[] = $material['name'] . ': ' . $material['quantity'];
+            if (!empty($c['requirements']) && $c['requirements'] !== ['all' => []]) $parts[] = 'Требования: ' . json_encode($c['requirements'], JSON_UNESCAPED_UNICODE);
             return implode('<br>', array_map([Html::class, 'encode'], $parts));
         }],
         ['attribute' => 'author_user_id', 'label' => 'Автор, ID'],
@@ -58,6 +59,7 @@ $kinds = ['canopy' => 'Навес', 'workroom' => 'Мастерская', 'house
         <?= $form->field($model, 'delivery')->dropDownList(['ready' => 'Купить готовую', 'construction' => 'Построить по времени']) ?>
         <?= $form->field($model, 'duration_seconds')->input('number', ['min' => 0, 'max' => 604800])->hint('Для стройки 60–604800 секунд; для готовой постройки — 0.') ?>
         <?= $form->field($model, 'materials_json')->textarea(['rows' => 3])->hint('До 8 видов обычного добываемого сырья. Формат: [{"item_id": 1, "quantity": 10}]. ID берите из каталога крафта. Для готовой постройки: [].') ?>
+        <?= $form->field($model, 'requirements_json')->textarea(['rows' => 4])->hint('Без ограничений: {"all":[]}. Уровень навыка: {"type":"craft_level","category_id":1,"level":5}. Изученный рецепт: {"type":"recipe_known","recipe_id":1}. Объединение: {"all":[...]} или {"any":[...]}. Используйте реальные ID категорий и рецептов крафта.') ?>
         <p>При старте стройки Cr и материалы резервируются. При отмене до завершения Cr освобождаются в бюджете, все материалы возвращаются в рюкзак. Для отмены нужно место под весь возврат. При паузе резервы сохраняются.</p>
         <div class="row">
             <div class="col-md-4"><?= $form->field($model, 'area')->input('number', ['min' => 1, 'max' => 4]) ?></div>

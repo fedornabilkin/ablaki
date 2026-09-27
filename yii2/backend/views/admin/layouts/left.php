@@ -102,6 +102,18 @@ use mdm\admin\components\Helper;
             ],
 
 
+            ['label' => 'Мир', 'icon' => 'globe', 'url' => '#', 'items' => [
+                ['label' => 'Обзор и готовность', 'icon' => 'dashboard', 'url' => ['/world-admin/index']],
+                ['label' => 'Миры', 'icon' => 'globe', 'url' => ['/world-root/index']],
+                ['label' => 'Регионы', 'icon' => 'map', 'url' => ['/world-region/index']],
+                ['label' => 'Поселения', 'icon' => 'map-marker', 'url' => ['/world-settlement/index']],
+                ['label' => 'Постройки', 'icon' => 'building', 'url' => ['/world-building/index']],
+                ['label' => 'Комнаты', 'icon' => 'home', 'url' => ['/world-room/index']],
+                ['label' => 'Участки', 'icon' => 'map-o', 'url' => ['/world-plot/index']],
+                ['label' => 'Грядки', 'icon' => 'leaf', 'url' => ['/world-bed/index']],
+                ['label' => 'Места оборудования', 'icon' => 'th', 'url' => ['/world-slot/index']],
+                ['label' => 'Журнал изменений', 'icon' => 'history', 'url' => ['/world-admin/audit']],
+            ]],
             ['label' => 'Other', 'options' => ['class' => 'header']],
 
             ['label' => 'Login', 'url' => ['site/login'], 'visible' => Yii::$app->user->isGuest],
@@ -136,10 +148,6 @@ use mdm\admin\components\Helper;
         ];
 
         $menuItems = Helper::filter($menuItems);
-        // These controllers use semantic permissions, independent of mdm route assignments.
-        if (Yii::$app->user->can('p-admin') && Yii::$app->user->can('world-manage')) {
-            array_unshift($menuItems, ['label' => 'Мир', 'icon' => 'globe', 'url' => ['/world-admin/index']]);
-        }
         ?>
 
         <!-- widget -->
@@ -150,7 +158,7 @@ use mdm\admin\components\Helper;
             ]
         )?>
 
-        <?php if (Yii::$app->user->can('p-admin')): ?>
+        <?php if (!Yii::$app->user->isGuest && Helper::checkRoute('/maintenance/clear-cache')): ?>
             <div class="sidebar-form">
                 <?= \yii\helpers\Html::beginForm(['/maintenance/clear-cache'], 'post') ?>
                 <?= \yii\helpers\Html::submitButton('Сбросить кэш', [

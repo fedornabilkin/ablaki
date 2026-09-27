@@ -13,6 +13,10 @@ $labels = ['area' => 'Площадь', 'level' => 'Уровень', 'condition' 
     'ordinal' => 'Номер грядки', 'unlocked' => 'Доступна', 'fertility' => 'Плодородие', 'population' => 'Население'];
 ?>
 <div class="box box-primary"><div class="box-body">
+    <?php $crud = '/' . \common\modules\world\model\WorldNodeForm::ROUTES[$node['type']] . '/view'; ?>
+    <?php if (\mdm\admin\components\Helper::checkRoute($crud)): ?>
+        <p><?= Html::a('Карточка и редактирование', [$crud, 'id' => $node['id']], ['class' => 'btn btn-primary']) ?></p>
+    <?php endif ?>
     <p>Объект №<?= (int)$node['id'] ?>. Версия <?= (int)$node['revision'] ?>. Состояние: <?= Html::encode($node['status']) ?>.</p>
     <p><?= Html::a('Журнал изменений объекта', ['audit', 'node_id' => $node['id']], ['class' => 'btn btn-default']) ?></p>
     <dl class="dl-horizontal">

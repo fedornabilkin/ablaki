@@ -34,7 +34,7 @@ class WorldController extends \yii\rest\Controller
     private function flags(): WorldFlags { return new WorldFlags(Yii::$app->db, Yii::$app->getModule('world')); }
     private function policy(): WorldAccessPolicy
     {
-        return new WorldAccessPolicy((int)Yii::$app->user->id, Yii::$app->user->can('p-admin') && Yii::$app->user->can('world-manage'));
+        return new WorldAccessPolicy((int)Yii::$app->user->id, Yii::$app->user->can('world-manage'));
     }
     private function reader(): WorldQuery { $this->flags()->requireFlag('world_read'); return new WorldQuery(Yii::$app->db, $this->policy()); }
     private function id($value): int
