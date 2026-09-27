@@ -71,6 +71,7 @@ jobs:
           php -l yii2/console/migrations/AbstractMigration.php
           php -l yii2/api/modules/v1/controllers/StatController.php
           php -l yii2/tests/release/frontend-api-routing.php
+          for file in yii2/common/modules/world/service/TestWorld*.php yii2/console/controllers/WorldSetupController.php yii2/console/world-migrations/m260928_003400_system_profession_author.php; do php -l "$file"; done
           bash deploy/tests/pipeline.sh
 
       - name: Install locked dependencies for the selected target
@@ -189,6 +190,14 @@ jobs:
           ssh "${options[@]}" -p "$DEPLOY_PORT" "$DEPLOY_USER@$DEPLOY_HOST" \
             "bash '$deploy_root/backend-deploy.sh' '$repo_root' '$GITHUB_REF_NAME' '$TARGET'"
 
+      - name: Resume interrupted world activation on test
+        if: env.TARGET == 'test'
+        shell: bash
+        run: |
+          options=(-i "$HOME/.ssh/deploy_key" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=yes -o UserKnownHostsFile="$HOME/.ssh/known_hosts")
+          ssh "${options[@]}" -p "$DEPLOY_PORT" "$DEPLOY_USER@$DEPLOY_HOST" \
+            "if test -f /opt/ablaki-backend-test/world-activation.pending; then bash /var/code/ablaki/deploy/world-open-test.sh; fi"
+
       - name: Apply additive activity, craft and forum migrations
         shell: bash
         run: |
@@ -214,7 +223,7 @@ jobs:
           ssh "${options[@]}" -p "$DEPLOY_PORT" "$DEPLOY_USER@$DEPLOY_HOST" \
             "cd '$repo_root' && test \"\$(pwd -P)\" = '$repo_root' && docker-compose exec -T -e 'FORUM_INSTALL=confirmed-$TARGET-checkout' php php /web/yii2/yii forum-setup/install"
 
-      - name: Install and open worlds on test
+      - name: Prepare and start all implemented world features on test
         if: env.TARGET == 'test'
         shell: bash
         run: |

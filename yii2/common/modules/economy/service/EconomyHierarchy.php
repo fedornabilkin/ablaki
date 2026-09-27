@@ -58,6 +58,7 @@ class EconomyHierarchy
                     'operation_id' => $operation, 'reason' => 'Initial parent at account provisioning',
                 ])->execute();
                 $this->db->createCommand()->insert('economy_parent_rule', ['subject_id' => $subject['id'], 'history_id' => (int)$this->db->getLastInsertID(), 'revision' => 1])->execute();
+                \common\modules\world\service\TestWorldDefaults::initialPolicy($this->db, (int)$subject['id'], $operation);
                 $changed = true;
             }
             if ($changed) $this->db->createCommand()->update('world_node', ['revision' => new Expression('[[revision]]+1'), 'updated_at' => time()], ['id' => $place['id']])->execute();

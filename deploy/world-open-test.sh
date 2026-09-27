@@ -1,27 +1,54 @@
 #!/usr/bin/env bash
-# Install and open the world browser/onboarding on the test checkout only.
-# Canonical inventory and wallet conversion have separate offline rollouts.
-set -euo pipefail
+# Fully prepare the established test environment, including existing property and credits.
+set -Eeuo pipefail
 cd /var/code/ablaki
 [[ "$(pwd -P)" = /var/code/ablaki ]]
 [[ "$(git symbolic-ref --quiet --short HEAD)" = test ]]
 [[ -f .env && ! -L .env && -w .env ]]
-exec 9>/opt/ablaki-backend-test/world-setup.lock
+deploy_root=/opt/ablaki-backend-test
+exec 9>"$deploy_root/world-setup.lock"
 flock -n 9
+umask 077
+pending="$deploy_root/world-activation.pending"
+worker=ablaki-world-worker-test
 
-world_setup() {
-  docker-compose exec -T -e WORLD_INSTALL=confirmed-world-install php php /web/yii2/yii "world-setup/$@"
-}
-world_setup install
-world_setup flag world_read 1
-world_setup flag world_write 1
-
-# Change only the two world UI flags; preserve all other local configuration.
-# The same mounted .env is read by PHP-FPM, and env_file supplies console calls.
-if ! grep -qx 'WORLD_READ=1' .env || ! grep -qx 'WORLD_WRITE=1' .env; then
-  sed -i '/^WORLD_READ=/d; /^WORLD_WRITE=/d' .env
-  printf '\nWORLD_READ=1\nWORLD_WRITE=1\n' >> .env
-  docker-compose up -d --no-deps php
+if docker container inspect "$worker" >/dev/null 2>&1; then
+  [[ "$(docker inspect -f '{{index .Config.Labels "ablaki.world.worker"}}' "$worker")" = test ]]
+  docker stop --time 60 "$worker"
+  docker rm "$worker"
 fi
-printf 'World schema, navigation and onboarding are enabled on test.\n'
-printf 'Storage and wallet activation remain explicit offline procedures.\n'
+touch "$pending"
+trap 'printf "Test activation interrupted. Resume by deploying test again; checkpoints and backup are retained.\n" >&2' ERR
+
+# Stop FPM, legacy cron and in-flight writers before converting property or money.
+docker-compose stop -t 60 nginx php
+mkdir -p "$deploy_root/backups"
+backup="$deploy_root/backups/world-$(date -u +%Y%m%dT%H%M%S)-$$.dump"
+# The established test uses the compose PostgreSQL service, unlike production MySQL/MariaDB.
+docker-compose exec -T postgres sh -c 'exec pg_dump -U "$POSTGRES_USER" -d "$POSTGRES_DB" -Fc' > "$backup.partial"
+test -s "$backup.partial"
+mv -- "$backup.partial" "$backup"
+printf 'Test database backup saved: %s\n' "$backup"
+
+# No operator switches after deployment. Preserve unrelated application settings.
+for name in WORLD_READ WORLD_WRITE STORAGE_V2 ECONOMY_TICK WORLD_WORKER WORLD_TEST_MODE; do
+  sed -i "/^${name}=/d" .env
+  printf '\n%s=1\n' "$name" >> .env
+done
+
+docker-compose run --rm --no-deps -T --entrypoint php \
+  -e WORLD_INSTALL=confirmed-world-install -e WORLD_TEST_SETUP=confirmed-test-checkout \
+  php /web/yii2/yii world-setup/test-ready
+
+# Exercise registered handlers once before opening HTTP.
+docker-compose run --rm --no-deps -T --entrypoint php php /web/yii2/yii world-worker/run 200
+docker-compose up -d --no-deps php nginx
+
+# Reuse the same image, env_file, network and mounts; no image rebuild or host cron.
+docker-compose run -d --no-deps --name "$worker" --label ablaki.world.worker=test \
+  --entrypoint /bin/sh php -c 'while true; do php /web/yii2/yii world-worker/run 200; sleep 5; done'
+docker update --restart unless-stopped "$worker" >/dev/null
+[[ "$(docker inspect -f '{{.State.Running}}' "$worker")" = true ]]
+rm -- "$pending"
+trap - ERR
+printf 'Test world is ready: canonical storage, personal credits, finance, content and worker are active.\n'
