@@ -35,6 +35,18 @@ class CraftInventory extends ActiveRecord implements UserRelationInterface, Craf
     {
         return 'craft_inventory';
     }
+    public function beforeSave($insert)
+    {
+        \common\modules\craft\service\StorageMaintenance::writable(static::getDb());
+        if ((new \common\modules\craft\service\CraftStorage(static::getDb()))->isCanonical()) throw new \yii\web\ConflictHttpException('Изменяйте предметы через сервис хранилищ.');
+        return parent::beforeSave($insert);
+    }
+    public function beforeDelete()
+    {
+        \common\modules\craft\service\StorageMaintenance::writable(static::getDb());
+        if ((new \common\modules\craft\service\CraftStorage(static::getDb()))->isCanonical()) throw new \yii\web\ConflictHttpException('История предметов сохраняется; используйте сервис хранилищ.');
+        return parent::beforeDelete();
+    }
 
     /**
      * {@inheritdoc}

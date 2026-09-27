@@ -38,7 +38,11 @@ class InventoryService
     {
         Yii::$app->db->transaction(function() use($person,$item) {
             $storage=new CraftStorage(Yii::$app->db);
-            $storage->lock('craft_meta',['id'=>1]); $storage->lock('persone',['user_id'=>$person->user_id]);
+            $storage->lock('craft_meta',['id'=>1]);
+            StorageMaintenance::writable(Yii::$app->db);
+            if ($storage->isCanonical()) (new \common\services\game\Locks(Yii::$app->db))->owners([(int)$person->user_id]);
+            $storage->lock('persone',['user_id'=>$person->user_id]);
+            if ($storage->isCanonical()) $storage->lock('world_registry',['id'=>1]);
             $storage->move((int)$person->user_id,$item->getAttributes(),$item->getQuantity());
         });
     }
@@ -51,10 +55,17 @@ class InventoryService
      */
     public function availableItems(Person $person, ...$itemIds): array
     {
-        return CraftInventory::find()
+        $query = CraftInventory::find()
             ->andWhere(['user_id' => $person->user_id])
-            ->andFilterWhere(['item_id' => $itemIds])
-            ->all();
+            ->andFilterWhere(['item_id' => $itemIds]);
+        $storage = new CraftStorage(Yii::$app->db);
+        if ($storage->isCanonical()) {
+            $backpack = (new CanonicalInventory($storage))->backpack((int)$person->user_id);
+            if (!$backpack) return [];
+            $active = (new \common\modules\craft\service\CraftInventory($storage))->capacity((int)$person->user_id)['active_slots'];
+            $query->andWhere(['storage_id' => $backpack['id']])->andWhere(['between', 'slot', 1, $active])->andWhere(['>', 'item_quantity', 0]);
+        }
+        return $query->all();
     }
 
     public function deficitItem(CraftInventory $available, CraftItem $required): bool

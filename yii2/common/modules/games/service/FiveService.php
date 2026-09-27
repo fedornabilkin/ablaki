@@ -23,6 +23,7 @@ class FiveService
     {
         return Yii::$app->db->transaction(function () use ($game, $person) {
             $this->lock($person);
+            if (\common\modules\economy\service\WalletSchema::ready(Yii::$app->db)) \common\modules\economy\service\LegacyCreditPolicy::game($game->kon);
             $this->requireFunds($person, (float)$game->kon);
             $game->user_id = $person->user_id;
             $game->user_gamer = 0;
@@ -123,14 +124,22 @@ class FiveService
 
     private function changePerson(Person $person, GameFive $game, float $credit, float $rating, string $comment): void
     {
-        if (!$person->updateCounters(['credit' => $credit, 'rating' => $rating])) {
+        \common\modules\economy\service\WalletMaintenance::writable(Yii::$app->db);
+        $exact = \common\modules\economy\service\WalletSchema::ready(Yii::$app->db);
+        if ($exact) {
+            (new \common\services\user\CreditLedger(Yii::$app->db))->changeExact((int)$person->user_id, \common\modules\economy\value\Money::fromLegacy($credit)->decimal(), $game->getHistoryType(), $comment);
+            $person->refresh();
+        }
+        if ((!$exact || $rating != 0) && !$person->updateCounters($exact ? ['rating' => $rating] : ['credit' => $credit, 'rating' => $rating])) {
             throw new RuntimeException('Failed to update account.');
         }
         $values = ['user_id' => $person->user_id, 'type' => $game->getHistoryType(), 'comment' => $comment];
-        $history = new HistoryBalance();
-        $history->setAttributes($values + ['balance' => $person->balance, 'credit' => $person->credit,
-            'balance_up' => 0, 'credit_up' => $credit]);
-        $this->save($history);
+        if (!$exact) {
+            $history = new HistoryBalance();
+            $history->setAttributes($values + ['balance' => $person->balance, 'credit' => $person->credit,
+                'balance_up' => 0, 'credit_up' => $credit]);
+            $this->save($history);
+        }
         if ($rating != 0) {
             $history = new HistoryRating();
             $history->setAttributes($values + ['rating' => $person->rating, 'rating_up' => $rating]);

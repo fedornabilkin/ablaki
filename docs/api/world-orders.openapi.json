@@ -1,0 +1,1911 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Ablaki funded starter orders",
+    "version": "1.0.0",
+    "description": "Code only, not tested or deployed. Finite municipal demand for existing gatherable materials. Fully reserved real budget; no minting. Selected backpack goods are consumed with a funded receipt in the player campsite treasury. Expiry jobs release unused reserves. Publication is allowed to the settlement owner or world administrators for unowned system settlements. Initial income terms require explicit publication and delivery confirmation."
+  },
+  "servers": [
+    {
+      "url": "/v1"
+    }
+  ],
+  "security": [
+    {
+      "bearerAuth": []
+    }
+  ],
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer"
+      }
+    },
+    "schemas": {
+      "IncomePolicy": {
+        "type": "object",
+        "properties": {
+          "rate_bps": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 10000
+          },
+          "due_seconds": {
+            "type": "integer",
+            "minimum": 3600,
+            "maximum": 31536000
+          },
+          "loss_policy": {
+            "type": "object",
+            "properties": {
+              "protected_seconds": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 31536000
+              },
+              "loss_period_seconds": {
+                "type": "integer",
+                "minimum": 3600,
+                "maximum": 2592000
+              },
+              "loss_rate_bps": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 10000
+              }
+            },
+            "required": [
+              "protected_seconds",
+              "loss_period_seconds",
+              "loss_rate_bps"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "rate_bps",
+          "due_seconds",
+          "loss_policy"
+        ],
+        "additionalProperties": true,
+        "description": "Pinned income conditions with policy identity metadata. Existing published campsite conditions are preserved."
+      },
+      "Order": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          },
+          "item_id": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          },
+          "item_name": {
+            "type": "string",
+            "maxLength": 120
+          },
+          "purpose": {
+            "type": "string",
+            "maxLength": 255
+          },
+          "quantity": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 1000000
+          },
+          "remaining_quantity": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 1000000
+          },
+          "my_remaining": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 1000000
+          },
+          "unit_price": {
+            "type": "string",
+            "pattern": "^(0|[1-9][0-9]{0,14})\\.[0-9]{4}$",
+            "description": "Exact Cr, maximum 900000000000000.0000. Never a JSON number."
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "open",
+              "fulfilled",
+              "cancelled",
+              "expired"
+            ]
+          },
+          "can_cancel": {
+            "type": "boolean"
+          },
+          "expires_at": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 2147483647
+          }
+        },
+        "required": [
+          "id",
+          "item_id",
+          "item_name",
+          "purpose",
+          "quantity",
+          "remaining_quantity",
+          "my_remaining",
+          "unit_price",
+          "status",
+          "can_cancel",
+          "expires_at"
+        ],
+        "additionalProperties": false
+      },
+      "CatalogItem": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          },
+          "name": {
+            "type": "string",
+            "maxLength": 120
+          }
+        },
+        "required": [
+          "id",
+          "name"
+        ],
+        "additionalProperties": false
+      },
+      "StockItem": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          },
+          "position": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          },
+          "quantity": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          }
+        },
+        "required": [
+          "id",
+          "position",
+          "quantity"
+        ],
+        "additionalProperties": false
+      },
+      "PublishInput": {
+        "type": "object",
+        "properties": {
+          "item_id": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          },
+          "quantity": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 1000000
+          },
+          "per_user_limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 1000000
+          },
+          "lifetime_hours": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 720
+          },
+          "unit_price": {
+            "type": "string",
+            "pattern": "^(0|[1-9][0-9]{0,14})\\.[0-9]{4}$",
+            "description": "Exact Cr, maximum 900000000000000.0000. Never a JSON number."
+          },
+          "purpose": {
+            "type": "string",
+            "maxLength": 255,
+            "minLength": 1
+          },
+          "initialize_starter_policy": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          }
+        },
+        "required": [
+          "item_id",
+          "quantity",
+          "per_user_limit",
+          "lifetime_hours",
+          "unit_price",
+          "purpose",
+          "initialize_starter_policy"
+        ],
+        "additionalProperties": false
+      },
+      "DeliverInput": {
+        "type": "object",
+        "properties": {
+          "order_id": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          },
+          "inventory_id": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          },
+          "quantity": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 10000
+          }
+        },
+        "required": [
+          "order_id",
+          "inventory_id",
+          "quantity"
+        ],
+        "additionalProperties": false
+      },
+      "CancelInput": {
+        "type": "object",
+        "properties": {
+          "order_id": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          }
+        },
+        "required": [
+          "order_id"
+        ],
+        "additionalProperties": false
+      },
+      "Orders": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "maxItems": 20,
+            "items": {
+              "$ref": "#/components/schemas/Order"
+            }
+          },
+          "_meta": {
+            "type": "object",
+            "properties": {
+              "totalCount": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 2147483647
+              },
+              "pageCount": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 2147483647
+              },
+              "currentPage": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 1000000
+              },
+              "perPage": {
+                "type": "integer",
+                "enum": [
+                  20
+                ]
+              }
+            },
+            "required": [
+              "totalCount",
+              "pageCount",
+              "currentPage",
+              "perPage"
+            ],
+            "additionalProperties": false
+          },
+          "node_id": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          },
+          "can_publish": {
+            "type": "boolean"
+          },
+          "can_deliver": {
+            "type": "boolean"
+          },
+          "site_node_id": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647,
+            "nullable": true
+          },
+          "server_time": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 2147483647
+          }
+        },
+        "required": [
+          "items",
+          "_meta",
+          "node_id",
+          "can_publish",
+          "can_deliver",
+          "site_node_id",
+          "server_time"
+        ],
+        "additionalProperties": false
+      },
+      "Catalog": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "maxItems": 20,
+            "items": {
+              "$ref": "#/components/schemas/CatalogItem"
+            }
+          },
+          "_meta": {
+            "type": "object",
+            "properties": {
+              "totalCount": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 2147483647
+              },
+              "pageCount": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 2147483647
+              },
+              "currentPage": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 1000000
+              },
+              "perPage": {
+                "type": "integer",
+                "enum": [
+                  20
+                ]
+              }
+            },
+            "required": [
+              "totalCount",
+              "pageCount",
+              "currentPage",
+              "perPage"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "items",
+          "_meta"
+        ],
+        "additionalProperties": false
+      },
+      "Stock": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "maxItems": 20,
+            "items": {
+              "$ref": "#/components/schemas/StockItem"
+            }
+          },
+          "_meta": {
+            "type": "object",
+            "properties": {
+              "totalCount": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 2147483647
+              },
+              "pageCount": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 2147483647
+              },
+              "currentPage": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 1000000
+              },
+              "perPage": {
+                "type": "integer",
+                "enum": [
+                  20
+                ]
+              }
+            },
+            "required": [
+              "totalCount",
+              "pageCount",
+              "currentPage",
+              "perPage"
+            ],
+            "additionalProperties": false
+          },
+          "item_id": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          }
+        },
+        "required": [
+          "items",
+          "_meta",
+          "item_id"
+        ],
+        "additionalProperties": false
+      },
+      "PublishCommand": {
+        "type": "object",
+        "properties": {
+          "item_id": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          },
+          "quantity": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 1000000
+          },
+          "per_user_limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 1000000
+          },
+          "lifetime_hours": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 720
+          },
+          "unit_price": {
+            "type": "string",
+            "pattern": "^(0|[1-9][0-9]{0,14})\\.[0-9]{4}$",
+            "description": "Exact Cr, maximum 900000000000000.0000. Never a JSON number."
+          },
+          "purpose": {
+            "type": "string",
+            "maxLength": 255,
+            "minLength": 1
+          },
+          "initialize_starter_policy": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          },
+          "request_key": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_-]{16,80}$"
+          },
+          "quote_id": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{32}$"
+          },
+          "expected_revisions": {
+            "$ref": "world.openapi.json#/components/schemas/Revisions"
+          }
+        },
+        "required": [
+          "item_id",
+          "quantity",
+          "per_user_limit",
+          "lifetime_hours",
+          "unit_price",
+          "purpose",
+          "initialize_starter_policy",
+          "request_key",
+          "quote_id",
+          "expected_revisions"
+        ],
+        "additionalProperties": false
+      },
+      "PublishTerms": {
+        "type": "object",
+        "properties": {
+          "item_id": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          },
+          "quantity": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 1000000
+          },
+          "per_user_limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 1000000
+          },
+          "lifetime_hours": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 720
+          },
+          "unit_price": {
+            "type": "string",
+            "pattern": "^(0|[1-9][0-9]{0,14})\\.[0-9]{4}$",
+            "description": "Exact Cr, maximum 900000000000000.0000. Never a JSON number."
+          },
+          "purpose": {
+            "type": "string",
+            "maxLength": 255,
+            "minLength": 1
+          },
+          "initialize_starter_policy": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          },
+          "node_id": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          },
+          "reserved_cost": {
+            "type": "string",
+            "pattern": "^(0|[1-9][0-9]{0,14})\\.[0-9]{4}$",
+            "description": "Exact Cr, maximum 900000000000000.0000. Never a JSON number."
+          },
+          "item_name": {
+            "type": "string",
+            "maxLength": 120
+          },
+          "starter_policy": {
+            "$ref": "#/components/schemas/IncomePolicy"
+          },
+          "goods_consumed": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          }
+        },
+        "required": [
+          "item_id",
+          "quantity",
+          "per_user_limit",
+          "lifetime_hours",
+          "unit_price",
+          "purpose",
+          "initialize_starter_policy",
+          "node_id",
+          "reserved_cost",
+          "item_name",
+          "starter_policy",
+          "goods_consumed"
+        ],
+        "additionalProperties": false
+      },
+      "PublishQuote": {
+        "type": "object",
+        "properties": {
+          "quote_id": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{32}$"
+          },
+          "expected_revisions": {
+            "$ref": "world.openapi.json#/components/schemas/Revisions"
+          },
+          "expires_at": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 2147483647
+          },
+          "server_time": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 2147483647
+          },
+          "terms": {
+            "$ref": "#/components/schemas/PublishTerms"
+          }
+        },
+        "required": [
+          "quote_id",
+          "expected_revisions",
+          "expires_at",
+          "server_time",
+          "terms"
+        ],
+        "additionalProperties": false
+      },
+      "DeliverCommand": {
+        "type": "object",
+        "properties": {
+          "order_id": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          },
+          "inventory_id": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          },
+          "quantity": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 10000
+          },
+          "request_key": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_-]{16,80}$"
+          },
+          "quote_id": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{32}$"
+          },
+          "expected_revisions": {
+            "$ref": "world.openapi.json#/components/schemas/Revisions"
+          }
+        },
+        "required": [
+          "order_id",
+          "inventory_id",
+          "quantity",
+          "request_key",
+          "quote_id",
+          "expected_revisions"
+        ],
+        "additionalProperties": false
+      },
+      "DeliverTerms": {
+        "type": "object",
+        "properties": {
+          "order_id": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          },
+          "inventory_id": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          },
+          "quantity": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 10000
+          },
+          "node_id": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          },
+          "order_revision": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          },
+          "item_id": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          },
+          "site_node_id": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          },
+          "earned": {
+            "type": "string",
+            "pattern": "^(0|[1-9][0-9]{0,14})\\.[0-9]{4}$",
+            "description": "Exact Cr, maximum 900000000000000.0000. Never a JSON number."
+          },
+          "destination": {
+            "type": "string",
+            "enum": [
+              "site_treasury"
+            ]
+          },
+          "income_policy": {
+            "type": "object",
+            "properties": {
+              "initialize": {
+                "type": "boolean"
+              },
+              "policy": {
+                "$ref": "#/components/schemas/IncomePolicy"
+              }
+            },
+            "required": [
+              "initialize",
+              "policy"
+            ],
+            "additionalProperties": false
+          },
+          "goods_consumed": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          }
+        },
+        "required": [
+          "order_id",
+          "inventory_id",
+          "quantity",
+          "node_id",
+          "order_revision",
+          "item_id",
+          "site_node_id",
+          "earned",
+          "destination",
+          "income_policy",
+          "goods_consumed"
+        ],
+        "additionalProperties": false
+      },
+      "DeliverQuote": {
+        "type": "object",
+        "properties": {
+          "quote_id": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{32}$"
+          },
+          "expected_revisions": {
+            "$ref": "world.openapi.json#/components/schemas/Revisions"
+          },
+          "expires_at": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 2147483647
+          },
+          "server_time": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 2147483647
+          },
+          "terms": {
+            "$ref": "#/components/schemas/DeliverTerms"
+          }
+        },
+        "required": [
+          "quote_id",
+          "expected_revisions",
+          "expires_at",
+          "server_time",
+          "terms"
+        ],
+        "additionalProperties": false
+      },
+      "CancelCommand": {
+        "type": "object",
+        "properties": {
+          "order_id": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          },
+          "request_key": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_-]{16,80}$"
+          },
+          "quote_id": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{32}$"
+          },
+          "expected_revisions": {
+            "$ref": "world.openapi.json#/components/schemas/Revisions"
+          }
+        },
+        "required": [
+          "order_id",
+          "request_key",
+          "quote_id",
+          "expected_revisions"
+        ],
+        "additionalProperties": false
+      },
+      "CancelTerms": {
+        "type": "object",
+        "properties": {
+          "order_id": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          },
+          "node_id": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          },
+          "order_revision": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          },
+          "released_reserve": {
+            "type": "string",
+            "pattern": "^(0|[1-9][0-9]{0,14})\\.[0-9]{4}$",
+            "description": "Exact Cr, maximum 900000000000000.0000. Never a JSON number."
+          }
+        },
+        "required": [
+          "order_id",
+          "node_id",
+          "order_revision",
+          "released_reserve"
+        ],
+        "additionalProperties": false
+      },
+      "CancelQuote": {
+        "type": "object",
+        "properties": {
+          "quote_id": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{32}$"
+          },
+          "expected_revisions": {
+            "$ref": "world.openapi.json#/components/schemas/Revisions"
+          },
+          "expires_at": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 2147483647
+          },
+          "server_time": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 2147483647
+          },
+          "terms": {
+            "$ref": "#/components/schemas/CancelTerms"
+          }
+        },
+        "required": [
+          "quote_id",
+          "expected_revisions",
+          "expires_at",
+          "server_time",
+          "terms"
+        ],
+        "additionalProperties": false
+      }
+    }
+  },
+  "paths": {
+    "/world/nodes/{id}/orders": {
+      "get": {
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 2147483647
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 1000000,
+              "default": 1
+            }
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "maxLength": 120
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "open",
+                "all"
+              ],
+              "default": "open"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Orders"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Request rejected; no partial delivery or payment",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Request rejected; no partial delivery or payment",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Request rejected; no partial delivery or payment",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Request rejected; no partial delivery or payment",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Request rejected; no partial delivery or payment",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Request rejected; no partial delivery or payment",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Request rejected; no partial delivery or payment",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/world/nodes/{id}/order-items": {
+      "get": {
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 2147483647
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 1000000,
+              "default": 1
+            }
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "maxLength": 120
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Catalog"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Request rejected; no partial delivery or payment",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Request rejected; no partial delivery or payment",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Request rejected; no partial delivery or payment",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Request rejected; no partial delivery or payment",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Request rejected; no partial delivery or payment",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Request rejected; no partial delivery or payment",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Request rejected; no partial delivery or payment",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/world/nodes/{id}/order-stock": {
+      "get": {
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 2147483647
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 1000000,
+              "default": 1
+            }
+          },
+          {
+            "name": "item_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 2147483647
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Stock"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Request rejected; no partial delivery or payment",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Request rejected; no partial delivery or payment",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Request rejected; no partial delivery or payment",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Request rejected; no partial delivery or payment",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Request rejected; no partial delivery or payment",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Request rejected; no partial delivery or payment",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Request rejected; no partial delivery or payment",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/world/nodes/{id}/order-publish-preview": {
+      "post": {
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 2147483647
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PublishInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublishQuote"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Request rejected; no partial delivery or payment",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Request rejected; no partial delivery or payment",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Request rejected; no partial delivery or payment",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Request rejected; no partial delivery or payment",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Request rejected; no partial delivery or payment",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Request rejected; no partial delivery or payment",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Request rejected; no partial delivery or payment",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/world/nodes/{id}/order-publish": {
+      "post": {
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 2147483647
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PublishCommand"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/CommandResult"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Request rejected; no partial delivery or payment",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Request rejected; no partial delivery or payment",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Request rejected; no partial delivery or payment",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Request rejected; no partial delivery or payment",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Request rejected; no partial delivery or payment",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Request rejected; no partial delivery or payment",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Request rejected; no partial delivery or payment",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/world/nodes/{id}/order-deliver-preview": {
+      "post": {
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 2147483647
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeliverInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeliverQuote"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Request rejected; no partial delivery or payment",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Request rejected; no partial delivery or payment",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Request rejected; no partial delivery or payment",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Request rejected; no partial delivery or payment",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Request rejected; no partial delivery or payment",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Request rejected; no partial delivery or payment",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Request rejected; no partial delivery or payment",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/world/nodes/{id}/order-deliver": {
+      "post": {
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 2147483647
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeliverCommand"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/CommandResult"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Request rejected; no partial delivery or payment",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Request rejected; no partial delivery or payment",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Request rejected; no partial delivery or payment",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Request rejected; no partial delivery or payment",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Request rejected; no partial delivery or payment",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Request rejected; no partial delivery or payment",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Request rejected; no partial delivery or payment",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/world/nodes/{id}/order-cancel-preview": {
+      "post": {
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 2147483647
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CancelInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CancelQuote"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Request rejected; no partial delivery or payment",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Request rejected; no partial delivery or payment",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Request rejected; no partial delivery or payment",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Request rejected; no partial delivery or payment",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Request rejected; no partial delivery or payment",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Request rejected; no partial delivery or payment",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Request rejected; no partial delivery or payment",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/world/nodes/{id}/order-cancel": {
+      "post": {
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 2147483647
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CancelCommand"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/CommandResult"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Request rejected; no partial delivery or payment",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Request rejected; no partial delivery or payment",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Request rejected; no partial delivery or payment",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Request rejected; no partial delivery or payment",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Request rejected; no partial delivery or payment",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Request rejected; no partial delivery or payment",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Request rejected; no partial delivery or payment",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

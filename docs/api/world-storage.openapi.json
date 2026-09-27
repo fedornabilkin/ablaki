@@ -1,0 +1,830 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Ablaki World Storage API",
+    "version": "1.0.0",
+    "description": "Implemented storage slice, not deployed or runtime-tested. Requires storage_v2 and world_read. Writes also require world_write. All items are owner-private; public node access grants no storage rights. Transfer quote includes the physical equipment IDs. Repair quote terms.repair preserves the existing repair DTO and includes missing materials. New revision keys: storage:<id>, inventory:<id>. Activation requires the separate offline baseline/freeze/reconciliation workflow; it has not been executed or runtime-tested."
+  },
+  "servers": [
+    {
+      "url": "/v1"
+    }
+  ],
+  "security": [
+    {
+      "bearerAuth": []
+    }
+  ],
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer"
+      }
+    },
+    "schemas": {
+      "Header": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "backpack",
+              "chest",
+              "placement",
+              "recovery",
+              "stockpile"
+            ]
+          },
+          "name": {
+            "type": "string",
+            "maxLength": 120
+          },
+          "node_id": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647,
+            "nullable": true
+          },
+          "container_inventory_id": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647,
+            "nullable": true
+          },
+          "capacity": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 10000
+          },
+          "revision": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "name",
+          "node_id",
+          "container_inventory_id",
+          "capacity",
+          "revision"
+        ],
+        "additionalProperties": false
+      },
+      "Instance": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          },
+          "durability": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 2147483647
+          },
+          "max_durability": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          },
+          "exposure_class": {
+            "type": "string",
+            "enum": [
+              "outdoor",
+              "covered",
+              "indoor",
+              "carried"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "durability",
+          "max_durability",
+          "exposure_class"
+        ],
+        "additionalProperties": false
+      },
+      "Item": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          },
+          "item_id": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          },
+          "name": {
+            "type": "string",
+            "maxLength": 120
+          },
+          "icon": {
+            "type": "string",
+            "maxLength": 64
+          },
+          "quantity": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          },
+          "position": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          },
+          "revision": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          },
+          "instances": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Instance"
+            },
+            "maxItems": 10000
+          },
+          "inner_storage_id": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647,
+            "nullable": true
+          }
+        },
+        "required": [
+          "id",
+          "item_id",
+          "name",
+          "icon",
+          "quantity",
+          "position",
+          "revision",
+          "instances",
+          "inner_storage_id"
+        ],
+        "additionalProperties": false
+      },
+      "List": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Header"
+            },
+            "maxItems": 200
+          },
+          "server_time": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          }
+        },
+        "required": [
+          "items",
+          "server_time"
+        ],
+        "additionalProperties": false
+      },
+      "View": {
+        "type": "object",
+        "properties": {
+          "storage": {
+            "$ref": "#/components/schemas/Header"
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Item"
+            },
+            "maxItems": 100
+          },
+          "slots": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "position": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 2147483647
+                },
+                "type": {
+                  "type": "string",
+                  "maxLength": 24
+                },
+                "exposure_class": {
+                  "type": "string",
+                  "enum": [
+                    "outdoor",
+                    "covered",
+                    "indoor"
+                  ]
+                },
+                "available": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "position",
+                "type",
+                "exposure_class",
+                "available"
+              ],
+              "additionalProperties": false
+            },
+            "maxItems": 100
+          },
+          "_meta": {
+            "type": "object",
+            "properties": {
+              "totalCount": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 2147483647
+              },
+              "pageCount": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 2147483647
+              },
+              "currentPage": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 1000000
+              },
+              "perPage": {
+                "type": "integer",
+                "enum": [
+                  100
+                ]
+              }
+            },
+            "required": [
+              "totalCount",
+              "pageCount",
+              "currentPage",
+              "perPage"
+            ],
+            "additionalProperties": false
+          },
+          "server_time": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "writable": {
+            "type": "boolean"
+          },
+          "container": {
+            "type": "object",
+            "nullable": true,
+            "properties": {
+              "durability": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "max_durability": {
+                "type": "integer",
+                "minimum": 1
+              }
+            },
+            "required": [
+              "durability",
+              "max_durability"
+            ],
+            "additionalProperties": false
+          },
+          "location": {
+            "type": "object",
+            "nullable": true,
+            "properties": {
+              "node_id": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "name": {
+                "type": "string",
+                "maxLength": 120
+              }
+            },
+            "required": [
+              "node_id",
+              "name"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "storage",
+          "items",
+          "slots",
+          "_meta",
+          "server_time",
+          "writable",
+          "container",
+          "location"
+        ],
+        "additionalProperties": false
+      },
+      "TransferPreview": {
+        "type": "object",
+        "properties": {
+          "inventory_id": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          },
+          "source_storage_id": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          },
+          "destination_storage_id": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          },
+          "position": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          },
+          "quantity": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 10000
+          },
+          "instance_id": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647,
+            "nullable": true
+          }
+        },
+        "required": [
+          "inventory_id",
+          "source_storage_id",
+          "destination_storage_id",
+          "position",
+          "quantity",
+          "instance_id"
+        ],
+        "additionalProperties": false
+      },
+      "Transfer": {
+        "type": "object",
+        "properties": {
+          "inventory_id": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          },
+          "source_storage_id": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          },
+          "destination_storage_id": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          },
+          "position": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          },
+          "quantity": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 10000
+          },
+          "instance_id": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647,
+            "nullable": true
+          },
+          "request_key": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_-]{16,80}$"
+          },
+          "quote_id": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{32}$"
+          },
+          "expected_revisions": {
+            "$ref": "./world.openapi.json#/components/schemas/Revisions"
+          }
+        },
+        "required": [
+          "inventory_id",
+          "source_storage_id",
+          "destination_storage_id",
+          "position",
+          "quantity",
+          "instance_id",
+          "request_key",
+          "quote_id",
+          "expected_revisions"
+        ],
+        "additionalProperties": false
+      },
+      "RepairPreview": {
+        "type": "object",
+        "properties": {
+          "storage_id": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          },
+          "container_inventory_id": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          }
+        },
+        "required": [
+          "storage_id",
+          "container_inventory_id"
+        ],
+        "additionalProperties": false
+      },
+      "Repair": {
+        "type": "object",
+        "properties": {
+          "storage_id": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          },
+          "container_inventory_id": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          },
+          "request_key": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_-]{16,80}$"
+          },
+          "quote_id": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{32}$"
+          },
+          "expected_revisions": {
+            "$ref": "./world.openapi.json#/components/schemas/Revisions"
+          }
+        },
+        "required": [
+          "storage_id",
+          "container_inventory_id",
+          "request_key",
+          "quote_id",
+          "expected_revisions"
+        ],
+        "additionalProperties": false
+      }
+    }
+  },
+  "paths": {
+    "/world/storages": {
+      "get": {
+        "operationId": "worldStorages",
+        "parameters": [
+          {
+            "name": "node_id",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 2147483647
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/List"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Object ownership required"
+          },
+          "404": {
+            "description": "Private storage not accessible"
+          },
+          "409": {
+            "description": "State or quote changed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Invalid input"
+          },
+          "503": {
+            "description": "World/storage feature disabled; no fallback to legacy locations"
+          }
+        }
+      }
+    },
+    "/world/storage/{id}": {
+      "get": {
+        "operationId": "worldStorage",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 2147483647
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 1000000
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/View"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Object ownership required"
+          },
+          "404": {
+            "description": "Private storage not accessible"
+          },
+          "409": {
+            "description": "State or quote changed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Invalid input"
+          },
+          "503": {
+            "description": "World/storage feature disabled; no fallback to legacy locations"
+          }
+        }
+      }
+    },
+    "/world/storage/transfer-preview": {
+      "post": {
+        "operationId": "worldStoragetransferPreview",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TransferPreview"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./world.openapi.json#/components/schemas/Quote"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Object ownership required"
+          },
+          "404": {
+            "description": "Private storage not accessible"
+          },
+          "409": {
+            "description": "State or quote changed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Invalid input"
+          },
+          "503": {
+            "description": "World/storage feature disabled; no fallback to legacy locations"
+          }
+        }
+      }
+    },
+    "/world/storage/transfer": {
+      "post": {
+        "operationId": "worldStoragetransfer",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Transfer"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./world.openapi.json#/components/schemas/CommandResult"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Object ownership required"
+          },
+          "404": {
+            "description": "Private storage not accessible"
+          },
+          "409": {
+            "description": "State or quote changed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Invalid input"
+          },
+          "503": {
+            "description": "World/storage feature disabled; no fallback to legacy locations"
+          }
+        }
+      }
+    },
+    "/world/storage/chest-repair-preview": {
+      "post": {
+        "operationId": "worldStoragechestrepairPreview",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RepairPreview"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./world.openapi.json#/components/schemas/Quote"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Object ownership required"
+          },
+          "404": {
+            "description": "Private storage not accessible"
+          },
+          "409": {
+            "description": "State or quote changed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Invalid input"
+          },
+          "503": {
+            "description": "World/storage feature disabled; no fallback to legacy locations"
+          }
+        }
+      }
+    },
+    "/world/storage/chest-repair": {
+      "post": {
+        "operationId": "worldStoragechestrepair",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Repair"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./world.openapi.json#/components/schemas/CommandResult"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Object ownership required"
+          },
+          "404": {
+            "description": "Private storage not accessible"
+          },
+          "409": {
+            "description": "State or quote changed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Invalid input"
+          },
+          "503": {
+            "description": "World/storage feature disabled; no fallback to legacy locations"
+          }
+        }
+      }
+    }
+  }
+}

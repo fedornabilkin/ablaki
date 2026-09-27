@@ -33,7 +33,7 @@ class DeleteMiddleware extends AbstractMiddleware
         $this->model = self::$data->getModel();
 
         $this->updateData();
-        $this->model->delete();
+        if ($this->model->delete() !== 1) throw new \RuntimeException('Could not delete exchange position.');
 
         return parent::check();
     }

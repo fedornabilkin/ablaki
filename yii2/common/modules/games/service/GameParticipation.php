@@ -13,15 +13,17 @@ class GameParticipation
     public static function run(string $table, int $id, Person $person, callable $play)
     {
         return Yii::$app->db->transaction(function () use ($table, $id, $person, $play) {
+            \common\modules\economy\service\WalletMaintenance::writable(Yii::$app->db);
             $ledger = new CreditLedger(Yii::$app->db);
             $game = $ledger->lock($table, ['id' => $id]);
             if (!$game) throw new ConflictHttpException('Игра уже удалена. Обновите список.');
             $ids = array_unique([(int)$game['user_id'], (int)$person->user_id]);
             sort($ids, SORT_NUMERIC);
             foreach ($ids as $userId) {
-                if (!$ledger->lock('persone', ['user_id' => $userId])) throw new \RuntimeException('Player unavailable.');
+                $account = $ledger->lock('persone', ['user_id' => $userId]);
+                if (!$account) throw new \RuntimeException('Player unavailable.');
+                if ($userId === (int)$person->user_id) $person::populateRecord($person, $account);
             }
-            if (!$person->refresh()) throw new \RuntimeException('Player unavailable.');
             return $play($game);
         });
     }

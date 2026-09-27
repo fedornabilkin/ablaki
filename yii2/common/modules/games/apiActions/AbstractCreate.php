@@ -49,17 +49,20 @@ abstract class AbstractCreate extends Action
 
     public function checkMiddleware(): bool
     {
-        $middleware = $this->getMiddleware();
-
-        if ($middleware->check()) {
-            App::response()->setStatusCode(201);
-            $message = '';
-        } else {
-            $errors = $middleware->getErrors();
-            App::response()->setStatusCode(400);
-            $message = Yii::t('games', $errors[0]);
-        }
-
-        return $message;
+        Yii::$app->db->transaction(function (): void {
+            $db = Yii::$app->db;
+            \common\modules\economy\service\WalletMaintenance::writable($db);
+            $person = App::user()->identity->person;
+            $row = (new \common\services\user\CreditLedger($db))->lock('persone', ['user_id' => (int)$person->user_id]);
+            if (!$row) throw new \RuntimeException('Player unavailable.');
+            $person::populateRecord($person, $row);
+            if ($this->model::tableName() !== 'game_saper' && \common\modules\economy\service\WalletSchema::ready($db)) {
+                \common\modules\economy\service\LegacyCreditPolicy::game($this->model->kon);
+            }
+            $middleware = $this->getMiddleware();
+            if (!$middleware->check()) throw new BadRequestHttpException(Yii::t('games', $middleware->getErrors()[0] ?? 'Error create game'));
+        });
+        App::response()->setStatusCode(201);
+        return false; // Preserve the existing successful JSON result (formerly bool-cast from '').
     }
 }

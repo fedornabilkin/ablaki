@@ -19,6 +19,18 @@ class AbstractGamesController extends FrontendController
 {
     protected $model;
 
+    public function beforeAction($action)
+    {
+        if (!parent::beforeAction($action)) return false;
+        // These deprecated HTML handlers write game rows without reserving/refunding stakes.
+        // They must not bypass the current transactional API once the exact wallet is active.
+        if (\common\modules\economy\service\WalletSchema::ready(\Yii::$app->db)
+            && in_array($action->id, ['create', 'remove', 'remove-all', 'start', 'play', 'double'], true)) {
+            throw new \yii\web\GoneHttpException('Этот старый игровой маршрут закрыт. Используйте текущую страницу игры.');
+        }
+        return true;
+    }
+
     /**
      * {@inheritdoc}
      */

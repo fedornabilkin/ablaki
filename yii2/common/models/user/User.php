@@ -31,6 +31,7 @@ class User extends \dektrium\user\models\User
 
     public function beforeSave($insert)
     {
+        if ($insert) \common\modules\economy\service\WalletMaintenance::writable(static::getDb());
         if (!parent::beforeSave($insert)) return false;
         if ($insert && $this->hasAttribute('latest_activity') && !$this->getAttribute('latest_activity')) {
             $this->setAttribute('latest_activity', \common\services\user\UserActivity::date(time()));

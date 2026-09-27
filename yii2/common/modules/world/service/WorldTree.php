@@ -1,0 +1,128 @@
+<?php
+namespace common\modules\world\service;
+
+use common\services\game\CanonicalJson;
+use common\services\game\GameError;
+use yii\db\Connection;
+use yii\db\Expression;
+use yii\db\Query;
+
+/** Writes are called under the registry lock; parent_id and closure change together. */
+class WorldTree
+{
+    public const TYPES = ['WORLD', 'REGION', 'SETTLEMENT', 'BUILDING', 'ROOM', 'PLOT', 'BED'];
+    private $db;
+    public function __construct(Connection $db) { $this->db = $db; }
+    public function get(int $id): array
+    {
+        $row = (new Query())->from('world_node')->where(['id' => $id])->one($this->db);
+        if (!$row) throw new GameError('NODE_NOT_FOUND', 'Объект не найден.', 404);
+        return $row;
+    }
+    public function assertParent(string $type, ?array $parent): void
+    {
+        $allowed = ['WORLD' => ['REGION'], 'REGION' => ['SETTLEMENT'], 'SETTLEMENT' => ['BUILDING', 'PLOT'], 'BUILDING' => ['ROOM', 'PLOT'], 'PLOT' => ['BUILDING', 'BED'], 'ROOM' => [], 'BED' => []];
+        if (!in_array($type, self::TYPES, true) || (!$parent && $type !== 'WORLD') || ($parent && !in_array($type, $allowed[$parent['node_type']] ?? [], true))) throw new GameError('INVALID_PARENT', 'Здесь нельзя разместить такой объект.', 422);
+        if (!$parent) return;
+        if ($parent['status'] !== 'active' || (int)$parent['depth'] >= 32) throw new GameError('INVALID_PARENT', 'Родительский объект недоступен.');
+        if ($parent['node_type'] === 'PLOT') {
+            $plot = (new Query())->from('world_plot')->where(['node_id' => $parent['id']])->one($this->db);
+            if (($type === 'BUILDING' && empty($plot['allow_building'])) || ($type === 'BED' && ($plot['plot_kind'] ?? '') !== 'garden')) throw new GameError('INCOMPATIBLE_PLOT', 'Назначение участка не подходит.');
+        }
+    }
+    public function create(array $values, array $details = []): array
+    {
+        if (!$this->db->getTransaction()) throw new \LogicException('World writes require a transaction.');
+        $parent = isset($values['parent_id']) ? $this->get((int)$values['parent_id']) : null;
+        $type = $values['node_type']; $this->assertParent($type, $parent);
+        if (!preg_match('/^[a-z0-9][a-z0-9-]{0,79}$/D', $values['code']) || !preg_match('/^[a-z0-9][a-z0-9-]{0,79}$/D', $values['slug'])) throw new GameError('INVALID_NODE', 'Некорректный код объекта.', 422);
+        if (!is_string($values['name']) || trim($values['name']) === '' || mb_strlen($values['name'], 'UTF-8') > 120) throw new GameError('INVALID_NODE', 'Некорректное название.', 422);
+        $row = ['parent_id' => $parent ? (int)$parent['id'] : null, 'root_id' => $parent ? (int)$parent['root_id'] : null, 'node_type' => $type,
+            'code' => $values['code'], 'slug' => $values['slug'], 'name' => trim($values['name']), 'owner_user_id' => $values['owner_user_id'] ?? null,
+            'visibility' => $values['visibility'] ?? 'public', 'status' => 'active', 'depth' => $parent ? (int)$parent['depth'] + 1 : 0,
+            'position_x' => $values['position_x'] ?? 0, 'position_y' => $values['position_y'] ?? 0, 'position' => $values['position'] ?? 0,
+            'revision' => 1, 'created_at' => time(), 'updated_at' => time()];
+        if (!in_array($row['visibility'], ['public', 'private'], true)) throw new GameError('INVALID_VISIBILITY', 'Некорректная видимость.', 422);
+        foreach (['position_x', 'position_y', 'position'] as $field) if (!is_int($row[$field]) || abs($row[$field]) > 1000000) throw new GameError('INVALID_POSITION', 'Некорректная позиция.', 422);
+        $this->db->createCommand()->insert('world_node', $row)->execute(); $id = (int)$this->db->getLastInsertID();
+        if (!$parent) $this->db->createCommand()->update('world_node', ['root_id' => $id], ['id' => $id])->execute();
+        $this->db->createCommand()->insert('world_node_closure', ['ancestor_id' => $id, 'descendant_id' => $id, 'distance' => 0])->execute();
+        if ($parent) foreach ((new Query())->from('world_node_closure')->where(['descendant_id' => $parent['id']])->all($this->db) as $ancestor) {
+            $this->db->createCommand()->insert('world_node_closure', ['ancestor_id' => $ancestor['ancestor_id'], 'descendant_id' => $id, 'distance' => (int)$ancestor['distance'] + 1])->execute();
+        }
+        if ($type !== 'WORLD') {
+            $table = 'world_' . strtolower($type);
+            $allowedDetails = ['REGION' => ['climate'], 'SETTLEMENT' => ['settlement_kind', 'population', 'plot_limit'], 'BUILDING' => ['level', 'condition', 'max_condition', 'operational_status'], 'ROOM' => ['area', 'exposure_class'], 'PLOT' => ['plot_kind', 'area', 'fertility', 'allow_building'], 'BED' => ['garden_node_id', 'ordinal', 'unlocked']];
+            $detailRow = array_intersect_key($details, array_flip(array_merge($allowedDetails[$type], ['template_revision_id'])));
+            if ($type === 'BED' && (($details['garden_node_id'] ?? null) !== (int)$parent['id'] || !is_int($details['ordinal'] ?? null) || $details['ordinal'] < 1 || $details['ordinal'] > 10)) throw new GameError('INVALID_BED', 'Некорректная грядка.', 422);
+            $this->db->createCommand()->insert($table, ['node_id' => $id] + $detailRow)->execute();
+        }
+        $this->touchAncestors($id);
+        return $this->get($id);
+    }
+    /** Also used by preview: an invalid action must not produce a confirmable quote. */
+    public function previewMove(int $id, int $parentId): array
+    {
+        $node = $this->get($id); $parent = $this->get($parentId);
+        if ($node['status'] !== 'active') throw new GameError('NODE_INACTIVE', 'Объект недоступен.');
+        if ((int)$node['parent_id'] === $parentId) throw new GameError('SAME_PARENT', 'Объект уже находится здесь.');
+        if ($node['node_type'] === 'WORLD' || (int)$node['root_id'] !== (int)$parent['root_id']) throw new GameError('CROSS_WORLD_MOVE', 'Перенос между мирами недоступен.');
+        if ($node['node_type'] === 'BED') throw new GameError('FIXED_GARDEN_BED', 'Грядка закреплена за своим огородом.');
+        $this->assertParent($node['node_type'], $parent);
+        $descendants = (new Query())->from('world_node_closure')->where(['ancestor_id' => $id])->all($this->db);
+        if (count($descendants) > 10000) throw new GameError('TREE_TOO_LARGE', 'Перенос требует отдельного задания.');
+        $ids = array_map('intval', array_column($descendants, 'descendant_id'));
+        if (in_array($parentId, $ids, true)) throw new GameError('TREE_CYCLE', 'Нельзя перенести объект внутрь самого себя.');
+        $height = max(array_column($descendants, 'distance'));
+        if ((int)$parent['depth'] + 1 + (int)$height > 32) throw new GameError('TREE_TOO_DEEP', 'Превышена глубина мира.');
+        $duplicate = (new Query())->from('world_node')->where(['parent_id' => $parentId, 'slug' => $node['slug']])->andWhere(['<>', 'id', $id])->exists($this->db);
+        if ($duplicate) throw new GameError('SLUG_OCCUPIED', 'В этом месте уже есть объект с таким адресом.');
+        return ['node' => $node, 'parent' => $parent, 'descendants' => $descendants, 'ids' => $ids];
+    }
+    public function move(int $id, int $parentId): array
+    {
+        if (!$this->db->getTransaction()) throw new \LogicException('World writes require a transaction.');
+        $prepared = $this->previewMove($id, $parentId);
+        $node = $prepared['node']; $parent = $prepared['parent']; $descendants = $prepared['descendants']; $ids = $prepared['ids'];
+        $ancestors = (new Query())->from('world_node_closure')->where(['descendant_id' => $parentId])->all($this->db);
+        $this->touchAncestors($id);
+        $this->db->createCommand()->delete('world_node_closure', ['and', ['descendant_id' => $ids], ['not in', 'ancestor_id', $ids]])->execute();
+        foreach ($ancestors as $ancestor) foreach ($descendants as $descendant) {
+            $this->db->createCommand()->insert('world_node_closure', ['ancestor_id' => $ancestor['ancestor_id'], 'descendant_id' => $descendant['descendant_id'], 'distance' => (int)$ancestor['distance'] + 1 + (int)$descendant['distance']])->execute();
+        }
+        $delta = (int)$parent['depth'] + 1 - (int)$node['depth'];
+        $this->db->createCommand()->update('world_node', ['depth' => new Expression('[[depth]] + :delta', [':delta' => $delta]), 'revision' => new Expression('[[revision]] + 1'), 'updated_at' => time()], ['id' => $ids])->execute();
+        $this->db->createCommand()->update('world_node', ['parent_id' => $parentId], ['id' => $id])->execute();
+        $this->touchAncestors($id);
+        return $this->get($id);
+    }
+    public function previewArchive(int $id): array
+    {
+        $node = $this->get($id);
+        if ($node['status'] !== 'active') throw new GameError('NODE_INACTIVE', 'Объект недоступен.');
+        if ($node['node_type'] === 'WORLD') throw new GameError('ROOT_REQUIRED', 'Корень мира нельзя архивировать.');
+        if ((new Query())->from('world_node')->where(['parent_id' => $id])->andWhere(['<>', 'status', 'archived'])->exists($this->db)) throw new GameError('NODE_NOT_EMPTY', 'Сначала освободите дочерние объекты.');
+        foreach (['world_membership' => 'starter_site_id', 'world_construction' => 'node_id', 'craft_storage' => 'node_id', 'economy_subject' => 'node_id'] as $table => $column) {
+            if ($this->db->schema->getTableSchema($table) && (new Query())->from($table)->where([$column => $id])->exists($this->db)) throw new GameError('NODE_IN_USE', 'Объект связан с имуществом или назначениями.');
+        }
+        return $node;
+    }
+    public function archive(int $id): array
+    {
+        if (!$this->db->getTransaction()) throw new \LogicException('World writes require a transaction.');
+        $this->previewArchive($id);
+        $this->db->createCommand()->update('world_node', ['status' => 'archived', 'revision' => new Expression('[[revision]] + 1'), 'updated_at' => time()], ['id' => $id])->execute();
+        $this->touchAncestors($id);
+        return $this->get($id);
+    }
+    private function touchAncestors(int $id): void
+    {
+        $ids = (new Query())->select('ancestor_id')->from('world_node_closure')->where(['descendant_id' => $id])->andWhere(['>', 'distance', 0])->column($this->db);
+        if ($ids) $this->db->createCommand()->update('world_node', ['revision' => new Expression('[[revision]] + 1'), 'updated_at' => time()], ['id' => $ids])->execute();
+    }
+    public function audit(int $user, string $action, string $reason, array $before, array $after, string $operation): void
+    {
+        $this->db->createCommand()->insert('world_audit', ['actor_user_id' => $user, 'node_id' => $after['id'], 'action' => $action, 'reason' => $reason,
+            'before_json' => CanonicalJson::encode($before), 'after_json' => CanonicalJson::encode($after), 'operation_id' => $operation, 'created_at' => time()])->execute();
+    }
+}

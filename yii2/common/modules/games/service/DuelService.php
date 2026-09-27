@@ -32,9 +32,15 @@ class DuelService
 
         $transaction = Yii::$app->db->beginTransaction();
         try {
+            \common\modules\economy\service\WalletMaintenance::writable(Yii::$app->db);
+            $row = (new \common\services\user\CreditLedger(Yii::$app->db))->lock('persone', ['user_id' => (int)$person->user_id]);
+            if (!$row) throw new \RuntimeException('Player unavailable.');
+            Person::populateRecord($person, $row);
+            if (\common\modules\economy\service\WalletSchema::ready(Yii::$app->db)) \common\modules\economy\service\LegacyCreditPolicy::game($game->kon);
+            if ($person->credit < $game->kon) throw new UserException(Yii::t('games', 'Insufficient funds'));
             $game->user_id = $person->user_id;
             $game->user_gamer = 0;
-            $game->save(false);
+            if (!$game->save(false)) throw new \RuntimeException('Could not create duel.');
 
             $this->changePerson($person, $game, 0 - $game->kon, 0, 'Create game duel #' . $game->id);
 
@@ -82,7 +88,7 @@ class DuelService
         $transaction = Yii::$app->db->beginTransaction();
         try {
             $game->user_gamer = $person->user_id;
-            $game->save(false);
+            if (!$game->save(false)) throw new \RuntimeException('Could not finish duel.');
 
             $this->settle($game, $person);
 

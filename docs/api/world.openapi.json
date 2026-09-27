@@ -1,0 +1,2022 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Ablaki World API — implemented foundation",
+    "version": "1.0.0",
+    "description": "Implemented world foundation. Storage routes are defined in world-storage.openapi.json. No migrations or runtime checks have been performed. Commands require a server quote and exact replay of request_key, payload, quote_id and expected_revisions. Feature flags default off. Workspace and recovery routes are defined in world-workspace.openapi.json; equipment instance revisions are supported."
+  },
+  "servers": [
+    {
+      "url": "/v1"
+    }
+  ],
+  "security": [
+    {
+      "bearerAuth": []
+    }
+  ],
+  "paths": {
+    "/world": {
+      "get": {
+        "operationId": "worldRoot",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 1000000
+            }
+          },
+          {
+            "name": "per-page",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            }
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "maxLength": 100
+            }
+          },
+          {
+            "name": "type",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "WORLD",
+                "REGION",
+                "SETTLEMENT",
+                "BUILDING",
+                "ROOM",
+                "PLOT",
+                "BED"
+              ]
+            }
+          },
+          {
+            "name": "bbox",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "pattern": "^-?\\d+,-?\\d+,-?\\d+,-?\\d+$",
+              "description": "Inclusive xMin,yMin,xMax,yMax, each within +/-1000000."
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Root"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Existing application authentication error"
+          },
+          "403": {
+            "description": "Insufficient access"
+          },
+          "404": {
+            "description": "Object absent or invisible"
+          },
+          "409": {
+            "description": "Conflict; obtain a new quote after resolving the reason",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Per-user command/preview rate exceeded"
+          },
+          "503": {
+            "description": "Feature disabled or schema not installed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/world/nodes/{id}": {
+      "get": {
+        "operationId": "worldNode",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 2147483647
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Node"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Existing application authentication error"
+          },
+          "403": {
+            "description": "Insufficient access"
+          },
+          "404": {
+            "description": "Object absent or invisible"
+          },
+          "409": {
+            "description": "Conflict; obtain a new quote after resolving the reason",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Per-user command/preview rate exceeded"
+          },
+          "503": {
+            "description": "Feature disabled or schema not installed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/world/nodes/{id}/children": {
+      "get": {
+        "operationId": "worldChildren",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 2147483647
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 1000000
+            }
+          },
+          {
+            "name": "per-page",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            }
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "maxLength": 100
+            }
+          },
+          {
+            "name": "type",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "WORLD",
+                "REGION",
+                "SETTLEMENT",
+                "BUILDING",
+                "ROOM",
+                "PLOT",
+                "BED"
+              ]
+            }
+          },
+          {
+            "name": "bbox",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "pattern": "^-?\\d+,-?\\d+,-?\\d+,-?\\d+$",
+              "description": "Inclusive xMin,yMin,xMax,yMax, each within +/-1000000."
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Existing application authentication error"
+          },
+          "403": {
+            "description": "Insufficient access"
+          },
+          "404": {
+            "description": "Object absent or invisible"
+          },
+          "409": {
+            "description": "Conflict; obtain a new quote after resolving the reason",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Per-user command/preview rate exceeded"
+          },
+          "503": {
+            "description": "Feature disabled or schema not installed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/world/nodes/{id}/map": {
+      "get": {
+        "operationId": "worldMap",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 2147483647
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 1000000
+            }
+          },
+          {
+            "name": "per-page",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            }
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "maxLength": 100
+            }
+          },
+          {
+            "name": "type",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "WORLD",
+                "REGION",
+                "SETTLEMENT",
+                "BUILDING",
+                "ROOM",
+                "PLOT",
+                "BED"
+              ]
+            }
+          },
+          {
+            "name": "bbox",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "pattern": "^-?\\d+,-?\\d+,-?\\d+,-?\\d+$",
+              "description": "Inclusive xMin,yMin,xMax,yMax, each within +/-1000000."
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Existing application authentication error"
+          },
+          "403": {
+            "description": "Insufficient access"
+          },
+          "404": {
+            "description": "Object absent or invisible"
+          },
+          "409": {
+            "description": "Conflict; obtain a new quote after resolving the reason",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Per-user command/preview rate exceeded"
+          },
+          "503": {
+            "description": "Feature disabled or schema not installed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/world/nodes/{id}/navigation": {
+      "get": {
+        "operationId": "worldNavigation",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 2147483647
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Navigation"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Existing application authentication error"
+          },
+          "403": {
+            "description": "Insufficient access"
+          },
+          "404": {
+            "description": "Object absent or invisible"
+          },
+          "409": {
+            "description": "Conflict; obtain a new quote after resolving the reason",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Per-user command/preview rate exceeded"
+          },
+          "503": {
+            "description": "Feature disabled or schema not installed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/world/nodes/{id}/statistics": {
+      "get": {
+        "operationId": "worldStatistics",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 2147483647
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Statistics"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Existing application authentication error"
+          },
+          "403": {
+            "description": "Insufficient access"
+          },
+          "404": {
+            "description": "Object absent or invisible"
+          },
+          "409": {
+            "description": "Conflict; obtain a new quote after resolving the reason",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Per-user command/preview rate exceeded"
+          },
+          "503": {
+            "description": "Feature disabled or schema not installed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/world/nodes/{id}/actions": {
+      "get": {
+        "operationId": "worldActions",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 2147483647
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Actions"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Existing application authentication error"
+          },
+          "403": {
+            "description": "Insufficient access"
+          },
+          "404": {
+            "description": "Object absent or invisible"
+          },
+          "409": {
+            "description": "Conflict; obtain a new quote after resolving the reason",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Per-user command/preview rate exceeded"
+          },
+          "503": {
+            "description": "Feature disabled or schema not installed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/world/onboarding": {
+      "get": {
+        "operationId": "worldOnboarding",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Onboarding"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Existing application authentication error"
+          },
+          "403": {
+            "description": "Insufficient access"
+          },
+          "404": {
+            "description": "Object absent or invisible"
+          },
+          "409": {
+            "description": "Conflict; obtain a new quote after resolving the reason",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Per-user command/preview rate exceeded"
+          },
+          "503": {
+            "description": "Feature disabled or schema not installed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/world/onboarding/preview": {
+      "post": {
+        "operationId": "worldJoinPreview",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/JoinPreview"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Quote"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Existing application authentication error"
+          },
+          "403": {
+            "description": "Insufficient access"
+          },
+          "404": {
+            "description": "Object absent or invisible"
+          },
+          "409": {
+            "description": "Conflict; obtain a new quote after resolving the reason",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Per-user command/preview rate exceeded"
+          },
+          "503": {
+            "description": "Feature disabled or schema not installed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/world/onboarding/join": {
+      "post": {
+        "operationId": "worldJoin",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Join"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommandResult"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Existing application authentication error"
+          },
+          "403": {
+            "description": "Insufficient access"
+          },
+          "404": {
+            "description": "Object absent or invisible"
+          },
+          "409": {
+            "description": "Conflict; obtain a new quote after resolving the reason",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Per-user command/preview rate exceeded"
+          },
+          "503": {
+            "description": "Feature disabled or schema not installed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/world/nodes/{id}/move-preview": {
+      "post": {
+        "operationId": "worldMovePreview",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 2147483647
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MovePreview"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Quote"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Existing application authentication error"
+          },
+          "403": {
+            "description": "Insufficient access"
+          },
+          "404": {
+            "description": "Object absent or invisible"
+          },
+          "409": {
+            "description": "Conflict; obtain a new quote after resolving the reason",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Per-user command/preview rate exceeded"
+          },
+          "503": {
+            "description": "Feature disabled or schema not installed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/world/nodes/{id}/move": {
+      "post": {
+        "operationId": "worldMove",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 2147483647
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Move"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommandResult"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Existing application authentication error"
+          },
+          "403": {
+            "description": "Insufficient access"
+          },
+          "404": {
+            "description": "Object absent or invisible"
+          },
+          "409": {
+            "description": "Conflict; obtain a new quote after resolving the reason",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Per-user command/preview rate exceeded"
+          },
+          "503": {
+            "description": "Feature disabled or schema not installed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/world/nodes/{id}/archive-preview": {
+      "post": {
+        "operationId": "worldArchivePreview",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 2147483647
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ArchivePreview"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Quote"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Existing application authentication error"
+          },
+          "403": {
+            "description": "Insufficient access"
+          },
+          "404": {
+            "description": "Object absent or invisible"
+          },
+          "409": {
+            "description": "Conflict; obtain a new quote after resolving the reason",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Per-user command/preview rate exceeded"
+          },
+          "503": {
+            "description": "Feature disabled or schema not installed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/world/nodes/{id}/archive": {
+      "post": {
+        "operationId": "worldArchive",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 2147483647
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Archive"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommandResult"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Existing application authentication error"
+          },
+          "403": {
+            "description": "Insufficient access"
+          },
+          "404": {
+            "description": "Object absent or invisible"
+          },
+          "409": {
+            "description": "Conflict; obtain a new quote after resolving the reason",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Per-user command/preview rate exceeded"
+          },
+          "503": {
+            "description": "Feature disabled or schema not installed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/world/storages": {
+      "$ref": "./world-storage.openapi.json#/paths/~1world~1storages"
+    },
+    "/world/storage/{id}": {
+      "$ref": "./world-storage.openapi.json#/paths/~1world~1storage~1{id}"
+    },
+    "/world/storage/transfer-preview": {
+      "$ref": "./world-storage.openapi.json#/paths/~1world~1storage~1transfer-preview"
+    },
+    "/world/storage/transfer": {
+      "$ref": "./world-storage.openapi.json#/paths/~1world~1storage~1transfer"
+    },
+    "/world/storage/chest-repair-preview": {
+      "$ref": "./world-storage.openapi.json#/paths/~1world~1storage~1chest-repair-preview"
+    },
+    "/world/storage/chest-repair": {
+      "$ref": "./world-storage.openapi.json#/paths/~1world~1storage~1chest-repair"
+    },
+    "/world/workspace": {
+      "$ref": "world-workspace.openapi.json#/paths/~1world~1workspace"
+    },
+    "/world/workspace/preview": {
+      "$ref": "world-workspace.openapi.json#/paths/~1world~1workspace~1preview"
+    },
+    "/world/workspace/craft": {
+      "$ref": "world-workspace.openapi.json#/paths/~1world~1workspace~1craft"
+    },
+    "/world/storage/recovery": {
+      "$ref": "world-workspace.openapi.json#/paths/~1world~1storage~1recovery"
+    },
+    "/world/storage/recovery-preview": {
+      "$ref": "world-workspace.openapi.json#/paths/~1world~1storage~1recovery-preview"
+    },
+    "/world/storage/recover": {
+      "$ref": "world-workspace.openapi.json#/paths/~1world~1storage~1recover"
+    },
+    "/world/nodes/{id}/economy": {
+      "$ref": "world-economy.openapi.json#/paths/~1world~1nodes~1{id}~1economy"
+    },
+    "/world/nodes/{id}/invest-preview": {
+      "$ref": "world-economy.openapi.json#/paths/~1world~1nodes~1{id}~1invest-preview"
+    },
+    "/world/nodes/{id}/invest": {
+      "$ref": "world-economy.openapi.json#/paths/~1world~1nodes~1{id}~1invest"
+    },
+    "/world/nodes/{id}/collect-preview": {
+      "$ref": "world-economy.openapi.json#/paths/~1world~1nodes~1{id}~1collect-preview"
+    },
+    "/world/nodes/{id}/collect": {
+      "$ref": "world-economy.openapi.json#/paths/~1world~1nodes~1{id}~1collect"
+    },
+    "/world/nodes/{id}/pay-preview": {
+      "$ref": "world-economy.openapi.json#/paths/~1world~1nodes~1{id}~1pay-preview"
+    },
+    "/world/nodes/{id}/pay": {
+      "$ref": "world-economy.openapi.json#/paths/~1world~1nodes~1{id}~1pay"
+    },
+    "/world/nodes/{id}/finance-policy-preview": {
+      "$ref": "world-economy.openapi.json#/paths/~1world~1nodes~1{id}~1finance-policy-preview"
+    },
+    "/world/nodes/{id}/finance-policy": {
+      "$ref": "world-economy.openapi.json#/paths/~1world~1nodes~1{id}~1finance-policy"
+    },
+    "/world/nodes/{id}/obligations": {
+      "$ref": "world-economy.openapi.json#/paths/~1world~1nodes~1{id}~1obligations"
+    },
+    "/world/nodes/{id}/orders": {
+      "$ref": "world-orders.openapi.json#/paths/~1world~1nodes~1{id}~1orders"
+    },
+    "/world/nodes/{id}/order-items": {
+      "$ref": "world-orders.openapi.json#/paths/~1world~1nodes~1{id}~1order-items"
+    },
+    "/world/nodes/{id}/order-stock": {
+      "$ref": "world-orders.openapi.json#/paths/~1world~1nodes~1{id}~1order-stock"
+    },
+    "/world/nodes/{id}/order-publish-preview": {
+      "$ref": "world-orders.openapi.json#/paths/~1world~1nodes~1{id}~1order-publish-preview"
+    },
+    "/world/nodes/{id}/order-publish": {
+      "$ref": "world-orders.openapi.json#/paths/~1world~1nodes~1{id}~1order-publish"
+    },
+    "/world/nodes/{id}/order-deliver-preview": {
+      "$ref": "world-orders.openapi.json#/paths/~1world~1nodes~1{id}~1order-deliver-preview"
+    },
+    "/world/nodes/{id}/order-deliver": {
+      "$ref": "world-orders.openapi.json#/paths/~1world~1nodes~1{id}~1order-deliver"
+    },
+    "/world/nodes/{id}/order-cancel-preview": {
+      "$ref": "world-orders.openapi.json#/paths/~1world~1nodes~1{id}~1order-cancel-preview"
+    },
+    "/world/nodes/{id}/order-cancel": {
+      "$ref": "world-orders.openapi.json#/paths/~1world~1nodes~1{id}~1order-cancel"
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer"
+      }
+    },
+    "schemas": {
+      "Reason": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "maxLength": 80
+          },
+          "message": {
+            "type": "string",
+            "maxLength": 255
+          }
+        },
+        "required": [
+          "code"
+        ],
+        "additionalProperties": false
+      },
+      "Action": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "maxLength": 80
+          },
+          "allowed": {
+            "type": "boolean"
+          },
+          "reasons": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Reason"
+            },
+            "maxItems": 100
+          }
+        },
+        "required": [
+          "code",
+          "allowed",
+          "reasons"
+        ],
+        "additionalProperties": false
+      },
+      "Node": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "WORLD",
+              "REGION",
+              "SETTLEMENT",
+              "BUILDING",
+              "ROOM",
+              "PLOT",
+              "BED"
+            ]
+          },
+          "parent_id": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647,
+            "nullable": true
+          },
+          "root_id": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          },
+          "name": {
+            "type": "string",
+            "maxLength": 120
+          },
+          "status": {
+            "type": "string",
+            "maxLength": 24
+          },
+          "visibility": {
+            "type": "string",
+            "enum": [
+              "public",
+              "private"
+            ]
+          },
+          "revision": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          },
+          "coordinates": {
+            "type": "object",
+            "properties": {
+              "x": {
+                "type": "integer",
+                "minimum": -1000000,
+                "maximum": 1000000
+              },
+              "y": {
+                "type": "integer",
+                "minimum": -1000000,
+                "maximum": 1000000
+              }
+            },
+            "required": [
+              "x",
+              "y"
+            ],
+            "additionalProperties": false
+          },
+          "child_count": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 2147483647
+          },
+          "details": {
+            "type": "object",
+            "description": "Type-specific fields. Private details appear only for the owner or world manager.",
+            "additionalProperties": {
+              "oneOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ],
+              "nullable": true
+            }
+          },
+          "permissions": {
+            "type": "object",
+            "properties": {
+              "manage": {
+                "type": "boolean"
+              },
+              "administer": {
+                "type": "boolean"
+              },
+              "storage": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "manage",
+              "administer"
+            ],
+            "additionalProperties": false
+          },
+          "actions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Action"
+            },
+            "maxItems": 100
+          }
+        },
+        "required": [
+          "id",
+          "type",
+          "parent_id",
+          "root_id",
+          "name",
+          "status",
+          "visibility",
+          "revision",
+          "coordinates",
+          "child_count",
+          "details",
+          "permissions",
+          "actions"
+        ],
+        "additionalProperties": false
+      },
+      "Page": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Node"
+            },
+            "maxItems": 100
+          },
+          "_meta": {
+            "type": "object",
+            "properties": {
+              "totalCount": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 2147483647
+              },
+              "pageCount": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 2147483647
+              },
+              "currentPage": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 1000000
+              },
+              "perPage": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 100
+              }
+            },
+            "required": [
+              "totalCount",
+              "pageCount",
+              "currentPage",
+              "perPage"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "items",
+          "_meta"
+        ],
+        "additionalProperties": false
+      },
+      "Capabilities": {
+        "type": "object",
+        "properties": {
+          "schema_ready": {
+            "type": "boolean"
+          },
+          "contract_version": {
+            "type": "integer",
+            "enum": [
+              1
+            ]
+          },
+          "world_read": {
+            "type": "boolean"
+          },
+          "world_write": {
+            "type": "boolean"
+          },
+          "storage_v2": {
+            "type": "boolean"
+          },
+          "economy_tick": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "schema_ready",
+          "contract_version",
+          "world_read",
+          "world_write",
+          "storage_v2",
+          "economy_tick"
+        ],
+        "additionalProperties": false
+      },
+      "Root": {
+        "type": "object",
+        "properties": {
+          "contract_version": {
+            "type": "integer",
+            "enum": [
+              1
+            ]
+          },
+          "server_time": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "capabilities": {
+            "$ref": "#/components/schemas/Capabilities"
+          },
+          "world": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Node"
+              }
+            ]
+          },
+          "regions": {
+            "$ref": "#/components/schemas/Page"
+          }
+        },
+        "required": [
+          "contract_version",
+          "server_time",
+          "capabilities",
+          "world",
+          "regions"
+        ],
+        "additionalProperties": false
+      },
+      "Navigation": {
+        "type": "object",
+        "properties": {
+          "node": {
+            "$ref": "#/components/schemas/Node"
+          },
+          "breadcrumbs": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Node"
+            },
+            "maxItems": 33
+          },
+          "parent_id": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647,
+            "nullable": true
+          },
+          "siblings": {
+            "$ref": "#/components/schemas/Page"
+          }
+        },
+        "required": [
+          "node",
+          "breadcrumbs",
+          "parent_id",
+          "siblings"
+        ],
+        "additionalProperties": false
+      },
+      "Revisions": {
+        "type": "object",
+        "additionalProperties": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 2147483647
+        },
+        "maxProperties": 256,
+        "description": "Keys: node:<id>, storage:<id>, inventory:<id>, instance:<id>, account:<id>, catalog, registry."
+      },
+      "Quote": {
+        "type": "object",
+        "properties": {
+          "quote_id": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{32}$"
+          },
+          "expires_at": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "expected_revisions": {
+            "$ref": "#/components/schemas/Revisions"
+          },
+          "terms": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "server_time": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          }
+        },
+        "required": [
+          "quote_id",
+          "expires_at",
+          "expected_revisions",
+          "terms",
+          "server_time"
+        ],
+        "additionalProperties": false
+      },
+      "Onboarding": {
+        "type": "object",
+        "properties": {
+          "world_id": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          },
+          "joined": {
+            "type": "boolean"
+          },
+          "starter_site_id": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647,
+            "nullable": true
+          },
+          "joined_at": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991,
+            "nullable": true
+          },
+          "grace_until": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991,
+            "nullable": true
+          },
+          "server_time": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "join_available": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "world_id",
+          "joined",
+          "starter_site_id",
+          "joined_at",
+          "grace_until",
+          "server_time",
+          "join_available"
+        ],
+        "additionalProperties": false
+      },
+      "JoinPreview": {
+        "type": "object",
+        "properties": {
+          "settlement_id": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          }
+        },
+        "required": [
+          "settlement_id"
+        ],
+        "additionalProperties": false
+      },
+      "Join": {
+        "type": "object",
+        "properties": {
+          "settlement_id": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          },
+          "request_key": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_-]{16,80}$"
+          },
+          "quote_id": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{32}$"
+          },
+          "expected_revisions": {
+            "$ref": "#/components/schemas/Revisions"
+          }
+        },
+        "required": [
+          "settlement_id",
+          "request_key",
+          "quote_id",
+          "expected_revisions"
+        ],
+        "additionalProperties": false
+      },
+      "ArchivePreview": {
+        "type": "object",
+        "properties": {
+          "reason": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255
+          }
+        },
+        "required": [
+          "reason"
+        ],
+        "additionalProperties": false
+      },
+      "MovePreview": {
+        "type": "object",
+        "properties": {
+          "parent_id": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255
+          }
+        },
+        "required": [
+          "parent_id",
+          "reason"
+        ],
+        "additionalProperties": false
+      },
+      "Archive": {
+        "type": "object",
+        "properties": {
+          "reason": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255
+          },
+          "request_key": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_-]{16,80}$"
+          },
+          "quote_id": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{32}$"
+          },
+          "expected_revisions": {
+            "$ref": "#/components/schemas/Revisions"
+          }
+        },
+        "required": [
+          "reason",
+          "request_key",
+          "quote_id",
+          "expected_revisions"
+        ],
+        "additionalProperties": false
+      },
+      "Move": {
+        "type": "object",
+        "properties": {
+          "parent_id": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255
+          },
+          "request_key": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_-]{16,80}$"
+          },
+          "quote_id": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{32}$"
+          },
+          "expected_revisions": {
+            "$ref": "#/components/schemas/Revisions"
+          }
+        },
+        "required": [
+          "parent_id",
+          "reason",
+          "request_key",
+          "quote_id",
+          "expected_revisions"
+        ],
+        "additionalProperties": false
+      },
+      "CommandResult": {
+        "type": "object",
+        "properties": {
+          "contract_version": {
+            "type": "integer",
+            "enum": [
+              1
+            ]
+          },
+          "operation_id": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{32}$"
+          },
+          "request_key": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_-]{16,80}$"
+          },
+          "server_time": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "changed_node_ids": {
+            "type": "array",
+            "items": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 2147483647
+            },
+            "maxItems": 10000
+          },
+          "node": {
+            "$ref": "#/components/schemas/Node"
+          },
+          "onboarding": {
+            "$ref": "#/components/schemas/Onboarding"
+          },
+          "changed_storage_ids": {
+            "type": "array",
+            "maxItems": 10000,
+            "items": {
+              "type": "integer",
+              "minimum": 1
+            }
+          },
+          "quantity": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "inventory_id": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "instance_ids": {
+            "type": "array",
+            "items": {
+              "type": "integer",
+              "minimum": 1
+            }
+          },
+          "message": {
+            "type": "string",
+            "maxLength": 1000
+          },
+          "recovery_storage_id": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          },
+          "amount": {
+            "type": "string",
+            "pattern": "^(0|[1-9][0-9]{0,14})\\.[0-9]{4}$",
+            "description": "Cr decimal string; max 900000000000000.0000; never a JSON number."
+          },
+          "wallet_after": {
+            "type": "string",
+            "pattern": "^(0|[1-9][0-9]{0,14})\\.[0-9]{4}$",
+            "description": "Cr decimal string; max 900000000000000.0000; never a JSON number."
+          },
+          "currency": {
+            "type": "string",
+            "enum": [
+              "Cr"
+            ]
+          }
+        },
+        "required": [
+          "contract_version",
+          "operation_id",
+          "request_key",
+          "server_time",
+          "changed_node_ids"
+        ],
+        "additionalProperties": false
+      },
+      "Error": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "maxLength": 80
+          },
+          "message": {
+            "type": "string",
+            "maxLength": 1000
+          },
+          "details": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        },
+        "required": [
+          "code",
+          "message",
+          "details"
+        ],
+        "additionalProperties": false
+      },
+      "Statistics": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "enum": [
+                    "WORLD",
+                    "REGION",
+                    "SETTLEMENT",
+                    "BUILDING",
+                    "ROOM",
+                    "PLOT",
+                    "BED"
+                  ]
+                },
+                "count": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 2147483647
+                }
+              },
+              "required": [
+                "type",
+                "count"
+              ],
+              "additionalProperties": false
+            },
+            "maxItems": 7
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "additionalProperties": false
+      },
+      "Actions": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Action"
+            },
+            "maxItems": 100
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "additionalProperties": false
+      }
+    }
+  }
+}

@@ -10,7 +10,17 @@ class CraftStorage
 {
     public const SLOT_LIMIT=50;
     public $db;
+    public $operationId;
+    public $protectedInstances = [];
+    public $workspaceNodeId;
+    public $allowPlacedChests = false;
     public function __construct(Connection $db) { $this->db=$db; }
+    /** Persisted format wins over environment flags: never reinterpret installed items as backpack rows. */
+    public function isCanonical(): bool
+    {
+        // A reused service/worker must observe the format switch after acquiring the catalog lock.
+        return $this->db->schema->getTableSchema('world_registry') && (bool)(new Query())->select('storage_v2')->from('world_registry')->where(['id' => 1])->scalar($this->db);
+    }
     public function lock(string $table,array $where): array
     {
         if (!$this->db->getTransaction()) throw new \RuntimeException('Transaction required.');
@@ -33,6 +43,7 @@ class CraftStorage
     }
     public function insert(string $table,array $values): int
     {
+        if ($table === 'craft_inventory' && $this->isCanonical()) throw new \LogicException('Use CanonicalInventory for storage_v2 writes.');
         if ($this->db->createCommand()->insert($table,$values)->execute()!==1) throw new \RuntimeException('Craft write failed.');
         return isset($values['id'])?(int)$values['id']:(int)$this->db->getLastInsertID();
     }
@@ -40,11 +51,13 @@ class CraftStorage
     {
         $inventory=new CraftInventory($this);$active=$inventory->capacity($userId)['active_slots'];$result=[];
         $filled=array_flip((new Query())->select('container_id')->distinct()->from('craft_inventory')->where(['user_id'=>$userId])->andWhere(['not',['container_id'=>null]])->andWhere(['>','item_quantity',0])->column($this->db));
+        if ($this->isCanonical()) $filled = array_flip((new Query())->select('s.container_inventory_id')->distinct()->from(['i' => 'craft_inventory'])->innerJoin(['s' => 'craft_storage'], '[[s.id]]=[[i.storage_id]]')->where(['s.kind' => 'chest', 's.owner_user_id' => $userId])->andWhere(['>', 'i.item_quantity', 0])->column($this->db));
         foreach($inventory->layout($userId) as $slot)if((int)$slot['slot']<=$active&&!isset($filled[$slot['id']]))$result[(int)$slot['item_id']]=($result[(int)$slot['item_id']]??0)+(int)$slot['item_quantity'];
         return $result;
     }
     public function move(int $userId,array $item,int $delta,?int $slotId=null): void
     {
+        if ($this->isCanonical()) { (new CanonicalInventory($this))->change($userId, $item, $delta, $slotId); return; }
         if(!$this->db->getTransaction())throw new \RuntimeException('Inventory transaction required.');
         if(!$delta)return;
         $inventory=new CraftInventory($this);$inventory->synchronize($userId);
@@ -88,6 +101,10 @@ class CraftStorage
         $target=(new Query())->from('craft_inventory')->where(['id'=>$targetId,'user_id'=>$userId,'item_id'=>$item['id']])->one($this->db);
         $source=(new Query())->from('craft_inventory')->where(['id'=>$sourceId,'user_id'=>$userId,'item_id'=>$item['id']])->one($this->db);
         if(!$source||!$target||(int)$source['item_quantity']<1||(int)$target['item_quantity']<1)throw new ConflictHttpException('Выберите свои стопки одинаковых предметов.');
+        if ($this->isCanonical()) {
+            $place = (new StorageAccessPolicy($this->db))->storage($userId, (int)$target['storage_id']);
+            if (!in_array($place['kind'], ['backpack', 'chest'], true)) throw new ConflictHttpException('Для установленной вещи используйте страницу размещения.');
+        }
         return (new CraftInventory($this))->transfer($userId,$sourceId,(int)$target['container_id'],(int)$target['slot'],(int)$source['item_quantity']);
     }
 }

@@ -50,6 +50,7 @@ class DailyRewardService
         }
 
         return $this->db->transaction(function () use ($userId, $amount, $counter) {
+            \common\modules\economy\service\WalletMaintenance::writable($this->db);
             $person = $this->lockPerson($userId);
             // Calculate the day after obtaining the lock, including requests spanning midnight.
             $now = time();
@@ -63,6 +64,10 @@ class DailyRewardService
                 return false;
             }
 
+            if ($counter === 'credit' && \common\modules\economy\service\WalletSchema::ready($this->db)) {
+                (new CreditLedger($this->db))->changeExact($userId, \common\modules\economy\value\Money::fromLegacy($amount)->decimal(), 'everyday', 'everyday');
+                return true;
+            }
             $history = [
                 'user_id' => $userId,
                 'type' => 'everyday',

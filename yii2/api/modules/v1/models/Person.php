@@ -41,7 +41,12 @@ class Person extends \common\models\user\Person
         // todo отображается для action profile, не отображается на стене. Непонятно как работает.
         if (!App::user()->getIsGuest() && App::user()->identity->getId() === $this->user_id) {
             $f[] = 'balance';
-            $f[] = 'credit';
+            $f['credit'] = static function (self $model) {
+                return \common\modules\economy\service\WalletSchema::ready(static::getDb()) ? (float)$model->credit : $model->credit;
+            };
+            if (\common\modules\economy\service\WalletSchema::ready(static::getDb())) $f['credit_exact'] = static function (self $model): string {
+                return \common\modules\economy\value\Money::parse((string)$model->credit)->decimal();
+            };
         }
 
         return $f;

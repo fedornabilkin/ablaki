@@ -19,6 +19,10 @@ class HistoryController extends Controller
         // Retain the existing daily rewards feed's deliberately limited public fields.
         $query = HistoryBalance::find()->select(['type', 'credit_up', 'created_at'])
             ->where(['type' => 'everyday'])->asArray();
+        if (\common\modules\economy\service\WalletSchema::ready(Yii::$app->db)) {
+            $numeric = Yii::$app->db->driverName === 'mysql' ? '[[credit_up]] + 0e0' : 'CAST([[credit_up]] AS DOUBLE PRECISION)';
+            $query->select(['type', 'credit_up' => new \yii\db\Expression($numeric), 'credit_up_exact' => 'credit_up', 'created_at']);
+        }
         return ApiList::provider($query, ['type']);
     }
 
