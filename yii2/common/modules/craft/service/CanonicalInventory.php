@@ -1,0 +1,323 @@
+<?php
+namespace common\modules\craft\service;
+
+use yii\db\Expression;
+use yii\db\Query;
+use yii\web\ConflictHttpException;
+
+/** The only storage_v2 inventory writer. Caller holds catalog/owner/registry locks. */
+class CanonicalInventory
+{
+    private $s;
+    private $db;
+    private $equipment;
+    public function __construct(CraftStorage $store) { $this->s = $store; $this->db = $store->db; $this->equipment = new EquipmentInstances($this->db); }
+    private function transaction(): void { if (!$this->db->getTransaction()) throw new \LogicException('Inventory writes require a transaction.'); }
+    public function backpack(int $user): ?array { return (new Query())->from('craft_storage')->where(['identity_key' => 'backpack:user:' . $user, 'owner_user_id' => $user, 'status' => 'active'])->one($this->db) ?: null; }
+    public function rows(int $storage): array
+    {
+        return (new Query())->from('craft_inventory')->where(['storage_id' => $storage])->andWhere(['>', 'item_quantity', 0])->orderBy(['slot' => SORT_ASC, 'id' => SORT_ASC])->all($this->db);
+    }
+    public function initialize(int $user): void
+    {
+        $this->transaction();
+        if ((new Query())->from('craft_inventory')->where(['user_id' => $user, 'storage_id' => null])->andWhere(['>', 'item_quantity', 0])->exists($this->db)) throw new ConflictHttpException('Перенос инвентаря ещё не завершён.');
+        if (!$this->backpack($user)) $this->db->createCommand()->insert('craft_storage', ['identity_key' => 'backpack:user:' . $user, 'kind' => 'backpack', 'owner_user_id' => $user, 'capacity' => CraftInventory::LIMIT])->execute();
+        if (!(new Query())->from('craft_capacity')->where(['user_id' => $user])->exists($this->db)) $this->db->createCommand()->insert('craft_capacity', ['user_id' => $user, 'permanent_slots' => CraftInventory::BASE])->execute();
+    }
+    public function synchronize(int $user): void
+    {
+        $this->initialize($user);
+        $layout = (new CraftInventory($this->s))->layout($user); $changed = [];
+        foreach ($layout as $row) {
+            $old = (new Query())->select('slot')->from('craft_inventory')->where(['id' => $row['id']])->scalar($this->db);
+            if ((int)$old !== (int)$row['slot']) $changed[] = $row;
+        }
+        if (!$changed) return;
+        // Vacate first: no temporary collision with UNIQUE(storage_id,slot).
+        $this->db->createCommand()->update('craft_inventory', ['slot' => null], ['id' => array_column($changed, 'id')])->execute();
+        foreach ($changed as $row) $this->write((int)$row['id'], ['slot' => $row['slot']]);
+        $this->touch([(int)$this->backpack($user)['id']]);
+    }
+    private function write(int $id, array $values): void
+    {
+        $values['revision'] = new Expression('[[revision]]+1');
+        if ($this->db->createCommand()->update('craft_inventory', $values, ['id' => $id])->execute() !== 1) throw new \RuntimeException('Inventory row write failed.');
+    }
+    private function touch(array $ids): void
+    {
+        $ids = array_values(array_unique($ids));
+        if ($ids) $this->db->createCommand()->update('craft_storage', ['revision' => new Expression('[[revision]]+1')], ['id' => $ids])->execute();
+    }
+    private function record(int $user, array $row, int $quantity, ?int $source, ?int $destination, string $reason): void
+    {
+        if (!$this->s->operationId) {
+            $this->s->operationId = bin2hex(random_bytes(16));
+            $this->db->createCommand()->insert('game_operation', ['id' => $this->s->operationId, 'user_id' => $user, 'type' => 'inventory.legacy', 'created_at' => time()])->execute();
+        }
+        $this->db->createCommand()->insert('inventory_movement', ['operation_id' => $this->s->operationId, 'inventory_id' => $row['id'], 'item_id' => $row['item_id'], 'source_storage_id' => $source, 'destination_storage_id' => $destination, 'quantity' => $quantity, 'reason' => $reason, 'created_at' => time()])->execute();
+    }
+    private function insert(int $user, array $storage, array $item, int $quantity, int $position): array
+    {
+        $row = ['user_id' => $user, 'storage_id' => $storage['id'], 'container_id' => $storage['kind'] === 'chest' ? $storage['container_inventory_id'] : null, 'item_id' => $item['id'], 'item_quantity' => $quantity, 'slot' => $position];
+        $this->db->createCommand()->insert('craft_inventory', $row)->execute();
+        return ['id' => (int)$this->db->getLastInsertID(), 'revision' => 1] + $row;
+    }
+    public function innerChest(int $user, int $inventory): array
+    {
+        $row = (new Query())->from('craft_storage')->where(['container_inventory_id' => $inventory, 'owner_user_id' => $user, 'status' => 'active'])->one($this->db);
+        if (!$row) throw new ConflictHttpException('Хранилище сундука недоступно.');
+        return (new StorageAccessPolicy($this->db))->storage($user, (int)$row['id']);
+    }
+    private function createChest(int $user, array $row): void
+    {
+        $settings = (new CraftInventory($this->s))->settings();
+        $this->db->createCommand()->insert('craft_container', ['id' => $row['id'], 'user_id' => $user, 'capacity' => $settings['chest_slots'], 'durability' => $settings['chest_durability'], 'max_durability' => $settings['chest_durability']])->execute();
+        $this->db->createCommand()->insert('craft_storage', ['identity_key' => 'chest:item:' . $row['id'], 'kind' => 'chest', 'owner_user_id' => $user, 'container_inventory_id' => $row['id'], 'capacity' => $settings['chest_slots']])->execute();
+    }
+    public function nonempty(int $inventory): bool
+    {
+        $storage = (new Query())->select('id')->from('craft_storage')->where(['container_inventory_id' => $inventory])->scalar($this->db);
+        return $storage && (new Query())->from('craft_inventory')->where(['storage_id' => $storage])->andWhere(['>', 'item_quantity', 0])->exists($this->db);
+    }
+    public function change(int $user, array $item, int $delta, ?int $slot = null): void
+    {
+        $this->transaction(); if (!$delta) return;
+        $this->synchronize($user);
+        $backpack = $this->backpack($user); $storage = (new StorageAccessPolicy($this->db))->storage($user, (int)$backpack['id'], $delta > 0);
+        if ($delta < 0) {
+            $needed = -$delta;
+            foreach ($this->rows((int)$storage['id']) as $row) {
+                if ((int)$row['item_id'] !== (int)$item['id'] || ($slot !== null && (int)$row['id'] !== $slot) || ($slot === null && (int)$row['slot'] > (int)$storage['capacity']) || $this->nonempty((int)$row['id'])) continue;
+                $units = $this->equipment->units((int)$row['id']);
+                $tracked = $this->equipment->tracked($item);
+                if ($tracked && count($units) !== (int)$row['item_quantity']) throw new ConflictHttpException('Экземпляры оборудования требуют сверки.');
+                $available = array_values(array_filter($units, function ($unit) { return !in_array((int)$unit['id'], $this->s->protectedInstances, true); }));
+                $take = min($needed, $tracked ? count($available) : (int)$row['item_quantity']);
+                if (!$take) continue;
+                $this->equipment->consume(array_map('intval', array_column(array_slice($available, 0, $take), 'id')));
+                $left = (int)$row['item_quantity'] - $take;
+                $this->write((int)$row['id'], ['item_quantity' => $left, 'item_id' => $left ? $row['item_id'] : null, 'slot' => $left ? $row['slot'] : null]);
+                if (!$left && ($item['storage_kind'] ?? '') === 'chest') $this->db->createCommand()->update('craft_storage', ['status' => 'retired', 'revision' => new Expression('[[revision]]+1')], ['container_inventory_id' => $row['id']])->execute();
+                $this->record($user, $row, $take, (int)$storage['id'], null, 'consume');
+                $needed -= $take;
+                if (!$needed) { $this->touch([(int)$storage['id']]); return; }
+            }
+            throw new ConflictHttpException('Не хватает доступных предметов. Установленные вещи и содержимое сундуков не расходуются из рюкзака.');
+        }
+        if ($slot !== null) throw new \InvalidArgumentException('Positive slot targeting is unsupported.');
+        $stack = ($item['storage_kind'] ?? '') === 'chest' ? 1 : (int)$item['stack_size'];
+        if ($stack < 1 || $stack > 10000) throw new ConflictHttpException('Некорректный размер стопки.');
+        $occupied = [];
+        foreach ($this->rows((int)$storage['id']) as $row) {
+            $occupied[(int)$row['slot']] = true;
+            if ((int)$row['slot'] > (int)$storage['capacity'] || (int)$row['item_id'] !== (int)$item['id']) continue;
+            $add = min($delta, max(0, $stack - (int)$row['item_quantity'])); if (!$add) continue;
+            $this->write((int)$row['id'], ['item_quantity' => (int)$row['item_quantity'] + $add]);
+            $this->equipment->create($row, $item, $add); $this->record($user, $row, $add, null, (int)$storage['id'], 'grant');
+            $delta -= $add; if (!$delta) break;
+        }
+        for ($position = 1; $position <= (int)$storage['capacity'] && $delta > 0; $position++) {
+            if (isset($occupied[$position])) continue;
+            $add = min($delta, $stack); $row = $this->insert($user, $storage, $item, $add, $position);
+            $this->equipment->create($row, $item, $add);
+            if (($item['storage_kind'] ?? '') === 'chest') $this->createChest($user, $row);
+            $this->record($user, $row, $add, null, (int)$storage['id'], 'grant'); $delta -= $add;
+        }
+        if ($delta) throw new ConflictHttpException('Активные слоты рюкзака заполнены.');
+        $this->touch([(int)$storage['id']]);
+    }
+    /** Explicit selected backpack stack, ordinary gathered goods only. No equipment/chest consumption. */
+    public function inspectOrderDelivery(int $user, int $inventory, int $item, int $quantity): array
+    {
+        $row = (new Query())->from('craft_inventory')->where(['id' => $inventory, 'user_id' => $user, 'item_id' => $item])->one($this->db);
+        $definition = (new Query())->from('craft_item')->where(['id' => $item, 'active' => 1])->one($this->db);
+        if (!$row || !$definition || $quantity < 1 || $quantity > 10000 || (int)$row['item_quantity'] < $quantity) throw new ConflictHttpException('В выбранной ячейке недостаточно предметов.');
+        if (($definition['storage_kind'] ?? 'none') !== 'none' || $definition['kind'] !== 'material' || (int)$definition['gather_quantity'] < 1 || $this->equipment->tracked($definition) || $this->equipment->units($inventory)) throw new ConflictHttpException('Для начального заказа требуется обычное сырьё.');
+        $storage = (new StorageAccessPolicy($this->db))->storage($user, (int)$row['storage_id']);
+        if ($storage['kind'] !== 'backpack' || (int)$row['slot'] < 1 || (int)$row['slot'] > (int)$storage['capacity']) throw new ConflictHttpException('Перенесите сырьё в доступную ячейку рюкзака.');
+        return ['row' => $row, 'storage' => $storage];
+    }
+    public function deliverOrder(int $user, int $inventory, int $item, int $quantity): int
+    {
+        $this->transaction(); $selection = $this->inspectOrderDelivery($user, $inventory, $item, $quantity); $row = $selection['row'];
+        $left = (int)$row['item_quantity'] - $quantity;
+        $this->write($inventory, ['item_quantity' => $left, 'item_id' => $left ? $item : null, 'slot' => $left ? $row['slot'] : null]);
+        $this->record($user, $row, $quantity, (int)$row['storage_id'], null, 'order.consumed');
+        $this->touch([(int)$row['storage_id']]);
+        return (int)$row['storage_id'];
+    }
+    /** Read-only, deterministic allocation. Storage access and location are checked by the workspace. */
+    public function planCraft(array $sources, array $target, array $required, array $items, array $output, int $quantity): array
+    {
+        $consumed = []; $materials = []; $blocked = [];
+        foreach (array_merge($sources, [$target]) as $storage) if ($storage['kind'] === 'chest') $blocked[(int)$storage['container_inventory_id']] = true;
+        foreach ($required as $itemId => $needed) {
+            $have = 0; $remaining = $needed;
+            foreach ($sources as $storage) foreach ($this->rows((int)$storage['id']) as $row) {
+                if ((int)$row['item_id'] !== (int)$itemId || (int)$row['slot'] > (int)$storage['capacity'] || isset($blocked[(int)$row['id']]) || $this->nonempty((int)$row['id'])) continue;
+                $units = $this->equipment->units((int)$row['id']); $tracked = $this->equipment->tracked($items[$itemId]);
+                if ($tracked && count($units) !== (int)$row['item_quantity']) throw new ConflictHttpException('Экземпляры оборудования требуют сверки.');
+                $units = array_values(array_filter($units, function ($unit) { return !in_array((int)$unit['id'], $this->s->protectedInstances, true); }));
+                $available = $tracked ? count($units) : (int)$row['item_quantity']; $have += $available;
+                $take = min($remaining, $available); if (!$take) continue;
+                $consumed[] = ['inventory_id' => (int)$row['id'], 'storage_id' => (int)$storage['id'], 'item_id' => (int)$itemId, 'quantity' => $take,
+                    'instance_ids' => array_map('intval', array_column(array_slice($units, 0, $take), 'id'))];
+                $remaining -= $take;
+            }
+            $materials[] = ['item_id' => (int)$itemId, 'name' => trim($items[$itemId]['name']), 'quantity' => $needed, 'have' => $have, 'available' => $remaining === 0];
+        }
+        $remainingRows = [];
+        foreach ($this->rows((int)$target['id']) as $row) $remainingRows[(int)$row['id']] = $row;
+        foreach ($consumed as $take) if (isset($remainingRows[$take['inventory_id']])) $remainingRows[$take['inventory_id']]['item_quantity'] -= $take['quantity'];
+        $stack = ($output['storage_kind'] ?? '') === 'chest' ? 1 : (int)$output['stack_size'];
+        if ($stack < 1 || $stack > 10000) throw new ConflictHttpException('Некорректный размер стопки.');
+        $canStore = !(($output['storage_kind'] ?? '') === 'chest' && $target['kind'] === 'chest');
+        $left = $quantity; $grants = []; $occupied = [];
+        foreach ($remainingRows as $row) {
+            if ((int)$row['item_quantity'] < 1) continue;
+            $occupied[(int)$row['slot']] = true;
+            if (!$canStore || (int)$row['slot'] > (int)$target['capacity'] || (int)$row['item_id'] !== (int)$output['id']) continue;
+            $add = min($left, max(0, $stack - (int)$row['item_quantity'])); if (!$add) continue;
+            $grants[] = ['inventory_id' => (int)$row['id'], 'position' => (int)$row['slot'], 'quantity' => $add]; $left -= $add;
+        }
+        for ($position = 1; $canStore && $position <= (int)$target['capacity'] && $left; $position++) {
+            if (isset($occupied[$position])) continue;
+            $add = min($left, $stack); $grants[] = ['inventory_id' => null, 'position' => $position, 'quantity' => $add]; $left -= $add;
+        }
+        if (count($consumed) + count($grants) > 2000) throw new ConflictHttpException('Слишком много ячеек для одной операции. Уменьшите количество изготовлений.');
+        return ['materials' => $materials, 'consume' => $consumed, 'grant' => $grants, 'output_fits' => $left === 0, 'output_missing_quantity' => $left];
+    }
+    /** Apply a freshly recomputed plan under the command bus locks, never a client-supplied plan. */
+    public function applyCraft(int $user, array $plan, array $target, array $items, array $output): void
+    {
+        $this->transaction();
+        if (!$plan['output_fits']) throw new ConflictHttpException('Недостаточно места для результата.');
+        foreach ($plan['materials'] as $material) if (!$material['available']) throw new ConflictHttpException('Не хватает материалов.');
+        $changed = [(int)$target['id']];
+        foreach ($plan['consume'] as $take) {
+            $row = (new Query())->from('craft_inventory')->where(['id' => $take['inventory_id'], 'user_id' => $user, 'storage_id' => $take['storage_id'], 'item_id' => $take['item_id']])->one($this->db);
+            if (!$row || (int)$row['item_quantity'] < $take['quantity']) throw new ConflictHttpException('Материалы изменились.');
+            $left = (int)$row['item_quantity'] - $take['quantity'];
+            $this->equipment->consume($take['instance_ids']);
+            $this->write((int)$row['id'], ['item_quantity' => $left, 'item_id' => $left ? $row['item_id'] : null, 'slot' => $left ? $row['slot'] : null]);
+            if (!$left && ($items[$take['item_id']]['storage_kind'] ?? '') === 'chest') $this->db->createCommand()->update('craft_storage', ['status' => 'retired', 'revision' => new Expression('[[revision]]+1')], ['container_inventory_id' => $row['id']])->execute();
+            $this->record($user, $row, $take['quantity'], $take['storage_id'], null, 'craft.consume'); $changed[] = $take['storage_id'];
+        }
+        foreach ($plan['grant'] as $grant) {
+            if ($grant['inventory_id'] === null) {
+                $row = $this->insert($user, $target, $output, $grant['quantity'], $grant['position']);
+                if (($output['storage_kind'] ?? '') === 'chest') $this->createChest($user, $row);
+            } else {
+                $row = (new Query())->from('craft_inventory')->where(['id' => $grant['inventory_id'], 'user_id' => $user, 'storage_id' => $target['id'], 'item_id' => $output['id']])->one($this->db);
+                if (!$row) throw new ConflictHttpException('Место выдачи изменилось.');
+                $this->write((int)$row['id'], ['item_quantity' => (int)$row['item_quantity'] + $grant['quantity']]);
+            }
+            $this->equipment->create($row, $output, $grant['quantity']);
+            $this->record($user, $row, $grant['quantity'], null, (int)$target['id'], 'craft.output');
+        }
+        // One deposit operation wears the receiving chest once, including a multi-batch recipe.
+        if ($target['kind'] === 'chest') {
+            $container = (new Query())->from('craft_container')->where(['id' => $target['container_inventory_id']])->one($this->db);
+            $wear = (new CraftInventory($this->s))->settings()['chest_wear'];
+            if ($wear) $this->db->createCommand()->update('craft_container', ['durability' => max(0, (int)$container['durability'] - $wear)], ['id' => $container['id']])->execute();
+        }
+        $this->touch($changed);
+    }
+    /** Preview and commit share this validation; commit repeats it under the write locks. */
+    public function inspectTransfer(int $user, int $inventory, int $destination, int $position, int $quantity, ?int $instance = null, bool $partial = false): array
+    {
+        $row = (new Query())->from('craft_inventory')->where(['id' => $inventory, 'user_id' => $user])->one($this->db);
+        if (!$row || !$row['item_id'] || $quantity < 1 || $quantity > 10000 || (int)$row['item_quantity'] < $quantity) throw new ConflictHttpException('Предмет в исходном слоте изменился.');
+        $policy = new StorageAccessPolicy($this->db);
+        $source = $policy->storage($user, (int)$row['storage_id']); $target = $policy->storage($user, $destination, true);
+        if ($position < 1 || $position > (int)$target['capacity']) throw new ConflictHttpException('Целевой слот недоступен.');
+        $item = (new Query())->from('craft_item')->where(['id' => $row['item_id']])->one($this->db);
+        $chest = ($item['storage_kind'] ?? '') === 'chest';
+        if ($chest && $target['kind'] === 'chest') throw new ConflictHttpException('Сундук нельзя помещать в другой сундук.');
+        $occupied = (new Query())->from('craft_inventory')->where(['storage_id' => $destination, 'slot' => $position])->andWhere(['>', 'item_quantity', 0])->one($this->db);
+        if ($occupied && (int)$occupied['id'] === $inventory) throw new ConflictHttpException('Предмет уже в этом слоте.');
+        if ($occupied && (int)$occupied['item_id'] !== (int)$item['id']) throw new ConflictHttpException('Слот занят другим предметом.');
+        $stack = $chest ? 1 : (int)$item['stack_size'];
+        if ($target['kind'] === 'placement') {
+            $slot = (new Query())->from('world_slot')->where(['storage_id' => $destination, 'position' => $position, 'status' => 'active'])->one($this->db);
+            $station = (new Query())->from('craft_station')->where(['item_id' => $item['id'], 'active' => 1])->exists($this->db);
+            if (!$slot || (int)$slot['size'] < 1 || !$item['active'] || (!$chest && !$station) || ($slot['slot_type'] !== 'equipment' && $slot['slot_type'] !== ($chest ? 'chest' : 'station'))) throw new ConflictHttpException('Предмет не подходит для этого места.');
+            $compatibility = json_decode($slot['compatibility_json'], true, 512, JSON_THROW_ON_ERROR);
+            if (!is_array($compatibility) || (isset($compatibility['item_codes']) && !in_array($item['code'], $compatibility['item_codes'], true))) throw new ConflictHttpException('Назначение места не подходит предмету.');
+            if ($quantity !== 1 || $occupied) throw new ConflictHttpException('В монтажном слоте размещается одна вещь.');
+            $stack = 1;
+        }
+        $room = max(0, $stack - (int)($occupied['item_quantity'] ?? 0));
+        if (!$room || (!$partial && $quantity > $room)) throw new ConflictHttpException('В целевом слоте недостаточно места.');
+        $quantity = min($quantity, $room);
+        $units = $this->equipment->units($inventory); $tracked = $this->equipment->tracked($item);
+        if ($tracked && count($units) !== (int)$row['item_quantity']) throw new ConflictHttpException('Экземпляры оборудования требуют сверки.');
+        $units = array_values(array_filter($units, function ($unit) use ($instance) { return !in_array((int)$unit['id'], $this->s->protectedInstances, true) && ($instance === null || (int)$unit['id'] === $instance); }));
+        if (($tracked && count($units) < $quantity) || ($instance !== null && (!$tracked || $quantity !== 1))) throw new ConflictHttpException('Выбранный экземпляр недоступен.');
+        return ['row' => $row, 'source' => $source, 'target' => $target, 'item' => $item, 'occupied' => $occupied ?: null, 'quantity' => $quantity, 'position' => $position, 'unit_ids' => array_map('intval', array_column(array_slice($units, 0, $quantity), 'id'))];
+    }
+    public function transfer(int $user, int $inventory, int $destination, int $position, int $quantity, ?int $instance = null, bool $partial = false): array
+    {
+        $this->transaction(); $p = $this->inspectTransfer($user, $inventory, $destination, $position, $quantity, $instance, $partial);
+        $row = $p['row']; $target = $p['target']; $source = $p['source']; $item = $p['item']; $quantity = $p['quantity']; $out = $p['occupied'];
+        (new EquipmentExposure($this->db))->location($p['unit_ids'], $target, $position);
+        if (($item['storage_kind'] ?? '') === 'chest') {
+            $this->write($inventory, ['storage_id' => $destination, 'slot' => $position, 'container_id' => null]); $out = $row;
+        } else {
+            $left = (int)$row['item_quantity'] - $quantity;
+            $this->write($inventory, ['item_quantity' => $left, 'item_id' => $left ? $row['item_id'] : null, 'slot' => $left ? $row['slot'] : null]);
+            if ($out) $this->write((int)$out['id'], ['item_quantity' => (int)$out['item_quantity'] + $quantity]);
+            else $out = $this->insert($user, $target, $item, $quantity, $position);
+            $this->equipment->move($p['unit_ids'], (int)$out['id']);
+        }
+        if ($target['kind'] === 'chest' && $source['id'] !== $target['id']) {
+            $container = (new Query())->from('craft_container')->where(['id' => $target['container_inventory_id']])->one($this->db);
+            $wear = (new CraftInventory($this->s))->settings()['chest_wear'];
+            if ($wear) $this->db->createCommand()->update('craft_container', ['durability' => max(0, (int)$container['durability'] - $wear)], ['id' => $container['id']])->execute();
+        }
+        $this->record($user, $out, $quantity, (int)$source['id'], $destination, 'transfer');
+        $this->touch([(int)$source['id'], $destination]);
+        return ['quantity' => $quantity, 'inventory_id' => (int)$out['id'], 'instance_ids' => $p['unit_ids'], 'changed_storage_ids' => array_values(array_unique([(int)$source['id'], $destination]))];
+    }
+    /** StorageRecovery validates the authoritative loss of access under the same locks. */
+    public function recover(int $user, array $row, array $source): array
+    {
+        $this->transaction();
+        if ((int)$row['user_id'] !== $user || (int)$source['owner_user_id'] !== $user || !in_array($source['kind'], ['placement', 'stockpile'], true) || (int)$row['storage_id'] !== (int)$source['id']) throw new ConflictHttpException('Источник восстановления недоступен.');
+        $where = ['identity_key' => 'recovery:user:' . $user, 'owner_user_id' => $user, 'kind' => 'recovery', 'status' => 'active'];
+        $target = (new Query())->from('craft_storage')->where($where)->one($this->db);
+        if (!$target) {
+            $this->db->createCommand()->insert('craft_storage', $where + ['capacity' => 10000])->execute();
+            $target = (new Query())->from('craft_storage')->where(['id' => $this->db->getLastInsertID()])->one($this->db);
+        }
+        $occupied = array_flip(array_map('intval', array_column($this->rows((int)$target['id']), 'slot'))); $position = 1;
+        while (isset($occupied[$position]) && $position <= (int)$target['capacity']) $position++;
+        if ($position > (int)$target['capacity']) throw new ConflictHttpException('Сначала заберите часть вещей из восстановления. Исходная вещь сохранена.');
+        $units = $this->equipment->units((int)$row['id']);
+        (new EquipmentExposure($this->db))->location(array_map('intval', array_column($units, 'id')), $target, $position);
+        // Preserve the original row and chest identity; contents remain in the same inner storage.
+        $this->write((int)$row['id'], ['storage_id' => (int)$target['id'], 'container_id' => null, 'slot' => $position]);
+        $this->record($user, $row, (int)$row['item_quantity'], (int)$source['id'], (int)$target['id'], 'recovery');
+        $this->touch([(int)$source['id'], (int)$target['id']]);
+        return ['recovery_storage_id' => (int)$target['id'], 'changed_storage_ids' => [(int)$source['id'], (int)$target['id']]];
+    }
+    public function legacyTransfer(int $user, int $inventory, int $container, int $position, int $quantity): int
+    {
+        $source = (new Query())->from('craft_inventory')->where(['id' => $inventory, 'user_id' => $user])->one($this->db);
+        if (!$source) throw new ConflictHttpException('Предмет недоступен.');
+        $outer = (new StorageAccessPolicy($this->db))->storage($user, (int)$source['storage_id']);
+        if (!in_array($outer['kind'], ['backpack', 'chest'], true)) throw new ConflictHttpException('Для установленной вещи используйте страницу её размещения.');
+        // Legacy chest actions only address chests currently in the backpack.
+        if ($outer['kind'] === 'chest') $this->requireBackpackChest($user, (int)$outer['container_inventory_id']);
+        if ($container) { $this->requireBackpackChest($user, $container); $target = $this->innerChest($user, $container); }
+        else $target = $this->backpack($user);
+        if (!$target) throw new ConflictHttpException('Рюкзак недоступен.');
+        return $this->transfer($user, $inventory, (int)$target['id'], $position, $quantity, null, true)['quantity'];
+    }
+    public function requireBackpackChest(int $user, int $id): void
+    {
+        $backpack = $this->backpack($user);
+        if (!$backpack || !(new Query())->from('craft_inventory')->where(['id' => $id, 'user_id' => $user, 'storage_id' => $backpack['id'], 'item_quantity' => 1])->exists($this->db)) throw new ConflictHttpException('Выберите сундук из рюкзака.');
+    }
+}

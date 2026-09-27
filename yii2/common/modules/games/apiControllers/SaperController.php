@@ -75,12 +75,13 @@ class SaperController extends ActiveController
     public function actionStart($id)
     {
         return \common\modules\games\service\GameParticipation::run('game_saper', (int)$id, Yii::$app->user->identity->person,
-            function () use ($id) { return $this->startLocked($id); });
+            function (array $row) { return $this->startLocked($row); });
     }
 
-    private function startLocked($id)
+    private function startLocked(array $row)
     {
-        $model = $this->findModel($id);
+        $model = new GameSaper();
+        GameSaper::populateRecord($model, $row);
 
         $data = new GameDataMiddleware([
             'game' => $model,
@@ -109,7 +110,18 @@ class SaperController extends ActiveController
 
     public function actionPlay($id)
     {
-        $model = $this->findModel($id);
+        $lost = false;
+        $result = \common\modules\games\service\GameParticipation::run('game_saper', (int)$id, Yii::$app->user->identity->person,
+            function (array $row) use (&$lost) { return $this->playLocked($row, $lost); });
+        // Losing is a committed game result, not a transaction failure. Preserve the old message.
+        if ($lost) throw new MainException(Yii::t('games', 'Game lost'));
+        return $result;
+    }
+
+    private function playLocked(array $row, bool &$lost)
+    {
+        $model = new GameSaper();
+        GameSaper::populateRecord($model, $row);
         $model->setScenario($model::SCENARIO_PLAY);
 
         if (!$model->load(Yii::$app->request->post(), '') || !$model->validate()) {
@@ -130,7 +142,8 @@ class SaperController extends ActiveController
 
 
         if ($middleware->check()) {
-            Yii::$app->getResponse()->setStatusCode(204);
+            $lost = (int)$model->etap === GameSaper::GAME_SAPER_ETAP_LOSE;
+            if (!$lost) Yii::$app->getResponse()->setStatusCode(204);
         } else {
             $errors = $middleware->getErrors();
             throw new MainException(Yii::t('games', $errors[0]));

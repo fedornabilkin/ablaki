@@ -1,0 +1,2126 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Ablaki World Economy",
+    "version": "1.1.0",
+    "description": "Code prepared, not tested or deployed. Exact existing wallet requires explicit offline activation. Owner-only balances, FIFO manual collection, reserved obligations and funded parent payments. Versioned policy publication requires world-manage and p-admin. Losses run only in the trusted worker; HTTP waits for catch-up. No minting or personal withdrawals."
+  },
+  "servers": [
+    {
+      "url": "/v1"
+    }
+  ],
+  "security": [
+    {
+      "bearerAuth": []
+    }
+  ],
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer"
+      }
+    },
+    "schemas": {
+      "Economy": {
+        "type": "object",
+        "properties": {
+          "node_id": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          },
+          "currency": {
+            "type": "string",
+            "enum": [
+              "Cr"
+            ]
+          },
+          "balances": {
+            "type": "object",
+            "properties": {
+              "budget": {
+                "type": "string",
+                "pattern": "^(0|[1-9][0-9]{0,14})\\.[0-9]{4}$",
+                "description": "Cr decimal string; max 900000000000000.0000; never a JSON number."
+              },
+              "reserved": {
+                "type": "string",
+                "pattern": "^(0|[1-9][0-9]{0,14})\\.[0-9]{4}$",
+                "description": "Cr decimal string; max 900000000000000.0000; never a JSON number."
+              },
+              "available": {
+                "type": "string",
+                "pattern": "^(0|[1-9][0-9]{0,14})\\.[0-9]{4}$",
+                "description": "Cr decimal string; max 900000000000000.0000; never a JSON number."
+              },
+              "treasury": {
+                "type": "string",
+                "pattern": "^(0|[1-9][0-9]{0,14})\\.[0-9]{4}$",
+                "description": "Cr decimal string; max 900000000000000.0000; never a JSON number."
+              }
+            },
+            "required": [
+              "budget",
+              "reserved",
+              "available",
+              "treasury"
+            ],
+            "additionalProperties": false,
+            "nullable": true
+          },
+          "can_view_finances": {
+            "type": "boolean"
+          },
+          "can_invest": {
+            "type": "boolean"
+          },
+          "wallet_ready": {
+            "type": "boolean"
+          },
+          "collect_available": {
+            "type": "boolean"
+          },
+          "entries": {
+            "type": "object",
+            "properties": {
+              "items": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 2147483647
+                    },
+                    "kind": {
+                      "type": "string",
+                      "maxLength": 32
+                    },
+                    "amount": {
+                      "type": "string",
+                      "pattern": "^(0|[1-9][0-9]{0,14})\\.[0-9]{4}$",
+                      "description": "Cr decimal string; max 900000000000000.0000; never a JSON number."
+                    },
+                    "purpose": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 255
+                    },
+                    "created_at": {
+                      "type": "integer",
+                      "minimum": 0
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "kind",
+                    "amount",
+                    "purpose",
+                    "created_at"
+                  ],
+                  "additionalProperties": false
+                },
+                "maxItems": 50
+              },
+              "_meta": {
+                "type": "object",
+                "properties": {
+                  "totalCount": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "pageCount": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "currentPage": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 2147483647
+                  },
+                  "perPage": {
+                    "type": "integer",
+                    "enum": [
+                      50
+                    ]
+                  }
+                },
+                "required": [
+                  "totalCount",
+                  "pageCount",
+                  "currentPage",
+                  "perPage"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "required": [
+              "items",
+              "_meta"
+            ],
+            "additionalProperties": false
+          },
+          "server_time": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "can_pay": {
+            "type": "boolean"
+          },
+          "treasury_catching_up": {
+            "type": "boolean"
+          },
+          "collection_rule": {
+            "$ref": "#/components/schemas/CollectionRule"
+          }
+        },
+        "required": [
+          "node_id",
+          "currency",
+          "balances",
+          "can_view_finances",
+          "can_invest",
+          "wallet_ready",
+          "collect_available",
+          "entries",
+          "server_time",
+          "can_pay",
+          "treasury_catching_up",
+          "collection_rule"
+        ],
+        "additionalProperties": false
+      },
+      "InvestInput": {
+        "type": "object",
+        "properties": {
+          "amount": {
+            "type": "string",
+            "pattern": "^(0|[1-9][0-9]{0,14})(\\.[0-9]{1,4})?$",
+            "description": "Positive amount, normalized to four fractional digits."
+          },
+          "purpose": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255
+          }
+        },
+        "required": [
+          "amount",
+          "purpose"
+        ],
+        "additionalProperties": false
+      },
+      "InvestCommand": {
+        "type": "object",
+        "properties": {
+          "amount": {
+            "type": "string",
+            "pattern": "^(0|[1-9][0-9]{0,14})(\\.[0-9]{1,4})?$",
+            "description": "Positive amount, normalized to four fractional digits."
+          },
+          "purpose": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255
+          },
+          "request_key": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_-]{16,80}$"
+          },
+          "quote_id": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{32}$"
+          },
+          "expected_revisions": {
+            "$ref": "world.openapi.json#/components/schemas/Revisions"
+          }
+        },
+        "required": [
+          "amount",
+          "purpose",
+          "request_key",
+          "quote_id",
+          "expected_revisions"
+        ],
+        "additionalProperties": false
+      },
+      "InvestTerms": {
+        "type": "object",
+        "properties": {
+          "node_id": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          },
+          "node_name": {
+            "type": "string",
+            "maxLength": 120
+          },
+          "amount": {
+            "type": "string",
+            "pattern": "^(0|[1-9][0-9]{0,14})\\.[0-9]{4}$",
+            "description": "Cr decimal string; max 900000000000000.0000; never a JSON number."
+          },
+          "currency": {
+            "type": "string",
+            "enum": [
+              "Cr"
+            ]
+          },
+          "purpose": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255
+          },
+          "wallet_before": {
+            "type": "string",
+            "pattern": "^(0|[1-9][0-9]{0,14})\\.[0-9]{4}$",
+            "description": "Cr decimal string; max 900000000000000.0000; never a JSON number."
+          },
+          "wallet_after": {
+            "type": "string",
+            "pattern": "^(0|[1-9][0-9]{0,14})\\.[0-9]{4}$",
+            "description": "Cr decimal string; max 900000000000000.0000; never a JSON number."
+          },
+          "destination": {
+            "type": "string",
+            "enum": [
+              "budget"
+            ]
+          },
+          "automatic_return": {
+            "type": "boolean",
+            "enum": [
+              false
+            ]
+          }
+        },
+        "required": [
+          "node_id",
+          "node_name",
+          "amount",
+          "currency",
+          "purpose",
+          "wallet_before",
+          "wallet_after",
+          "destination",
+          "automatic_return"
+        ],
+        "additionalProperties": false
+      },
+      "InvestQuote": {
+        "type": "object",
+        "properties": {
+          "quote_id": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{32}$"
+          },
+          "expires_at": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "expected_revisions": {
+            "$ref": "world.openapi.json#/components/schemas/Revisions"
+          },
+          "terms": {
+            "$ref": "#/components/schemas/InvestTerms"
+          },
+          "server_time": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "quote_id",
+          "expires_at",
+          "expected_revisions",
+          "terms",
+          "server_time"
+        ],
+        "additionalProperties": false
+      },
+      "CollectionRule": {
+        "type": "object",
+        "properties": {
+          "revision": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          },
+          "history_id": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          },
+          "parent_node_id": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647,
+            "nullable": true
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "root",
+              "unconfigured",
+              "published"
+            ]
+          },
+          "basis": {
+            "type": "string",
+            "enum": [
+              "collected_revenue"
+            ]
+          },
+          "rate_bps": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 10000,
+            "nullable": true
+          },
+          "due_seconds": {
+            "type": "integer",
+            "minimum": 3600,
+            "maximum": 31536000,
+            "nullable": true
+          },
+          "effective_from": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "loss_policy": {
+            "type": "object",
+            "properties": {
+              "protected_seconds": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 31536000
+              },
+              "loss_period_seconds": {
+                "type": "integer",
+                "minimum": 3600,
+                "maximum": 2592000
+              },
+              "loss_rate_bps": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 10000
+              }
+            },
+            "required": [
+              "protected_seconds",
+              "loss_period_seconds",
+              "loss_rate_bps"
+            ],
+            "additionalProperties": false,
+            "nullable": true
+          }
+        },
+        "required": [
+          "revision",
+          "history_id",
+          "parent_node_id",
+          "status",
+          "basis",
+          "rate_bps",
+          "due_seconds",
+          "effective_from",
+          "loss_policy"
+        ],
+        "additionalProperties": false,
+        "nullable": true
+      },
+      "Obligation": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          },
+          "amount": {
+            "type": "string",
+            "pattern": "^(0|[1-9][0-9]{0,14})\\.[0-9]{4}$",
+            "description": "Cr decimal string; max 900000000000000.0000; never a JSON number."
+          },
+          "parent_node_id": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          },
+          "rule_revision": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "paid"
+            ]
+          },
+          "created_at": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "due_at": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "paid_at": {
+            "type": "integer",
+            "minimum": 0,
+            "nullable": true
+          }
+        },
+        "required": [
+          "id",
+          "amount",
+          "parent_node_id",
+          "rule_revision",
+          "status",
+          "created_at",
+          "due_at",
+          "paid_at"
+        ],
+        "additionalProperties": false
+      },
+      "Obligations": {
+        "type": "object",
+        "properties": {
+          "node_id": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          },
+          "items": {
+            "type": "array",
+            "maxItems": 50,
+            "items": {
+              "$ref": "#/components/schemas/Obligation"
+            }
+          },
+          "_meta": {
+            "type": "object",
+            "properties": {
+              "totalCount": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "pageCount": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "currentPage": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 1000000
+              },
+              "perPage": {
+                "type": "integer",
+                "enum": [
+                  50
+                ]
+              }
+            },
+            "required": [
+              "totalCount",
+              "pageCount",
+              "currentPage",
+              "perPage"
+            ],
+            "additionalProperties": false
+          },
+          "server_time": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "node_id",
+          "items",
+          "_meta",
+          "server_time"
+        ],
+        "additionalProperties": false
+      },
+      "CollectInput": {
+        "type": "object",
+        "properties": {},
+        "required": [],
+        "additionalProperties": false
+      },
+      "PayInput": {
+        "type": "object",
+        "properties": {
+          "obligation_id": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          }
+        },
+        "required": [
+          "obligation_id"
+        ],
+        "additionalProperties": false
+      },
+      "PolicyInput": {
+        "type": "object",
+        "properties": {
+          "rate_bps": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 10000
+          },
+          "due_seconds": {
+            "type": "integer",
+            "minimum": 3600,
+            "maximum": 31536000
+          },
+          "protected_seconds": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 31536000
+          },
+          "loss_period_seconds": {
+            "type": "integer",
+            "minimum": 3600,
+            "maximum": 2592000
+          },
+          "loss_rate_bps": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 10000
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255
+          }
+        },
+        "required": [
+          "rate_bps",
+          "due_seconds",
+          "protected_seconds",
+          "loss_period_seconds",
+          "loss_rate_bps",
+          "reason"
+        ],
+        "additionalProperties": false
+      },
+      "CollectTerms": {
+        "type": "object",
+        "properties": {
+          "node_id": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          },
+          "collected": {
+            "type": "string",
+            "pattern": "^(0|[1-9][0-9]{0,14})\\.[0-9]{4}$",
+            "description": "Cr decimal string; max 900000000000000.0000; never a JSON number."
+          },
+          "reserved_for_parent": {
+            "type": "string",
+            "pattern": "^(0|[1-9][0-9]{0,14})\\.[0-9]{4}$",
+            "description": "Cr decimal string; max 900000000000000.0000; never a JSON number."
+          },
+          "budget_after": {
+            "type": "string",
+            "pattern": "^(0|[1-9][0-9]{0,14})\\.[0-9]{4}$",
+            "description": "Cr decimal string; max 900000000000000.0000; never a JSON number."
+          },
+          "available_after": {
+            "type": "string",
+            "pattern": "^(0|[1-9][0-9]{0,14})\\.[0-9]{4}$",
+            "description": "Cr decimal string; max 900000000000000.0000; never a JSON number."
+          },
+          "treasury_after": {
+            "type": "string",
+            "pattern": "^(0|[1-9][0-9]{0,14})\\.[0-9]{4}$",
+            "description": "Cr decimal string; max 900000000000000.0000; never a JSON number."
+          },
+          "rule_revision": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          },
+          "parent_node_id": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647,
+            "nullable": true
+          },
+          "due_seconds": {
+            "type": "integer",
+            "minimum": 3600,
+            "maximum": 31536000
+          },
+          "more_pending": {
+            "type": "boolean"
+          },
+          "plan_hash": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          }
+        },
+        "required": [
+          "node_id",
+          "collected",
+          "reserved_for_parent",
+          "budget_after",
+          "available_after",
+          "treasury_after",
+          "rule_revision",
+          "parent_node_id",
+          "due_seconds",
+          "more_pending",
+          "plan_hash"
+        ],
+        "additionalProperties": false
+      },
+      "PayTerms": {
+        "type": "object",
+        "properties": {
+          "node_id": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          },
+          "obligation_id": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          },
+          "payment_amount": {
+            "type": "string",
+            "pattern": "^(0|[1-9][0-9]{0,14})\\.[0-9]{4}$",
+            "description": "Cr decimal string; max 900000000000000.0000; never a JSON number."
+          },
+          "parent_node_id": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          },
+          "invoice_history_id": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          },
+          "recipient_policy_revision": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          },
+          "budget_after": {
+            "type": "string",
+            "pattern": "^(0|[1-9][0-9]{0,14})\\.[0-9]{4}$",
+            "description": "Cr decimal string; max 900000000000000.0000; never a JSON number."
+          },
+          "reserved_after": {
+            "type": "string",
+            "pattern": "^(0|[1-9][0-9]{0,14})\\.[0-9]{4}$",
+            "description": "Cr decimal string; max 900000000000000.0000; never a JSON number."
+          },
+          "destination": {
+            "type": "string",
+            "enum": [
+              "parent_treasury"
+            ]
+          }
+        },
+        "required": [
+          "node_id",
+          "obligation_id",
+          "payment_amount",
+          "parent_node_id",
+          "invoice_history_id",
+          "recipient_policy_revision",
+          "budget_after",
+          "reserved_after",
+          "destination"
+        ],
+        "additionalProperties": false
+      },
+      "PolicyTerms": {
+        "type": "object",
+        "properties": {
+          "rate_bps": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 10000
+          },
+          "due_seconds": {
+            "type": "integer",
+            "minimum": 3600,
+            "maximum": 31536000
+          },
+          "protected_seconds": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 31536000
+          },
+          "loss_period_seconds": {
+            "type": "integer",
+            "minimum": 3600,
+            "maximum": 2592000
+          },
+          "loss_rate_bps": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 10000
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255
+          },
+          "node_id": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          },
+          "parent_node_id": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647,
+            "nullable": true
+          },
+          "revision": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          },
+          "basis": {
+            "type": "string",
+            "enum": [
+              "collected_revenue"
+            ]
+          },
+          "existing_receipts_unchanged": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          },
+          "existing_obligations_unchanged": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          }
+        },
+        "required": [
+          "rate_bps",
+          "due_seconds",
+          "protected_seconds",
+          "loss_period_seconds",
+          "loss_rate_bps",
+          "reason",
+          "node_id",
+          "parent_node_id",
+          "revision",
+          "basis",
+          "existing_receipts_unchanged",
+          "existing_obligations_unchanged"
+        ],
+        "additionalProperties": false
+      },
+      "CollectCommand": {
+        "type": "object",
+        "properties": {
+          "request_key": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_-]{16,80}$"
+          },
+          "quote_id": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{32}$"
+          },
+          "expected_revisions": {
+            "$ref": "world.openapi.json#/components/schemas/Revisions"
+          }
+        },
+        "required": [
+          "request_key",
+          "quote_id",
+          "expected_revisions"
+        ],
+        "additionalProperties": false
+      },
+      "CollectQuote": {
+        "type": "object",
+        "properties": {
+          "quote_id": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{32}$"
+          },
+          "expires_at": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "expected_revisions": {
+            "$ref": "world.openapi.json#/components/schemas/Revisions"
+          },
+          "terms": {
+            "$ref": "#/components/schemas/CollectTerms"
+          },
+          "server_time": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "quote_id",
+          "expires_at",
+          "expected_revisions",
+          "terms",
+          "server_time"
+        ],
+        "additionalProperties": false
+      },
+      "PayCommand": {
+        "type": "object",
+        "properties": {
+          "obligation_id": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          },
+          "request_key": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_-]{16,80}$"
+          },
+          "quote_id": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{32}$"
+          },
+          "expected_revisions": {
+            "$ref": "world.openapi.json#/components/schemas/Revisions"
+          }
+        },
+        "required": [
+          "obligation_id",
+          "request_key",
+          "quote_id",
+          "expected_revisions"
+        ],
+        "additionalProperties": false
+      },
+      "PayQuote": {
+        "type": "object",
+        "properties": {
+          "quote_id": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{32}$"
+          },
+          "expires_at": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "expected_revisions": {
+            "$ref": "world.openapi.json#/components/schemas/Revisions"
+          },
+          "terms": {
+            "$ref": "#/components/schemas/PayTerms"
+          },
+          "server_time": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "quote_id",
+          "expires_at",
+          "expected_revisions",
+          "terms",
+          "server_time"
+        ],
+        "additionalProperties": false
+      },
+      "PolicyCommand": {
+        "type": "object",
+        "properties": {
+          "rate_bps": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 10000
+          },
+          "due_seconds": {
+            "type": "integer",
+            "minimum": 3600,
+            "maximum": 31536000
+          },
+          "protected_seconds": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 31536000
+          },
+          "loss_period_seconds": {
+            "type": "integer",
+            "minimum": 3600,
+            "maximum": 2592000
+          },
+          "loss_rate_bps": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 10000
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255
+          },
+          "request_key": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_-]{16,80}$"
+          },
+          "quote_id": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{32}$"
+          },
+          "expected_revisions": {
+            "$ref": "world.openapi.json#/components/schemas/Revisions"
+          }
+        },
+        "required": [
+          "rate_bps",
+          "due_seconds",
+          "protected_seconds",
+          "loss_period_seconds",
+          "loss_rate_bps",
+          "reason",
+          "request_key",
+          "quote_id",
+          "expected_revisions"
+        ],
+        "additionalProperties": false
+      },
+      "PolicyQuote": {
+        "type": "object",
+        "properties": {
+          "quote_id": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{32}$"
+          },
+          "expires_at": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "expected_revisions": {
+            "$ref": "world.openapi.json#/components/schemas/Revisions"
+          },
+          "terms": {
+            "$ref": "#/components/schemas/PolicyTerms"
+          },
+          "server_time": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "quote_id",
+          "expires_at",
+          "expected_revisions",
+          "terms",
+          "server_time"
+        ],
+        "additionalProperties": false
+      }
+    }
+  },
+  "paths": {
+    "/world/nodes/{id}/economy": {
+      "get": {
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 2147483647
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 1000000,
+              "default": 1
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Economy"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Request rejected; exact wallet may still be gated.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Request rejected; exact wallet may still be gated.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Request rejected; exact wallet may still be gated.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Request rejected; exact wallet may still be gated.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Request rejected; exact wallet may still be gated.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Request rejected; exact wallet may still be gated.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Request rejected; exact wallet may still be gated.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/world/nodes/{id}/invest-preview": {
+      "post": {
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 2147483647
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InvestInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvestQuote"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Request rejected; exact wallet may still be gated.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Request rejected; exact wallet may still be gated.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Request rejected; exact wallet may still be gated.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Request rejected; exact wallet may still be gated.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Request rejected; exact wallet may still be gated.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Request rejected; exact wallet may still be gated.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Request rejected; exact wallet may still be gated.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/world/nodes/{id}/invest": {
+      "post": {
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 2147483647
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InvestCommand"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/CommandResult"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Request rejected; exact wallet may still be gated.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Request rejected; exact wallet may still be gated.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Request rejected; exact wallet may still be gated.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Request rejected; exact wallet may still be gated.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Request rejected; exact wallet may still be gated.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Request rejected; exact wallet may still be gated.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Request rejected; exact wallet may still be gated.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/world/nodes/{id}/collect-preview": {
+      "post": {
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 2147483647
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CollectInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CollectQuote"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Request rejected; exact wallet may still be gated.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Request rejected; exact wallet may still be gated.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Request rejected; exact wallet may still be gated.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Request rejected; exact wallet may still be gated.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Request rejected; exact wallet may still be gated.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Request rejected; exact wallet may still be gated.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Request rejected; exact wallet may still be gated.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Preview collect"
+      }
+    },
+    "/world/nodes/{id}/collect": {
+      "post": {
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 2147483647
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CollectCommand"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/CommandResult"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Request rejected; exact wallet may still be gated.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Request rejected; exact wallet may still be gated.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Request rejected; exact wallet may still be gated.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Request rejected; exact wallet may still be gated.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Request rejected; exact wallet may still be gated.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Request rejected; exact wallet may still be gated.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Request rejected; exact wallet may still be gated.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Confirm collect"
+      }
+    },
+    "/world/nodes/{id}/pay-preview": {
+      "post": {
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 2147483647
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PayInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PayQuote"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Request rejected; exact wallet may still be gated.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Request rejected; exact wallet may still be gated.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Request rejected; exact wallet may still be gated.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Request rejected; exact wallet may still be gated.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Request rejected; exact wallet may still be gated.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Request rejected; exact wallet may still be gated.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Request rejected; exact wallet may still be gated.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Preview pay"
+      }
+    },
+    "/world/nodes/{id}/pay": {
+      "post": {
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 2147483647
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PayCommand"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/CommandResult"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Request rejected; exact wallet may still be gated.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Request rejected; exact wallet may still be gated.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Request rejected; exact wallet may still be gated.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Request rejected; exact wallet may still be gated.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Request rejected; exact wallet may still be gated.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Request rejected; exact wallet may still be gated.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Request rejected; exact wallet may still be gated.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Confirm pay"
+      }
+    },
+    "/world/nodes/{id}/finance-policy-preview": {
+      "post": {
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 2147483647
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PolicyInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PolicyQuote"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Request rejected; exact wallet may still be gated.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Request rejected; exact wallet may still be gated.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Request rejected; exact wallet may still be gated.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Request rejected; exact wallet may still be gated.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Request rejected; exact wallet may still be gated.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Request rejected; exact wallet may still be gated.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Request rejected; exact wallet may still be gated.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Preview finance-policy"
+      }
+    },
+    "/world/nodes/{id}/finance-policy": {
+      "post": {
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 2147483647
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PolicyCommand"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/CommandResult"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Request rejected; exact wallet may still be gated.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Request rejected; exact wallet may still be gated.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Request rejected; exact wallet may still be gated.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Request rejected; exact wallet may still be gated.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Request rejected; exact wallet may still be gated.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Request rejected; exact wallet may still be gated.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Request rejected; exact wallet may still be gated.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Confirm finance-policy"
+      }
+    },
+    "/world/nodes/{id}/obligations": {
+      "get": {
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 2147483647
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 1000000,
+              "default": 1
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Obligations"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Request rejected; exact wallet may still be gated.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Request rejected; exact wallet may still be gated.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Request rejected; exact wallet may still be gated.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Request rejected; exact wallet may still be gated.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Request rejected; exact wallet may still be gated.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Request rejected; exact wallet may still be gated.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Request rejected; exact wallet may still be gated.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Owner-only obligations, newest first, 50 per page"
+      }
+    }
+  }
+}

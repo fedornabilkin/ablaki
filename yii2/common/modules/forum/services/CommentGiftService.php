@@ -41,15 +41,23 @@ class CommentGiftService
             $already = (new Query())->from('forum_comment_gift')
                 ->where(['comment_id' => $commentId, 'user_id' => $donorId])->exists($this->db);
             if (!$already) {
-                // The predicate prevents overdraft even if an older balance writer ignores locks.
-                $changed = $this->db->createCommand()->update('persone', [
-                    'credit' => new Expression('[[credit]] - :gift', [':gift' => $amount]),
-                ], ['and', ['user_id' => $donorId], ['>=', 'credit', $amount]])->execute();
-                if ($changed !== 1) throw new DomainException('Not enough credit.');
-                if ($this->db->createCommand()->update('persone', [
-                    'credit' => new Expression('[[credit]] + :gift', [':gift' => $amount]),
-                ], ['user_id' => $recipientId])->execute() !== 1) {
-                    throw new RuntimeException('Could not credit recipient.');
+                \common\modules\economy\service\WalletMaintenance::writable($this->db);
+                $exact = \common\modules\economy\service\WalletSchema::ready($this->db);
+                if ($exact) {
+                    $ledger = new \common\services\user\CreditLedger($this->db);
+                    $ledger->changeExact($donorId, (string)-$amount, 'forum_gift', 'Благодарность за сообщение №' . $commentId);
+                    $ledger->changeExact($recipientId, (string)$amount, 'forum_gift', 'Благодарность за сообщение №' . $commentId);
+                } else {
+                    // The predicate prevents overdraft even if an older balance writer ignores locks.
+                    $changed = $this->db->createCommand()->update('persone', [
+                        'credit' => new Expression('[[credit]] - :gift', [':gift' => $amount]),
+                    ], ['and', ['user_id' => $donorId], ['>=', 'credit', $amount]])->execute();
+                    if ($changed !== 1) throw new DomainException('Not enough credit.');
+                    if ($this->db->createCommand()->update('persone', [
+                        'credit' => new Expression('[[credit]] + :gift', [':gift' => $amount]),
+                    ], ['user_id' => $recipientId])->execute() !== 1) {
+                        throw new RuntimeException('Could not credit recipient.');
+                    }
                 }
                 $now = time();
                 $gift = [
@@ -58,7 +66,7 @@ class CommentGiftService
                 ];
                 if ($hasAmount) $gift['amount'] = $amount;
                 if ($this->db->createCommand()->insert('forum_comment_gift', $gift)->execute() !== 1) throw new RuntimeException('Could not record gift.');
-                foreach ([$donorId => -$amount, $recipientId => $amount] as $userId => $change) {
+                foreach ($exact ? [] : [$donorId => -$amount, $recipientId => $amount] as $userId => $change) {
                     $person = (new Query())->from('persone')->where(['user_id' => $userId])->one($this->db);
                     if ($this->db->createCommand()->insert('history_balance', [
                         'user_id' => $userId, 'balance' => $person['balance'], 'credit' => $person['credit'],

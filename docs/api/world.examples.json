@@ -1,0 +1,48 @@
+{
+  "description": "Synthetic contract examples; these are not execution or test results.",
+  "root_disabled": {
+    "contract_version": 1,
+    "server_time": 1790467200,
+    "capabilities": {
+      "schema_ready": false,
+      "contract_version": 1,
+      "world_read": false,
+      "world_write": false,
+      "storage_v2": false,
+      "economy_tick": false
+    },
+    "world": null,
+    "regions": {
+      "items": [],
+      "_meta": {
+        "totalCount": 0,
+        "pageCount": 0,
+        "currentPage": 1,
+        "perPage": 20
+      }
+    }
+  },
+  "join_quote": {
+    "quote_id": "0123456789abcdef0123456789abcdef",
+    "expires_at": 1790467500,
+    "expected_revisions": {
+      "registry": 1,
+      "node:4": 1
+    },
+    "terms": {
+      "settlement_id": 4,
+      "world_id": 1,
+      "price": "0.0000",
+      "currency": "Cr",
+      "right": "starter-campsite-use",
+      "items": [],
+      "grace_seconds": 86400
+    },
+    "server_time": 1790467200
+  },
+  "revision_conflict": {
+    "code": "REVISION_CHANGED",
+    "message": "Состояние изменилось. Повторите предварительный расчёт.",
+    "details": {}
+  }
+}

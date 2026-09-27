@@ -6,6 +6,7 @@ use common\modules\forum\Module;
 use yii\redis\Cache;
 
 $config = [
+    'bootstrap' => [\common\modules\economy\service\WalletMaintenanceBootstrap::class],
     'language' => 'ru-RU',
     'charset' => 'UTF-8',
     'aliases' => [
@@ -54,6 +55,7 @@ $config = [
     ],
 
     'modules' => [
+        'world' => ['class' => \common\modules\world\Module::class],
         'user' => [
             'class' => 'dektrium\user\Module',
             'enableFlashMessages' => false,

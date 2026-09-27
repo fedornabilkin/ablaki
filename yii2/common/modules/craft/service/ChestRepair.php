@@ -11,8 +11,12 @@ class ChestRepair
     private $store;
     public function __construct(CraftStorage $store) { $this->store = $store; }
 
-    private function equipment(int $user, int $itemId): array
+    private function equipment(int $user, int $itemId, bool $station = false): array
     {
+        if ($this->store->isCanonical()) {
+            $unit = (new StationResolver($this->store))->select($user, $itemId, $station);
+            return $unit ?: ['item_id' => $itemId, 'instance_id' => null, 'durability' => 0, 'max_durability' => 100, 'in_backpack' => false, 'is_station' => $station, 'exposure_class' => 'carried'];
+        }
         // Tools and owned stations share the wear of their current inventory item.
         $wear = (int)(new Query())->select('wear')->from('craft_tool_wear')->where(['user_id' => $user, 'item_id' => $itemId])->scalar($this->store->db);
         return ['item_id' => $itemId, 'durability' => self::TOOL_DURABILITY - $wear, 'max_durability' => self::TOOL_DURABILITY];
@@ -66,8 +70,18 @@ class ChestRepair
                 $result['station'] = ['id' => (int)$station['id'], 'name' => trim($station['name']), 'item_id' => $station['item_id'] === null ? null : (int)$station['item_id']];
                 if ($station['item_id'] !== null) {
                     $reserve[(int)$station['item_id']] = 1;
-                    $result['station'] += $this->equipment($user, (int)$station['item_id']);
+                    $result['station'] += $this->equipment($user, (int)$station['item_id'], true);
                 }
+            }
+        }
+        if ($this->store->isCanonical()) {
+            $equipment = [];
+            foreach ($result['tools'] as $unit) $equipment[$unit['item_id']] = $unit;
+            if ($result['station'] && $result['station']['item_id'] !== null) $equipment[$result['station']['item_id']] = $result['station'];
+            foreach ($equipment as $id => $unit) {
+                $cost = (new EquipmentExposure($db))->cost($unit, 1, 1, $unit['is_station']);
+                if (!$unit['instance_id'] || $unit['durability'] < $cost) $result['reasons'][] = 'Недоступно или изношено оборудование: ' . trim($items[$id]['name'] ?? ('#' . $id));
+                if (!$unit['in_backpack']) unset($reserve[$id]);
             }
         }
         foreach ($reserve as $id => $amount) $required[$id] = ($required[$id] ?? 0) + $amount;
@@ -82,6 +96,16 @@ class ChestRepair
         }
         unset($entry);
         if ($result['station']) $result['station']['available'] = $result['station']['item_id'] === null || $available($result['station']['item_id']);
+        if ($this->store->isCanonical()) {
+            foreach ($result['tools'] as &$tool) $tool['available'] = !empty($tool['instance_id']) && $tool['durability'] >= 1;
+            unset($tool);
+            if ($result['station'] && $result['station']['item_id'] !== null) {
+                $unit = $result['station'];
+                $result['station']['available'] = !empty($unit['instance_id']) && $unit['durability'] >= (new EquipmentExposure($db))->cost($unit, 1, 1, true);
+            }
+        }
+        foreach (['materials', 'tools'] as $group) foreach ($result[$group] as &$entry) $entry['name'] = trim($items[$entry['item_id']]['name'] ?? ('#' . $entry['item_id']));
+        unset($entry);
         return $result;
     }
 
@@ -94,6 +118,13 @@ class ChestRepair
         if ($quote['reasons']) throw new ConflictHttpException(implode(' ', $quote['reasons']));
         $inventory = new CraftInventory($this->store);
         $chest = $inventory->container($user, $slotId);
+        if ($this->store->isCanonical()) {
+            $units = [];
+            foreach ($quote['tools'] as $tool) $units[$tool['item_id']] = $tool;
+            if ($quote['station'] && $quote['station']['item_id'] !== null) $units[$quote['station']['item_id']] = $quote['station'];
+            $this->store->protectedInstances = array_column($units, 'instance_id');
+            foreach ($units as $unit) (new EquipmentExposure($db))->use($unit['instance_id'], 1, 1, $unit['is_station']);
+        }
         foreach ($quote['materials'] as $material) {
             $item = (new Query())->from('craft_item')->where(['id' => $material['item_id']])->one($db);
             $this->store->move($user, $item, -$material['quantity']);
@@ -102,6 +133,7 @@ class ChestRepair
         foreach ($quote['tools'] as $tool) $equipment[$tool['item_id']] = $tool;
         if ($quote['station'] && $quote['station']['item_id'] !== null) $equipment[$quote['station']['item_id']] = $quote['station'];
         foreach ($equipment as $tool) {
+            if ($this->store->isCanonical()) continue;
             $where = ['user_id' => $user, 'item_id' => $tool['item_id']];
             $wear = self::TOOL_DURABILITY - $tool['durability'] + 1;
             if ($wear >= self::TOOL_DURABILITY) {
@@ -114,6 +146,7 @@ class ChestRepair
             } elseif ($db->createCommand()->insert('craft_tool_wear', $where + ['wear' => $wear])->execute() !== 1) throw new \RuntimeException('Tool wear insert failed.');
         }
         if ($db->createCommand()->update('craft_container', ['durability' => (int)$chest['max_durability']], ['id' => $slotId, 'user_id' => $user])->execute() !== 1) throw new \RuntimeException('Repair write failed.');
+        if ($this->store->isCanonical()) $db->createCommand()->update('craft_storage', ['revision' => new \yii\db\Expression('[[revision]]+1')], ['container_inventory_id' => $slotId])->execute();
         return $quote['restore'];
     }
 }

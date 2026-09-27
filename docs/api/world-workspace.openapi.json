@@ -1,0 +1,1527 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Ablaki World Workspace and Recovery API",
+    "version": "1.0.0",
+    "description": "Implemented code; not runtime-tested or deployed. Requires world_read/storage_v2, writes require world_write. Storage activation remains gated. Only own local storages are available. Recipe prices and XP use the existing craft engine. Quote terms are recalculated under locks, including wear. New instance:<id> revision. Recovery moves a whole inventory row without changing its physical identity or chest contents; it cannot be used as general-purpose free storage."
+  },
+  "servers": [
+    {
+      "url": "/v1"
+    }
+  ],
+  "security": [
+    {
+      "bearerAuth": []
+    }
+  ],
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer"
+      }
+    },
+    "schemas": {
+      "Equipment": {
+        "type": "object",
+        "properties": {
+          "item_id": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          },
+          "instance_id": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          },
+          "inventory_id": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          },
+          "storage_id": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          },
+          "in_backpack": {
+            "type": "boolean"
+          },
+          "is_station": {
+            "type": "boolean"
+          },
+          "durability": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "max_durability": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          },
+          "exposure_class": {
+            "type": "string",
+            "enum": [
+              "carried",
+              "outdoor",
+              "covered",
+              "indoor"
+            ]
+          }
+        },
+        "required": [
+          "item_id",
+          "instance_id",
+          "inventory_id",
+          "storage_id",
+          "in_backpack",
+          "is_station",
+          "durability",
+          "max_durability",
+          "exposure_class"
+        ],
+        "additionalProperties": false
+      },
+      "Workspace": {
+        "type": "object",
+        "properties": {
+          "node_id": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          },
+          "name": {
+            "type": "string",
+            "maxLength": 120
+          },
+          "recipe_id": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647,
+            "nullable": true
+          },
+          "recipes": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 2147483647
+                },
+                "name": {
+                  "type": "string",
+                  "maxLength": 120
+                },
+                "quantity": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 1000
+                },
+                "locked_reasons": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "maxLength": 1000
+                  },
+                  "maxItems": 100
+                }
+              },
+              "required": [
+                "id",
+                "name",
+                "quantity",
+                "locked_reasons"
+              ],
+              "additionalProperties": false
+            },
+            "maxItems": 2000
+          },
+          "equipment": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "item_id": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 2147483647
+                },
+                "name": {
+                  "type": "string",
+                  "maxLength": 120
+                },
+                "is_station": {
+                  "type": "boolean"
+                },
+                "candidates": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Equipment"
+                  },
+                  "maxItems": 100
+                }
+              },
+              "required": [
+                "item_id",
+                "name",
+                "is_station",
+                "candidates"
+              ],
+              "additionalProperties": false
+            },
+            "maxItems": 100
+          },
+          "storages": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 2147483647
+                },
+                "kind": {
+                  "type": "string",
+                  "enum": [
+                    "backpack",
+                    "chest",
+                    "placement",
+                    "recovery",
+                    "stockpile"
+                  ]
+                },
+                "name": {
+                  "type": "string",
+                  "maxLength": 120
+                },
+                "node_id": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 2147483647,
+                  "nullable": true
+                },
+                "container_inventory_id": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 2147483647,
+                  "nullable": true
+                },
+                "capacity": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 10000
+                },
+                "revision": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 2147483647
+                },
+                "output_allowed": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "id",
+                "kind",
+                "name",
+                "node_id",
+                "container_inventory_id",
+                "capacity",
+                "revision",
+                "output_allowed"
+              ],
+              "additionalProperties": false
+            },
+            "maxItems": 200
+          },
+          "writable": {
+            "type": "boolean"
+          },
+          "server_time": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "node_id",
+          "name",
+          "recipe_id",
+          "recipes",
+          "equipment",
+          "storages",
+          "writable",
+          "server_time"
+        ],
+        "additionalProperties": false
+      },
+      "CraftInput": {
+        "type": "object",
+        "properties": {
+          "node_id": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          },
+          "recipe_id": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          },
+          "quantity": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100
+          },
+          "source_storage_ids": {
+            "type": "array",
+            "items": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 2147483647
+            },
+            "maxItems": 20,
+            "minItems": 1,
+            "uniqueItems": true,
+            "description": "Consumption priority is the array order."
+          },
+          "output_storage_id": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          },
+          "equipment_instance_ids": {
+            "type": "array",
+            "items": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 2147483647
+            },
+            "maxItems": 100,
+            "uniqueItems": true,
+            "description": "Exact physical units, normalized to ascending order."
+          }
+        },
+        "required": [
+          "node_id",
+          "recipe_id",
+          "quantity",
+          "source_storage_ids",
+          "output_storage_id",
+          "equipment_instance_ids"
+        ],
+        "additionalProperties": false
+      },
+      "CraftCommand": {
+        "type": "object",
+        "properties": {
+          "node_id": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          },
+          "recipe_id": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          },
+          "quantity": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100
+          },
+          "source_storage_ids": {
+            "type": "array",
+            "items": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 2147483647
+            },
+            "maxItems": 20,
+            "minItems": 1,
+            "uniqueItems": true,
+            "description": "Consumption priority is the array order."
+          },
+          "output_storage_id": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          },
+          "equipment_instance_ids": {
+            "type": "array",
+            "items": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 2147483647
+            },
+            "maxItems": 100,
+            "uniqueItems": true,
+            "description": "Exact physical units, normalized to ascending order."
+          },
+          "request_key": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_-]{16,80}$"
+          },
+          "quote_id": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{32}$"
+          },
+          "expected_revisions": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 2147483647
+            },
+            "maxProperties": 256,
+            "description": "Keys: node:<id>, storage:<id>, inventory:<id>, instance:<id>, catalog, registry."
+          }
+        },
+        "required": [
+          "node_id",
+          "recipe_id",
+          "quantity",
+          "source_storage_ids",
+          "output_storage_id",
+          "equipment_instance_ids",
+          "request_key",
+          "quote_id",
+          "expected_revisions"
+        ],
+        "additionalProperties": false
+      },
+      "CraftTerms": {
+        "type": "object",
+        "properties": {
+          "materials": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "item_id": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 2147483647
+                },
+                "name": {
+                  "type": "string",
+                  "maxLength": 120
+                },
+                "quantity": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 2147483647
+                },
+                "have": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "available": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "item_id",
+                "name",
+                "quantity",
+                "have",
+                "available"
+              ],
+              "additionalProperties": false
+            },
+            "maxItems": 100
+          },
+          "consume": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "inventory_id": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 2147483647
+                },
+                "storage_id": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 2147483647
+                },
+                "item_id": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 2147483647
+                },
+                "quantity": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 2147483647
+                },
+                "instance_ids": {
+                  "type": "array",
+                  "items": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 2147483647
+                  },
+                  "maxItems": 10000
+                }
+              },
+              "required": [
+                "inventory_id",
+                "storage_id",
+                "item_id",
+                "quantity",
+                "instance_ids"
+              ],
+              "additionalProperties": false
+            },
+            "maxItems": 2000
+          },
+          "grant": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "inventory_id": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 2147483647,
+                  "nullable": true
+                },
+                "position": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 2147483647
+                },
+                "quantity": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 2147483647
+                }
+              },
+              "required": [
+                "inventory_id",
+                "position",
+                "quantity"
+              ],
+              "additionalProperties": false
+            },
+            "maxItems": 2000
+          },
+          "equipment": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "item_id": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 2147483647
+                },
+                "instance_id": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 2147483647
+                },
+                "inventory_id": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 2147483647
+                },
+                "storage_id": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 2147483647
+                },
+                "in_backpack": {
+                  "type": "boolean"
+                },
+                "is_station": {
+                  "type": "boolean"
+                },
+                "durability": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "max_durability": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 2147483647
+                },
+                "exposure_class": {
+                  "type": "string",
+                  "enum": [
+                    "carried",
+                    "outdoor",
+                    "covered",
+                    "indoor"
+                  ]
+                },
+                "wear": {
+                  "type": "integer",
+                  "minimum": 0
+                }
+              },
+              "required": [
+                "item_id",
+                "instance_id",
+                "inventory_id",
+                "storage_id",
+                "in_backpack",
+                "is_station",
+                "durability",
+                "max_durability",
+                "exposure_class",
+                "wear"
+              ],
+              "additionalProperties": false
+            },
+            "maxItems": 100
+          },
+          "output": {
+            "type": "object",
+            "properties": {
+              "item_id": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 2147483647
+              },
+              "name": {
+                "type": "string",
+                "maxLength": 120
+              },
+              "quantity": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 100000
+              },
+              "storage_id": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 2147483647
+              },
+              "fits": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "item_id",
+              "name",
+              "quantity",
+              "storage_id",
+              "fits"
+            ],
+            "additionalProperties": false
+          },
+          "price": {
+            "type": "string",
+            "pattern": "^(0|[1-9][0-9]{0,8})\\.0000$"
+          },
+          "currency": {
+            "type": "string",
+            "enum": [
+              "Cr"
+            ]
+          },
+          "experience": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 100000
+          },
+          "reasons": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "maxLength": 1000
+            },
+            "maxItems": 100
+          }
+        },
+        "required": [
+          "materials",
+          "consume",
+          "grant",
+          "equipment",
+          "output",
+          "price",
+          "currency",
+          "experience",
+          "reasons"
+        ],
+        "additionalProperties": false
+      },
+      "CraftQuote": {
+        "type": "object",
+        "properties": {
+          "quote_id": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{32}$"
+          },
+          "expires_at": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "expected_revisions": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 2147483647
+            },
+            "maxProperties": 256,
+            "description": "Keys: node:<id>, storage:<id>, inventory:<id>, instance:<id>, catalog, registry."
+          },
+          "server_time": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "terms": {
+            "$ref": "#/components/schemas/CraftTerms"
+          }
+        },
+        "required": [
+          "quote_id",
+          "expires_at",
+          "expected_revisions",
+          "server_time",
+          "terms"
+        ],
+        "additionalProperties": false
+      },
+      "RecoveryList": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "inventory_id": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 2147483647
+                },
+                "name": {
+                  "type": "string",
+                  "maxLength": 120
+                },
+                "quantity": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 2147483647
+                },
+                "node_id": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 2147483647
+                }
+              },
+              "required": [
+                "inventory_id",
+                "name",
+                "quantity",
+                "node_id"
+              ],
+              "additionalProperties": false
+            },
+            "maxItems": 50
+          },
+          "recovery_storage_id": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647,
+            "nullable": true
+          },
+          "writable": {
+            "type": "boolean"
+          },
+          "_meta": {
+            "type": "object",
+            "properties": {
+              "totalCount": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "pageCount": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "currentPage": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 2147483647
+              },
+              "perPage": {
+                "type": "integer",
+                "enum": [
+                  50
+                ]
+              }
+            },
+            "required": [
+              "totalCount",
+              "pageCount",
+              "currentPage",
+              "perPage"
+            ],
+            "additionalProperties": false
+          },
+          "server_time": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "items",
+          "recovery_storage_id",
+          "writable",
+          "_meta",
+          "server_time"
+        ],
+        "additionalProperties": false
+      },
+      "RecoveryInput": {
+        "type": "object",
+        "properties": {
+          "inventory_id": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          }
+        },
+        "required": [
+          "inventory_id"
+        ],
+        "additionalProperties": false
+      },
+      "RecoveryCommand": {
+        "type": "object",
+        "properties": {
+          "inventory_id": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          },
+          "request_key": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_-]{16,80}$"
+          },
+          "quote_id": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{32}$"
+          },
+          "expected_revisions": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 2147483647
+            },
+            "maxProperties": 256,
+            "description": "Keys: node:<id>, storage:<id>, inventory:<id>, instance:<id>, catalog, registry."
+          }
+        },
+        "required": [
+          "inventory_id",
+          "request_key",
+          "quote_id",
+          "expected_revisions"
+        ],
+        "additionalProperties": false
+      },
+      "RecoveryQuote": {
+        "type": "object",
+        "properties": {
+          "quote_id": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{32}$"
+          },
+          "expires_at": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "expected_revisions": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 2147483647
+            },
+            "maxProperties": 256,
+            "description": "Keys: node:<id>, storage:<id>, inventory:<id>, instance:<id>, catalog, registry."
+          },
+          "server_time": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "terms": {
+            "type": "object",
+            "properties": {
+              "inventory_id": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 2147483647
+              },
+              "name": {
+                "type": "string",
+                "maxLength": 120
+              },
+              "quantity": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 2147483647
+              },
+              "source_storage_id": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 2147483647
+              },
+              "cause_node_id": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 2147483647
+              },
+              "contents_preserved": {
+                "type": "boolean",
+                "enum": [
+                  true
+                ]
+              }
+            },
+            "required": [
+              "inventory_id",
+              "name",
+              "quantity",
+              "source_storage_id",
+              "cause_node_id",
+              "contents_preserved"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "quote_id",
+          "expires_at",
+          "expected_revisions",
+          "server_time",
+          "terms"
+        ],
+        "additionalProperties": false
+      }
+    }
+  },
+  "paths": {
+    "/world/workspace": {
+      "get": {
+        "parameters": [
+          {
+            "in": "query",
+            "name": "node_id",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 2147483647
+            }
+          },
+          {
+            "in": "query",
+            "name": "recipe_id",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 2147483647
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Workspace"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Access denied or disabled",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Object unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "State/quote changed or action unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Schema or feature unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/world/workspace/preview": {
+      "post": {
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CraftInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CraftQuote"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Access denied or disabled",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Object unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "State/quote changed or action unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Schema or feature unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/world/workspace/craft": {
+      "post": {
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CraftCommand"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/CommandResult"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Access denied or disabled",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Object unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "State/quote changed or action unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Schema or feature unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/world/storage/recovery": {
+      "get": {
+        "parameters": [
+          {
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 1000000,
+              "default": 1
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecoveryList"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Access denied or disabled",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Object unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "State/quote changed or action unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Schema or feature unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/world/storage/recovery-preview": {
+      "post": {
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RecoveryInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecoveryQuote"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Access denied or disabled",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Object unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "State/quote changed or action unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Schema or feature unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/world/storage/recover": {
+      "post": {
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RecoveryCommand"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "world.openapi.json#/components/schemas/CommandResult"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "recovery_storage_id": {
+                          "type": "integer",
+                          "minimum": 1,
+                          "maximum": 2147483647
+                        }
+                      },
+                      "required": [
+                        "recovery_storage_id"
+                      ]
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Access denied or disabled",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Object unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "State/quote changed or action unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Schema or feature unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

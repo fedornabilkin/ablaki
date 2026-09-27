@@ -22,7 +22,9 @@ class CraftInventory
             $slots[]=$dto($slot)+['active'=>(int)$slot['slot']<=$capacity['active_slots']];
             if(!isset($chestItems[$slot['item_id']]))continue;
             $container=$this->container($user,(int)$slot['id']);$contents=[];
-            foreach($this->s->rows('craft_inventory',['user_id'=>$user,'container_id'=>$slot['id']]) as $row)if($row['item_id']&&(int)$row['item_quantity']>0)$contents[]=$dto($row);
+            $where = ['user_id'=>$user,'container_id'=>$slot['id']];
+            if ($this->s->isCanonical()) { $inner = (new CanonicalInventory($this->s))->innerChest($user, (int)$slot['id']); $where = ['storage_id' => $inner['id']]; }
+            foreach($this->s->rows('craft_inventory',$where) as $row)if($row['item_id']&&(int)$row['item_quantity']>0)$contents[]=$dto($row);
             $containers[]=['id'=>(int)$slot['id'],'capacity'=>(int)$container['capacity'],'durability'=>(int)$container['durability'],'max_durability'=>(int)$container['max_durability'],'slots'=>$contents,'repair'=>(new ChestRepair($this->s))->quote($user,(int)$slot['id'])];
         }
         return $capacity+['slot_limit'=>self::LIMIT,'slots_used'=>count($slots),'inventory_slots'=>$slots,'containers'=>$containers,'inventory_settings'=>$this->settings(),'slot_pricing'=>'linear','server_time'=>time()];
@@ -38,6 +40,7 @@ class CraftInventory
     /** One-time conversion retains IDs and every item, even beyond the visible 50 cells. */
     public function initialize(int $user): void
     {
+        if ($this->s->isCanonical()) { (new CanonicalInventory($this->s))->initialize($user); return; }
         if($this->one('craft_capacity',['user_id'=>$user]))return;
         $position=0;
         foreach($this->s->rows('craft_inventory',['user_id'=>$user,'container_id'=>null]) as $slot) {
@@ -51,7 +54,13 @@ class CraftInventory
     public function layout(int $user): array
     {
         $active=$this->capacity($user)['active_slots'];$occupied=[];$held=[];
-        foreach($this->s->rows('craft_inventory',['user_id'=>$user,'container_id'=>null]) as $slot) {
+        $where = ['user_id'=>$user,'container_id'=>null];
+        if ($this->s->isCanonical()) {
+            $storage = (new CanonicalInventory($this->s))->backpack($user);
+            if (!$storage) return [];
+            $where = ['user_id' => $user, 'storage_id' => $storage['id']];
+        }
+        foreach($this->s->rows('craft_inventory',$where) as $slot) {
             if(!$slot['item_id']||(int)$slot['item_quantity']<1)continue;
             $index=(int)$slot['slot'];
             if($index>0&&$index<=$active&&!isset($occupied[$index]))$occupied[$index]=$slot;else $held[]=$slot;
@@ -65,17 +74,24 @@ class CraftInventory
     }
     public function synchronize(int $user): void
     {
+        if ($this->s->isCanonical()) { (new CanonicalInventory($this->s))->synchronize($user); return; }
         $this->initialize($user);
         foreach($this->layout($user) as $slot)$this->s->db->createCommand()->update('craft_inventory',['slot'=>$slot['slot']],['id'=>$slot['id']])->execute();
     }
     public function write(int $id,array $values): void
     {
+        if ($this->s->isCanonical()) throw new \LogicException('Use CanonicalInventory for storage_v2 writes.');
         $changed=$this->s->db->createCommand()->update('craft_inventory',$values,['id'=>$id])->execute();
         // MySQL reports changed rows, so an already normalized slot may return zero.
         if($changed!==1&&($changed!==0||!(new Query())->from('craft_inventory')->where(['id'=>$id]+$values)->exists($this->s->db)))throw new \RuntimeException('Inventory write failed.');
     }
     public function container(int $user,int $id): array
     {
+        if ($this->s->isCanonical()) {
+            $canonical = new CanonicalInventory($this->s);
+            if ($this->s->allowPlacedChests) $canonical->innerChest($user, $id);
+            else $canonical->requireBackpackChest($user, $id);
+        }
         $slot=$this->one('craft_inventory',['id'=>$id,'user_id'=>$user,'container_id'=>null]);
         $item=$slot?$this->one('craft_item',['id'=>$slot['item_id']]):null;
         if(!$slot||(int)$slot['item_quantity']!==1||($item['storage_kind']??'none')!=='chest')throw new ConflictHttpException('Выберите свой сундук.');
@@ -85,6 +101,7 @@ class CraftInventory
     }
     public function nonempty(int $id): bool
     {
+        if ($this->s->isCanonical()) return (new CanonicalInventory($this->s))->nonempty($id);
         return (new Query())->from('craft_inventory')->where(['container_id'=>$id])->andWhere(['>','item_quantity',0])->exists($this->s->db);
     }
     public function buy(int $user,int $quantity,int $quotedPrice,?int $quotedTotal=null): int
@@ -122,6 +139,7 @@ class CraftInventory
     /** Target container 0 means backpack; target position is stable, including empty cells. */
     public function transfer(int $user,int $sourceId,int $containerId,int $position,int $quantity): int
     {
+        if ($this->s->isCanonical()) return (new CanonicalInventory($this->s))->legacyTransfer($user, $sourceId, $containerId, $position, $quantity);
         if($quantity<1||$quantity>10000||$containerId<0)throw new ConflictHttpException('Некорректное количество предметов.');
         $source=$this->one('craft_inventory',['id'=>$sourceId,'user_id'=>$user]);
         if(!$source||!$source['item_id']||(int)$source['item_quantity']<$quantity)throw new ConflictHttpException('Предмет в исходном слоте изменился.');

@@ -31,10 +31,20 @@ class BalanceBehavior extends AbstractBehavior
     {
         $events = parent::events();
         return array_merge($events, [
+            ActiveRecord::EVENT_BEFORE_INSERT => 'requireTransaction',
+            ActiveRecord::EVENT_BEFORE_UPDATE => 'requireTransaction',
+            ActiveRecord::EVENT_BEFORE_DELETE => 'requireTransaction',
             ActiveRecord::EVENT_AFTER_INSERT => 'afterInsert',
             ActiveRecord::EVENT_AFTER_UPDATE => 'afterUpdate',
             ActiveRecord::EVENT_AFTER_DELETE => 'afterDelete',
         ]);
+    }
+
+    public function requireTransaction($event): void
+    {
+        $db = $event->sender::getDb();
+        \common\modules\economy\service\WalletMaintenance::writable($db);
+        if (\common\modules\economy\service\WalletSchema::ready($db) && !$db->getTransaction()) throw new \LogicException('Financial behavior requires an outer model transaction.');
     }
 
     public function afterInsert($event){$this->changeBalance($event);}
@@ -43,6 +53,8 @@ class BalanceBehavior extends AbstractBehavior
 
     protected function changeBalance($event)
     {
+        $this->changingCredit = $this->changingBalance = $this->commission = 0;
+        $this->person = null;
         $this->setBalance($event);
         $this->setPersone($event);
 
@@ -55,8 +67,19 @@ class BalanceBehavior extends AbstractBehavior
 
             $transaction = $this->person::getDb()->beginTransaction();
             try {
-                $this->person->updateCounters($update);
-                $this->saveHistory();
+                $db = $this->person::getDb();
+                \common\modules\economy\service\WalletMaintenance::writable($db);
+                if (\common\modules\economy\service\WalletSchema::ready($db)) {
+                    $history = $this->getHistoryValues();
+                    (new \common\services\user\CreditLedger($db))->changeExactWithBalance(
+                        (int)$this->person->user_id, \common\modules\economy\value\Money::fromLegacy($this->changingCredit)->decimal(),
+                        $this->changingBalance, (string)$history['type'], (string)($history['comment'] ?? '')
+                    );
+                    if (!$this->person->refresh()) throw new \RuntimeException('Account unavailable.');
+                } else {
+                    if (!$this->person->updateCounters($update)) throw new \RuntimeException('Could not update account.');
+                    $this->saveHistory();
+                }
                 $this->saveCommission();
 
                 $transaction->commit();
@@ -89,8 +112,8 @@ class BalanceBehavior extends AbstractBehavior
         $model = new Commission();
 
         $model->attributes = $this->getCommissionValues();
-        if ($model->attributes['amount'] > 0) {
-            $model->save();
+        if (($model->attributes['amount'] ?? 0) > 0) {
+            if (!$model->save()) throw new \RuntimeException('Could not record commission.');
         }
     }
 
@@ -104,7 +127,7 @@ class BalanceBehavior extends AbstractBehavior
         $model = new HistoryBalance();
 
         $model->attributes = $this->getHistoryValues();
-        $model->save();
+        if (!$model->save()) throw new \RuntimeException('Could not record balance history.');
     }
 
     protected function getHistoryValues()

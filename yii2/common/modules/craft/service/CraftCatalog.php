@@ -98,14 +98,22 @@ class CraftCatalog
     public function apply(array $patch,string $digest): array
     {
         return $this->store->db->transaction(function() use($patch,$digest) {
-            $this->store->lock('craft_meta',['id'=>1]); $preview=$this->preview($patch);
+            $this->store->lock('craft_meta',['id'=>1]); StorageMaintenance::writable($this->store->db); $preview=$this->preview($patch);
             if (!hash_equals($preview['digest'],$digest)) throw new \yii\web\ConflictHttpException('Каталог изменился. Повторите предварительную проверку.');
             $data=$preview['catalog']; $s=$this->store; $maps=[];
+            $equipmentCodes = [];
+            foreach ($data['stations'] as $entry) if (!empty($entry['item'])) $equipmentCodes[$entry['item']] = true;
+            foreach ($data['recipes'] as $entry) foreach ($entry['tools'] as $code) $equipmentCodes[$code] = true;
             $upsert=function($table,$r) use($s) { $old=(new \yii\db\Query())->from($table)->where(['code'=>$r['code']])->one($s->db); if($old){$s->db->createCommand()->update($table,$r,['id'=>$old['id']])->execute();return (int)$old['id'];} return $s->insert($table,$r); };
             foreach($data['categories'] as $r) $maps['categories'][$r['code']]=$upsert('craft_category',['code'=>$r['code'],'name'=>$r['name'],'description'=>$r['description']??'']);
             foreach($data['items'] as $r) {
                 $old=(new \yii\db\Query())->from('craft_item')->where(['code'=>$r['code']])->one($s->db);
+                if ($s->isCanonical() && $old && (new \yii\db\Query())->from('craft_inventory')->where(['item_id' => $old['id']])->andWhere(['>', 'item_quantity', 0])->exists($s->db)) {
+                    $tracked = ($r['storage_kind'] ?? 'none') !== 'chest' && (in_array($r['kind'], ['tool', 'station'], true) || isset($equipmentCodes[$r['code']]));
+                    if ($tracked !== (new EquipmentInstances($s->db))->tracked($old)) $this->fail('Изменение учёта экземпляров требует отдельного переноса данных.');
+                }
                 if($old&&($old['storage_kind']??'none')!==($r['storage_kind']??'none')&&(new \yii\db\Query())->from('craft_inventory')->where(['item_id'=>$old['id']])->andWhere(['>','item_quantity',0])->exists($s->db))$this->fail('Нельзя менять назначение хранилища у предметов в инвентарях. Создайте новый предмет.');
+                if($old&&$old['kind']!==$r['kind']&&(new \yii\db\Query())->from('craft_inventory')->where(['item_id'=>$old['id']])->andWhere(['>','item_quantity',0])->exists($s->db))$this->fail('Нельзя менять тип предмета с существующими экземплярами. Создайте новый предмет.');
                 $row=array_intersect_key($r,array_flip(['code','name','description','kind','rarity','icon','stack_size','destroyable','use_xp','gather_quantity','active','storage_kind']));$row['category_id']=$maps['categories'][$r['category']];$maps['items'][$r['code']]=$upsert('craft_item',$row);
             }
             foreach($data['stations'] as $r) $maps['stations'][$r['code']]=$upsert('craft_station',['code'=>$r['code'],'name'=>$r['name'],'active'=>$r['active'],'item_id'=>empty($r['item'])?null:$maps['items'][$r['item']]]);

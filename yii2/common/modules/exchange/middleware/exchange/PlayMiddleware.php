@@ -27,7 +27,7 @@ class PlayMiddleware extends AbstractMiddleware
         $this->model = self::$data->getModel();
 
         $this->model->user_buyer = self::$data->user->user_id;
-        $this->model->save();
+        if (!$this->model->save()) throw new \RuntimeException('Could not confirm exchange position.');
 
         self::$data->historyType = $this->model->getHistoryType();
         self::$data->historyComment = 'Confirm #' . $this->model->id;

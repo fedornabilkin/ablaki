@@ -29,6 +29,7 @@ class CraftSettings
         }
         $this->s->db->transaction(function()use($clean,$actor){
             $this->s->lock('craft_meta',['id'=>1]);
+            StorageMaintenance::writable($this->s->db);
             $this->s->db->createCommand()->update('craft_meta',$clean+['charges_updated_by'=>$actor,'charges_updated_at'=>time()],['id'=>1])->execute();
             \Yii::info(['actor'=>$actor,'inventory'=>$clean],'craft.settings');
         });
@@ -38,6 +39,7 @@ class CraftSettings
         if($actor<1)throw new \InvalidArgumentException('An administrator is required.');
         $this->s->db->transaction(function()use($enabled,$actor){
             $meta=$this->s->lock('craft_meta',['id'=>1]);
+            StorageMaintenance::writable($this->s->db);
             if(!array_key_exists('charge_credits',$meta))throw new \yii\web\ConflictHttpException('Сначала примените миграцию настроек крафта.');
             if((int)$meta['charge_credits']===(int)$enabled)return;
             $changed=$this->s->db->createCommand()->update('craft_meta',[

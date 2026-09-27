@@ -116,6 +116,20 @@ Preview collect содержит receipt snapshot/digest, exact amount, as_of, l
 
 Дополнительные коды: `grant_already_claimed`, `lodging_unavailable`, `station_not_deployed`, `expansion_limit`, `bed_locked`, `harvest_not_ready`, `budget_reserved`, `obligation_already_paid`, `treasury_changed`, `treasury_catching_up`. При catch-up до сбора показывается время следующего обновления; это не повод сгенерировать новый ключ и повторить покупку/сбор автоматически. Theft/night/wear обрабатываются только доверенными CLI jobs, публичного «начислить доход/убыток» endpoint нет.
 
+## Реализованные команды казны (2026-09-27)
+
+Текущий исполняемый контракт описан в [world-economy.openapi.json](api/world-economy.openapi.json), состояние и ограничения — в [восьмом блоке](world-treasury-implementation.md). Доступны `economy`, `obligations`, пары `collect-preview/collect`, `pay-preview/pay`, `finance-policy-preview/finance-policy`. Изменение финансовых правил требует `p-admin` и `world-manage`; сбор/оплата — фактического владельца, без административного обхода.
+
+Фактическая ошибка ожидания потерь: HTTP 409 `{code: "TREASURY_CATCHING_UP", message, details: {retry_after: 30}}`. Worker выполняет потери, HTTP только ждёт и вручную собирает уже рассчитанные поступления. Для сбора применяется до 100 старейших receipt на команду; `more_pending` означает наличие следующей партии. Quote содержит точные `collected`, `reserved_for_parent`, `budget_after`, `available_after`, `treasury_after`, версию и родителя. Платёж принимает только `obligation_id` и подтверждение quote, сумма/получатель фиксированы обязательством. Новые команды возвращают общий `CommandResult`; денежные поля личного кошелька в collect/pay не добавляются.
+
+Существующие выше расширенные error/result-примеры остаются целевым контрактом будущих частей плана; реализованные DTO и uppercase-коды берутся из OpenAPI и кода сервисов. Миграции, активация и проверки не запускались.
+
+## Реализованные начальные заказы (2026-09-27)
+
+[Контракт заказов](api/world-orders.openapi.json) добавляет `orders`, `order-items`, `order-stock` и пары `order-publish-preview/order-publish`, `order-deliver-preview/order-deliver`, `order-cancel-preview/order-cancel` у поселения. Список публичен, выбранные стопки — только собственные. Публикация резервирует всю стоимость в существующем бюджете; оплата и расход сырья фиксируются одной командой, получатель — казна стартовой стоянки игрока в этом поселении. Сдача не создаёт личные кредиты и не выдаёт предметы повторно.
+
+Начальные условия стоянки фиксируются в заказе и требуют явного подтверждения при публикации и первой сдаче. Существующая опубликованная политика сохраняется. Отмена/expiry освобождает только неиспользованный резерв; deadline проверяется сервером до сдачи независимо от готовности worker. [Ограничения и продолжение](world-orders-implementation.md). Код не проверялся и не запускался на серверах.
+
 ## Админка и доставка обновлений
 
 Начальный редактор находится в существующем Yii backend: `/world/...`, отдельные permissions поверх RBAC, POST/CSRF для изменений. Preview выдаёт diff + digest + base revision; publish отвергает устаревший просмотр. Публичному API не нужен открытый generic PATCH произвольных колонок. Административная смена владельца/дерева имеет отдельный use case и аудит.

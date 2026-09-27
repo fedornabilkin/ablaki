@@ -30,6 +30,7 @@ use yii\db\ActiveRecord;
 class Person extends ActiveRecord implements UserRelationInterface
 {
     use ModelQueryTrait;
+    use \common\modules\economy\service\PersonalCreditRecord;
 
     /**
      * {@inheritdoc}

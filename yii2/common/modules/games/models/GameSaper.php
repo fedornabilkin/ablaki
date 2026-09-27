@@ -48,6 +48,7 @@ class GameSaper extends Saper
     public function rules(): array
     {
         $arr = [
+            [['col', 'row'], 'required', 'on' => self::SCENARIO_PLAY],
             [['count'], 'integer', 'min' => 1, 'max' => 100],
             [['count'], 'required'],
 
