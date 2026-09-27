@@ -14,7 +14,7 @@ class EquipmentInstances
     public function tracked(array $item): bool
     {
         if (($item['storage_kind'] ?? 'none') === 'chest') return false;
-        return in_array($item['kind'], ['tool', 'station'], true)
+        return ($item['code'] ?? '') === \common\modules\world\service\ShelterCatalog::CODE || in_array($item['kind'], ['tool', 'station'], true)
             || (new Query())->from('craft_station')->where(['item_id' => $item['id']])->exists($this->db)
             || (new Query())->from('craft_recipe_tool')->where(['item_id' => $item['id']])->exists($this->db);
     }
@@ -35,6 +35,7 @@ class EquipmentInstances
     {
         if (!$this->db->getTransaction()) throw new \LogicException('Equipment writes require a transaction.');
         if (!$ids) return;
+        if ((new Query())->from(['e' => 'craft_equipment_instance'])->innerJoin(['i' => 'craft_item'], '[[i.id]]=[[e.item_id]]')->where(['e.id' => $ids, 'i.code' => \common\modules\world\service\ShelterCatalog::CODE])->exists($this->db)) throw new ConflictHttpException('Шалаш нельзя расходовать как материал.');
         $changed = $this->db->createCommand()->update('craft_equipment_instance', ['inventory_id' => null, 'status' => 'consumed', 'revision' => new Expression('[[revision]]+1')], ['id' => $ids, 'status' => 'active'])->execute();
         if ($changed !== count($ids)) throw new ConflictHttpException('Экземпляры предмета изменились.');
     }

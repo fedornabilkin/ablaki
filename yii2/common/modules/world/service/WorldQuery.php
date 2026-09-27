@@ -61,6 +61,18 @@ class WorldQuery
             if ($type === 'WORLD') continue;
             $details += (new Query())->from('world_' . strtolower($type))->where(['node_id' => $ids])->indexBy('node_id')->all($this->db);
         }
+        $shelters = [];
+        if ($this->db->schema->getTableSchema('world_shelter_deployment')) {
+            $shelters = (new Query())->from('world_shelter_deployment')->where(['node_id' => $ids])->indexBy('node_id')->all($this->db);
+            $units = (new Query())->from('craft_equipment_instance')->where(['id' => array_column($shelters, 'instance_id')])->all($this->db);
+            $projected = [];
+            foreach ((new \common\modules\craft\service\EquipmentExposure($this->db))->projectedBatch($units) as $unit) $projected[$unit['id']] = $unit;
+            foreach ($shelters as $id => $shelter) {
+                $unit = $projected[$shelter['instance_id']];
+                $details[$id]['shelter_instance_id'] = (int)$unit['id']; $details[$id]['shelter_plot_id'] = (int)$shelter['plot_id'];
+                $details[$id]['condition'] = (int)$unit['durability']; $details[$id]['max_condition'] = (int)$unit['max_durability'];
+            }
+        }
         $result = [];
         foreach ($rows as $row) {
             $owned = $this->policy->owns($row); $detail = $details[$row['id']] ?? [];

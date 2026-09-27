@@ -55,17 +55,19 @@ class CraftCatalog
             if (!in_array($r['kind']??null,['material','tool','equipment','consumable','station','product'],true)||!in_array($r['rarity']??null,['common','uncommon','rare','epic','legendary'],true)) $this->fail('Неверный тип/редкость '.$r['code']);
             if (!isset($r['icon'])||!is_string($r['icon'])||!preg_match('/^[a-z][a-z0-9-]{0,63}$/D',$r['icon'])) $this->fail('Неверная иконка.');
             foreach(['stack_size'=>[1,10000],'destroyable'=>[0,1],'use_xp'=>[0,1000],'gather_quantity'=>[0,100],'active'=>[0,1]] as $field=>$bounds) $number($r,$field,$bounds[0],$bounds[1]);
+            if ($r['code'] === \common\modules\world\service\ShelterCatalog::CODE && ($r['kind'] !== 'equipment' || $r['stack_size'] !== 1 || $r['destroyable'] !== 0 || $r['use_xp'] !== 0 || $r['gather_quantity'] !== 0 || ($r['storage_kind'] ?? 'none') !== 'none')) $this->fail('Системный шалаш должен оставаться единичным нерасходуемым укрытием.');
             if ($r['use_xp']>0&&$r['kind']!=='consumable') $this->fail('Использование доступно только расходникам.');
             if ($r['gather_quantity']>0&&$r['kind']!=='material') $this->fail('Собирать можно только сырьё.');
             $storage=$r['storage_kind']??'none';
             if(!in_array($storage,['none','chest','elixir'],true)||($storage==='chest'&&$r['stack_size']!==1)||($storage==='elixir'&&$r['kind']!=='consumable'))$this->fail('Для сундука нужна стопка 1; эликсир должен быть расходником.');
         }
-        foreach($sets['stations'] as $r) { if (($r['item']??null)!==null) $ref('items',$r['item']); $number($r,'active',0,1); }
+        foreach($sets['stations'] as $r) { if (($r['item']??null) === \common\modules\world\service\ShelterCatalog::CODE) $this->fail('Шалаш не является станцией.'); if (($r['item']??null)!==null) $ref('items',$r['item']); $number($r,'active',0,1); }
         foreach($sets['recipes'] as $r) {
             $ref('categories',$r['category']??null); $ref('items',$r['output']??null);
             if (($r['station']??null)!==null) $ref('stations',$r['station']);
             foreach(['output_quantity'=>[1,1000],'cost_credits'=>[0,1000000],'experience'=>[0,1000],'min_level'=>[1,100],'active'=>[0,1]] as $field=>$bounds) $number($r,$field,$bounds[0],$bounds[1]);
             foreach(['ingredients','tools','requires'] as $field) if (!isset($r[$field])||!is_array($r[$field])||count($r[$field])>100) $this->fail('Неверный список '.$field);
+            if (in_array(\common\modules\world\service\ShelterCatalog::CODE, array_merge([$r['output']], $r['tools'], array_column($r['ingredients'], 'item')), true)) $this->fail('Разовый шалаш не участвует в рецептах.');
             if ($r['active']&&!count($r['ingredients'])) $this->fail('Активный рецепт должен расходовать ингредиенты.');
             $seen=[];
             foreach($r['ingredients'] as $ing) {
@@ -109,7 +111,7 @@ class CraftCatalog
             foreach($data['items'] as $r) {
                 $old=(new \yii\db\Query())->from('craft_item')->where(['code'=>$r['code']])->one($s->db);
                 if ($s->isCanonical() && $old && (new \yii\db\Query())->from('craft_inventory')->where(['item_id' => $old['id']])->andWhere(['>', 'item_quantity', 0])->exists($s->db)) {
-                    $tracked = ($r['storage_kind'] ?? 'none') !== 'chest' && (in_array($r['kind'], ['tool', 'station'], true) || isset($equipmentCodes[$r['code']]));
+                    $tracked = ($r['storage_kind'] ?? 'none') !== 'chest' && ($r['code'] === \common\modules\world\service\ShelterCatalog::CODE || in_array($r['kind'], ['tool', 'station'], true) || isset($equipmentCodes[$r['code']]));
                     if ($tracked !== (new EquipmentInstances($s->db))->tracked($old)) $this->fail('Изменение учёта экземпляров требует отдельного переноса данных.');
                 }
                 if($old&&($old['storage_kind']??'none')!==($r['storage_kind']??'none')&&(new \yii\db\Query())->from('craft_inventory')->where(['item_id'=>$old['id']])->andWhere(['>','item_quantity',0])->exists($s->db))$this->fail('Нельзя менять назначение хранилища у предметов в инвентарях. Создайте новый предмет.');

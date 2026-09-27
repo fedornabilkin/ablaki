@@ -15,6 +15,11 @@ class WorldWorkerController extends \yii\console\Controller
         $consumers = $module->params['consumers'] ?? [];
         $handlers = $module->params['jobHandlers'] ?? [];
         $flags = new \common\modules\world\service\WorldFlags(Yii::$app->db, $module);
+        if ($flags->capabilities()['world_write'] && $flags->capabilities()['storage_v2']) {
+            $nights = new \common\modules\world\service\WorldNights(Yii::$app->db, $flags);
+            $handlers['world.night.enroll'] = function (array $payload) use ($nights) { $nights->enroll($payload); };
+            $handlers['world.night.resolve'] = function (array $payload, array $job) use ($nights) { $nights->resolve($payload, $job); };
+        }
         if ($flags->capabilities()['world_write'] && \common\modules\economy\service\WalletSchema::ready(Yii::$app->db)) {
             $handlers['economy.treasury.loss'] = function (array $payload) use ($flags) {
                 $flags->requireFlag('world_write');

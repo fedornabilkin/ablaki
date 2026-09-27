@@ -72,7 +72,7 @@ class BudgetSpending
         return $result;
     }
     /** Allocates only an authorised commitment. Payment, provenance and recipient receipt share its transaction. */
-    public function pay(int $commitment, int $recipientNode, Money $amount, string $operation): int
+    public function pay(int $commitment, int $recipientNode, Money $amount, string $operation, string $kind = 'order_payment'): int
     {
         $this->writable(); $hold = $this->commitment($commitment); $account = $this->account((int)$hold['account_id']);
         $left = Money::parse((string)$hold['remaining_amount'])->subtract($amount);
@@ -80,7 +80,7 @@ class BudgetSpending
         if ($amount->isZero() || $amount->isNegative() || $left->isNegative() || $reserve->isNegative()) throw new GameError('ORDER_RESERVE_UNAVAILABLE', 'Средств заказа недостаточно.');
         $allocations = $this->allocation((int)$account['id'], $amount);
         $this->update('economy_account', ['reserved' => $reserve->decimal(), 'revision' => new Expression('[[revision]]+1')], ['id' => $account['id']]);
-        $transfer = (new TreasuryLedger($this->db))->receiveBudgetPayment((int)$account['id'], $recipientNode, $amount, $operation, $hold['purpose']);
+        $transfer = (new TreasuryLedger($this->db))->receiveBudgetPayment((int)$account['id'], $recipientNode, $amount, $operation, $hold['purpose'], $kind);
         $this->update('economy_spending_commitment', ['remaining_amount' => $left->decimal(), 'closed_at' => $left->isZero() ? time() : null], ['id' => $commitment, 'closed_at' => null]);
         // FIFO personal contributions first; the remainder is previously collected income.
         foreach ($allocations as $lot) {

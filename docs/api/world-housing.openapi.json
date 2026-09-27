@@ -1,0 +1,815 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Ablaki paid housing and lodging",
+    "version": "1.0.0",
+    "description": "Schema marker 17. Implemented code only, not yet migrated, tested or deployed. One permanent bunk per new house; no NPC, extra bunks or building wear in this slice. Existing offers and purchases retain their original capacity."
+  },
+  "servers": [
+    {
+      "url": "/v1"
+    }
+  ],
+  "security": [
+    {
+      "bearerAuth": []
+    }
+  ],
+  "paths": {
+    "/world/nodes/{id}/housing": {
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          }
+        }
+      ],
+      "get": {
+        "summary": "Read personal house bunk and current lodging assignment",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/State"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Own room required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Node unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Changed quote, inactive house or conflicting assignment",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Invalid command",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Command limit",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Schema or storage unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/world/nodes/{id}/housing-lodge-preview": {
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          }
+        }
+      ],
+      "post": {
+        "summary": "housing-lodge-preview",
+        "description": "CommandBus owner/registry locks serialize shelter and house occupancy. One current assignment per player. No charge. Preview lasts 300 seconds; commit pins place/actor/interval and room revision, saves audit/outbox and exact replay. Protection requires the same place for the entire night; no retroactive healing.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PreviewInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Quote"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Own room required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Node unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Changed quote, inactive house or conflicting assignment",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Invalid command",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Command limit",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Schema or storage unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/world/nodes/{id}/housing-lodge": {
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          }
+        }
+      ],
+      "post": {
+        "summary": "housing-lodge",
+        "description": "CommandBus owner/registry locks serialize shelter and house occupancy. One current assignment per player. No charge. Preview lasts 300 seconds; commit pins place/actor/interval and room revision, saves audit/outbox and exact replay. Protection requires the same place for the entire night; no retroactive healing.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Command"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/CommandResult"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Own room required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Node unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Changed quote, inactive house or conflicting assignment",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Invalid command",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Command limit",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Schema or storage unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/world/nodes/{id}/housing-leave-preview": {
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          }
+        }
+      ],
+      "post": {
+        "summary": "housing-leave-preview",
+        "description": "CommandBus owner/registry locks serialize shelter and house occupancy. One current assignment per player. No charge. Preview lasts 300 seconds; commit pins place/actor/interval and room revision, saves audit/outbox and exact replay. Protection requires the same place for the entire night; no retroactive healing.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PreviewInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Quote"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Own room required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Node unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Changed quote, inactive house or conflicting assignment",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Invalid command",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Command limit",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Schema or storage unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/world/nodes/{id}/housing-leave": {
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          }
+        }
+      ],
+      "post": {
+        "summary": "housing-leave",
+        "description": "CommandBus owner/registry locks serialize shelter and house occupancy. One current assignment per player. No charge. Preview lasts 300 seconds; commit pins place/actor/interval and room revision, saves audit/outbox and exact replay. Protection requires the same place for the entire night; no retroactive healing.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Command"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/CommandResult"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Own room required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Node unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Changed quote, inactive house or conflicting assignment",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Invalid command",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Command limit",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Schema or storage unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer"
+      }
+    },
+    "schemas": {
+      "State": {
+        "type": "object",
+        "properties": {
+          "node_id": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          },
+          "supported": {
+            "type": "boolean"
+          },
+          "active": {
+            "type": "boolean"
+          },
+          "writable": {
+            "type": "boolean"
+          },
+          "place": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 2147483647
+              },
+              "plot_id": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 2147483647
+              },
+              "created_at": {
+                "type": "integer",
+                "minimum": 0
+              }
+            },
+            "required": [
+              "id",
+              "plot_id",
+              "created_at"
+            ],
+            "additionalProperties": false,
+            "nullable": true
+          },
+          "lodging": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 2147483647
+              },
+              "assigned_at": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "protects_now": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "id",
+              "assigned_at",
+              "protects_now"
+            ],
+            "additionalProperties": false,
+            "nullable": true
+          },
+          "current_assignment": {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "shelter",
+                  "house"
+                ]
+              },
+              "node_id": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 2147483647
+              },
+              "interval_id": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 2147483647
+              },
+              "started_at": {
+                "type": "integer",
+                "minimum": 0
+              }
+            },
+            "required": [
+              "kind",
+              "node_id",
+              "interval_id",
+              "started_at"
+            ],
+            "additionalProperties": false,
+            "nullable": true
+          },
+          "night_resolution_enabled": {
+            "type": "boolean"
+          },
+          "server_time": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "node_id",
+          "supported",
+          "active",
+          "writable",
+          "place",
+          "lodging",
+          "current_assignment",
+          "night_resolution_enabled",
+          "server_time"
+        ],
+        "additionalProperties": false,
+        "description": "Owner-only ROOM state. Non-residential room: supported=false, place/lodging=null, writable/active=false. Current assignment identifies the control node: campsite for shelter, room for house. Leave is allowed for an existing assignment even when protection is unavailable. No implicit lodging, healing, calendar activation or money change."
+      },
+      "Assignment": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "shelter",
+              "house"
+            ]
+          },
+          "node_id": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          },
+          "interval_id": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          },
+          "started_at": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "kind",
+          "node_id",
+          "interval_id",
+          "started_at"
+        ],
+        "additionalProperties": false,
+        "nullable": true
+      },
+      "PreviewInput": {
+        "type": "object",
+        "properties": {},
+        "required": [],
+        "additionalProperties": false
+      },
+      "Command": {
+        "type": "object",
+        "properties": {
+          "request_key": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_-]{16,80}$"
+          },
+          "quote_id": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{32}$"
+          },
+          "expected_revisions": {
+            "$ref": "world.openapi.json#/components/schemas/Revisions"
+          }
+        },
+        "required": [
+          "request_key",
+          "quote_id",
+          "expected_revisions"
+        ],
+        "additionalProperties": false
+      },
+      "Terms": {
+        "type": "object",
+        "properties": {
+          "node_id": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          },
+          "place_id": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          },
+          "plot_id": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          },
+          "actor_id": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          },
+          "lodging_id": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647,
+            "nullable": true
+          },
+          "price": {
+            "type": "string",
+            "enum": [
+              "0.0000"
+            ]
+          }
+        },
+        "required": [
+          "node_id",
+          "place_id",
+          "plot_id",
+          "actor_id",
+          "lodging_id",
+          "price"
+        ],
+        "additionalProperties": false
+      },
+      "Quote": {
+        "allOf": [
+          {
+            "$ref": "world.openapi.json#/components/schemas/Quote"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "terms": {
+                "$ref": "#/components/schemas/Terms"
+              }
+            }
+          }
+        ]
+      }
+    }
+  }
+}

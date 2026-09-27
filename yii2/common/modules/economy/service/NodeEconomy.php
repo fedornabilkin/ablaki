@@ -8,10 +8,7 @@ use common\modules\world\service\WorldFlags;
 use common\services\game\CanonicalJson;
 use common\services\game\CommandBus;
 use common\services\game\GameError;
-use common\services\game\Locks;
-use common\services\user\CreditLedger;
 use yii\db\Connection;
-use yii\db\Expression;
 use yii\db\Query;
 
 /** Owner-only accounts/journal with explicit personal contributions. GET never collects income. */
@@ -48,10 +45,10 @@ class NodeEconomy
             }
         }
         $rule = $owner ? (new EconomyHierarchy($this->db))->current($node) : null;
-        $writable = $place['status'] === 'active' && WalletSchema::ready($this->db) && $this->flags->capabilities()['world_write'];
+        $writable = $place['status'] === 'active' && !(new \common\modules\world\service\WorldTree($this->db))->isShelter($node) && WalletSchema::ready($this->db) && $this->flags->capabilities()['world_write'];
         $catchingUp = $owner && isset($accounts['treasury']) && (new TreasuryLedger($this->db))->catchingUp((int)$accounts['treasury']['id'], time());
         return ['node_id' => $node, 'currency' => 'Cr', 'balances' => $balances, 'can_view_finances' => $owner, 'collection_rule' => $rule,
-            'can_invest' => $place['status'] === 'active' && WalletSchema::ready($this->db) && $this->flags->capabilities()['world_write'],
+            'can_invest' => $writable,
             'wallet_ready' => WalletSchema::ready($this->db), 'treasury_catching_up' => $catchingUp, 'collect_available' => $writable && !$catchingUp && $owner && $rule && $rule['status'] === 'published' && $rule['loss_policy'] !== null && $balances['treasury'] !== '0.0000',
             'can_pay' => $writable && $owner, 'entries' => ['items' => $entries, '_meta' => ['totalCount' => $total, 'pageCount' => (int)ceil($total / 50), 'currentPage' => $page, 'perPage' => 50]], 'server_time' => time()];
     }
@@ -78,6 +75,7 @@ class NodeEconomy
     private function prepare(int $user, array $input): array
     {
         $place = $this->node($user, $input['node_id']); WalletSchema::requireReady($this->db);
+        if ((new \common\modules\world\service\WorldTree($this->db))->isShelter($place['id'])) throw new GameError('SHELTER_HAS_NO_BUDGET', 'Вкладывайте кредиты в бюджет стоянки. Шалаш — переносной предмет.');
         if ($place['status'] !== 'active') throw new GameError('INVESTMENT_UNAVAILABLE', 'Объект недоступен для вложений.');
         $amount = Money::parse($input['amount']);
         if ($amount->isZero() || $amount->isNegative()) throw new GameError('INVALID_AMOUNT', 'Укажите положительную сумму.', 422);
@@ -105,15 +103,9 @@ class NodeEconomy
         return $bus->execute($user, $key, 'world.economy.invest', $input, $quote, $revisions, function (array $payload, array $terms, string $operation) use ($user, $bus) {
             $p = $this->prepare($user, $payload);
             if (CanonicalJson::encode($p['terms']) !== CanonicalJson::encode($terms)) throw new GameError('INVESTMENT_CHANGED', 'Сумма или условия изменились. Повторите расчёт.');
-            $accounts = (new EconomyHierarchy($this->db))->provision($payload['node_id'], $operation);
-            $account = (new Locks($this->db))->row('economy_account', ['id' => $accounts['budget']['id']]);
-            $amount = Money::parse($payload['amount']); $next = Money::parse((string)$account['amount'])->add($amount);
-            $walletAfter = (new CreditLedger($this->db))->changeExact($user, Money::parse('0')->subtract($amount)->decimal(), 'world_invest', 'Вклад в объект #' . $payload['node_id']);
-            if ($this->db->createCommand()->update('economy_account', ['amount' => $next->decimal(), 'revision' => new Expression('[[revision]]+1')], ['id' => $account['id'], 'revision' => $account['revision']])->execute() !== 1) throw new \RuntimeException('Budget update failed.');
-            $this->db->createCommand()->insert('economy_transfer', ['operation_id' => $operation, 'line_code' => 'investment', 'kind' => 'personal_investment', 'source_account_id' => null, 'source_user_id' => $user,
-                'destination_account_id' => $account['id'], 'amount' => $amount->decimal(), 'source_after' => $walletAfter, 'destination_after' => $next->decimal(), 'purpose' => $payload['purpose'], 'created_at' => time()])->execute();
-            $transfer = (int)$this->db->getLastInsertID();
-            $this->db->createCommand()->insert('economy_funding_lot', ['transfer_id' => $transfer, 'budget_account_id' => $account['id'], 'investor_user_id' => $user, 'original_amount' => $amount->decimal(), 'remaining_amount' => $amount->decimal(), 'purpose' => $payload['purpose'], 'created_at' => time()])->execute();
+            $amount = Money::parse($payload['amount']);
+            $funding = (new BudgetFunding($this->db))->contribute($user, $payload['node_id'], $amount, $payload['purpose'], $operation);
+            $transfer = $funding['transfer_id']; $walletAfter = $funding['wallet_after'];
             $bus->emit($operation, $user, 'economy.invested', ['node_id' => $payload['node_id'], 'transfer_id' => $transfer, 'amount' => $amount->decimal()]);
             return ['changed_node_ids' => [$payload['node_id']], 'amount' => $amount->decimal(), 'wallet_after' => $walletAfter, 'currency' => 'Cr'];
         });

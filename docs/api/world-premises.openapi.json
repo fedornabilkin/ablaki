@@ -1,0 +1,1208 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Ablaki ready premises",
+    "version": "1.1.0",
+    "description": "Implementation contract, schema marker 17 adds house with one unassigned permanent bunk. Not yet deployed or behavior-tested. Ready premises are distinct from timed construction. Purchase terms include config(name/kind/price/area/slots/expansion_limit/expansion_base_price/exposure_class/delivery=ready/lodging_places), template_revision_id, source_budget_id, recipient_node_id/name/account_id/policy_id, available_area and personal_charge=0.0000. Standard command result additionally includes building_id and room_id on purchase. Prices and recipient policy are authoritative server terms."
+  },
+  "servers": [
+    {
+      "url": "/v1"
+    }
+  ],
+  "security": [
+    {
+      "bearerAuth": []
+    }
+  ],
+  "paths": {
+    "/world/nodes/{id}/premises": {
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          }
+        }
+      ],
+      "get": {
+        "summary": "List ready premises offered by the settlement; owned campsite adds private area information",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 1000000,
+              "default": 1
+            }
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "maxLength": 120
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Catalog"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Owner/manager permission required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Unavailable node or offer",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Changed quote, insufficient budget/area or missing finance policy",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Invalid input or monetary limit",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Command limit",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Schema, storage or wallet unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/world/nodes/{id}/premises-publish-preview": {
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          }
+        }
+      ],
+      "post": {
+        "summary": "premises-publish-preview",
+        "description": "Settlement owner or world manager of an unowned public settlement. Creates immutable terms; no charge. Preview creates only a 300-second quote. Commit requires unchanged exact payload/revisions; same request key replays the saved result.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Publication"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Quote"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Owner/manager permission required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Unavailable node or offer",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Changed quote, insufficient budget/area or missing finance policy",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Invalid input or monetary limit",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Command limit",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Schema, storage or wallet unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/world/nodes/{id}/premises-publish": {
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          }
+        }
+      ],
+      "post": {
+        "summary": "premises-publish",
+        "description": "Settlement owner or world manager of an unowned public settlement. Creates immutable terms; no charge. Preview creates only a 300-second quote. Commit requires unchanged exact payload/revisions; same request key replays the saved result.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PublicationCommand"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/CommandResult"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Owner/manager permission required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Unavailable node or offer",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Changed quote, insufficient budget/area or missing finance policy",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Invalid input or monetary limit",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Command limit",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Schema, storage or wallet unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/world/nodes/{id}/premises-buy-preview": {
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          }
+        }
+      ],
+      "post": {
+        "summary": "premises-buy-preview",
+        "description": "Owned active campsite only; house additionally requires membership at this starter site. Requires storage_v2 and exact wallet. Plot free budget pays its settlement treasury; ready BUILDING, ROOM, placement slots and house bunk commit together. No automatic personal debit or items. House bunk remains unassigned until housing-lodge. Preview creates only a 300-second quote. Commit requires unchanged exact payload/revisions; same request key replays the saved result.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Selection"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Quote"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Owner/manager permission required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Unavailable node or offer",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Changed quote, insufficient budget/area or missing finance policy",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Invalid input or monetary limit",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Command limit",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Schema, storage or wallet unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/world/nodes/{id}/premises-buy": {
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          }
+        }
+      ],
+      "post": {
+        "summary": "premises-buy",
+        "description": "Owned active campsite only; house additionally requires membership at this starter site. Requires storage_v2 and exact wallet. Plot free budget pays its settlement treasury; ready BUILDING, ROOM, placement slots and house bunk commit together. No automatic personal debit or items. House bunk remains unassigned until housing-lodge. Preview creates only a 300-second quote. Commit requires unchanged exact payload/revisions; same request key replays the saved result.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SelectionCommand"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/CommandResult"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Owner/manager permission required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Unavailable node or offer",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Changed quote, insufficient budget/area or missing finance policy",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Invalid input or monetary limit",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Command limit",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Schema, storage or wallet unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/world/nodes/{id}/premises-withdraw-preview": {
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          }
+        }
+      ],
+      "post": {
+        "summary": "premises-withdraw-preview",
+        "description": "Same authority as publication. Stops future purchases; previously acquired premises are retained. Preview creates only a 300-second quote. Commit requires unchanged exact payload/revisions; same request key replays the saved result.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Selection"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Quote"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Owner/manager permission required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Unavailable node or offer",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Changed quote, insufficient budget/area or missing finance policy",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Invalid input or monetary limit",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Command limit",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Schema, storage or wallet unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/world/nodes/{id}/premises-withdraw": {
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          }
+        }
+      ],
+      "post": {
+        "summary": "premises-withdraw",
+        "description": "Same authority as publication. Stops future purchases; previously acquired premises are retained. Preview creates only a 300-second quote. Commit requires unchanged exact payload/revisions; same request key replays the saved result.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SelectionCommand"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/CommandResult"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Owner/manager permission required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Unavailable node or offer",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Changed quote, insufficient budget/area or missing finance policy",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Invalid input or monetary limit",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Command limit",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Schema, storage or wallet unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer"
+      }
+    },
+    "schemas": {
+      "Publication": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "canopy",
+              "workroom",
+              "house"
+            ]
+          },
+          "price": {
+            "type": "string",
+            "pattern": "^(0|[1-9][0-9]{0,14})\\.[0-9]{4}$",
+            "description": "Exact Cr; maximum 900000000000000.0000."
+          },
+          "area": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 4
+          },
+          "slots": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 4
+          },
+          "lodging_places": {
+            "type": "integer",
+            "enum": [
+              0,
+              1
+            ],
+            "description": "Derived by server: 1 for house, otherwise 0. Client cannot choose a different capacity."
+          },
+          "expansion_limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 4,
+            "description": "Defaults to slots; must be between slots and area."
+          },
+          "expansion_base_price": {
+            "type": "string",
+            "pattern": "^(0|[1-9][0-9]{0,14})\\.[0-9]{4}$",
+            "description": "Positive only when expansion_limit exceeds slots; otherwise null. Each successive additional place costs another multiple of this price.",
+            "nullable": true
+          }
+        },
+        "required": [
+          "name",
+          "kind",
+          "price",
+          "area",
+          "slots"
+        ],
+        "additionalProperties": false,
+        "description": "Positive price required. House reserves one unit of area for one permanent bunk; equipment expansion_limit + lodging_places cannot exceed area. A house needs area >= 2. No automatic balancing defaults."
+      },
+      "Selection": {
+        "type": "object",
+        "properties": {
+          "offer_id": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          }
+        },
+        "required": [
+          "offer_id"
+        ],
+        "additionalProperties": false
+      },
+      "Offer": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          },
+          "template_revision_id": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "canopy",
+              "workroom",
+              "house"
+            ]
+          },
+          "price": {
+            "type": "string",
+            "pattern": "^(0|[1-9][0-9]{0,14})\\.[0-9]{4}$",
+            "description": "Exact Cr; maximum 900000000000000.0000."
+          },
+          "area": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 4
+          },
+          "slots": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 4
+          },
+          "lodging_places": {
+            "type": "integer",
+            "enum": [
+              0,
+              1
+            ],
+            "description": "Derived by server: 1 for house, otherwise 0. Client cannot choose a different capacity."
+          },
+          "expansion_limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 4,
+            "description": "Defaults to slots; must be between slots and area."
+          },
+          "expansion_base_price": {
+            "type": "string",
+            "pattern": "^(0|[1-9][0-9]{0,14})\\.[0-9]{4}$",
+            "description": "Positive only when expansion_limit exceeds slots; otherwise null. Each successive additional place costs another multiple of this price.",
+            "nullable": true
+          },
+          "exposure_class": {
+            "type": "string",
+            "enum": [
+              "covered",
+              "indoor"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "template_revision_id",
+          "name",
+          "kind",
+          "price",
+          "area",
+          "slots",
+          "lodging_places",
+          "expansion_limit",
+          "expansion_base_price",
+          "exposure_class"
+        ],
+        "additionalProperties": false
+      },
+      "Area": {
+        "type": "object",
+        "properties": {
+          "total": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "used": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "available": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "unaccounted_building": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "total",
+          "used",
+          "available",
+          "unaccounted_building"
+        ],
+        "additionalProperties": false
+      },
+      "Meta": {
+        "type": "object",
+        "properties": {
+          "totalCount": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "pageCount": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "currentPage": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 1000000
+          },
+          "perPage": {
+            "type": "integer",
+            "enum": [
+              20
+            ]
+          }
+        },
+        "required": [
+          "totalCount",
+          "pageCount",
+          "currentPage",
+          "perPage"
+        ],
+        "additionalProperties": false
+      },
+      "Catalog": {
+        "type": "object",
+        "properties": {
+          "node_id": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          },
+          "settlement_id": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          },
+          "settlement_name": {
+            "type": "string",
+            "maxLength": 120
+          },
+          "items": {
+            "type": "array",
+            "maxItems": 20,
+            "items": {
+              "$ref": "#/components/schemas/Offer"
+            }
+          },
+          "_meta": {
+            "$ref": "#/components/schemas/Meta"
+          },
+          "can_publish": {
+            "type": "boolean"
+          },
+          "can_buy": {
+            "type": "boolean"
+          },
+          "area": {
+            "type": "object",
+            "nullable": true,
+            "properties": {
+              "total": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "used": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "available": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "unaccounted_building": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "total",
+              "used",
+              "available",
+              "unaccounted_building"
+            ],
+            "additionalProperties": false
+          },
+          "server_time": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "node_id",
+          "settlement_id",
+          "settlement_name",
+          "items",
+          "_meta",
+          "can_publish",
+          "can_buy",
+          "area",
+          "server_time"
+        ],
+        "additionalProperties": false
+      },
+      "PublicationCommand": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "canopy",
+              "workroom",
+              "house"
+            ]
+          },
+          "price": {
+            "type": "string",
+            "pattern": "^(0|[1-9][0-9]{0,14})\\.[0-9]{4}$",
+            "description": "Exact Cr; maximum 900000000000000.0000."
+          },
+          "area": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 4
+          },
+          "slots": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 4
+          },
+          "lodging_places": {
+            "type": "integer",
+            "enum": [
+              0,
+              1
+            ],
+            "description": "Derived by server: 1 for house, otherwise 0. Client cannot choose a different capacity."
+          },
+          "expansion_limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 4,
+            "description": "Defaults to slots; must be between slots and area."
+          },
+          "expansion_base_price": {
+            "type": "string",
+            "pattern": "^(0|[1-9][0-9]{0,14})\\.[0-9]{4}$",
+            "description": "Positive only when expansion_limit exceeds slots; otherwise null. Each successive additional place costs another multiple of this price.",
+            "nullable": true
+          },
+          "request_key": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_-]{16,80}$"
+          },
+          "quote_id": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{32}$"
+          },
+          "expected_revisions": {
+            "$ref": "world.openapi.json#/components/schemas/Revisions"
+          }
+        },
+        "required": [
+          "name",
+          "kind",
+          "price",
+          "area",
+          "slots",
+          "request_key",
+          "quote_id",
+          "expected_revisions"
+        ],
+        "additionalProperties": false
+      },
+      "SelectionCommand": {
+        "type": "object",
+        "properties": {
+          "offer_id": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          },
+          "request_key": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_-]{16,80}$"
+          },
+          "quote_id": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{32}$"
+          },
+          "expected_revisions": {
+            "$ref": "world.openapi.json#/components/schemas/Revisions"
+          }
+        },
+        "required": [
+          "offer_id",
+          "request_key",
+          "quote_id",
+          "expected_revisions"
+        ],
+        "additionalProperties": false
+      }
+    }
+  }
+}

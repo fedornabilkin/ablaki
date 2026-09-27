@@ -1,0 +1,1738 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "World garden purchase and permanent bed expansion",
+    "version": "1.0.0"
+  },
+  "servers": [
+    {
+      "url": "/v1"
+    }
+  ],
+  "security": [
+    {
+      "bearerAuth": []
+    }
+  ],
+  "paths": {
+    "/world/nodes/{id}/garden": {
+      "get": {
+        "operationId": "worldGardenState",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/State"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "World error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "World error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "World error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "World error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "World error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "World error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "World error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          }
+        }
+      ]
+    },
+    "/world/nodes/{id}/garden-publish-preview": {
+      "post": {
+        "operationId": "worldGardenPublishPreview",
+        "description": "One current settlement offer; publication replaces only future purchases. Buy at owned campsite, expand at owned garden. One permanent starter garden per membership. top_up=true explicitly permits the quoted personal contribution and budget payment in one transaction. Bought expansion price is pinned; beds cost B..9B. No crops or automatic income.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PublishInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublishQuote"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "World error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "World error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "World error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "World error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "World error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "World error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "World error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          }
+        }
+      ]
+    },
+    "/world/nodes/{id}/garden-publish": {
+      "post": {
+        "operationId": "worldGardenPublish",
+        "description": "One current settlement offer; publication replaces only future purchases. Buy at owned campsite, expand at owned garden. One permanent starter garden per membership. top_up=true explicitly permits the quoted personal contribution and budget payment in one transaction. Bought expansion price is pinned; beds cost B..9B. No crops or automatic income.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PublishCommit"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./world.openapi.json#/components/schemas/CommandResult"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "World error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "World error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "World error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "World error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "World error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "World error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "World error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          }
+        }
+      ]
+    },
+    "/world/nodes/{id}/garden-withdraw-preview": {
+      "post": {
+        "operationId": "worldGardenWithdrawPreview",
+        "description": "One current settlement offer; publication replaces only future purchases. Buy at owned campsite, expand at owned garden. One permanent starter garden per membership. top_up=true explicitly permits the quoted personal contribution and budget payment in one transaction. Bought expansion price is pinned; beds cost B..9B. No crops or automatic income.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WithdrawInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WithdrawQuote"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "World error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "World error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "World error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "World error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "World error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "World error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "World error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          }
+        }
+      ]
+    },
+    "/world/nodes/{id}/garden-withdraw": {
+      "post": {
+        "operationId": "worldGardenWithdraw",
+        "description": "One current settlement offer; publication replaces only future purchases. Buy at owned campsite, expand at owned garden. One permanent starter garden per membership. top_up=true explicitly permits the quoted personal contribution and budget payment in one transaction. Bought expansion price is pinned; beds cost B..9B. No crops or automatic income.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WithdrawCommit"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./world.openapi.json#/components/schemas/CommandResult"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "World error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "World error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "World error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "World error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "World error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "World error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "World error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          }
+        }
+      ]
+    },
+    "/world/nodes/{id}/garden-buy-preview": {
+      "post": {
+        "operationId": "worldGardenBuyPreview",
+        "description": "One current settlement offer; publication replaces only future purchases. Buy at owned campsite, expand at owned garden. One permanent starter garden per membership. top_up=true explicitly permits the quoted personal contribution and budget payment in one transaction. Bought expansion price is pinned; beds cost B..9B. No crops or automatic income.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BuyInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BuyQuote"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "World error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "World error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "World error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "World error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "World error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "World error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "World error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          }
+        }
+      ]
+    },
+    "/world/nodes/{id}/garden-buy": {
+      "post": {
+        "operationId": "worldGardenBuy",
+        "description": "One current settlement offer; publication replaces only future purchases. Buy at owned campsite, expand at owned garden. One permanent starter garden per membership. top_up=true explicitly permits the quoted personal contribution and budget payment in one transaction. Bought expansion price is pinned; beds cost B..9B. No crops or automatic income.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BuyCommit"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./world.openapi.json#/components/schemas/CommandResult"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "World error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "World error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "World error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "World error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "World error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "World error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "World error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          }
+        }
+      ]
+    },
+    "/world/nodes/{id}/garden-expand-preview": {
+      "post": {
+        "operationId": "worldGardenExpandPreview",
+        "description": "One current settlement offer; publication replaces only future purchases. Buy at owned campsite, expand at owned garden. One permanent starter garden per membership. top_up=true explicitly permits the quoted personal contribution and budget payment in one transaction. Bought expansion price is pinned; beds cost B..9B. No crops or automatic income.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ExpandInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExpandQuote"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "World error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "World error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "World error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "World error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "World error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "World error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "World error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          }
+        }
+      ]
+    },
+    "/world/nodes/{id}/garden-expand": {
+      "post": {
+        "operationId": "worldGardenExpand",
+        "description": "One current settlement offer; publication replaces only future purchases. Buy at owned campsite, expand at owned garden. One permanent starter garden per membership. top_up=true explicitly permits the quoted personal contribution and budget payment in one transaction. Bought expansion price is pinned; beds cost B..9B. No crops or automatic income.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ExpandCommit"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./world.openapi.json#/components/schemas/CommandResult"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "World error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "World error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "World error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "World error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "World error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "World error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "World error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          }
+        }
+      ]
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer"
+      }
+    },
+    "schemas": {
+      "State": {
+        "type": "object",
+        "properties": {
+          "node_id": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          },
+          "settlement_id": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          },
+          "settlement_name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120
+          },
+          "offer": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 2147483647
+              },
+              "name": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 120
+              },
+              "price": {
+                "type": "string",
+                "pattern": "^(0|[1-9]\\d{0,14})\\.\\d{4}$"
+              },
+              "base_price": {
+                "type": "string",
+                "pattern": "^(0|[1-9]\\d{0,14})\\.\\d{4}$"
+              }
+            },
+            "required": [
+              "id",
+              "name",
+              "price",
+              "base_price"
+            ],
+            "additionalProperties": false,
+            "nullable": true
+          },
+          "garden": {
+            "type": "object",
+            "properties": {
+              "node_id": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 2147483647
+              },
+              "unlocked": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 10
+              },
+              "limit": {
+                "type": "integer",
+                "enum": [
+                  10
+                ]
+              },
+              "base_price": {
+                "type": "string",
+                "pattern": "^(0|[1-9]\\d{0,14})\\.\\d{4}$"
+              },
+              "available_budget": {
+                "type": "string",
+                "pattern": "^(0|[1-9]\\d{0,14})\\.\\d{4}$"
+              },
+              "beds": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "node_id": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 2147483647
+                    },
+                    "ordinal": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 10
+                    },
+                    "unlocked": {
+                      "type": "boolean"
+                    },
+                    "price": {
+                      "type": "string",
+                      "pattern": "^(0|[1-9]\\d{0,14})\\.\\d{4}$"
+                    }
+                  },
+                  "required": [
+                    "node_id",
+                    "ordinal",
+                    "unlocked",
+                    "price"
+                  ],
+                  "additionalProperties": false
+                },
+                "minItems": 10,
+                "maxItems": 10
+              }
+            },
+            "required": [
+              "node_id",
+              "unlocked",
+              "limit",
+              "base_price",
+              "available_budget",
+              "beds"
+            ],
+            "additionalProperties": false,
+            "nullable": true
+          },
+          "can_publish": {
+            "type": "boolean"
+          },
+          "can_buy": {
+            "type": "boolean"
+          },
+          "can_expand": {
+            "type": "boolean"
+          },
+          "cultivation_enabled": {
+            "type": "boolean",
+            "enum": [
+              false
+            ]
+          },
+          "server_time": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          }
+        },
+        "required": [
+          "node_id",
+          "settlement_id",
+          "settlement_name",
+          "offer",
+          "garden",
+          "can_publish",
+          "can_buy",
+          "can_expand",
+          "cultivation_enabled",
+          "server_time"
+        ],
+        "additionalProperties": false
+      },
+      "PublishInput": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120
+          },
+          "price": {
+            "type": "string",
+            "pattern": "^(0|[1-9]\\d{0,14})\\.\\d{4}$"
+          },
+          "base_price": {
+            "type": "string",
+            "pattern": "^(0|[1-9]\\d{0,14})\\.\\d{4}$"
+          }
+        },
+        "required": [
+          "name",
+          "price",
+          "base_price"
+        ],
+        "additionalProperties": false
+      },
+      "PublishCommit": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120
+          },
+          "price": {
+            "type": "string",
+            "pattern": "^(0|[1-9]\\d{0,14})\\.\\d{4}$"
+          },
+          "base_price": {
+            "type": "string",
+            "pattern": "^(0|[1-9]\\d{0,14})\\.\\d{4}$"
+          },
+          "request_key": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_-]{16,80}$"
+          },
+          "quote_id": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{32}$"
+          },
+          "expected_revisions": {
+            "$ref": "./world.openapi.json#/components/schemas/Revisions"
+          }
+        },
+        "required": [
+          "name",
+          "price",
+          "base_price",
+          "request_key",
+          "quote_id",
+          "expected_revisions"
+        ],
+        "additionalProperties": false
+      },
+      "PublishTerms": {
+        "type": "object",
+        "properties": {
+          "node_id": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120
+          },
+          "price": {
+            "type": "string",
+            "pattern": "^(0|[1-9]\\d{0,14})\\.\\d{4}$"
+          },
+          "base_price": {
+            "type": "string",
+            "pattern": "^(0|[1-9]\\d{0,14})\\.\\d{4}$"
+          },
+          "previous_offer_id": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647,
+            "nullable": true
+          }
+        },
+        "required": [
+          "node_id",
+          "name",
+          "price",
+          "base_price",
+          "previous_offer_id"
+        ],
+        "additionalProperties": false
+      },
+      "PublishQuote": {
+        "allOf": [
+          {
+            "$ref": "./world.openapi.json#/components/schemas/Quote"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "terms": {
+                "$ref": "#/components/schemas/PublishTerms"
+              }
+            }
+          }
+        ]
+      },
+      "WithdrawInput": {
+        "type": "object",
+        "properties": {},
+        "required": [],
+        "additionalProperties": false
+      },
+      "WithdrawCommit": {
+        "type": "object",
+        "properties": {
+          "request_key": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_-]{16,80}$"
+          },
+          "quote_id": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{32}$"
+          },
+          "expected_revisions": {
+            "$ref": "./world.openapi.json#/components/schemas/Revisions"
+          }
+        },
+        "required": [
+          "request_key",
+          "quote_id",
+          "expected_revisions"
+        ],
+        "additionalProperties": false
+      },
+      "WithdrawTerms": {
+        "type": "object",
+        "properties": {
+          "node_id": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          },
+          "previous_offer_id": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647,
+            "nullable": true
+          }
+        },
+        "required": [
+          "node_id",
+          "previous_offer_id"
+        ],
+        "additionalProperties": false
+      },
+      "WithdrawQuote": {
+        "allOf": [
+          {
+            "$ref": "./world.openapi.json#/components/schemas/Quote"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "terms": {
+                "$ref": "#/components/schemas/WithdrawTerms"
+              }
+            }
+          }
+        ]
+      },
+      "BuyInput": {
+        "type": "object",
+        "properties": {
+          "top_up": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "top_up"
+        ],
+        "additionalProperties": false
+      },
+      "BuyCommit": {
+        "type": "object",
+        "properties": {
+          "top_up": {
+            "type": "boolean"
+          },
+          "request_key": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_-]{16,80}$"
+          },
+          "quote_id": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{32}$"
+          },
+          "expected_revisions": {
+            "$ref": "./world.openapi.json#/components/schemas/Revisions"
+          }
+        },
+        "required": [
+          "top_up",
+          "request_key",
+          "quote_id",
+          "expected_revisions"
+        ],
+        "additionalProperties": false
+      },
+      "BuyTerms": {
+        "type": "object",
+        "properties": {
+          "node_id": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          },
+          "top_up": {
+            "type": "boolean"
+          },
+          "source_node_id": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          },
+          "source_budget_id": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647,
+            "nullable": true
+          },
+          "available_before": {
+            "type": "string",
+            "pattern": "^(0|[1-9]\\d{0,14})\\.\\d{4}$"
+          },
+          "personal_charge": {
+            "type": "string",
+            "pattern": "^(0|[1-9]\\d{0,14})\\.\\d{4}$"
+          },
+          "wallet_before": {
+            "type": "string",
+            "pattern": "^(0|[1-9]\\d{0,14})\\.\\d{4}$",
+            "nullable": true
+          },
+          "wallet_after": {
+            "type": "string",
+            "pattern": "^(0|[1-9]\\d{0,14})\\.\\d{4}$",
+            "nullable": true
+          },
+          "recipient_node_id": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          },
+          "recipient_name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120
+          },
+          "recipient_account_id": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          },
+          "recipient_policy_id": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          },
+          "total": {
+            "type": "string",
+            "pattern": "^(0|[1-9]\\d{0,14})\\.\\d{4}$"
+          },
+          "base_price": {
+            "type": "string",
+            "pattern": "^(0|[1-9]\\d{0,14})\\.\\d{4}$"
+          },
+          "initial_open": {
+            "type": "integer",
+            "enum": [
+              1
+            ]
+          },
+          "limit": {
+            "type": "integer",
+            "enum": [
+              10
+            ]
+          },
+          "offer_id": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120
+          }
+        },
+        "required": [
+          "node_id",
+          "top_up",
+          "source_node_id",
+          "source_budget_id",
+          "available_before",
+          "personal_charge",
+          "wallet_before",
+          "wallet_after",
+          "recipient_node_id",
+          "recipient_name",
+          "recipient_account_id",
+          "recipient_policy_id",
+          "total",
+          "base_price",
+          "initial_open",
+          "limit",
+          "offer_id",
+          "name"
+        ],
+        "additionalProperties": false
+      },
+      "BuyQuote": {
+        "allOf": [
+          {
+            "$ref": "./world.openapi.json#/components/schemas/Quote"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "terms": {
+                "$ref": "#/components/schemas/BuyTerms"
+              }
+            }
+          }
+        ]
+      },
+      "ExpandInput": {
+        "type": "object",
+        "properties": {
+          "top_up": {
+            "type": "boolean"
+          },
+          "quantity": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 9
+          }
+        },
+        "required": [
+          "top_up",
+          "quantity"
+        ],
+        "additionalProperties": false
+      },
+      "ExpandCommit": {
+        "type": "object",
+        "properties": {
+          "top_up": {
+            "type": "boolean"
+          },
+          "quantity": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 9
+          },
+          "request_key": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_-]{16,80}$"
+          },
+          "quote_id": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{32}$"
+          },
+          "expected_revisions": {
+            "$ref": "./world.openapi.json#/components/schemas/Revisions"
+          }
+        },
+        "required": [
+          "top_up",
+          "quantity",
+          "request_key",
+          "quote_id",
+          "expected_revisions"
+        ],
+        "additionalProperties": false
+      },
+      "ExpandTerms": {
+        "type": "object",
+        "properties": {
+          "node_id": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          },
+          "top_up": {
+            "type": "boolean"
+          },
+          "quantity": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 9
+          },
+          "source_node_id": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          },
+          "source_budget_id": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647,
+            "nullable": true
+          },
+          "available_before": {
+            "type": "string",
+            "pattern": "^(0|[1-9]\\d{0,14})\\.\\d{4}$"
+          },
+          "personal_charge": {
+            "type": "string",
+            "pattern": "^(0|[1-9]\\d{0,14})\\.\\d{4}$"
+          },
+          "wallet_before": {
+            "type": "string",
+            "pattern": "^(0|[1-9]\\d{0,14})\\.\\d{4}$",
+            "nullable": true
+          },
+          "wallet_after": {
+            "type": "string",
+            "pattern": "^(0|[1-9]\\d{0,14})\\.\\d{4}$",
+            "nullable": true
+          },
+          "recipient_node_id": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          },
+          "recipient_name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120
+          },
+          "recipient_account_id": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          },
+          "recipient_policy_id": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          },
+          "total": {
+            "type": "string",
+            "pattern": "^(0|[1-9]\\d{0,14})\\.\\d{4}$"
+          },
+          "base_price": {
+            "type": "string",
+            "pattern": "^(0|[1-9]\\d{0,14})\\.\\d{4}$"
+          },
+          "initial_open": {
+            "type": "integer",
+            "enum": [
+              1
+            ]
+          },
+          "limit": {
+            "type": "integer",
+            "enum": [
+              10
+            ]
+          },
+          "policy_id": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          },
+          "policy_revision": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 9007199254740991
+          },
+          "unlocked": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 9
+          },
+          "unit_prices": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "ordinal": {
+                  "type": "integer",
+                  "minimum": 2,
+                  "maximum": 10
+                },
+                "price": {
+                  "type": "string",
+                  "pattern": "^(0|[1-9]\\d{0,14})\\.\\d{4}$"
+                }
+              },
+              "required": [
+                "ordinal",
+                "price"
+              ],
+              "additionalProperties": false
+            },
+            "minItems": 1,
+            "maxItems": 9
+          },
+          "currency": {
+            "type": "string",
+            "enum": [
+              "Cr"
+            ]
+          },
+          "curve": {
+            "type": "string",
+            "enum": [
+              "linear"
+            ]
+          }
+        },
+        "required": [
+          "node_id",
+          "top_up",
+          "quantity",
+          "source_node_id",
+          "source_budget_id",
+          "available_before",
+          "personal_charge",
+          "wallet_before",
+          "wallet_after",
+          "recipient_node_id",
+          "recipient_name",
+          "recipient_account_id",
+          "recipient_policy_id",
+          "total",
+          "base_price",
+          "initial_open",
+          "limit",
+          "policy_id",
+          "policy_revision",
+          "unlocked",
+          "unit_prices",
+          "currency",
+          "curve"
+        ],
+        "additionalProperties": false
+      },
+      "ExpandQuote": {
+        "allOf": [
+          {
+            "$ref": "./world.openapi.json#/components/schemas/Quote"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "terms": {
+                "$ref": "#/components/schemas/ExpandTerms"
+              }
+            }
+          }
+        ]
+      }
+    }
+  }
+}

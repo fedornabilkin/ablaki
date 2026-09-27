@@ -22,7 +22,7 @@ class WorldSetupController extends \yii\console\Controller
         $exit = $this->actionSeed();
         if ($exit === 0) Yii::$app->db->transaction(function () {
             (new Locks(Yii::$app->db))->row('world_registry', ['id' => 1]);
-            Yii::$app->db->createCommand()->update('world_registry', ['schema_version' => 10], ['id' => 1])->execute();
+            Yii::$app->db->createCommand()->update('world_registry', ['schema_version' => 17], ['id' => 1])->execute();
         });
         return $exit;
     }
@@ -41,7 +41,7 @@ class WorldSetupController extends \yii\console\Controller
         if ($enabled && $name === 'economy_tick') throw new \RuntimeException('The economy rollout gate is not implemented yet.');
         Yii::$app->db->transaction(function () use ($name, $enabled) {
             $registry = (new Locks(Yii::$app->db))->row('world_registry', ['id' => 1]);
-            if (!$registry || ($enabled && (!$registry['active_world_id'] || (int)$registry['schema_version'] < 10))) throw new \RuntimeException('Complete world-setup/install before activation.');
+            if (!$registry || ($enabled && (!$registry['active_world_id'] || (int)$registry['schema_version'] < 17))) throw new \RuntimeException('Complete world-setup/install before activation.');
             if ($name === 'storage_v2' && !$enabled && !empty($registry['storage_v2'])) throw new \RuntimeException('Canonical inventory cannot revert to the legacy interpretation. Disable WORLD storage actions instead.');
             if ($name === 'world_write' && $enabled && !$registry['world_read']) throw new \RuntimeException('Enable reading before writing.');
             $values = [$name => $enabled];
@@ -58,6 +58,18 @@ class WorldSetupController extends \yii\console\Controller
         $result = (new \common\modules\craft\service\StorageBackfill(Yii::$app->db))->batch($limit);
         $this->stdout(json_encode($result, JSON_THROW_ON_ERROR) . "\n");
         return 0;
+    }
+    /** Explicit values: publishing a calendar starts the grace period for existing members. */
+    public function actionNightsActivate(int $world, int $daySeconds, int $nightOffset, int $nightSeconds, int $maxSeverity, int $recoveryNights, int $mildEfficiencyBps, int $severeEfficiencyBps): int
+    {
+        $this->requireInstall();
+        if (getenv('WORLD_NIGHTS_ACTIVATE') !== 'confirmed-night-policy') throw new \RuntimeException('Set WORLD_NIGHTS_ACTIVATE=confirmed-night-policy only after reviewing the calendar and health rules.');
+        $flags = new \common\modules\world\service\WorldFlags(Yii::$app->db, Yii::$app->getModule('world'));
+        return $this->rolloutOutput((new \common\modules\world\service\WorldNights(Yii::$app->db, $flags))->activate($world, [
+            'day_seconds' => $daySeconds, 'night_offset' => $nightOffset, 'night_seconds' => $nightSeconds,
+            'max_severity' => $maxSeverity, 'recovery_nights' => $recoveryNights,
+            'mild_efficiency_bps' => $mildEfficiencyBps, 'severe_efficiency_bps' => $severeEfficiencyBps,
+        ]));
     }
     public function actionGrantManager(int $user): int
     {

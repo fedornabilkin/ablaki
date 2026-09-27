@@ -15,7 +15,7 @@ class WorldFlags
     {
         $ready = $this->db->schema->getTableSchema('world_registry') !== null;
         $registry = $ready ? (new Query())->from('world_registry')->where(['id' => 1])->one($this->db) : false;
-        $installed = $registry && (int)$registry['schema_version'] >= 10;
+        $installed = $registry && (int)$registry['schema_version'] >= 17;
         $result = ['schema_ready' => (bool)$installed, 'contract_version' => $this->module->contractVersion];
         foreach (['world_read', 'world_write', 'storage_v2', 'economy_tick'] as $flag) {
             $result[$flag] = (bool)$installed && !empty($registry[$flag]) && !empty($this->module->flags[$flag]);

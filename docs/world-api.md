@@ -1,5 +1,15 @@
 # Контракты мира и интеграции крафта
 
+Жильё: [OpenAPI](api/world-housing.openapi.json), [границы реализации](world-housing-implementation.md). Дом покупается через premises, включает одну койку отдельно от оборудования. Назначение/отмена в комнате связаны с общей занятостью персонажа в шалаше и историческим расчётом ночей; schema marker 17, код без приёмки/выкладки.
+
+Места оборудования: [OpenAPI](api/world-equipment-expansion.openapi.json), [границы реализации](world-equipment-expansion-implementation.md). Расширяемые навесы/мастерские задают включённые места, предел и цену в предложении; оплата последующих мест идёт из бюджета комнаты с необязательным явным пополнением.
+
+Огород и грядки: [OpenAPI](api/world-garden.openapi.json), [границы реализации](world-garden-implementation.md). Покупка из бюджета стоянки, открытия из бюджета огорода; явный top_up объединяет личный взнос и оплату. Посев/урожай ещё не включены.
+
+Ночи и здоровье: [OpenAPI](api/world-nights.openapi.json), [правила и границы реализации](world-nights-implementation.md). GET не рассчитывает ночи; календарь публикуется отдельно, обработка выполняется worker.
+
+Реализованный контракт шалаша: [OpenAPI](api/world-shelter.openapi.json), [границы блока](world-shelter-implementation.md), [ремонт](world-shelter-repair-implementation.md). Разовая выдача, установка/складывание, назначения ночлега и ручной ремонт за сырьё без Cr. `shelter-repair-preview` возвращает расход, доступность и прочность; `shelter-repair` сохраняет экземпляр и ночлег. night_resolution_enabled отражает наличие опубликованного календаря. Сейчас он ещё не включён.
+
 Дата: 2026-09-26. Статус: проект для реализации. Связан с [архитектурой](world-architecture.md), [backend](plan/2026-09-26-world-backend.md), [БД](plan/2026-09-26-world-database.md) и [frontend](../../frontend/docs/plan/2026-09-26-world-frontend.md).
 
 Уточнённые правила: [шалаш, ночлег, улица, бюджеты и расширения](world-gameplay-economy.md). Сбор всегда treasury→budget одного subject; отчисление budget→treasury родителя — отдельная команда. Treasury loss не запускается GET и не заменяет ручной сбор.
@@ -131,6 +141,8 @@ Preview collect содержит receipt snapshot/digest, exact amount, as_of, l
 Начальные условия стоянки фиксируются в заказе и требуют явного подтверждения при публикации и первой сдаче. Существующая опубликованная политика сохраняется. Отмена/expiry освобождает только неиспользованный резерв; deadline проверяется сервером до сдачи независимо от готовности worker. [Ограничения и продолжение](world-orders-implementation.md). Код не проверялся и не запускался на серверах.
 
 ## Админка и доставка обновлений
+
+Покупка готового помещения описана в [world-premises.openapi.json](api/world-premises.openapi.json): `GET /v1/world/nodes/{id}/premises` и пары `premises-publish-preview/premises-publish`, `premises-buy-preview/premises-buy`, `premises-withdraw-preview/premises-withdraw`. Публикация и снятие выполняются у поселения, покупка — у собственной площадки. Preview фиксирует цену, площадь, места, защиту, бюджет и казну получателя. Оплата и создание BUILDING→ROOM/placement атомарны; старые покупки не меняются при снятии предложения. [Состояние и ограничения](world-premises-implementation.md).
 
 Начальный редактор находится в существующем Yii backend: `/world/...`, отдельные permissions поверх RBAC, POST/CSRF для изменений. Preview выдаёт diff + digest + base revision; publish отвергает устаревший просмотр. Публичному API не нужен открытый generic PATCH произвольных колонок. Административная смена владельца/дерева имеет отдельный use case и аудит.
 
