@@ -35,6 +35,7 @@ class EquipmentInstances
     {
         if (!$this->db->getTransaction()) throw new \LogicException('Equipment writes require a transaction.');
         if (!$ids) return;
+        (new ProductionReservations($this->db))->assertEquipment($ids);
         if ((new Query())->from(['e' => 'craft_equipment_instance'])->innerJoin(['i' => 'craft_item'], '[[i.id]]=[[e.item_id]]')->where(['e.id' => $ids, 'i.code' => \common\modules\world\service\ShelterCatalog::CODE])->exists($this->db)) throw new ConflictHttpException('Шалаш нельзя расходовать как материал.');
         $changed = $this->db->createCommand()->update('craft_equipment_instance', ['inventory_id' => null, 'status' => 'consumed', 'revision' => new Expression('[[revision]]+1')], ['id' => $ids, 'status' => 'active'])->execute();
         if ($changed !== count($ids)) throw new ConflictHttpException('Экземпляры предмета изменились.');
@@ -42,6 +43,7 @@ class EquipmentInstances
     public function move(array $ids, int $inventory): void
     {
         if (!$this->db->getTransaction()) throw new \LogicException('Equipment writes require a transaction.');
+        (new ProductionReservations($this->db))->assertEquipment($ids);
         if ($ids && $this->db->createCommand()->update('craft_equipment_instance', ['inventory_id' => $inventory, 'revision' => new Expression('[[revision]]+1')], ['id' => $ids, 'status' => 'active'])->execute() !== count($ids)) throw new ConflictHttpException('Экземпляры предмета изменились.');
     }
     /** Maintenance only: transfer the old shared wear to exactly one deterministic unit. */

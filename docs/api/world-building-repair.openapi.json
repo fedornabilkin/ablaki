@@ -1,0 +1,791 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Ablaki contracted building repair",
+    "version": "1.1.0",
+    "description": "Schema marker 20. Effective repair terms come from the original purchase or an explicitly accepted supplement. No automatic contracts for legacy purchases. Migration and behavioral acceptance deferred."
+  },
+  "servers": [
+    {
+      "url": "/v1"
+    }
+  ],
+  "security": [
+    {
+      "bearerAuth": []
+    }
+  ],
+  "paths": {
+    "/world/nodes/{id}/building-repair": {
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          }
+        }
+      ],
+      "get": {
+        "summary": "Read building repair contract, proportional costs and shortages",
+        "description": "No writes. Reads the original purchase contract or accepted supplement; absent contracts remain unsupported. Requires world_read and storage_v2.",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/State"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Actual owner required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Node or contractor unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Repair unavailable, materials/budget missing, quote expired or state changed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Feature or wallet unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Commit immediate repair",
+        "description": "Requires world_write, storage_v2 and active exact wallet. Fixed effective contract from purchase or accepted supplement; ceil(full_price * damage / max_condition) at 0.0001 Cr, ceil each raw material to whole units. Building budget pays original settlement treasury. Personal balance unchanged. Materials only from accessible backpack slots. Only own ready/paused/damaged buildings with own rooms and no construction/shelter/nested estate. Destroyed/archived buildings cannot be repaired. Damaged or stopped buildings remain paused; no lodging restored. Healthy active lodging is preserved. All transfers, consumption, condition, revisions, audit and outbox share a transaction; same key replays original result.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "world-construction.openapi.json#/components/schemas/Command"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/CommandResult"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Actual owner required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Node or contractor unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Repair unavailable, materials/budget missing, quote expired or state changed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Feature or wallet unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/world/nodes/{id}/building-repair-preview": {
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          }
+        }
+      ],
+      "post": {
+        "summary": "Calculate repair",
+        "description": "Requires world_write, storage_v2 and active exact wallet. Fixed effective contract from purchase or accepted supplement; ceil(full_price * damage / max_condition) at 0.0001 Cr, ceil each raw material to whole units. Building budget pays original settlement treasury. Personal balance unchanged. Materials only from accessible backpack slots. Only own ready/paused/damaged buildings with own rooms and no construction/shelter/nested estate. Destroyed/archived buildings cannot be repaired. Damaged or stopped buildings remain paused; no lodging restored. Healthy active lodging is preserved. All transfers, consumption, condition, revisions, audit and outbox share a transaction; same key replays original result.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Quote"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Actual owner required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Node or contractor unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Repair unavailable, materials/budget missing, quote expired or state changed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Feature or wallet unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "RepairContractInput": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "full_price",
+          "materials"
+        ],
+        "properties": {
+          "full_price": {
+            "type": "string",
+            "pattern": "^(0|[1-9][0-9]{0,14})\\.[0-9]{4}$",
+            "description": "Positive price at full damage; no automatic default."
+          },
+          "materials": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 8,
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "item_id",
+                "quantity"
+              ],
+              "properties": {
+                "item_id": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 2147483647
+                },
+                "quantity": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 10000
+                }
+              }
+            }
+          }
+        }
+      },
+      "RepairContract": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "full_price",
+          "materials"
+        ],
+        "properties": {
+          "full_price": {
+            "type": "string",
+            "pattern": "^(0|[1-9][0-9]{0,14})\\.[0-9]{4}$",
+            "description": "Positive price at full damage; no automatic default."
+          },
+          "materials": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 8,
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "item_id",
+                "quantity",
+                "name"
+              ],
+              "properties": {
+                "item_id": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 2147483647
+                },
+                "quantity": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 10000
+                },
+                "name": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 2000
+                }
+              }
+            }
+          }
+        }
+      },
+      "Cost": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "condition_before",
+          "condition_after",
+          "restore",
+          "price",
+          "materials"
+        ],
+        "properties": {
+          "condition_before": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 1000000
+          },
+          "condition_after": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 1000000
+          },
+          "restore": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 1000000
+          },
+          "price": {
+            "type": "string",
+            "pattern": "^(0|[1-9][0-9]{0,14})\\.[0-9]{4}$"
+          },
+          "materials": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 8,
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "item_id",
+                "name",
+                "full_quantity",
+                "quantity",
+                "have",
+                "available"
+              ],
+              "properties": {
+                "item_id": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 2147483647
+                },
+                "name": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 2000
+                },
+                "full_quantity": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 10000
+                },
+                "quantity": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 10000
+                },
+                "have": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "available": {
+                  "type": "boolean"
+                }
+              }
+            }
+          }
+        }
+      },
+      "State": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "node_id",
+          "supported",
+          "writable",
+          "available",
+          "reasons",
+          "repair",
+          "available_budget",
+          "server_time"
+        ],
+        "properties": {
+          "node_id": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          },
+          "supported": {
+            "type": "boolean"
+          },
+          "writable": {
+            "type": "boolean"
+          },
+          "available": {
+            "type": "boolean"
+          },
+          "reasons": {
+            "type": "array",
+            "maxItems": 32,
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 2000
+            }
+          },
+          "repair": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "condition_before",
+              "condition_after",
+              "restore",
+              "price",
+              "materials"
+            ],
+            "properties": {
+              "condition_before": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 1000000
+              },
+              "condition_after": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 1000000
+              },
+              "restore": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 1000000
+              },
+              "price": {
+                "type": "string",
+                "pattern": "^(0|[1-9][0-9]{0,14})\\.[0-9]{4}$"
+              },
+              "materials": {
+                "type": "array",
+                "minItems": 1,
+                "maxItems": 8,
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "item_id",
+                    "name",
+                    "full_quantity",
+                    "quantity",
+                    "have",
+                    "available"
+                  ],
+                  "properties": {
+                    "item_id": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 2147483647
+                    },
+                    "name": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 2000
+                    },
+                    "full_quantity": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 10000
+                    },
+                    "quantity": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 10000
+                    },
+                    "have": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "available": {
+                      "type": "boolean"
+                    }
+                  }
+                }
+              }
+            },
+            "nullable": true
+          },
+          "available_budget": {
+            "type": "string",
+            "pattern": "^(0|[1-9][0-9]{0,14})\\.[0-9]{4}$"
+          },
+          "server_time": {
+            "type": "integer",
+            "minimum": 0
+          }
+        }
+      },
+      "Terms": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "node_id",
+          "purchase_id",
+          "template_revision_id",
+          "name",
+          "repair",
+          "full_price",
+          "source_budget_id",
+          "available_before",
+          "personal_charge",
+          "recipient_node_id",
+          "recipient_name",
+          "recipient_account_id",
+          "recipient_policy_id",
+          "status_before",
+          "status_after",
+          "material_plan",
+          "repair_contract_id",
+          "repair_template_revision_id"
+        ],
+        "properties": {
+          "node_id": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          },
+          "purchase_id": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          },
+          "template_revision_id": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000
+          },
+          "repair": {
+            "$ref": "#/components/schemas/Cost"
+          },
+          "full_price": {
+            "type": "string",
+            "pattern": "^(0|[1-9][0-9]{0,14})\\.[0-9]{4}$"
+          },
+          "source_budget_id": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          },
+          "available_before": {
+            "type": "string",
+            "pattern": "^(0|[1-9][0-9]{0,14})\\.[0-9]{4}$"
+          },
+          "personal_charge": {
+            "type": "string",
+            "enum": [
+              "0.0000"
+            ]
+          },
+          "recipient_node_id": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          },
+          "recipient_name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000
+          },
+          "recipient_account_id": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          },
+          "recipient_policy_id": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          },
+          "status_before": {
+            "type": "string",
+            "enum": [
+              "active",
+              "paused",
+              "damaged"
+            ]
+          },
+          "status_after": {
+            "type": "string",
+            "enum": [
+              "active",
+              "paused"
+            ]
+          },
+          "material_plan": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 64,
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "inventory_id",
+                "storage_id",
+                "item_id",
+                "quantity"
+              ],
+              "properties": {
+                "inventory_id": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 2147483647
+                },
+                "storage_id": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 2147483647
+                },
+                "item_id": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 2147483647
+                },
+                "quantity": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 10000
+                }
+              }
+            }
+          },
+          "repair_contract_id": {
+            "type": "integer",
+            "minimum": 1,
+            "nullable": true
+          },
+          "repair_template_revision_id": {
+            "type": "integer",
+            "minimum": 1
+          }
+        }
+      },
+      "Quote": {
+        "allOf": [
+          {
+            "$ref": "world.openapi.json#/components/schemas/Quote"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "terms": {
+                "$ref": "#/components/schemas/Terms"
+              }
+            }
+          }
+        ]
+      }
+    },
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer"
+      }
+    }
+  }
+}

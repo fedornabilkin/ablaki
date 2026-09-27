@@ -63,9 +63,10 @@ class WorldConstruction
     {
         $node = $this->node($user, $nodeId);
         if ($page < 1 || $page > 1000000 || mb_strlen($q, 'UTF-8') > 120 || !in_array($status, ['', 'constructing', 'paused', 'completed', 'cancelled'], true)) throw new GameError('INVALID_FILTER', 'Некорректные параметры списка.', 422);
-        $query = (new Query())->select(['c.*', 's.plot_id', 'n.name', 'p.room_id'])->from(['c' => 'world_construction'])
+        $query = (new Query())->select(['c.*', 's.plot_id', 'n.name', 'p.room_id', 'demolition_id' => 'd.id'])->from(['c' => 'world_construction'])
             ->innerJoin(['s' => 'world_construction_site'], '[[s.project_id]]=[[c.id]]')->innerJoin(['n' => 'world_node'], '[[n.id]]=[[c.node_id]]')
             ->leftJoin(['p' => 'world_premises_purchase'], '[[p.building_id]]=[[c.node_id]]')
+            ->leftJoin(['d' => 'world_building_demolition'], '[[d.building_id]]=[[c.node_id]]')
             ->where(['c.owner_user_id' => $user])->andWhere(['or', ['s.plot_id' => $nodeId], ['c.node_id' => $nodeId]]);
         if ($q !== '') $query->andWhere(['like', 'n.name', $q]);
         if ($status !== '') $query->andWhere(['c.status' => $status]);
@@ -73,7 +74,7 @@ class WorldConstruction
         foreach ($query->orderBy(['c.id' => SORT_DESC])->offset(($page - 1) * 20)->limit(20)->all($this->db) as $row) {
             $terms = json_decode($row['terms_json'], true, 512, JSON_THROW_ON_ERROR);
             $items[] = ['id' => (int)$row['id'], 'node_id' => (int)$row['node_id'], 'plot_id' => (int)$row['plot_id'], 'name' => $row['name'],
-                'status' => $row['status'], 'revision' => (int)$row['revision'], 'started_at' => (int)$row['started_at'], 'finish_at' => (int)$row['finish_at'],
+                'status' => $row['status'], 'demolished' => $row['demolition_id'] !== null, 'revision' => (int)$row['revision'], 'started_at' => (int)$row['started_at'], 'finish_at' => (int)$row['finish_at'],
                 'remaining_seconds' => in_array($row['status'], ['completed', 'cancelled'], true) ? 0 : max(0, (int)$row['finish_at'] - ($row['paused_at'] === null ? $now : (int)$row['paused_at'])),
                 'room_id' => $row['room_id'] === null ? null : (int)$row['room_id'], 'price' => $terms['config']['price'], 'materials' => $terms['config']['materials']];
         }

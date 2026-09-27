@@ -75,8 +75,8 @@ class CommandBus
             elseif ($target === 'registry') {
                 $row = (new Query())->from('world_registry')->where(['id' => 1])->one($this->db);
                 $row['revision'] = $row['content_revision'];
-            } elseif (preg_match('/^(node|storage|inventory|instance|account):([1-9][0-9]*)$/D', $target, $match)) {
-                $tables = ['node' => 'world_node', 'storage' => 'craft_storage', 'inventory' => 'craft_inventory', 'instance' => 'craft_equipment_instance', 'account' => 'economy_account'];
+            } elseif (preg_match('/^(node|storage|inventory|instance|account|actor):([1-9][0-9]*)$/D', $target, $match)) {
+                $tables = ['node' => 'world_node', 'storage' => 'craft_storage', 'inventory' => 'craft_inventory', 'instance' => 'craft_equipment_instance', 'account' => 'economy_account', 'actor' => 'game_actor'];
                 $row = (new Query())->from($tables[$match[1]])->where(['id' => (int)$match[2]])->one($this->db);
             }
             else throw new GameError('INVALID_REVISION', 'Неизвестный объект версии.', 422);
@@ -94,6 +94,7 @@ class CommandBus
         $id = bin2hex(random_bytes(16));
         $this->db->createCommand()->insert('game_outbox', ['id' => $id, 'operation_id' => $operation, 'user_id' => $user, 'event_type' => $type,
             'event_version' => 1, 'payload_json' => CanonicalJson::encode($payload), 'created_at' => time()])->execute();
+        if (in_array($type, \common\modules\progression\service\WorldProgression::SOURCES, true)) (new \common\modules\progression\service\ProgressionAwards($this->db))->dispatch($id, $operation);
         return $id;
     }
 }

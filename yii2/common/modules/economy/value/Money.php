@@ -50,6 +50,13 @@ final class Money
     }
     public function isNegative(): bool { return $this->units < 0; }
     public function isZero(): bool { return $this->units === 0; }
+    /** Exact proportional cost rounded up to 0.0001 Cr; avoids multiplying the full int64 amount. */
+    public function ratioCeil(int $numerator, int $denominator): self
+    {
+        if ($this->units < 0 || $denominator < 1 || $denominator > 1000000 || $numerator < 0 || $numerator > $denominator) throw new \InvalidArgumentException('Invalid proportional amount.');
+        $fraction = ($this->units % $denominator) * $numerator;
+        return new self(intdiv($this->units, $denominator) * $numerator + intdiv($fraction + $denominator - 1, $denominator));
+    }
     /** Floor to 0.0001 Cr, carrying sub-unit fractions across operations. Never multiplies int64 by a rate. */
     public function portion(int $basisPoints, int $carry = 0): array
     {

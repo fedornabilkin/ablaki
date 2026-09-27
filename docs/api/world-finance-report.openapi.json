@@ -1,0 +1,497 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Ablaki node financial report",
+    "version": "1.0.0",
+    "description": "Code prepared, not tested or deployed. No new migration; current branch requires marker 21. Owner-only lifetime flows and filtered journal, no mutations."
+  },
+  "servers": [
+    {
+      "url": "/v1"
+    }
+  ],
+  "security": [
+    {
+      "bearerAuth": []
+    }
+  ],
+  "paths": {
+    "/world/nodes/{id}/finance-report": {
+      "get": {
+        "summary": "Owned node lifetime balances, flows, reconciliation and journal",
+        "description": "world_read and actual ownership required. Does not need wallet/storage activation. A REPEATABLE READ snapshot keeps balances/totals/count/items coherent. Query uses only this node budget and treasury; world loss sink and descendant accounts are excluded. Internal transfers appear once. Foreign account IDs, foreign balances, user IDs and operation IDs are not returned. All totals are over the whole lifetime, even when the journal is filtered; sort is fixed descending ID. GET does not collect, repair balances, settle losses, create accounts or enqueue jobs.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 2147483647
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 1000000,
+              "default": 1
+            }
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "maxLength": 120
+            },
+            "description": "Trimmed substring of purpose; filters journal before count and pagination."
+          },
+          {
+            "name": "kind",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "all",
+                "other",
+                "personal_investment",
+                "treasury_collection",
+                "parent_payment",
+                "treasury_loss",
+                "order_payment",
+                "premises_purchase",
+                "garden_purchase",
+                "garden_expansion",
+                "equipment_expansion",
+                "building_repair"
+              ],
+              "default": "all"
+            },
+            "description": "other selects kinds unknown to this report version."
+          },
+          {
+            "name": "direction",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "all",
+                "incoming",
+                "outgoing",
+                "internal"
+              ],
+              "default": "all"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "One consistent snapshot; absent accounts return zeros. Mismatched ledger balances are explicit flags, not automatically corrected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Report"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Actual owner required; manage is not an override",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Node missing or not visible",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Invalid journal filters",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "World read/schema unavailable or invalid account amounts/reserves",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer"
+      }
+    },
+    "schemas": {
+      "Report": {
+        "type": "object",
+        "required": [
+          "node_id",
+          "scope",
+          "currency",
+          "server_time",
+          "balances",
+          "totals",
+          "reconciliation",
+          "items",
+          "_meta"
+        ],
+        "properties": {
+          "node_id": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          },
+          "scope": {
+            "type": "string",
+            "enum": [
+              "node_lifetime"
+            ]
+          },
+          "currency": {
+            "type": "string",
+            "enum": [
+              "Cr"
+            ]
+          },
+          "server_time": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "balances": {
+            "type": "object",
+            "required": [
+              "budget",
+              "treasury"
+            ],
+            "properties": {
+              "budget": {
+                "type": "object",
+                "required": [
+                  "amount",
+                  "reserved",
+                  "available"
+                ],
+                "properties": {
+                  "amount": {
+                    "type": "string",
+                    "pattern": "^(0|[1-9][0-9]{0,14})\\.[0-9]{4}$",
+                    "description": "Exact Cr, bounded by the existing Money limit."
+                  },
+                  "reserved": {
+                    "type": "string",
+                    "pattern": "^(0|[1-9][0-9]{0,14})\\.[0-9]{4}$",
+                    "description": "Exact Cr, bounded by the existing Money limit."
+                  },
+                  "available": {
+                    "type": "string",
+                    "pattern": "^(0|[1-9][0-9]{0,14})\\.[0-9]{4}$",
+                    "description": "Exact Cr, bounded by the existing Money limit."
+                  }
+                }
+              },
+              "treasury": {
+                "type": "object",
+                "required": [
+                  "amount",
+                  "reserved",
+                  "available"
+                ],
+                "properties": {
+                  "amount": {
+                    "type": "string",
+                    "pattern": "^(0|[1-9][0-9]{0,14})\\.[0-9]{4}$",
+                    "description": "Exact Cr, bounded by the existing Money limit."
+                  },
+                  "reserved": {
+                    "type": "string",
+                    "pattern": "^(0|[1-9][0-9]{0,14})\\.[0-9]{4}$",
+                    "description": "Exact Cr, bounded by the existing Money limit."
+                  },
+                  "available": {
+                    "type": "string",
+                    "pattern": "^(0|[1-9][0-9]{0,14})\\.[0-9]{4}$",
+                    "description": "Exact Cr, bounded by the existing Money limit."
+                  }
+                }
+              }
+            }
+          },
+          "totals": {
+            "type": "object",
+            "required": [
+              "treasury_received",
+              "treasury_parent_received",
+              "treasury_payments_received",
+              "treasury_other_received",
+              "treasury_to_budget",
+              "budget_to_treasury",
+              "treasury_lost",
+              "treasury_other_out",
+              "budget_invested",
+              "budget_other_in",
+              "budget_parent_paid",
+              "budget_spent",
+              "budget_other_out"
+            ],
+            "properties": {
+              "treasury_received": {
+                "type": "string",
+                "pattern": "^(0|[1-9][0-9]{0,39})\\.[0-9]{4}$",
+                "description": "Exact lifetime aggregate, up to 40 integer digits. Not a spendable balance; do not parse as a floating-point number or apply the wallet limit."
+              },
+              "treasury_parent_received": {
+                "type": "string",
+                "pattern": "^(0|[1-9][0-9]{0,39})\\.[0-9]{4}$",
+                "description": "Exact lifetime aggregate, up to 40 integer digits. Not a spendable balance; do not parse as a floating-point number or apply the wallet limit."
+              },
+              "treasury_payments_received": {
+                "type": "string",
+                "pattern": "^(0|[1-9][0-9]{0,39})\\.[0-9]{4}$",
+                "description": "Exact lifetime aggregate, up to 40 integer digits. Not a spendable balance; do not parse as a floating-point number or apply the wallet limit."
+              },
+              "treasury_other_received": {
+                "type": "string",
+                "pattern": "^(0|[1-9][0-9]{0,39})\\.[0-9]{4}$",
+                "description": "Exact lifetime aggregate, up to 40 integer digits. Not a spendable balance; do not parse as a floating-point number or apply the wallet limit."
+              },
+              "treasury_to_budget": {
+                "type": "string",
+                "pattern": "^(0|[1-9][0-9]{0,39})\\.[0-9]{4}$",
+                "description": "Exact lifetime aggregate, up to 40 integer digits. Not a spendable balance; do not parse as a floating-point number or apply the wallet limit."
+              },
+              "budget_to_treasury": {
+                "type": "string",
+                "pattern": "^(0|[1-9][0-9]{0,39})\\.[0-9]{4}$",
+                "description": "Exact lifetime aggregate, up to 40 integer digits. Not a spendable balance; do not parse as a floating-point number or apply the wallet limit."
+              },
+              "treasury_lost": {
+                "type": "string",
+                "pattern": "^(0|[1-9][0-9]{0,39})\\.[0-9]{4}$",
+                "description": "Exact lifetime aggregate, up to 40 integer digits. Not a spendable balance; do not parse as a floating-point number or apply the wallet limit."
+              },
+              "treasury_other_out": {
+                "type": "string",
+                "pattern": "^(0|[1-9][0-9]{0,39})\\.[0-9]{4}$",
+                "description": "Exact lifetime aggregate, up to 40 integer digits. Not a spendable balance; do not parse as a floating-point number or apply the wallet limit."
+              },
+              "budget_invested": {
+                "type": "string",
+                "pattern": "^(0|[1-9][0-9]{0,39})\\.[0-9]{4}$",
+                "description": "Exact lifetime aggregate, up to 40 integer digits. Not a spendable balance; do not parse as a floating-point number or apply the wallet limit."
+              },
+              "budget_other_in": {
+                "type": "string",
+                "pattern": "^(0|[1-9][0-9]{0,39})\\.[0-9]{4}$",
+                "description": "Exact lifetime aggregate, up to 40 integer digits. Not a spendable balance; do not parse as a floating-point number or apply the wallet limit."
+              },
+              "budget_parent_paid": {
+                "type": "string",
+                "pattern": "^(0|[1-9][0-9]{0,39})\\.[0-9]{4}$",
+                "description": "Exact lifetime aggregate, up to 40 integer digits. Not a spendable balance; do not parse as a floating-point number or apply the wallet limit."
+              },
+              "budget_spent": {
+                "type": "string",
+                "pattern": "^(0|[1-9][0-9]{0,39})\\.[0-9]{4}$",
+                "description": "Exact lifetime aggregate, up to 40 integer digits. Not a spendable balance; do not parse as a floating-point number or apply the wallet limit."
+              },
+              "budget_other_out": {
+                "type": "string",
+                "pattern": "^(0|[1-9][0-9]{0,39})\\.[0-9]{4}$",
+                "description": "Exact lifetime aggregate, up to 40 integer digits. Not a spendable balance; do not parse as a floating-point number or apply the wallet limit."
+              }
+            },
+            "description": "Unaffected by q/kind/direction/page. treasury_received excludes transfers from this same budget/treasury; parent_received/payments_received/other_received partition that total. treasury_to_budget and budget_to_treasury are internal regardless of kind. Remaining inflow/outflow categories exclude internal transfers. Payments group: order_payment, premises_purchase, garden_purchase, garden_expansion, equipment_expansion, building_repair. Unknown kinds are included under other, not dropped. No descendant aggregation or new-world-revenue claim."
+          },
+          "reconciliation": {
+            "type": "object",
+            "required": [
+              "budget",
+              "treasury"
+            ],
+            "properties": {
+              "budget": {
+                "type": "object",
+                "required": [
+                  "ledger_balance",
+                  "matches"
+                ],
+                "properties": {
+                  "ledger_balance": {
+                    "type": "string",
+                    "pattern": "^-?(0|[1-9][0-9]{0,39})\\.[0-9]{4}$",
+                    "description": "Exact lifetime aggregate, up to 40 integer digits. Not a spendable balance; do not parse as a floating-point number or apply the wallet limit."
+                  },
+                  "matches": {
+                    "type": "boolean",
+                    "description": "Exact equality of account amount and all ledger credits minus debits. Assumes provisioned zero opening balances. Does not verify all reservations or domain receipts."
+                  }
+                }
+              },
+              "treasury": {
+                "type": "object",
+                "required": [
+                  "ledger_balance",
+                  "matches"
+                ],
+                "properties": {
+                  "ledger_balance": {
+                    "type": "string",
+                    "pattern": "^-?(0|[1-9][0-9]{0,39})\\.[0-9]{4}$",
+                    "description": "Exact lifetime aggregate, up to 40 integer digits. Not a spendable balance; do not parse as a floating-point number or apply the wallet limit."
+                  },
+                  "matches": {
+                    "type": "boolean",
+                    "description": "Exact equality of account amount and all ledger credits minus debits. Assumes provisioned zero opening balances. Does not verify all reservations or domain receipts."
+                  }
+                }
+              }
+            }
+          },
+          "items": {
+            "type": "array",
+            "maxItems": 20,
+            "items": {
+              "$ref": "#/components/schemas/Entry"
+            }
+          },
+          "_meta": {
+            "type": "object",
+            "required": [
+              "totalCount",
+              "pageCount",
+              "currentPage",
+              "perPage"
+            ],
+            "properties": {
+              "totalCount": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              "pageCount": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              "currentPage": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 1000000
+              },
+              "perPage": {
+                "type": "integer",
+                "enum": [
+                  20
+                ]
+              }
+            }
+          }
+        }
+      },
+      "Entry": {
+        "type": "object",
+        "required": [
+          "id",
+          "kind",
+          "purpose",
+          "amount",
+          "created_at",
+          "direction",
+          "source_role",
+          "destination_role"
+        ],
+        "properties": {
+          "id": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          },
+          "kind": {
+            "type": "string",
+            "maxLength": 32
+          },
+          "purpose": {
+            "type": "string",
+            "maxLength": 255
+          },
+          "amount": {
+            "type": "string",
+            "pattern": "^(0|[1-9][0-9]{0,14})\\.[0-9]{4}$",
+            "description": "Exact Cr, bounded by the existing Money limit."
+          },
+          "created_at": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "direction": {
+            "type": "string",
+            "enum": [
+              "incoming",
+              "outgoing",
+              "internal"
+            ]
+          },
+          "source_role": {
+            "type": "string",
+            "nullable": true,
+            "enum": [
+              "budget",
+              "treasury",
+              null
+            ]
+          },
+          "destination_role": {
+            "type": "string",
+            "nullable": true,
+            "enum": [
+              "budget",
+              "treasury",
+              null
+            ]
+          }
+        }
+      }
+    }
+  }
+}

@@ -130,7 +130,6 @@ class CraftWorkspace
             (new CanonicalInventory($p['store']))->applyCraft($user, $p['plan'], $p['target'], $p['input']['items'], $p['input']['output']);
             $message = (new Crafting($p['store']))->completeRecipe($user, $p['input']['recipe'], $p['input']['output'], $input['quantity'], $p['cost']);
             $storages = array_merge(array_column($p['sources'], 'id'), [$p['target']['id']], array_column($p['selected'], 'storage_id'));
-            $bus->emit($operation, $user, 'craft.completed', ['node_id' => $input['node_id'], 'recipe_id' => $input['recipe_id'], 'batches' => $input['quantity'], 'output' => $terms['output']]);
             return ['message' => $message, 'changed_node_ids' => [$input['node_id']], 'changed_storage_ids' => array_values(array_unique(array_map('intval', $storages)))];
         });
     }

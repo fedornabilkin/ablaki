@@ -27,6 +27,12 @@ class ConstructionSpec
             return self::presentation([]);
         }
         if ($duration < 60 || $duration > 604800 || !$materials) throw new GameError('INVALID_CONSTRUCTION', 'Срок стройки — от минуты до семи суток, нужен хотя бы один материал.', 422);
+        return ['delivery' => $delivery, 'duration_seconds' => $duration, 'materials' => $this->materialInput($materials), 'cancellation' => 'full_refund_before_completion'];
+    }
+    /** Shared raw-material norms for construction and contracted maintenance. */
+    public function materialInput(array $materials): array
+    {
+        if (!$materials || count($materials) > 8) throw new GameError('INVALID_MATERIALS', 'Укажите от одного до восьми материалов.', 422);
         $result = []; $seen = [];
         foreach ($materials as $material) {
             if (!is_array($material) || !is_int($material['item_id'] ?? null) || !is_int($material['quantity'] ?? null) || $material['item_id'] < 1 || $material['quantity'] < 1 || $material['quantity'] > 10000 || isset($seen[$material['item_id']])) throw new GameError('INVALID_CONSTRUCTION', 'Укажите до восьми разных материалов, от 1 до 10000 единиц каждого.', 422);
@@ -34,7 +40,7 @@ class ConstructionSpec
             $result[] = ['item_id' => $material['item_id'], 'quantity' => $material['quantity']];
         }
         usort($result, static function (array $a, array $b): int { return $a['item_id'] <=> $b['item_id']; });
-        return ['delivery' => $delivery, 'duration_seconds' => $duration, 'materials' => $result, 'cancellation' => 'full_refund_before_completion'];
+        return $result;
     }
     /** Resolve catalog state under CommandBus locks, after its completed-command replay check. */
     public function resolvedMaterials(array $materials): array

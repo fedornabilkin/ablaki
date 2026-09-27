@@ -32,6 +32,102 @@ class WorldController extends \yii\rest\Controller
         }
     }
     private function flags(): WorldFlags { return new WorldFlags(Yii::$app->db, Yii::$app->getModule('world')); }
+    private function achievementService(): \common\modules\progression\service\WorldAchievements { return new \common\modules\progression\service\WorldAchievements(Yii::$app->db, $this->flags(), $this->policy()); }
+    public function actionAchievements(): array
+    {
+        if (!Yii::$app->request->isGet) throw new \yii\web\MethodNotAllowedHttpException('Используйте GET.');
+        $status = Yii::$app->request->get('status', 'all');
+        if (!is_string($status)) throw new GameError('INVALID_FILTER', 'Некорректный фильтр.', 422);
+        return $this->achievementService()->listing((int)Yii::$app->user->id, $this->id(Yii::$app->request->get('page', 1)), $this->orderSearch(), $status);
+    }
+    private function achievementPublish(bool $preview): array
+    {
+        if (!Yii::$app->request->isPost) throw new \yii\web\MethodNotAllowedHttpException('Используйте POST.');
+        $body = Yii::$app->request->bodyParams;
+        if (!is_array($body)) throw new GameError('INVALID_COMMAND', 'Некорректное действие.', 422);
+        $service = $this->achievementService(); $input = $service->input($body); $user = (int)Yii::$app->user->id;
+        if ($preview) return $service->preview($user, $input);
+        if (!is_string($body['request_key'] ?? null) || !is_string($body['quote_id'] ?? null) || !is_array($body['expected_revisions'] ?? null)) throw new GameError('INVALID_COMMAND', 'Требуется подтверждённый расчёт.', 422);
+        return $service->publish($user, $input, $body['request_key'], $body['quote_id'], $body['expected_revisions']);
+    }
+    public function actionAchievementPublishPreview(): array { return $this->achievementPublish(true); }
+    public function actionAchievementPublish(): array { return $this->achievementPublish(false); }
+    private function cultivationService(): \common\modules\world\service\WorldCultivation { return new \common\modules\world\service\WorldCultivation(Yii::$app->db, $this->flags(), $this->policy()); }
+    public function actionCrops(): array
+    {
+        if (!Yii::$app->request->isGet) throw new \yii\web\MethodNotAllowedHttpException('Используйте GET.');
+        return $this->cultivationService()->crops($this->id(Yii::$app->request->get('page', 1)), $this->orderSearch());
+    }
+    public function actionCultivation($id): array
+    {
+        if (!Yii::$app->request->isGet) throw new \yii\web\MethodNotAllowedHttpException('Используйте GET.');
+        return $this->cultivationService()->state((int)Yii::$app->user->id, $this->id($id));
+    }
+    private function cultivationCommand($id, string $action, bool $preview): array
+    {
+        if (!Yii::$app->request->isPost) throw new \yii\web\MethodNotAllowedHttpException('Используйте POST.');
+        $body = Yii::$app->request->bodyParams;
+        if (!is_array($body)) throw new GameError('INVALID_COMMAND', 'Некорректное действие.', 422);
+        $service = $this->cultivationService(); $user = (int)Yii::$app->user->id;
+        $input = $action === 'publish' ? $service->publication($body) : ['bed_id' => $this->id($id)];
+        if ($action === 'sow') $input['crop_revision_id'] = $this->id($body['crop_revision_id'] ?? null);
+        if ($preview) return $service->preview($user, $action, $input);
+        if (!is_string($body['request_key'] ?? null) || !is_string($body['quote_id'] ?? null) || !is_array($body['expected_revisions'] ?? null)) throw new GameError('INVALID_COMMAND', 'Требуется подтверждённый расчёт.', 422);
+        return $service->execute($user, $action, $input, $body['request_key'], $body['quote_id'], $body['expected_revisions']);
+    }
+    public function actionCultivationPreview($id, string $action): array { return $this->cultivationCommand($id, $action, true); }
+    public function actionCultivationExecute($id, string $action): array { return $this->cultivationCommand($id, $action, false); }
+    public function actionCropPublishPreview(): array { return $this->cultivationCommand(null, 'publish', true); }
+    public function actionCropPublish(): array { return $this->cultivationCommand(null, 'publish', false); }
+    private function notificationService(): \common\modules\world\service\WorldNotifications { return new \common\modules\world\service\WorldNotifications(Yii::$app->db, $this->flags()); }
+    public function actionNotifications(): array
+    {
+        if (!Yii::$app->request->isGet) throw new \yii\web\MethodNotAllowedHttpException('Используйте GET.');
+        $status = Yii::$app->request->get('status', 'all'); $type = Yii::$app->request->get('type', '');
+        if (!is_string($status) || !is_string($type)) throw new GameError('INVALID_FILTER', 'Некорректный фильтр.', 422);
+        return $this->notificationService()->listing((int)Yii::$app->user->id, $this->id(Yii::$app->request->get('page', 1)), $this->orderSearch(), $status, $type);
+    }
+    public function actionNotificationRead($id): array
+    {
+        if (!Yii::$app->request->isPost) throw new \yii\web\MethodNotAllowedHttpException('Используйте POST.');
+        return $this->notificationService()->read((int)Yii::$app->user->id, $this->id($id));
+    }
+    public function actionNotificationPreferences(): array
+    {
+        if (!Yii::$app->request->isGet) throw new \yii\web\MethodNotAllowedHttpException('Используйте GET.');
+        return $this->notificationService()->preferences((int)Yii::$app->user->id);
+    }
+    public function actionNotificationConfigure(): array
+    {
+        if (!Yii::$app->request->isPost) throw new \yii\web\MethodNotAllowedHttpException('Используйте POST.');
+        $body = Yii::$app->request->bodyParams;
+        if (!is_array($body)) throw new GameError('INVALID_COMMAND', 'Некорректные настройки.', 422);
+        return $this->notificationService()->configure((int)Yii::$app->user->id, $body);
+    }
+    private function progressionService(): \common\modules\progression\service\WorldProgression
+    {
+        return new \common\modules\progression\service\WorldProgression(Yii::$app->db, $this->flags(), $this->policy());
+    }
+    public function actionProfessions(): array
+    {
+        if (!Yii::$app->request->isGet) throw new \yii\web\MethodNotAllowedHttpException('Используйте GET.');
+        return $this->progressionService()->listing((int)Yii::$app->user->id, $this->id(Yii::$app->request->get('page', 1)), $this->orderSearch());
+    }
+    private function professionCommand($id, string $action, bool $preview): array
+    {
+        if (!Yii::$app->request->isPost) throw new \yii\web\MethodNotAllowedHttpException('Используйте POST.');
+        $body = Yii::$app->request->bodyParams;
+        if (!is_array($body)) throw new GameError('INVALID_COMMAND', 'Некорректное действие.', 422);
+        $service = $this->progressionService(); $user = (int)Yii::$app->user->id;
+        $input = $action === 'publish' ? $service->publication($body) : ['profession_id' => $this->id($id)];
+        if ($preview) return $service->preview($user, $action, $input);
+        if (!is_string($body['request_key'] ?? null) || !is_string($body['quote_id'] ?? null) || !is_array($body['expected_revisions'] ?? null)) throw new GameError('INVALID_COMMAND', 'Требуется подтверждённый расчёт.', 422);
+        return $service->execute($user, $action, $input, $body['request_key'], $body['quote_id'], $body['expected_revisions']);
+    }
+    public function actionProfessionPreview($id, string $action): array { return $this->professionCommand($id, $action, true); }
+    public function actionProfessionExecute($id, string $action): array { return $this->professionCommand($id, $action, false); }
+    public function actionProfessionPublishPreview(): array { return $this->professionCommand(null, 'publish', true); }
+    public function actionProfessionPublish(): array { return $this->professionCommand(null, 'publish', false); }
     private function policy(): WorldAccessPolicy
     {
         return new WorldAccessPolicy((int)Yii::$app->user->id, Yii::$app->user->can('world-manage'));
@@ -168,6 +264,25 @@ class WorldController extends \yii\rest\Controller
     {
         if (!Yii::$app->request->isGet) throw new \yii\web\MethodNotAllowedHttpException('Используйте GET.');
         return (new \common\modules\economy\service\NodeEconomy(Yii::$app->db, $this->flags()))->obligations((int)Yii::$app->user->id, $this->id($id), $this->id(Yii::$app->request->get('page', 1)));
+    }
+    public function actionTreasuryReceipts($id): array
+    {
+        if (!Yii::$app->request->isGet) throw new \yii\web\MethodNotAllowedHttpException('Используйте GET.');
+        $status = Yii::$app->request->get('status', 'open');
+        if (!is_string($status)) throw new GameError('INVALID_RECEIPT_FILTER', 'Некорректный статус поступлений.', 422);
+        return (new \common\modules\economy\service\TreasuryReceipts(Yii::$app->db, $this->flags()))->listing((int)Yii::$app->user->id, $this->id($id), $this->id(Yii::$app->request->get('page', 1)), $this->orderSearch(), $status);
+    }
+    public function actionFinanceReport($id): array
+    {
+        if (!Yii::$app->request->isGet) throw new \yii\web\MethodNotAllowedHttpException('Используйте GET.');
+        $kind = Yii::$app->request->get('kind', 'all'); $direction = Yii::$app->request->get('direction', 'all');
+        if (!is_string($kind) || !is_string($direction)) throw new GameError('INVALID_FINANCE_FILTER', 'Некорректные фильтры отчёта.', 422);
+        return (new \common\modules\economy\service\NodeFinanceReport(Yii::$app->db, $this->flags()))->view((int)Yii::$app->user->id, $this->id($id), $this->id(Yii::$app->request->get('page', 1)), $this->orderSearch(), $kind, $direction);
+    }
+    public function actionFinanceHierarchy($id): array
+    {
+        if (!Yii::$app->request->isGet) throw new \yii\web\MethodNotAllowedHttpException('Используйте GET.');
+        return (new \common\modules\economy\service\HierarchyFinanceReport(Yii::$app->db, $this->flags()))->view((int)Yii::$app->user->id, $this->id($id), $this->id(Yii::$app->request->get('page', 1)), $this->orderSearch());
     }
     private function treasury($id, bool $pay, bool $preview): array
     {
@@ -352,6 +467,89 @@ class WorldController extends \yii\rest\Controller
     {
         return new \common\modules\world\service\WorldPremises(Yii::$app->db, $this->flags(), $this->policy());
     }
+    private function demolitionService(): \common\modules\world\service\WorldDemolition
+    {
+        return new \common\modules\world\service\WorldDemolition(Yii::$app->db, $this->flags());
+    }
+    public function actionDemolition($id): array
+    {
+        if (!Yii::$app->request->isGet) throw new \yii\web\MethodNotAllowedHttpException('Используйте GET.');
+        return $this->demolitionService()->state((int)Yii::$app->user->id, $this->id($id));
+    }
+    public function actionDemolitions($id): array
+    {
+        if (!Yii::$app->request->isGet) throw new \yii\web\MethodNotAllowedHttpException('Используйте GET.');
+        return $this->demolitionService()->history((int)Yii::$app->user->id, $this->id($id), $this->id(Yii::$app->request->get('page', 1)), $this->orderSearch());
+    }
+    private function demolitionCommand($id, bool $preview): array
+    {
+        if (!Yii::$app->request->isPost) throw new \yii\web\MethodNotAllowedHttpException('Используйте POST.');
+        $body = Yii::$app->request->bodyParams; $input = ['node_id' => $this->id($id)]; $user = (int)Yii::$app->user->id; $service = $this->demolitionService();
+        if ($preview) return $service->preview($user, $input);
+        if (!is_array($body) || !is_string($body['request_key'] ?? null) || !is_string($body['quote_id'] ?? null) || !is_array($body['expected_revisions'] ?? null)) throw new GameError('INVALID_COMMAND', 'Требуется подтверждённый расчёт.', 422);
+        return $service->execute($user, $body['request_key'], $input, $body['quote_id'], $body['expected_revisions']);
+    }
+    public function actionDemolishPreview($id): array { return $this->demolitionCommand($id, true); }
+    public function actionDemolish($id): array { return $this->demolitionCommand($id, false); }
+    private function repairContractService(): \common\modules\world\service\WorldRepairContracts
+    {
+        return new \common\modules\world\service\WorldRepairContracts(Yii::$app->db, $this->flags());
+    }
+    public function actionRepairContracts($id): array
+    {
+        if (!Yii::$app->request->isGet) throw new \yii\web\MethodNotAllowedHttpException('Используйте GET.');
+        return $this->repairContractService()->listing((int)Yii::$app->user->id, $this->id($id), $this->id(Yii::$app->request->get('page', 1)), $this->orderSearch());
+    }
+    private function repairContractCommand($id, bool $preview): array
+    {
+        if (!Yii::$app->request->isPost) throw new \yii\web\MethodNotAllowedHttpException('Используйте POST.');
+        $body = Yii::$app->request->bodyParams;
+        if (!is_array($body)) throw new GameError('INVALID_COMMAND', 'Некорректные условия договора.', 422);
+        $input = ['node_id' => $this->id($id), 'offer_id' => $this->id($body['offer_id'] ?? null)]; $user = (int)Yii::$app->user->id; $service = $this->repairContractService();
+        if ($preview) return $service->preview($user, $input);
+        if (!is_string($body['request_key'] ?? null) || !is_string($body['quote_id'] ?? null) || !is_array($body['expected_revisions'] ?? null)) throw new GameError('INVALID_COMMAND', 'Требуется подтверждённый расчёт.', 422);
+        return $service->execute($user, $body['request_key'], $input, $body['quote_id'], $body['expected_revisions']);
+    }
+    public function actionRepairContractPreview($id): array { return $this->repairContractCommand($id, true); }
+    public function actionRepairContractExecute($id): array { return $this->repairContractCommand($id, false); }
+    private function buildingRepairService(): \common\modules\world\service\WorldBuildingRepair
+    {
+        return new \common\modules\world\service\WorldBuildingRepair(Yii::$app->db, $this->flags());
+    }
+    public function actionBuildingRepair($id): array
+    {
+        if (!Yii::$app->request->isGet) throw new \yii\web\MethodNotAllowedHttpException('Используйте GET.');
+        return $this->buildingRepairService()->state((int)Yii::$app->user->id, $this->id($id));
+    }
+    private function buildingRepairCommand($id, bool $preview): array
+    {
+        if (!Yii::$app->request->isPost) throw new \yii\web\MethodNotAllowedHttpException('Используйте POST.');
+        $body = Yii::$app->request->bodyParams; $input = ['node_id' => $this->id($id)]; $user = (int)Yii::$app->user->id; $service = $this->buildingRepairService();
+        if ($preview) return $service->preview($user, $input);
+        if (!is_array($body) || !is_string($body['request_key'] ?? null) || !is_string($body['quote_id'] ?? null) || !is_array($body['expected_revisions'] ?? null)) throw new GameError('INVALID_COMMAND', 'Требуется подтверждённый расчёт.', 422);
+        return $service->execute($user, $body['request_key'], $input, $body['quote_id'], $body['expected_revisions']);
+    }
+    public function actionBuildingRepairPreview($id): array { return $this->buildingRepairCommand($id, true); }
+    public function actionBuildingRepairExecute($id): array { return $this->buildingRepairCommand($id, false); }
+    private function buildingOperationService(): \common\modules\world\service\WorldBuildingOperation
+    {
+        return new \common\modules\world\service\WorldBuildingOperation(Yii::$app->db, $this->flags());
+    }
+    public function actionBuildingOperation($id): array
+    {
+        if (!Yii::$app->request->isGet) throw new \yii\web\MethodNotAllowedHttpException('Используйте GET.');
+        return $this->buildingOperationService()->state((int)Yii::$app->user->id, $this->id($id));
+    }
+    private function buildingOperationCommand($id, string $operation, bool $preview): array
+    {
+        if (!Yii::$app->request->isPost) throw new \yii\web\MethodNotAllowedHttpException('Используйте POST.');
+        $body = Yii::$app->request->bodyParams; $input = ['node_id' => $this->id($id)]; $user = (int)Yii::$app->user->id; $service = $this->buildingOperationService();
+        if ($preview) return $service->preview($user, $input, $operation);
+        if (!is_array($body) || !is_string($body['request_key'] ?? null) || !is_string($body['quote_id'] ?? null) || !is_array($body['expected_revisions'] ?? null)) throw new GameError('INVALID_COMMAND', 'Требуется подтверждённый расчёт.', 422);
+        return $service->execute($user, $body['request_key'], $input, $body['quote_id'], $body['expected_revisions'], $operation);
+    }
+    public function actionBuildingOperationPreview($id, string $operation): array { return $this->buildingOperationCommand($id, $operation, true); }
+    public function actionBuildingOperationExecute($id, string $operation): array { return $this->buildingOperationCommand($id, $operation, false); }
     private function constructionService(): \common\modules\world\service\WorldConstruction
     {
         return new \common\modules\world\service\WorldConstruction(Yii::$app->db, $this->flags());

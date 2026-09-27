@@ -43,7 +43,8 @@ class WorldPremises
             ->leftJoin(['c' => 'world_construction'], '[[c.node_id]]=[[n.id]]')
             ->leftJoin(['cs' => 'world_construction_site'], '[[cs.project_id]]=[[c.id]]')
             ->where(['n.parent_id' => $site['id'], 'n.node_type' => 'BUILDING', 'p.id' => null, 's.id' => null, 'cs.project_id' => null])->andWhere(['<>', 'n.status', 'archived'])->exists($this->db);
-        $used = (int)(new Query())->from('world_premises_purchase')->where(['plot_id' => $site['id']])->sum('area', $this->db);
+        $used = (int)(new Query())->from(['p' => 'world_premises_purchase'])->leftJoin(['d' => 'world_building_demolition'], '[[d.purchase_id]]=[[p.id]]')
+            ->where(['p.plot_id' => $site['id'], 'd.id' => null])->sum('p.area', $this->db);
         $used += (int)(new Query())->from(['s' => 'world_construction_site'])->innerJoin(['c' => 'world_construction'], '[[c.id]]=[[s.project_id]]')->where(['s.plot_id' => $site['id'], 'c.status' => ['constructing', 'paused']])->sum('s.area', $this->db);
         return ['total' => (int)$site['details']['area'], 'used' => $used, 'available' => $unknown ? 0 : max(0, (int)$site['details']['area'] - $used), 'unaccounted_building' => $unknown];
     }
@@ -59,7 +60,7 @@ class WorldPremises
             $config = json_decode($row['config_json'], true, 512, JSON_THROW_ON_ERROR);
             $items[] = ['id' => (int)$row['id'], 'name' => $row['name'], 'template_revision_id' => (int)$row['template_revision_id'], 'kind' => $config['kind'],
                 'price' => $config['price'], 'area' => $config['area'], 'slots' => $config['slots'], 'lodging_places' => $config['lodging_places'] ?? 0, 'exposure_class' => $config['exposure_class'],
-                'requirements' => $config['requirements'] ?? ['all' => []], 'requirements_status' => $requirements->evaluate($user, $config['requirements'] ?? [])] + WorldEquipmentExpansion::terms($config) + ConstructionSpec::presentation($config);
+                'repair' => $config['repair'] ?? null, 'repair_for_existing' => $config['repair_for_existing'] ?? false, 'requirements' => $config['requirements'] ?? ['all' => []], 'requirements_status' => $requirements->evaluate($user, $config['requirements'] ?? [])] + WorldEquipmentExpansion::terms($config) + ConstructionSpec::presentation($config);
         }
         return ['node_id' => $id, 'settlement_id' => $c['settlement']['id'], 'settlement_name' => $c['settlement']['name'], 'items' => $items,
             '_meta' => ['totalCount' => $total, 'pageCount' => (int)ceil($total / 20), 'currentPage' => $page, 'perPage' => 20],
@@ -69,6 +70,8 @@ class WorldPremises
     /** Used by the HTTP boundary and again by the domain; prices have no automatic default. */
     public function publication(array $body): array
     {
+        $existingRepair = $body['repair_for_existing'] ?? false;
+        if (!is_bool($existingRepair) || ($existingRepair && empty($body['repair']))) throw new GameError('INVALID_REPAIR_POLICY', 'Для предложения ремонта прежним зданиям задайте условия ремонта.', 422);
         if (!is_string($body['name'] ?? null) || trim($body['name']) === '' || mb_strlen($body['name'], 'UTF-8') > 120 || !in_array($body['kind'] ?? null, ['canopy', 'workroom', 'house'], true)) throw new GameError('INVALID_PREMISES', 'Укажите название и тип помещения.', 422);
         foreach (['area', 'slots'] as $key) if (!is_int($body[$key] ?? null) || $body[$key] < 1 || $body[$key] > 4) throw new GameError('INVALID_PREMISES', 'Площадь и количество мест должны быть от 1 до 4.', 422);
         if ($body['slots'] > $body['area']) throw new GameError('INVALID_PREMISES', 'Для каждого места оборудования нужна единица площади.', 422);
@@ -77,6 +80,7 @@ class WorldPremises
         catch (\Exception $e) { throw new GameError('INVALID_AMOUNT', 'Некорректная цена.', 422); }
         if ($price->isNegative() || $price->isZero()) throw new GameError('INVALID_AMOUNT', 'Цена должна быть положительной.', 422);
         return ['name' => trim($body['name']), 'kind' => $body['kind'], 'area' => $body['area'], 'slots' => $body['slots'], 'price' => $price->decimal(), 'lodging_places' => $body['kind'] === 'house' ? 1 : 0,
+            'repair' => (new BuildingRepairSpec($this->db))->publication($body['repair'] ?? null), 'repair_for_existing' => $existingRepair,
             'requirements' => (new RequirementEvaluator($this->db))->validate($body['requirements'] ?? [])] + WorldEquipmentExpansion::terms($body) + (new ConstructionSpec($this->db))->publication($body);
     }
     private function offer(int $settlement, int $id): array
@@ -95,6 +99,7 @@ class WorldPremises
             if ($c['site'] || !$c['manager']) throw new GameError('PREMISES_MANAGEMENT_FORBIDDEN', 'Предложения публикует владелец поселения или администратор системного поселения.', 403);
             $config = $this->publication($input) + ['exposure_class' => $input['kind'] === 'canopy' ? 'covered' : 'indoor', 'delivery' => 'ready'];
             $config['materials'] = (new ConstructionSpec($this->db))->resolvedMaterials($config['materials']);
+            if ($config['repair'] !== null) $config['repair'] = (new BuildingRepairSpec($this->db))->resolve($config['repair']);
             $terms['config'] = $config;
         } elseif ($action === 'withdraw') {
             if ($c['site'] || !$c['manager']) throw new GameError('PREMISES_MANAGEMENT_FORBIDDEN', 'Нет прав на снятие предложения.', 403);
@@ -151,6 +156,7 @@ class WorldPremises
                 $this->db->createCommand()->insert('world_template_revision', ['template_id' => $template, 'version' => 1, 'status' => 'published', 'config_json' => CanonicalJson::encode($terms['config']), 'author_user_id' => $user, 'published_at' => time()])->execute();
                 $this->db->createCommand()->insert('world_premises_offer', ['settlement_id' => $payload['node_id'], 'template_revision_id' => (int)$this->db->getLastInsertID(), 'name' => $payload['name'], 'operation_id' => $operation, 'created_at' => time()])->execute();
                 $published = $this->offer($payload['node_id'], (int)$this->db->getLastInsertID());
+                if (!empty($terms['config']['repair_for_existing'])) $this->db->createCommand()->insert('world_repair_offer', ['offer_id' => (int)$published['id'], 'kind' => $terms['config']['kind'], 'area' => $terms['config']['area']])->execute();
                 (new WorldTree($this->db))->audit($user, 'world.premises.publish', $payload['admin_reason'] ?? 'Публикация предложения готовой постройки', [],
                     ['id' => $p['settlement']['id'], 'offer' => $published], $operation);
             } elseif ($action === 'withdraw') {
