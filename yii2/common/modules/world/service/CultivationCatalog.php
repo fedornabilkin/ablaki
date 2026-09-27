@@ -18,6 +18,9 @@ class CultivationCatalog
         $ids = []; $changed = false;
         foreach ([['world-carrot-seed', 'Семена моркови', 'seedling'], ['world-carrot', 'Морковь', 'carrot'], ['water', 'Вода', 'droplet']] as $definition) {
             $item = (new Query())->from('craft_item')->where(['code' => $definition[0]])->one($db);
+            // Legacy catalogues can use another code for the same unique item name.
+            // Reuse its ID without rewriting the item or breaking existing recipes.
+            if (!$item) $item = (new Query())->from('craft_item')->where(['name' => $definition[1]])->one($db);
             if (!$item) {
                 $db->createCommand()->insert('craft_item', ['code' => $definition[0], 'name' => $definition[1], 'description' => 'Ресурс выращивания. Источник приобретения и тариф настраиваются отдельно.', 'category_id' => $category['id'], 'kind' => 'material', 'rarity' => 'common', 'icon' => $definition[2], 'stack_size' => 100, 'destroyable' => 1, 'use_xp' => 0, 'gather_quantity' => 0, 'active' => 1, 'storage_kind' => 'none'])->execute();
                 $item = ['id' => (int)$db->getLastInsertID()]; $changed = true;
