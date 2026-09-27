@@ -22,7 +22,7 @@ class WorldSetupController extends \yii\console\Controller
         $exit = $this->actionSeed();
         if ($exit === 0) Yii::$app->db->transaction(function () {
             (new Locks(Yii::$app->db))->row('world_registry', ['id' => 1]);
-            Yii::$app->db->createCommand()->update('world_registry', ['schema_version' => 17], ['id' => 1])->execute();
+            Yii::$app->db->createCommand()->update('world_registry', ['schema_version' => 19], ['id' => 1])->execute();
         });
         return $exit;
     }
@@ -41,7 +41,7 @@ class WorldSetupController extends \yii\console\Controller
         if ($enabled && $name === 'economy_tick') throw new \RuntimeException('The economy rollout gate is not implemented yet.');
         Yii::$app->db->transaction(function () use ($name, $enabled) {
             $registry = (new Locks(Yii::$app->db))->row('world_registry', ['id' => 1]);
-            if (!$registry || ($enabled && (!$registry['active_world_id'] || (int)$registry['schema_version'] < 17))) throw new \RuntimeException('Complete world-setup/install before activation.');
+            if (!$registry || ($enabled && (!$registry['active_world_id'] || (int)$registry['schema_version'] < 19))) throw new \RuntimeException('Complete world-setup/install before activation.');
             if ($name === 'storage_v2' && !$enabled && !empty($registry['storage_v2'])) throw new \RuntimeException('Canonical inventory cannot revert to the legacy interpretation. Disable WORLD storage actions instead.');
             if ($name === 'world_write' && $enabled && !$registry['world_read']) throw new \RuntimeException('Enable reading before writing.');
             $values = [$name => $enabled];

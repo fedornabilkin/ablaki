@@ -136,6 +136,10 @@ use mdm\admin\components\Helper;
         ];
 
         $menuItems = Helper::filter($menuItems);
+        // These controllers use semantic permissions, independent of mdm route assignments.
+        if (Yii::$app->user->can('p-admin') && Yii::$app->user->can('world-manage')) {
+            array_unshift($menuItems, ['label' => 'Мир', 'icon' => 'globe', 'url' => ['/world-admin/index']]);
+        }
         ?>
 
         <!-- widget -->
@@ -145,6 +149,16 @@ use mdm\admin\components\Helper;
                 'items' => $menuItems,
             ]
         )?>
+
+        <?php if (Yii::$app->user->can('p-admin')): ?>
+            <div class="sidebar-form">
+                <?= \yii\helpers\Html::beginForm(['/maintenance/clear-cache'], 'post') ?>
+                <?= \yii\helpers\Html::submitButton('Сбросить кэш', [
+                    'class' => 'btn btn-default btn-block', 'title' => 'Сбросить кэш прав доступа и меню',
+                ]) ?>
+                <?= \yii\helpers\Html::endForm() ?>
+            </div>
+        <?php endif ?>
 
     </section>
 

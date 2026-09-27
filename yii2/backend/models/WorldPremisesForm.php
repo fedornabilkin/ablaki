@@ -1,0 +1,58 @@
+<?php
+namespace backend\models;
+
+use common\modules\world\service\WorldPremises;
+use yii\base\Model;
+
+class WorldPremisesForm extends Model
+{
+    public $name = '';
+    public $kind = 'workroom';
+    public $area = 2;
+    public $slots = 1;
+    public $price = '';
+    public $expansion_limit = 1;
+    public $expansion_base_price = '';
+    public $reason = '';
+    public $delivery = 'ready';
+    public $duration_seconds = 0;
+    public $materials_json = '[]';
+
+    public function rules(): array
+    {
+        return [
+            ['delivery', 'in', 'range' => ['ready', 'construction']],
+            ['duration_seconds', 'integer', 'min' => 0, 'max' => 604800],
+            ['materials_json', 'string', 'max' => 4000],
+            [['name', 'kind', 'area', 'slots', 'price', 'expansion_limit', 'reason'], 'required'],
+            [['name', 'price', 'reason', 'expansion_base_price'], 'string', 'max' => 500],
+            ['reason', 'string', 'max' => 255],
+            ['name', 'string', 'max' => 120],
+            ['kind', 'in', 'range' => ['canopy', 'workroom', 'house']],
+            [['area', 'slots', 'expansion_limit'], 'integer', 'min' => 1, 'max' => 4],
+            [['name', 'reason'], 'trim', 'skipOnArray' => true],
+        ];
+    }
+
+    public function attributeLabels(): array
+    {
+        return ['name' => 'Название', 'kind' => 'Тип постройки', 'area' => 'Площадь',
+            'slots' => 'Мест оборудования при покупке', 'price' => 'Цена покупки, Cr',
+            'expansion_limit' => 'Предельное число мест оборудования',
+            'expansion_base_price' => 'Базовая цена расширения, Cr', 'reason' => 'Причина публикации',
+            'delivery' => 'Способ получения', 'duration_seconds' => 'Срок строительства, секунд', 'materials_json' => 'Материалы строительства'];
+    }
+
+    public function payload(WorldPremises $service, int $node): array
+    {
+        try { $materials = json_decode($this->materials_json, true, 512, JSON_THROW_ON_ERROR); }
+        catch (\Exception $e) { throw new \common\services\game\GameError('INVALID_CONSTRUCTION', 'Укажите материалы в формате JSON: [{"item_id": 1, "quantity": 10}].', 422); }
+        return ['node_id' => $node, 'admin_reason' => trim($this->reason)] + $service->publication([
+            'delivery' => $this->delivery, 'duration_seconds' => (int)$this->duration_seconds, 'materials' => $materials,
+            'name' => $this->name, 'kind' => $this->kind, 'area' => (int)$this->area,
+            'slots' => (int)$this->slots, 'price' => trim($this->price),
+            'expansion_limit' => (int)$this->expansion_limit,
+            'expansion_base_price' => trim($this->expansion_base_price) === '' ? null : trim($this->expansion_base_price),
+        ]);
+    }
+}

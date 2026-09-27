@@ -21,7 +21,12 @@ class EquipmentExposure
     public function projected(array $unit, ?int $at = null): array
     {
         $exposure = (new Query())->from('craft_equipment_exposure')->where(['instance_id' => $unit['id']])->one($this->db) ?: null;
-        return array_merge($unit, $this->progress($unit, $exposure, $at ?? time()), ['exposure_class' => $exposure['exposure_class'] ?? 'carried']);
+        return $this->projectedWithExposure($unit, $exposure, $at ?? time());
+    }
+    /** For callers that fetched unit and exposure in one consistent SQL snapshot. */
+    public function projectedWithExposure(array $unit, ?array $exposure, int $at): array
+    {
+        return array_merge($unit, $this->progress($unit, $exposure, $at), ['exposure_class' => $exposure['exposure_class'] ?? 'carried']);
     }
     public function projectedBatch(array $units): array
     {
@@ -41,9 +46,15 @@ class EquipmentExposure
         if (!$unit) throw new ConflictHttpException('Экземпляр недоступен.');
         $exposure = (new Query())->from('craft_equipment_exposure')->where(['instance_id' => $id])->one($this->db) ?: null;
         $next = $this->progress($unit, $exposure, $at ?? time());
-        if ($next['durability'] !== (int)$unit['durability']) $this->db->createCommand()->update('craft_equipment_instance', ['durability' => $next['durability'], 'revision' => new Expression('[[revision]]+1')], ['id' => $id])->execute();
+        if ($exposure && $next['settled_at'] > (int)$exposure['settled_at'] && (int)$exposure['daily_wear'] > 0 && (int)$unit['durability'] > 0) {
+            (new EquipmentWearHistory($this->db))->append($unit, $exposure, array_merge($exposure, $next), 'elapsed', (int)$exposure['settled_at'], $next['settled_at'], $next['durability']);
+        }
+        if ($next['durability'] !== (int)$unit['durability']) {
+            if ($this->db->createCommand()->update('craft_equipment_instance', ['durability' => $next['durability'], 'revision' => new Expression('[[revision]]+1')], ['id' => $id, 'revision' => $unit['revision']])->execute() !== 1) throw new \RuntimeException('Equipment settlement changed concurrently.');
+            $unit['revision'] = (int)$unit['revision'] + 1;
+        }
         if ($exposure) $this->db->createCommand()->update('craft_equipment_exposure', ['settled_at' => $next['settled_at'], 'remainder' => $next['remainder']], ['instance_id' => $id])->execute();
-        return array_merge($unit, $next, ['exposure_class' => $exposure['exposure_class'] ?? 'carried']);
+        return array_merge($unit, $next, ['exposure_class' => $exposure['exposure_class'] ?? 'carried', 'daily_wear' => (int)($exposure['daily_wear'] ?? 0), 'policy_version' => (int)($exposure['policy_version'] ?? 1)]);
     }
     public function location(array $ids, array $storage, int $position): void
     {
@@ -58,7 +69,11 @@ class EquipmentExposure
             $unit = $this->settle($id);
             $values = ['exposure_class' => $class, 'daily_wear' => $rates[$class], 'settled_at' => $unit['settled_at'], 'remainder' => $unit['remainder'], 'policy_version' => 1];
             $where = ['instance_id' => $id];
-            if ((new Query())->from('craft_equipment_exposure')->where($where)->exists($this->db)) $this->db->createCommand()->update('craft_equipment_exposure', $values, $where)->execute();
+            $previous = (new Query())->from('craft_equipment_exposure')->where($where)->one($this->db) ?: null;
+            if (!$previous || $previous['exposure_class'] !== $class || (int)$previous['daily_wear'] !== $rates[$class] || (int)$previous['policy_version'] !== 1) {
+                (new EquipmentWearHistory($this->db))->append($unit, $previous, $values, 'location', $unit['settled_at'], $unit['settled_at'], (int)$unit['durability']);
+            }
+            if ($previous) $this->db->createCommand()->update('craft_equipment_exposure', $values, $where)->execute();
             else $this->db->createCommand()->insert('craft_equipment_exposure', $where + $values)->execute();
         }
     }
@@ -73,12 +88,16 @@ class EquipmentExposure
         $unit = $this->settle($id, $at);
         if ($damage < 1 || (int)$unit['max_durability'] - (int)$unit['durability'] !== $damage) throw new ConflictHttpException('Повреждение изменилось. Повторите расчёт ремонта.');
         if ($this->db->createCommand()->update('craft_equipment_instance', ['durability' => (int)$unit['max_durability'], 'revision' => new Expression('[[revision]]+1')], ['id' => $id, 'status' => 'active'])->execute() !== 1) throw new \RuntimeException('Equipment repair failed.');
-        return array_merge($unit, ['durability' => (int)$unit['max_durability']]);
+        (new EquipmentWearHistory($this->db))->append($unit, $unit, $unit, 'repair', $unit['settled_at'], $unit['settled_at'], (int)$unit['max_durability']);
+        return array_merge($unit, ['durability' => (int)$unit['max_durability'], 'revision' => (int)$unit['revision'] + 1]);
     }
     public function use(int $id, int $base, int $batches, bool $station): void
     {
         $unit = $this->settle($id); $cost = $this->cost($unit, $base, $batches, $station);
         if ((int)$unit['durability'] < max(1, $cost)) throw new ConflictHttpException('Прочности оборудования недостаточно для работы.');
-        if ($cost) $this->db->createCommand()->update('craft_equipment_instance', ['durability' => (int)$unit['durability'] - $cost, 'revision' => new Expression('[[revision]]+1')], ['id' => $id])->execute();
+        if ($cost) {
+            if ($this->db->createCommand()->update('craft_equipment_instance', ['durability' => (int)$unit['durability'] - $cost, 'revision' => new Expression('[[revision]]+1')], ['id' => $id, 'revision' => $unit['revision']])->execute() !== 1) throw new \RuntimeException('Equipment use changed concurrently.');
+            (new EquipmentWearHistory($this->db))->append($unit, $unit, $unit, 'work', $unit['settled_at'], $unit['settled_at'], (int)$unit['durability'] - $cost);
+        }
     }
 }

@@ -1,5 +1,7 @@
 # Контракты мира и интеграции крафта
 
+Прочность оборудования: [OpenAPI](api/world-equipment-wear.openapi.json), [границы реализации](world-equipment-wear-implementation.md). Owner-only GET экземпляра возвращает текущую проекцию и историю по 20 записей с поиском/фильтром; не погашает износ. Фоновые задания используют существующий EquipmentExposure. Schema marker 18; блок пока не выложен.
+
 Жильё: [OpenAPI](api/world-housing.openapi.json), [границы реализации](world-housing-implementation.md). Дом покупается через premises, включает одну койку отдельно от оборудования. Назначение/отмена в комнате связаны с общей занятостью персонажа в шалаше и историческим расчётом ночей; schema marker 17, код без приёмки/выкладки.
 
 Места оборудования: [OpenAPI](api/world-equipment-expansion.openapi.json), [границы реализации](world-equipment-expansion-implementation.md). Расширяемые навесы/мастерские задают включённые места, предел и цену в предложении; оплата последующих мест идёт из бюджета комнаты с необязательным явным пополнением.
@@ -147,3 +149,6 @@ Preview collect содержит receipt snapshot/digest, exact amount, as_of, l
 Начальный редактор находится в существующем Yii backend: `/world/...`, отдельные permissions поверх RBAC, POST/CSRF для изменений. Preview выдаёт diff + digest + base revision; publish отвергает устаревший просмотр. Публичному API не нужен открытый generic PATCH произвольных колонок. Административная смена владельца/дерева имеет отдельный use case и аудит.
 
 Первый клиент использует ограниченный polling видимой страницы и обновление после команд; polling приостанавливается при уходе/смене аккаунта и не запускает экономику. Контракты `changed/revision/notification_id` позволяют позже добавить SSE/WebSocket без изменения доменных команд.
+# Дополнение: строительство по времени
+
+Контракт marker 19: [world-construction.openapi.json](api/world-construction.openapi.json), [описание реализации](world-construction-implementation.md). Premises поддерживает ready/construction; новый owner-only список и pause/resume/cancel используют общие quote/command. Материалы резервируются из рюкзака, отмена требует места для полного возврата. Код не проходил игровую приёмку.
