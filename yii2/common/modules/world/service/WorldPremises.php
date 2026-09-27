@@ -54,11 +54,12 @@ class WorldPremises
         $query = (new Query())->select(['o.*', 'r.config_json'])->from(['o' => 'world_premises_offer'])->innerJoin(['r' => 'world_template_revision'], '[[r.id]]=[[o.template_revision_id]]')
             ->where(['o.settlement_id' => $c['settlement']['id'], 'o.status' => 'published', 'r.status' => 'published']);
         if ($search !== '') $query->andWhere(['like', 'o.name', $search]);
-        $total = (int)(clone $query)->count('*', $this->db); $items = [];
+        $total = (int)(clone $query)->count('*', $this->db); $items = []; $requirements = new RequirementEvaluator($this->db);
         foreach ($query->orderBy(['o.id' => SORT_DESC])->offset(($page - 1) * 20)->limit(20)->all($this->db) as $row) {
             $config = json_decode($row['config_json'], true, 512, JSON_THROW_ON_ERROR);
             $items[] = ['id' => (int)$row['id'], 'name' => $row['name'], 'template_revision_id' => (int)$row['template_revision_id'], 'kind' => $config['kind'],
-                'price' => $config['price'], 'area' => $config['area'], 'slots' => $config['slots'], 'lodging_places' => $config['lodging_places'] ?? 0, 'exposure_class' => $config['exposure_class']] + WorldEquipmentExpansion::terms($config) + ConstructionSpec::presentation($config);
+                'price' => $config['price'], 'area' => $config['area'], 'slots' => $config['slots'], 'lodging_places' => $config['lodging_places'] ?? 0, 'exposure_class' => $config['exposure_class'],
+                'requirements' => $config['requirements'] ?? ['all' => []], 'requirements_status' => $requirements->evaluate($user, $config['requirements'] ?? [])] + WorldEquipmentExpansion::terms($config) + ConstructionSpec::presentation($config);
         }
         return ['node_id' => $id, 'settlement_id' => $c['settlement']['id'], 'settlement_name' => $c['settlement']['name'], 'items' => $items,
             '_meta' => ['totalCount' => $total, 'pageCount' => (int)ceil($total / 20), 'currentPage' => $page, 'perPage' => 20],
@@ -75,7 +76,8 @@ class WorldPremises
         try { $price = Money::parse($body['price']); }
         catch (\Exception $e) { throw new GameError('INVALID_AMOUNT', 'Некорректная цена.', 422); }
         if ($price->isNegative() || $price->isZero()) throw new GameError('INVALID_AMOUNT', 'Цена должна быть положительной.', 422);
-        return ['name' => trim($body['name']), 'kind' => $body['kind'], 'area' => $body['area'], 'slots' => $body['slots'], 'price' => $price->decimal(), 'lodging_places' => $body['kind'] === 'house' ? 1 : 0] + WorldEquipmentExpansion::terms($body) + (new ConstructionSpec($this->db))->publication($body);
+        return ['name' => trim($body['name']), 'kind' => $body['kind'], 'area' => $body['area'], 'slots' => $body['slots'], 'price' => $price->decimal(), 'lodging_places' => $body['kind'] === 'house' ? 1 : 0,
+            'requirements' => (new RequirementEvaluator($this->db))->validate($body['requirements'] ?? [])] + WorldEquipmentExpansion::terms($body) + (new ConstructionSpec($this->db))->publication($body);
     }
     private function offer(int $settlement, int $id): array
     {
@@ -103,6 +105,7 @@ class WorldPremises
             $this->flags->requireFlag('storage_v2'); WalletSchema::requireReady($this->db); $site = $c['site'];
             if (!$site) throw new GameError('PREMISES_SITE_REQUIRED', 'Покупка выполняется из собственной площадки.', 403);
             $offer = $this->offer($place['id'], $input['offer_id']); $config = json_decode($offer['config_json'], true, 512, JSON_THROW_ON_ERROR);
+            (new RequirementEvaluator($this->db))->requireSatisfied($user, $config['requirements'] ?? []);
             if ($config['kind'] === 'house' && !(new Query())->from('world_membership')->where(['user_id' => $user, 'starter_site_id' => $site['id'], 'world_id' => $site['root_id']])->exists($this->db)) throw new GameError('HOUSING_SITE_REQUIRED', 'Дом с ночлегом можно купить на своей стартовой стоянке.');
             $area = $this->area($site);
             if ($area['available'] < $config['area']) throw new GameError('PREMISES_AREA_REQUIRED', 'На площадке недостаточно свободной площади.');

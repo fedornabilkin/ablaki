@@ -9,9 +9,6 @@ use yii\web\ForbiddenHttpException;
 
 class MaintenanceController extends Controller
 {
-    // Route ACL delegates to the explicit administrator permission below.
-    public function allowAction(): array { return ['clear-cache']; }
-
     public function behaviors(): array
     {
         return ['verbs' => ['class' => VerbFilter::class, 'actions' => ['clear-cache' => ['POST']]]];
@@ -19,8 +16,8 @@ class MaintenanceController extends Controller
 
     public function beforeAction($action)
     {
-        if (Yii::$app->user->isGuest || !Yii::$app->user->can('p-admin')) {
-            throw new ForbiddenHttpException('Требуются права администратора.');
+        if (Yii::$app->user->isGuest) {
+            throw new ForbiddenHttpException('Войдите в административную панель.');
         }
         return parent::beforeAction($action);
     }

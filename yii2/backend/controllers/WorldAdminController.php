@@ -20,8 +20,6 @@ use yii\web\HttpException;
 /** Server-rendered editor over the same domain commands as the game API. */
 class WorldAdminController extends Controller
 {
-    public function allowAction(): array { return ['index', 'view', 'premises', 'audit', 'preview', 'execute']; }
-
     public function behaviors(): array
     {
         return ['verbs' => ['class' => VerbFilter::class, 'actions' => [
@@ -31,8 +29,8 @@ class WorldAdminController extends Controller
 
     public function beforeAction($action)
     {
-        if (Yii::$app->user->isGuest || !Yii::$app->user->can('p-admin') || !Yii::$app->user->can('world-manage')) {
-            throw new ForbiddenHttpException('Требуются права p-admin и world-manage.');
+        if (Yii::$app->user->isGuest) {
+            throw new ForbiddenHttpException('Войдите в административную панель.');
         }
         return parent::beforeAction($action);
     }
@@ -116,6 +114,7 @@ class WorldAdminController extends Controller
     {
         // Domain context decides which settlement this administrator may actually manage.
         $context = $this->premises()->listing((int)Yii::$app->user->id, $id, 1, '');
+        $context['can_publish'] = $context['can_publish'] && \mdm\admin\components\Helper::checkRoute('/world-admin/preview') && \mdm\admin\components\Helper::checkRoute('/world-admin/execute');
         if ($id !== $context['settlement_id']) throw new HttpException(422, 'Выберите поселение.');
         $q = $this->filter('q'); $status = $this->filter('status', ['published', 'withdrawn']);
         $query = (new Query())->select(['o.*', 'r.config_json', 'r.version', 'r.author_user_id'])
@@ -150,6 +149,7 @@ class WorldAdminController extends Controller
                 $input = ['node_id' => $node, 'offer_id' => $this->id(Yii::$app->request->post('offer_id')), 'admin_reason' => trim($reason)];
             }
             $quote = $service->preview((int)Yii::$app->user->id, $input, $action);
+            $quote['expected_revisions'] = (array)$quote['expected_revisions'];
             $pending = Yii::$app->session->get('world.admin.confirmations', []);
             // Keep completed entries too: a repeated POST uses the same idempotency key.
             $record = ['user_id' => (int)Yii::$app->user->id, 'action' => $action, 'input' => $input,
