@@ -8,6 +8,17 @@ use Yii;
 /** Deliberate installation only; not part of the Docker entrypoint or deployment workflow. */
 class WorldSetupController extends \yii\console\Controller
 {
+    public function actionTestReady(): int
+    {
+        \common\modules\world\service\TestWorldSetup::requireContext();
+        $setup = new \common\modules\world\service\TestWorldSetup(Yii::$app->db);
+        // A failed rollout must be resumed before seed can touch the frozen catalogue.
+        if (\common\modules\craft\service\StorageMaintenance::frozen(Yii::$app->db) || \common\modules\economy\service\WalletMaintenance::frozen(Yii::$app->db)) $setup->rollouts();
+        $exit = $this->actionInstall();
+        if ($exit !== 0) return $exit;
+        $flags = new \common\modules\world\service\WorldFlags(Yii::$app->db, Yii::$app->getModule('world'));
+        return $this->rolloutOutput($setup->activate($flags));
+    }
     private function requireInstall(): void
     {
         if (getenv('WORLD_INSTALL') !== 'confirmed-world-install') throw new \RuntimeException('Set the explicit WORLD_INSTALL context for this database first.');

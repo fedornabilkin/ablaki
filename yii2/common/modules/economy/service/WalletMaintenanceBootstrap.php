@@ -16,7 +16,7 @@ class WalletMaintenanceBootstrap implements BootstrapInterface
             if ($app instanceof \yii\console\Application && in_array($route, [
                 'world-setup/wallet-status', 'world-setup/wallet-freeze', 'world-setup/wallet-snapshot',
                 'world-setup/wallet-convert', 'world-setup/wallet-verify', 'world-setup/wallet-cancel', 'world-audit/credits',
-                'world-setup/wallet-activate',
+                'world-setup/wallet-activate', 'world-setup/test-ready',
             ], true)) return;
             if ($app instanceof \yii\web\Application) throw new \yii\web\ServiceUnavailableHttpException('Кошелёк временно недоступен: перенос кредитов.');
             throw new \RuntimeException('Wallet maintenance: only wallet rollout/status/audit commands are available.');

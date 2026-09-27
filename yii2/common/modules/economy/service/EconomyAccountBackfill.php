@@ -86,7 +86,7 @@ class EconomyAccountBackfill
                 $history = $rule ? $this->one('economy_parent_history', ['id' => $rule['history_id'], 'subject_id' => $id, 'revision' => $rule['revision'], 'effective_to' => null]) : null;
                 if (!$node || (int)$node['root_id'] !== $world || !$history) throw new \RuntimeException('Missing or mismatched financial parent: ' . $id);
                 if ($history['parent_subject_id'] === null) {
-                    if ($node['node_type'] !== 'WORLD' || (int)$node['id'] !== $world || $history['status'] !== 'root') throw new \RuntimeException('Financial chain must end at its world root.');
+                    if ($node['node_type'] !== 'WORLD' || (int)$node['id'] !== $world || !in_array($history['status'], ['root', 'published'], true) || (int)$history['rate_bps'] !== 0) throw new \RuntimeException('Financial chain must end at its world root with zero tax.');
                     break;
                 }
                 if ($node['node_type'] === 'WORLD' || $history['status'] === 'root') throw new \RuntimeException('World root cannot have a financial parent.');
