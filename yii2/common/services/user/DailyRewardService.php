@@ -50,8 +50,9 @@ class DailyRewardService
         }
 
         return $this->db->transaction(function () use ($userId, $amount, $counter) {
-            \common\modules\economy\service\WalletMaintenance::writable($this->db);
             $person = $this->lockPerson($userId);
+            // Acquire the SQLite write lock before any schema/maintenance reads.
+            \common\modules\economy\service\WalletMaintenance::writable($this->db);
             // Calculate the day after obtaining the lock, including requests spanning midnight.
             $now = time();
             list($start, $end) = PresenceService::dayBounds($now);
