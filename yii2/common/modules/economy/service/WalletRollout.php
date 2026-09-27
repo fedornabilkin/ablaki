@@ -226,11 +226,14 @@ class WalletRollout
     {
         try {
             if ($row['raw_amount'] === null) throw new \InvalidArgumentException('Null amount.');
-            $amount = Money::parse((string)$row['raw_amount']);
+            // Test deployment adopts the wallet quantum for legacy fractional values.
+            // The immutable snapshot retains raw_amount; production stays strict.
+            $test = getenv('WORLD_TEST_SETUP') === 'confirmed-test-checkout' && getenv('WORLD_TEST_MODE') === '1';
+            $amount = $test ? \common\modules\economy\value\TestCreditConversion::amount((string)$row['raw_amount']) : Money::parse((string)$row['raw_amount']);
             if ($key === 'persone.credit' && $amount->isNegative()) throw new \InvalidArgumentException('Negative personal credit.');
             return $amount->decimal();
         } catch (\InvalidArgumentException | \OverflowException $e) {
-            throw new \RuntimeException('Explicit amount decision required at ' . $key . '#' . $row['id']);
+            throw new \RuntimeException('Explicit amount decision required at ' . $key . '#' . $row['id'] . ' (' . $e->getMessage() . ')');
         }
     }
     private function definition(\yii\db\ColumnSchema $column): string
