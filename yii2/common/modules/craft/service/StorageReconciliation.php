@@ -23,7 +23,7 @@ class StorageReconciliation
             if ($quantity < 0 || ($quantity > 0 && !$row['item_id'])) { $issue('INVALID_QUANTITY', $id); continue; }
             $storage = (new Query())->from('craft_storage')->where(['id' => $row['storage_id']])->one($this->db);
             if (!$storage || ($quantity > 0 && $storage['status'] !== 'active') || (int)$storage['owner_user_id'] !== (int)$row['user_id']) { $issue('INVALID_STORAGE_OWNER', $id); continue; }
-            if (!in_array($storage['kind'], ['backpack', 'chest', 'placement', 'stockpile', 'recovery'], true)) $issue('INVALID_STORAGE_KIND', $id);
+            if (!in_array($storage['kind'], ['backpack', 'chest', 'placement', 'stockpile', 'recovery', 'construction'], true)) $issue('INVALID_STORAGE_KIND', $id);
             if (!$quantity) { if ($row['slot'] !== null) $issue('EMPTY_POSITION', $id); continue; }
             if ((int)$row['slot'] < 1) $issue('INVALID_POSITION', $id);
             $expectedContainer = $storage['kind'] === 'chest' ? (int)$storage['container_inventory_id'] : null;

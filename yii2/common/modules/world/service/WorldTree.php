@@ -65,6 +65,7 @@ class WorldTree
     public function previewMove(int $id, int $parentId): array
     {
         $node = $this->get($id); $parent = $this->get($parentId);
+        if ((new Query())->from(['p' => 'world_construction'])->innerJoin(['c' => 'world_node_closure'], '[[c.descendant_id]]=[[p.node_id]]')->where(['c.ancestor_id' => $id, 'p.status' => ['constructing', 'paused']])->exists($this->db)) throw new GameError('CONSTRUCTION_FIXED', 'Сначала завершите или отмените строительство на этой территории.');
         if ($this->db->schema->getTableSchema('world_housing_place') && (new Query())->from(['p' => 'world_housing_place'])->innerJoin(['c' => 'world_node_closure'], '[[c.descendant_id]]=[[p.room_id]]')->where(['c.ancestor_id' => $id])->exists($this->db)) throw new GameError('HOUSING_MOVE_REQUIRED', 'Жильё закреплено за стоянкой. Для переноса территории нужен отдельный перенос жилья и истории ночлега.');
         if ($this->db->schema->getTableSchema('world_garden_purchase') && (new Query())->from('world_garden_purchase')->where(['node_id' => $id])->exists($this->db)) throw new GameError('FIXED_GARDEN', 'Огород закреплён за поселением. Перенос с сохранением прав и обязательств требует отдельной операции.');
         if ($this->isShelter($id)) throw new GameError('SHELTER_MOVE_REQUIRED', 'Для переноса сначала сложите шалаш на его стоянке.');

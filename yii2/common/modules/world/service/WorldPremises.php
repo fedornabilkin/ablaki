@@ -40,8 +40,11 @@ class WorldPremises
         // Unaccounted buildings cannot be silently assigned zero footprint.
         $unknown = (new Query())->from(['n' => 'world_node'])->leftJoin(['p' => 'world_premises_purchase'], '[[p.building_id]]=[[n.id]]')
             ->leftJoin(['s' => 'world_shelter_deployment'], '[[s.node_id]]=[[n.id]]')
-            ->where(['n.parent_id' => $site['id'], 'n.node_type' => 'BUILDING', 'p.id' => null, 's.id' => null])->andWhere(['<>', 'n.status', 'archived'])->exists($this->db);
+            ->leftJoin(['c' => 'world_construction'], '[[c.node_id]]=[[n.id]]')
+            ->leftJoin(['cs' => 'world_construction_site'], '[[cs.project_id]]=[[c.id]]')
+            ->where(['n.parent_id' => $site['id'], 'n.node_type' => 'BUILDING', 'p.id' => null, 's.id' => null, 'cs.project_id' => null])->andWhere(['<>', 'n.status', 'archived'])->exists($this->db);
         $used = (int)(new Query())->from('world_premises_purchase')->where(['plot_id' => $site['id']])->sum('area', $this->db);
+        $used += (int)(new Query())->from(['s' => 'world_construction_site'])->innerJoin(['c' => 'world_construction'], '[[c.id]]=[[s.project_id]]')->where(['s.plot_id' => $site['id'], 'c.status' => ['constructing', 'paused']])->sum('s.area', $this->db);
         return ['total' => (int)$site['details']['area'], 'used' => $used, 'available' => $unknown ? 0 : max(0, (int)$site['details']['area'] - $used), 'unaccounted_building' => $unknown];
     }
     public function listing(int $user, int $id, int $page, string $search): array
@@ -55,7 +58,7 @@ class WorldPremises
         foreach ($query->orderBy(['o.id' => SORT_DESC])->offset(($page - 1) * 20)->limit(20)->all($this->db) as $row) {
             $config = json_decode($row['config_json'], true, 512, JSON_THROW_ON_ERROR);
             $items[] = ['id' => (int)$row['id'], 'name' => $row['name'], 'template_revision_id' => (int)$row['template_revision_id'], 'kind' => $config['kind'],
-                'price' => $config['price'], 'area' => $config['area'], 'slots' => $config['slots'], 'lodging_places' => $config['lodging_places'] ?? 0, 'exposure_class' => $config['exposure_class']] + WorldEquipmentExpansion::terms($config);
+                'price' => $config['price'], 'area' => $config['area'], 'slots' => $config['slots'], 'lodging_places' => $config['lodging_places'] ?? 0, 'exposure_class' => $config['exposure_class']] + WorldEquipmentExpansion::terms($config) + ConstructionSpec::presentation($config);
         }
         return ['node_id' => $id, 'settlement_id' => $c['settlement']['id'], 'settlement_name' => $c['settlement']['name'], 'items' => $items,
             '_meta' => ['totalCount' => $total, 'pageCount' => (int)ceil($total / 20), 'currentPage' => $page, 'perPage' => 20],
@@ -72,7 +75,7 @@ class WorldPremises
         try { $price = Money::parse($body['price']); }
         catch (\Exception $e) { throw new GameError('INVALID_AMOUNT', 'Некорректная цена.', 422); }
         if ($price->isNegative() || $price->isZero()) throw new GameError('INVALID_AMOUNT', 'Цена должна быть положительной.', 422);
-        return ['name' => trim($body['name']), 'kind' => $body['kind'], 'area' => $body['area'], 'slots' => $body['slots'], 'price' => $price->decimal(), 'lodging_places' => $body['kind'] === 'house' ? 1 : 0] + WorldEquipmentExpansion::terms($body);
+        return ['name' => trim($body['name']), 'kind' => $body['kind'], 'area' => $body['area'], 'slots' => $body['slots'], 'price' => $price->decimal(), 'lodging_places' => $body['kind'] === 'house' ? 1 : 0] + WorldEquipmentExpansion::terms($body) + (new ConstructionSpec($this->db))->publication($body);
     }
     private function offer(int $settlement, int $id): array
     {
@@ -83,16 +86,19 @@ class WorldPremises
     }
     private function prepare(int $user, array $input, string $action): array
     {
+        if (array_key_exists('admin_reason', $input) && (!is_string($input['admin_reason']) || trim($input['admin_reason']) === '' || mb_strlen($input['admin_reason'], 'UTF-8') > 255)) throw new GameError('INVALID_REASON', 'Укажите причину изменения (до 255 символов).', 422);
         $c = $this->context($user, $input['node_id']); $place = $c['settlement'];
         $revisions = ['node:' . $place['id'] => $place['revision']]; $terms = $input; $result = $c;
         if ($action === 'publish') {
             if ($c['site'] || !$c['manager']) throw new GameError('PREMISES_MANAGEMENT_FORBIDDEN', 'Предложения публикует владелец поселения или администратор системного поселения.', 403);
             $config = $this->publication($input) + ['exposure_class' => $input['kind'] === 'canopy' ? 'covered' : 'indoor', 'delivery' => 'ready'];
+            $config['materials'] = (new ConstructionSpec($this->db))->resolvedMaterials($config['materials']);
             $terms['config'] = $config;
         } elseif ($action === 'withdraw') {
             if ($c['site'] || !$c['manager']) throw new GameError('PREMISES_MANAGEMENT_FORBIDDEN', 'Нет прав на снятие предложения.', 403);
             $offer = $this->offer($place['id'], $input['offer_id']);
             $terms += ['name' => $offer['name'], 'template_revision_id' => (int)$offer['template_revision_id']];
+            $result['offer'] = $offer;
         } elseif ($action === 'buy') {
             $this->flags->requireFlag('storage_v2'); WalletSchema::requireReady($this->db); $site = $c['site'];
             if (!$site) throw new GameError('PREMISES_SITE_REQUIRED', 'Покупка выполняется из собственной площадки.', 403);
@@ -114,6 +120,11 @@ class WorldPremises
                 'recipient_node_id' => $place['id'], 'recipient_name' => $place['name'], 'recipient_account_id' => (int)$recipient['treasury']['id'],
                 'recipient_policy_id' => $policy['history_id'], 'available_area' => $area['available'], 'personal_charge' => '0.0000'];
             $result += ['budget' => $budget, 'offer' => $offer];
+            if (($config['delivery'] ?? 'ready') === 'construction') {
+                $materials = (new ConstructionSpec($this->db))->materials($user, $config);
+                $revisions += $materials['revisions']; $terms['material_plan'] = $materials['plan'];
+                $terms['cancellation'] = 'full_refund_before_completion';
+            }
         } else throw new \InvalidArgumentException('Unknown premises action.');
         return $result + compact('terms', 'revisions');
     }
@@ -136,25 +147,26 @@ class WorldPremises
                 $this->db->createCommand()->insert('world_template', ['code' => 'premises-' . $operation, 'kind' => 'BUILDING'])->execute(); $template = (int)$this->db->getLastInsertID();
                 $this->db->createCommand()->insert('world_template_revision', ['template_id' => $template, 'version' => 1, 'status' => 'published', 'config_json' => CanonicalJson::encode($terms['config']), 'author_user_id' => $user, 'published_at' => time()])->execute();
                 $this->db->createCommand()->insert('world_premises_offer', ['settlement_id' => $payload['node_id'], 'template_revision_id' => (int)$this->db->getLastInsertID(), 'name' => $payload['name'], 'operation_id' => $operation, 'created_at' => time()])->execute();
+                $published = $this->offer($payload['node_id'], (int)$this->db->getLastInsertID());
+                (new WorldTree($this->db))->audit($user, 'world.premises.publish', $payload['admin_reason'] ?? 'Публикация предложения готовой постройки', [],
+                    ['id' => $p['settlement']['id'], 'offer' => $published], $operation);
             } elseif ($action === 'withdraw') {
                 if ($this->db->createCommand()->update('world_premises_offer', ['status' => 'withdrawn'], ['id' => $payload['offer_id'], 'status' => 'published'])->execute() !== 1) throw new \RuntimeException('Offer withdrawal failed.');
+                $before = ['id' => $p['settlement']['id'], 'offer' => $p['offer']]; $after = $before;
+                $after['offer']['status'] = 'withdrawn';
+                (new WorldTree($this->db))->audit($user, 'world.premises.withdraw', $payload['admin_reason'] ?? 'Снятие предложения готовой постройки', $before, $after, $operation);
             } else {
                 $config = $terms['config']; $price = Money::parse($config['price']); $spend = new BudgetSpending($this->db);
                 $hold = $spend->reserve($terms['source_budget_id'], $price, 'Покупка помещения: ' . $config['name'], $operation);
-                $transfer = $spend->pay($hold, $terms['recipient_node_id'], $price, $operation, 'premises_purchase');
-                $tree = new WorldTree($this->db); $code = 'premises-' . $operation;
-                $building = $tree->create(['code' => $code, 'slug' => $code, 'node_type' => 'BUILDING', 'name' => $config['name'], 'parent_id' => $payload['node_id'], 'owner_user_id' => $user, 'visibility' => 'private'], ['operational_status' => 'active', 'template_revision_id' => $terms['template_revision_id']]);
-                $room = $tree->create(['code' => $code . '-room', 'slug' => $config['kind'] === 'house' ? 'living-room' : 'workroom', 'node_type' => 'ROOM', 'name' => $config['name'], 'parent_id' => (int)$building['id'], 'owner_user_id' => $user, 'visibility' => 'private'], ['area' => $config['area'], 'exposure_class' => $config['exposure_class']]);
-                $roomId = (int)$room['id']; $buildingId = (int)$building['id'];
-                $this->db->createCommand()->insert('craft_storage', ['identity_key' => 'placement:node:' . $roomId, 'kind' => 'placement', 'owner_user_id' => $user, 'node_id' => $roomId, 'capacity' => $config['slots']])->execute(); $storage = (int)$this->db->getLastInsertID();
-                for ($position = 1; $position <= $config['slots']; $position++) $this->db->createCommand()->insert('world_slot', ['storage_id' => $storage, 'code' => 'equipment-' . $position, 'position' => $position, 'slot_type' => 'equipment', 'size' => 1, 'exposure_class' => $config['exposure_class'], 'compatibility_json' => '{}'])->execute();
-                (new EconomyHierarchy($this->db))->provision($roomId, $operation);
-                $this->db->createCommand()->insert('world_premises_purchase', ['offer_id' => $payload['offer_id'], 'plot_id' => $payload['node_id'], 'building_id' => $buildingId, 'room_id' => $roomId, 'user_id' => $user, 'area' => $config['area'], 'transfer_id' => $transfer, 'operation_id' => $operation, 'terms_json' => CanonicalJson::encode($terms), 'created_at' => time()])->execute();
-                (new WorldHousing($this->db, $this->flags))->initialize($roomId, $payload['node_id'], (int)$this->db->getLastInsertID(), $config, $operation);
-                (new WorldEquipmentExpansion($this->db, $this->flags))->initialize($roomId, $storage, $p['settlement']['id'], $terms['template_revision_id'], $config, $operation);
-                $tree->audit($user, 'world.premises.buy', 'Покупка готового помещения из бюджета площадки', [], $building, $operation);
-                $changed = array_merge($changed, [$buildingId, $roomId]); $storages[] = $storage;
-                $created = ['building_id' => $buildingId, 'room_id' => $roomId];
+                if (($config['delivery'] ?? 'ready') === 'construction') {
+                    $delivery = (new WorldConstruction($this->db, $this->flags))->start($user, $terms, $hold, $operation);
+                } else {
+                    $transfer = $spend->pay($hold, $terms['recipient_node_id'], $price, $operation, 'premises_purchase');
+                    $delivery = (new PremisesDelivery($this->db, $this->flags))->deliver($user, $terms, $transfer, $operation);
+                    (new WorldTree($this->db))->audit($user, 'world.premises.buy', 'Покупка готового помещения из бюджета площадки', [], (new WorldTree($this->db))->get($delivery['building_id']), $operation);
+                }
+                $changed = $delivery['changed_node_ids']; $storages = $delivery['changed_storage_ids'];
+                $created = array_diff_key($delivery, array_flip(['changed_node_ids', 'changed_storage_ids']));
             }
             $this->db->createCommand()->update('world_node', ['revision' => new Expression('[[revision]]+1'), 'updated_at' => time()], ['id' => $p['settlement']['id']])->execute();
             $result = ['changed_node_ids' => array_values(array_unique($changed)), 'changed_storage_ids' => $storages] + $created;

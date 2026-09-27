@@ -152,6 +152,83 @@ class CanonicalInventory
         if ($delta) throw new ConflictHttpException('Активные слоты рюкзака заполнены.');
         $this->touch([(int)$storage['id']]);
     }
+    /** Isolated construction reserve. Public storage routes cannot read or spend this kind. */
+    public function reserveConstruction(int $user, array $plan, string $operation): int
+    {
+        $this->transaction();
+        $this->db->createCommand()->insert('craft_storage', ['identity_key' => 'construction:' . $operation, 'kind' => 'construction', 'owner_user_id' => $user, 'capacity' => max(1, count($plan))])->execute();
+        $id = (int)$this->db->getLastInsertID();
+        $storage = (new Query())->from('craft_storage')->where(['id' => $id])->one($this->db); $position = 0;
+        foreach ($plan as $take) {
+            $selection = $this->inspectOrderDelivery($user, $take['inventory_id'], $take['item_id'], $take['quantity']);
+            $row = $selection['row']; $left = (int)$row['item_quantity'] - $take['quantity'];
+            $this->write((int)$row['id'], ['item_quantity' => $left, 'item_id' => $left ? $row['item_id'] : null, 'slot' => $left ? $row['slot'] : null]);
+            $this->insert($user, $storage, ['id' => $take['item_id']], $take['quantity'], ++$position);
+            $this->record($user, $row, $take['quantity'], (int)$row['storage_id'], $id, 'construction.reserve');
+            $this->touch([(int)$row['storage_id']]);
+        }
+        $this->touch([$id]);
+        return $id;
+    }
+    public function resolveConstruction(int $user, int $id, bool $refund): array
+    {
+        $this->transaction();
+        $storage = (new Query())->from('craft_storage')->where(['id' => $id, 'owner_user_id' => $user, 'kind' => 'construction', 'status' => 'active'])->one($this->db);
+        if (!$storage) throw new \LogicException('Construction reserve unavailable.');
+        $changed = [$id];
+        if ($refund) {
+            $return = $this->constructionReturnPlan($user, $id); $target = $return['target'];
+            foreach ($return['grants'] as $grant) {
+                $item = $return['items'][$grant['item_id']];
+                if ($grant['inventory_id'] === null) $row = $this->insert($user, $target, $item, $grant['quantity'], $grant['position']);
+                else {
+                    $row = (new Query())->from('craft_inventory')->where(['id' => $grant['inventory_id'], 'storage_id' => $target['id'], 'user_id' => $user, 'item_id' => $item['id']])->one($this->db);
+                    if (!$row) throw new \LogicException('Construction refund destination changed.');
+                    $this->write((int)$row['id'], ['item_quantity' => (int)$row['item_quantity'] + $grant['quantity']]);
+                }
+                $this->record($user, $row, $grant['quantity'], $id, (int)$target['id'], 'construction.refund');
+            }
+            $changed[] = (int)$target['id']; $this->touch([(int)$target['id']]);
+        }
+        foreach ($this->rows($id) as $row) {
+            if ($this->equipment->units((int)$row['id'])) throw new \LogicException('Equipment in material reserve.');
+            $this->write((int)$row['id'], ['item_quantity' => 0, 'item_id' => null, 'slot' => null]);
+            if (!$refund) $this->record($user, $row, (int)$row['item_quantity'], $id, null, 'construction.consume');
+        }
+        $this->db->createCommand()->update('craft_storage', ['status' => 'retired'], ['id' => $id])->execute();
+        $this->touch([$id]);
+        return array_values(array_unique($changed));
+    }
+    /** Simulate the whole refund before moving anything. Cancellation must not create free overflow storage. */
+    public function constructionReturnPlan(int $user, int $source): array
+    {
+        $reserve = (new Query())->from('craft_storage')->where(['id' => $source, 'kind' => 'construction', 'owner_user_id' => $user, 'status' => 'active'])->one($this->db);
+        $backpack = $this->backpack($user);
+        if (!$reserve || !$backpack) throw new ConflictHttpException('Хранилище материалов недоступно.');
+        $target = (new StorageAccessPolicy($this->db))->storage($user, (int)$backpack['id'], true);
+        $required = []; $items = []; $grants = []; $positions = [];
+        foreach ($this->rows($source) as $row) $required[(int)$row['item_id']] = ($required[(int)$row['item_id']] ?? 0) + (int)$row['item_quantity'];
+        foreach ($this->rows((int)$target['id']) as $row) $positions[(int)$row['slot']] = $row;
+        ksort($required);
+        foreach ($required as $id => $quantity) {
+            $item = (new Query())->from('craft_item')->where(['id' => $id])->one($this->db);
+            if (!$item || $this->equipment->tracked($item) || ($item['storage_kind'] ?? 'none') !== 'none' || (int)$item['stack_size'] < 1 || (int)$item['stack_size'] > 10000) throw new ConflictHttpException('Каталог материала изменился. Требуется восстановить его условия перед отменой стройки.');
+            $items[$id] = $item;
+            // Fill existing stacks before occupying a free slot.
+            for ($pass = 0; $pass < 2 && $quantity; $pass++) for ($slot = 1; $slot <= (int)$target['capacity'] && $quantity; $slot++) {
+                $row = $positions[$slot] ?? null;
+                if (($pass === 0 && (!$row || (int)$row['item_id'] !== $id)) || ($pass === 1 && $row)) continue;
+                $take = min($quantity, max(0, (int)$item['stack_size'] - ($row ? (int)$row['item_quantity'] : 0)));
+                if (!$take) continue;
+                $grants[] = ['inventory_id' => $row ? (int)$row['id'] : null, 'position' => $slot, 'item_id' => $id, 'quantity' => $take];
+                $positions[$slot] = ['id' => $row['id'] ?? null, 'item_id' => $id, 'item_quantity' => ($row ? (int)$row['item_quantity'] : 0) + $take];
+                $quantity -= $take;
+            }
+            if ($quantity) throw new ConflictHttpException('Освободите место в рюкзаке для возврата всех материалов. Стройка и резервы сохранены.');
+        }
+        if (count($grants) > 2000) throw new ConflictHttpException('Для возврата требуется слишком много ячеек. Объедините материалы в рюкзаке.');
+        return compact('target', 'grants', 'items');
+    }
     /** Explicit selected backpack stack, ordinary gathered goods only. No equipment/chest consumption. */
     public function inspectOrderDelivery(int $user, int $inventory, int $item, int $quantity): array
     {

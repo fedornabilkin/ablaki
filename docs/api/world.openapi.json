@@ -1308,6 +1308,30 @@
     },
     "/world/nodes/{id}/housing-leave": {
       "$ref": "world-housing.openapi.json#/paths/~1world~1nodes~1{id}~1housing-leave"
+    },
+    "/world/equipment/{id}/wear": {
+      "$ref": "world-equipment-wear.openapi.json#/paths/~1world~1equipment~1{id}~1wear"
+    },
+    "/world/nodes/{id}/construction": {
+      "$ref": "world-construction.openapi.json#/paths/~1world~1nodes~1{id}~1construction"
+    },
+    "/world/nodes/{id}/construction-pause-preview": {
+      "$ref": "world-construction.openapi.json#/paths/~1world~1nodes~1{id}~1construction-pause-preview"
+    },
+    "/world/nodes/{id}/construction-pause": {
+      "$ref": "world-construction.openapi.json#/paths/~1world~1nodes~1{id}~1construction-pause"
+    },
+    "/world/nodes/{id}/construction-resume-preview": {
+      "$ref": "world-construction.openapi.json#/paths/~1world~1nodes~1{id}~1construction-resume-preview"
+    },
+    "/world/nodes/{id}/construction-resume": {
+      "$ref": "world-construction.openapi.json#/paths/~1world~1nodes~1{id}~1construction-resume"
+    },
+    "/world/nodes/{id}/construction-cancel-preview": {
+      "$ref": "world-construction.openapi.json#/paths/~1world~1nodes~1{id}~1construction-cancel-preview"
+    },
+    "/world/nodes/{id}/construction-cancel": {
+      "$ref": "world-construction.openapi.json#/paths/~1world~1nodes~1{id}~1construction-cancel"
     }
   },
   "components": {
@@ -1970,6 +1994,19 @@
             "maximum": 2147483647
           },
           "room_id": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          },
+          "project_id": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          },
+          "finish_at": {
+            "type": "integer"
+          },
+          "return_node_id": {
             "type": "integer",
             "minimum": 1,
             "maximum": 2147483647

@@ -16,6 +16,11 @@ class WorldWorkerController extends \yii\console\Controller
         $handlers = $module->params['jobHandlers'] ?? [];
         $flags = new \common\modules\world\service\WorldFlags(Yii::$app->db, $module);
         if ($flags->capabilities()['world_write'] && $flags->capabilities()['storage_v2']) {
+            $construction = new \common\modules\world\service\WorldConstruction(Yii::$app->db, $flags);
+            $handlers['world.construction.finish'] = function (array $payload, array $job) use ($construction) { $construction->finish($payload, $job); };
+            $wear = new \common\modules\world\service\EquipmentWearJob(Yii::$app->db, $flags);
+            $wear->discover();
+            $handlers['world.equipment.wear'] = function (array $payload, array $job) use ($wear) { $wear->settle($payload, $job); };
             $nights = new \common\modules\world\service\WorldNights(Yii::$app->db, $flags);
             $handlers['world.night.enroll'] = function (array $payload) use ($nights) { $nights->enroll($payload); };
             $handlers['world.night.resolve'] = function (array $payload, array $job) use ($nights) { $nights->resolve($payload, $job); };

@@ -1,0 +1,362 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Equipment wear and history",
+    "version": "1.0.0",
+    "description": "Schema 18. Current owner only, active physical unit. No reconstruction of old moves; first elapsed entry may summarize an existing exposure checkpoint. Real 86400-second days, integer remainder in [0,86399]. History newest first, bounded to latest ID at request. No automatic money or calendar activation."
+  },
+  "servers": [
+    {
+      "url": "/v1"
+    }
+  ],
+  "security": [
+    {
+      "bearerAuth": []
+    }
+  ],
+  "paths": {
+    "/world/equipment/{id}/wear": {
+      "get": {
+        "summary": "Read equipment durability and interval history",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 2147483647
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 1000000,
+              "default": 1
+            }
+          },
+          {
+            "name": "kind",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "",
+                "elapsed",
+                "location",
+                "work",
+                "repair"
+              ],
+              "default": ""
+            }
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "maxLength": 120
+            },
+            "description": "Substring search in the Russian event labels; combines with kind."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Pure projection plus saved history; never settles wear.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/State"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Owner required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Equipment or storage unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Storage unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Invalid filter",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Schema/read/storage feature unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer"
+      }
+    },
+    "schemas": {
+      "Entry": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "elapsed",
+              "location",
+              "work",
+              "repair"
+            ]
+          },
+          "started_at": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "ended_at": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "durability_before": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "durability_after": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "remainder_before": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 86399
+          },
+          "remainder_after": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 86399
+          },
+          "class_before": {
+            "type": "string",
+            "enum": [
+              "carried",
+              "outdoor",
+              "covered",
+              "indoor"
+            ]
+          },
+          "class_after": {
+            "type": "string",
+            "enum": [
+              "carried",
+              "outdoor",
+              "covered",
+              "indoor"
+            ]
+          },
+          "daily_wear_before": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "daily_wear_after": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "policy_version": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "created_at": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "started_at",
+          "ended_at",
+          "durability_before",
+          "durability_after",
+          "remainder_before",
+          "remainder_after",
+          "class_before",
+          "class_after",
+          "daily_wear_before",
+          "daily_wear_after",
+          "policy_version",
+          "created_at"
+        ],
+        "additionalProperties": false
+      },
+      "State": {
+        "type": "object",
+        "properties": {
+          "instance_id": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          },
+          "name": {
+            "type": "string"
+          },
+          "storage_id": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          },
+          "storage_kind": {
+            "type": "string",
+            "enum": [
+              "backpack",
+              "chest",
+              "placement",
+              "stockpile",
+              "recovery",
+              "shelter"
+            ]
+          },
+          "return_node_id": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647,
+            "nullable": true
+          },
+          "durability": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "max_durability": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "exposure_class": {
+            "type": "string",
+            "enum": [
+              "carried",
+              "outdoor",
+              "covered",
+              "indoor"
+            ]
+          },
+          "daily_wear": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "items": {
+            "type": "array",
+            "maxItems": 20,
+            "items": {
+              "$ref": "#/components/schemas/Entry"
+            }
+          },
+          "_meta": {
+            "type": "object",
+            "properties": {
+              "totalCount": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "pageCount": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "currentPage": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 1000000
+              },
+              "perPage": {
+                "type": "integer",
+                "enum": [
+                  20
+                ]
+              }
+            },
+            "required": [
+              "totalCount",
+              "pageCount",
+              "currentPage",
+              "perPage"
+            ],
+            "additionalProperties": false
+          },
+          "server_time": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "instance_id",
+          "name",
+          "storage_id",
+          "storage_kind",
+          "return_node_id",
+          "durability",
+          "max_durability",
+          "exposure_class",
+          "daily_wear",
+          "items",
+          "_meta",
+          "server_time"
+        ],
+        "additionalProperties": false
+      }
+    }
+  }
+}

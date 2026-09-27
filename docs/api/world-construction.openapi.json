@@ -1,9 +1,9 @@
 {
   "openapi": "3.0.3",
   "info": {
-    "title": "Ablaki premises and timed construction",
-    "version": "1.2.0",
-    "description": "Schema marker 19. Ready purchases remain immediate. Construction reserves plot budget and backpack raw materials; no room or usable equipment slots exist until the fenced worker completes. Purchase result has building_id, project_id and finish_at for construction, or building_id and room_id for ready delivery. Quotes last 300 seconds; material_plan pins inventory_id/storage_id/item_id/quantity and revisions. Cancellation before actual completion releases the full credit reserve and returns all materials to available backpack slots; a full backpack blocks cancellation without partial changes. No local/runtime acceptance performed."
+    "title": "Ablaki timed construction",
+    "version": "1.0.0",
+    "description": "Schema marker 19. Code only, migrations and behavioral acceptance deferred. Start uses premises-buy on a construction offer. Fixed refund policy returns materials to backpack and releases credits, never recovery storage."
   },
   "servers": [
     {
@@ -16,7 +16,7 @@
     }
   ],
   "paths": {
-    "/world/nodes/{id}/premises": {
+    "/world/nodes/{id}/construction": {
       "parameters": [
         {
           "name": "id",
@@ -30,7 +30,8 @@
         }
       ],
       "get": {
-        "summary": "List ready premises offered by the settlement; owned campsite adds private area information",
+        "summary": "Owned campsite or building construction history",
+        "description": "Read-only, latest IDs first, 20 per page; filters applied before count. Archived cancelled projects are listed from their plot, not via archived node access. Waiting for worker is not completion.",
         "parameters": [
           {
             "name": "page",
@@ -49,6 +50,20 @@
               "type": "string",
               "maxLength": 120
             }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "",
+                "constructing",
+                "paused",
+                "completed",
+                "cancelled"
+              ]
+            }
           }
         ],
         "responses": {
@@ -57,7 +72,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Catalog"
+                  "$ref": "#/components/schemas/State"
                 }
               }
             }
@@ -73,7 +88,7 @@
             }
           },
           "403": {
-            "description": "Owner/manager permission required",
+            "description": "Owner required",
             "content": {
               "application/json": {
                 "schema": {
@@ -83,7 +98,7 @@
             }
           },
           "404": {
-            "description": "Unavailable node or offer",
+            "description": "Unavailable node",
             "content": {
               "application/json": {
                 "schema": {
@@ -93,7 +108,7 @@
             }
           },
           "409": {
-            "description": "Changed quote, insufficient budget/area or missing finance policy",
+            "description": "Quote/state changed or backpack full; all reserves retained",
             "content": {
               "application/json": {
                 "schema": {
@@ -103,7 +118,7 @@
             }
           },
           "422": {
-            "description": "Invalid input or monetary limit",
+            "description": "Invalid input",
             "content": {
               "application/json": {
                 "schema": {
@@ -113,7 +128,7 @@
             }
           },
           "429": {
-            "description": "Command limit",
+            "description": "Rate limited",
             "content": {
               "application/json": {
                 "schema": {
@@ -123,7 +138,7 @@
             }
           },
           "503": {
-            "description": "Schema, storage or wallet unavailable",
+            "description": "Feature or schema unavailable",
             "content": {
               "application/json": {
                 "schema": {
@@ -135,7 +150,7 @@
         }
       }
     },
-    "/world/nodes/{id}/premises-publish-preview": {
+    "/world/nodes/{id}/construction-pause-preview": {
       "parameters": [
         {
           "name": "id",
@@ -149,14 +164,15 @@
         }
       ],
       "post": {
-        "summary": "premises-publish-preview",
-        "description": "Settlement owner or world manager of an unowned public settlement. Creates immutable terms; no charge. Preview creates only a 300-second quote. Commit requires unchanged exact payload/revisions; same request key replays the saved result.",
+        "summary": "pause preview",
+        "description": "Building node ID, actual owner only. Pause allowed before due time; resume shifts finish_at by paused duration and schedules a new generation. Cancellation requires room for the entire backpack refund. Published terms are immutable; refund plan and backpack revision are pinned on cancel preview. Commands are atomic and idempotent. No per-action charge.",
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/Publication"
+                "type": "object",
+                "additionalProperties": false
               }
             }
           }
@@ -183,7 +199,7 @@
             }
           },
           "403": {
-            "description": "Owner/manager permission required",
+            "description": "Owner required",
             "content": {
               "application/json": {
                 "schema": {
@@ -193,7 +209,7 @@
             }
           },
           "404": {
-            "description": "Unavailable node or offer",
+            "description": "Unavailable node",
             "content": {
               "application/json": {
                 "schema": {
@@ -203,7 +219,7 @@
             }
           },
           "409": {
-            "description": "Changed quote, insufficient budget/area or missing finance policy",
+            "description": "Quote/state changed or backpack full; all reserves retained",
             "content": {
               "application/json": {
                 "schema": {
@@ -213,7 +229,7 @@
             }
           },
           "422": {
-            "description": "Invalid input or monetary limit",
+            "description": "Invalid input",
             "content": {
               "application/json": {
                 "schema": {
@@ -223,7 +239,7 @@
             }
           },
           "429": {
-            "description": "Command limit",
+            "description": "Rate limited",
             "content": {
               "application/json": {
                 "schema": {
@@ -233,7 +249,7 @@
             }
           },
           "503": {
-            "description": "Schema, storage or wallet unavailable",
+            "description": "Feature or schema unavailable",
             "content": {
               "application/json": {
                 "schema": {
@@ -245,7 +261,7 @@
         }
       }
     },
-    "/world/nodes/{id}/premises-publish": {
+    "/world/nodes/{id}/construction-pause": {
       "parameters": [
         {
           "name": "id",
@@ -259,14 +275,14 @@
         }
       ],
       "post": {
-        "summary": "premises-publish",
-        "description": "Settlement owner or world manager of an unowned public settlement. Creates immutable terms; no charge. Preview creates only a 300-second quote. Commit requires unchanged exact payload/revisions; same request key replays the saved result.",
+        "summary": "pause command",
+        "description": "Building node ID, actual owner only. Pause allowed before due time; resume shifts finish_at by paused duration and schedules a new generation. Cancellation requires room for the entire backpack refund. Published terms are immutable; refund plan and backpack revision are pinned on cancel preview. Commands are atomic and idempotent. No per-action charge.",
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/PublicationCommand"
+                "$ref": "#/components/schemas/Command"
               }
             }
           }
@@ -293,7 +309,7 @@
             }
           },
           "403": {
-            "description": "Owner/manager permission required",
+            "description": "Owner required",
             "content": {
               "application/json": {
                 "schema": {
@@ -303,7 +319,7 @@
             }
           },
           "404": {
-            "description": "Unavailable node or offer",
+            "description": "Unavailable node",
             "content": {
               "application/json": {
                 "schema": {
@@ -313,7 +329,7 @@
             }
           },
           "409": {
-            "description": "Changed quote, insufficient budget/area or missing finance policy",
+            "description": "Quote/state changed or backpack full; all reserves retained",
             "content": {
               "application/json": {
                 "schema": {
@@ -323,7 +339,7 @@
             }
           },
           "422": {
-            "description": "Invalid input or monetary limit",
+            "description": "Invalid input",
             "content": {
               "application/json": {
                 "schema": {
@@ -333,7 +349,7 @@
             }
           },
           "429": {
-            "description": "Command limit",
+            "description": "Rate limited",
             "content": {
               "application/json": {
                 "schema": {
@@ -343,7 +359,7 @@
             }
           },
           "503": {
-            "description": "Schema, storage or wallet unavailable",
+            "description": "Feature or schema unavailable",
             "content": {
               "application/json": {
                 "schema": {
@@ -355,7 +371,7 @@
         }
       }
     },
-    "/world/nodes/{id}/premises-buy-preview": {
+    "/world/nodes/{id}/construction-resume-preview": {
       "parameters": [
         {
           "name": "id",
@@ -369,14 +385,15 @@
         }
       ],
       "post": {
-        "summary": "premises-buy-preview",
-        "description": "Schema marker 19. Ready purchases remain immediate. Construction reserves plot budget and backpack raw materials; no room or usable equipment slots exist until the fenced worker completes. Purchase result has building_id, project_id and finish_at for construction, or building_id and room_id for ready delivery. Quotes last 300 seconds; material_plan pins inventory_id/storage_id/item_id/quantity and revisions. Cancellation before actual completion releases the full credit reserve and returns all materials to available backpack slots; a full backpack blocks cancellation without partial changes. No local/runtime acceptance performed. Requires owned active campsite, free area, storage_v2, exact wallet and published settlement finance policy. House requires starter membership.",
+        "summary": "resume preview",
+        "description": "Building node ID, actual owner only. Pause allowed before due time; resume shifts finish_at by paused duration and schedules a new generation. Cancellation requires room for the entire backpack refund. Published terms are immutable; refund plan and backpack revision are pinned on cancel preview. Commands are atomic and idempotent. No per-action charge.",
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/Selection"
+                "type": "object",
+                "additionalProperties": false
               }
             }
           }
@@ -403,7 +420,7 @@
             }
           },
           "403": {
-            "description": "Owner/manager permission required",
+            "description": "Owner required",
             "content": {
               "application/json": {
                 "schema": {
@@ -413,7 +430,7 @@
             }
           },
           "404": {
-            "description": "Unavailable node or offer",
+            "description": "Unavailable node",
             "content": {
               "application/json": {
                 "schema": {
@@ -423,7 +440,7 @@
             }
           },
           "409": {
-            "description": "Changed quote, insufficient budget/area or missing finance policy",
+            "description": "Quote/state changed or backpack full; all reserves retained",
             "content": {
               "application/json": {
                 "schema": {
@@ -433,7 +450,7 @@
             }
           },
           "422": {
-            "description": "Invalid input or monetary limit",
+            "description": "Invalid input",
             "content": {
               "application/json": {
                 "schema": {
@@ -443,7 +460,7 @@
             }
           },
           "429": {
-            "description": "Command limit",
+            "description": "Rate limited",
             "content": {
               "application/json": {
                 "schema": {
@@ -453,7 +470,7 @@
             }
           },
           "503": {
-            "description": "Schema, storage or wallet unavailable",
+            "description": "Feature or schema unavailable",
             "content": {
               "application/json": {
                 "schema": {
@@ -465,7 +482,7 @@
         }
       }
     },
-    "/world/nodes/{id}/premises-buy": {
+    "/world/nodes/{id}/construction-resume": {
       "parameters": [
         {
           "name": "id",
@@ -479,14 +496,14 @@
         }
       ],
       "post": {
-        "summary": "premises-buy",
-        "description": "Schema marker 19. Ready purchases remain immediate. Construction reserves plot budget and backpack raw materials; no room or usable equipment slots exist until the fenced worker completes. Purchase result has building_id, project_id and finish_at for construction, or building_id and room_id for ready delivery. Quotes last 300 seconds; material_plan pins inventory_id/storage_id/item_id/quantity and revisions. Cancellation before actual completion releases the full credit reserve and returns all materials to available backpack slots; a full backpack blocks cancellation without partial changes. No local/runtime acceptance performed. Requires owned active campsite, free area, storage_v2, exact wallet and published settlement finance policy. House requires starter membership.",
+        "summary": "resume command",
+        "description": "Building node ID, actual owner only. Pause allowed before due time; resume shifts finish_at by paused duration and schedules a new generation. Cancellation requires room for the entire backpack refund. Published terms are immutable; refund plan and backpack revision are pinned on cancel preview. Commands are atomic and idempotent. No per-action charge.",
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/SelectionCommand"
+                "$ref": "#/components/schemas/Command"
               }
             }
           }
@@ -513,7 +530,7 @@
             }
           },
           "403": {
-            "description": "Owner/manager permission required",
+            "description": "Owner required",
             "content": {
               "application/json": {
                 "schema": {
@@ -523,7 +540,7 @@
             }
           },
           "404": {
-            "description": "Unavailable node or offer",
+            "description": "Unavailable node",
             "content": {
               "application/json": {
                 "schema": {
@@ -533,7 +550,7 @@
             }
           },
           "409": {
-            "description": "Changed quote, insufficient budget/area or missing finance policy",
+            "description": "Quote/state changed or backpack full; all reserves retained",
             "content": {
               "application/json": {
                 "schema": {
@@ -543,7 +560,7 @@
             }
           },
           "422": {
-            "description": "Invalid input or monetary limit",
+            "description": "Invalid input",
             "content": {
               "application/json": {
                 "schema": {
@@ -553,7 +570,7 @@
             }
           },
           "429": {
-            "description": "Command limit",
+            "description": "Rate limited",
             "content": {
               "application/json": {
                 "schema": {
@@ -563,7 +580,7 @@
             }
           },
           "503": {
-            "description": "Schema, storage or wallet unavailable",
+            "description": "Feature or schema unavailable",
             "content": {
               "application/json": {
                 "schema": {
@@ -575,7 +592,7 @@
         }
       }
     },
-    "/world/nodes/{id}/premises-withdraw-preview": {
+    "/world/nodes/{id}/construction-cancel-preview": {
       "parameters": [
         {
           "name": "id",
@@ -589,14 +606,15 @@
         }
       ],
       "post": {
-        "summary": "premises-withdraw-preview",
-        "description": "Same authority as publication. Stops future purchases; previously acquired premises are retained. Preview creates only a 300-second quote. Commit requires unchanged exact payload/revisions; same request key replays the saved result.",
+        "summary": "cancel preview",
+        "description": "Building node ID, actual owner only. Pause allowed before due time; resume shifts finish_at by paused duration and schedules a new generation. Cancellation requires room for the entire backpack refund. Published terms are immutable; refund plan and backpack revision are pinned on cancel preview. Commands are atomic and idempotent. No per-action charge.",
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/Selection"
+                "type": "object",
+                "additionalProperties": false
               }
             }
           }
@@ -623,7 +641,7 @@
             }
           },
           "403": {
-            "description": "Owner/manager permission required",
+            "description": "Owner required",
             "content": {
               "application/json": {
                 "schema": {
@@ -633,7 +651,7 @@
             }
           },
           "404": {
-            "description": "Unavailable node or offer",
+            "description": "Unavailable node",
             "content": {
               "application/json": {
                 "schema": {
@@ -643,7 +661,7 @@
             }
           },
           "409": {
-            "description": "Changed quote, insufficient budget/area or missing finance policy",
+            "description": "Quote/state changed or backpack full; all reserves retained",
             "content": {
               "application/json": {
                 "schema": {
@@ -653,7 +671,7 @@
             }
           },
           "422": {
-            "description": "Invalid input or monetary limit",
+            "description": "Invalid input",
             "content": {
               "application/json": {
                 "schema": {
@@ -663,7 +681,7 @@
             }
           },
           "429": {
-            "description": "Command limit",
+            "description": "Rate limited",
             "content": {
               "application/json": {
                 "schema": {
@@ -673,7 +691,7 @@
             }
           },
           "503": {
-            "description": "Schema, storage or wallet unavailable",
+            "description": "Feature or schema unavailable",
             "content": {
               "application/json": {
                 "schema": {
@@ -685,7 +703,7 @@
         }
       }
     },
-    "/world/nodes/{id}/premises-withdraw": {
+    "/world/nodes/{id}/construction-cancel": {
       "parameters": [
         {
           "name": "id",
@@ -699,14 +717,14 @@
         }
       ],
       "post": {
-        "summary": "premises-withdraw",
-        "description": "Same authority as publication. Stops future purchases; previously acquired premises are retained. Preview creates only a 300-second quote. Commit requires unchanged exact payload/revisions; same request key replays the saved result.",
+        "summary": "cancel command",
+        "description": "Building node ID, actual owner only. Pause allowed before due time; resume shifts finish_at by paused duration and schedules a new generation. Cancellation requires room for the entire backpack refund. Published terms are immutable; refund plan and backpack revision are pinned on cancel preview. Commands are atomic and idempotent. No per-action charge.",
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/SelectionCommand"
+                "$ref": "#/components/schemas/Command"
               }
             }
           }
@@ -733,7 +751,7 @@
             }
           },
           "403": {
-            "description": "Owner/manager permission required",
+            "description": "Owner required",
             "content": {
               "application/json": {
                 "schema": {
@@ -743,7 +761,7 @@
             }
           },
           "404": {
-            "description": "Unavailable node or offer",
+            "description": "Unavailable node",
             "content": {
               "application/json": {
                 "schema": {
@@ -753,7 +771,7 @@
             }
           },
           "409": {
-            "description": "Changed quote, insufficient budget/area or missing finance policy",
+            "description": "Quote/state changed or backpack full; all reserves retained",
             "content": {
               "application/json": {
                 "schema": {
@@ -763,7 +781,7 @@
             }
           },
           "422": {
-            "description": "Invalid input or monetary limit",
+            "description": "Invalid input",
             "content": {
               "application/json": {
                 "schema": {
@@ -773,7 +791,7 @@
             }
           },
           "429": {
-            "description": "Command limit",
+            "description": "Rate limited",
             "content": {
               "application/json": {
                 "schema": {
@@ -783,7 +801,7 @@
             }
           },
           "503": {
-            "description": "Schema, storage or wallet unavailable",
+            "description": "Feature or schema unavailable",
             "content": {
               "application/json": {
                 "schema": {
@@ -797,214 +815,69 @@
     }
   },
   "components": {
-    "securitySchemes": {
-      "bearerAuth": {
-        "type": "http",
-        "scheme": "bearer"
-      }
-    },
     "schemas": {
-      "Publication": {
+      "Project": {
         "type": "object",
-        "properties": {
-          "name": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 120
-          },
-          "kind": {
-            "type": "string",
-            "enum": [
-              "canopy",
-              "workroom",
-              "house"
-            ]
-          },
-          "price": {
-            "type": "string",
-            "pattern": "^(0|[1-9][0-9]{0,14})\\.[0-9]{4}$",
-            "description": "Exact Cr; maximum 900000000000000.0000."
-          },
-          "area": {
-            "type": "integer",
-            "minimum": 1,
-            "maximum": 4
-          },
-          "slots": {
-            "type": "integer",
-            "minimum": 1,
-            "maximum": 4
-          },
-          "lodging_places": {
-            "type": "integer",
-            "enum": [
-              0,
-              1
-            ],
-            "description": "Derived by server: 1 for house, otherwise 0. Client cannot choose a different capacity."
-          },
-          "expansion_limit": {
-            "type": "integer",
-            "minimum": 1,
-            "maximum": 4,
-            "description": "Defaults to slots; must be between slots and area."
-          },
-          "expansion_base_price": {
-            "type": "string",
-            "pattern": "^(0|[1-9][0-9]{0,14})\\.[0-9]{4}$",
-            "description": "Positive only when expansion_limit exceeds slots; otherwise null. Each successive additional place costs another multiple of this price.",
-            "nullable": true
-          },
-          "delivery": {
-            "type": "string",
-            "enum": [
-              "ready",
-              "construction"
-            ],
-            "default": "ready"
-          },
-          "duration_seconds": {
-            "type": "integer",
-            "minimum": 0,
-            "maximum": 604800,
-            "default": 0,
-            "description": "Ready: zero. Construction: 60..604800 real seconds, paused time excluded."
-          },
-          "materials": {
-            "type": "array",
-            "maxItems": 8,
-            "items": {
-              "type": "object",
-              "required": [
-                "item_id",
-                "quantity"
-              ],
-              "properties": {
-                "item_id": {
-                  "type": "integer",
-                  "minimum": 1,
-                  "maximum": 2147483647
-                },
-                "quantity": {
-                  "type": "integer",
-                  "minimum": 1,
-                  "maximum": 10000
-                }
-              },
-              "additionalProperties": false
-            },
-            "description": "Ready: empty. Construction: 1..8 distinct active gathered raw materials; no tools, stations or chests."
-          }
-        },
-        "required": [
-          "name",
-          "kind",
-          "price",
-          "area",
-          "slots"
-        ],
         "additionalProperties": false,
-        "description": "Positive price required. House reserves one unit of area for one permanent bunk; equipment expansion_limit + lodging_places cannot exceed area. A house needs area >= 2. No automatic balancing defaults."
-      },
-      "Selection": {
-        "type": "object",
-        "properties": {
-          "offer_id": {
-            "type": "integer",
-            "minimum": 1,
-            "maximum": 2147483647
-          }
-        },
-        "required": [
-          "offer_id"
-        ],
-        "additionalProperties": false
-      },
-      "Offer": {
-        "type": "object",
         "properties": {
           "id": {
             "type": "integer",
             "minimum": 1,
             "maximum": 2147483647
           },
-          "template_revision_id": {
+          "node_id": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          },
+          "plot_id": {
             "type": "integer",
             "minimum": 1,
             "maximum": 2147483647
           },
           "name": {
             "type": "string",
-            "minLength": 1,
             "maxLength": 120
           },
-          "kind": {
+          "status": {
             "type": "string",
             "enum": [
-              "canopy",
-              "workroom",
-              "house"
+              "constructing",
+              "paused",
+              "completed",
+              "cancelled"
             ]
+          },
+          "revision": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          },
+          "started_at": {
+            "type": "integer"
+          },
+          "finish_at": {
+            "type": "integer"
+          },
+          "remaining_seconds": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 604800
+          },
+          "room_id": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647,
+            "nullable": true
           },
           "price": {
             "type": "string",
             "pattern": "^(0|[1-9][0-9]{0,14})\\.[0-9]{4}$",
             "description": "Exact Cr; maximum 900000000000000.0000."
           },
-          "area": {
-            "type": "integer",
-            "minimum": 1,
-            "maximum": 4
-          },
-          "slots": {
-            "type": "integer",
-            "minimum": 1,
-            "maximum": 4
-          },
-          "lodging_places": {
-            "type": "integer",
-            "enum": [
-              0,
-              1
-            ],
-            "description": "Derived by server: 1 for house, otherwise 0. Client cannot choose a different capacity."
-          },
-          "expansion_limit": {
-            "type": "integer",
-            "minimum": 1,
-            "maximum": 4,
-            "description": "Defaults to slots; must be between slots and area."
-          },
-          "expansion_base_price": {
-            "type": "string",
-            "pattern": "^(0|[1-9][0-9]{0,14})\\.[0-9]{4}$",
-            "description": "Positive only when expansion_limit exceeds slots; otherwise null. Each successive additional place costs another multiple of this price.",
-            "nullable": true
-          },
-          "exposure_class": {
-            "type": "string",
-            "enum": [
-              "covered",
-              "indoor"
-            ]
-          },
-          "delivery": {
-            "type": "string",
-            "enum": [
-              "ready",
-              "construction"
-            ],
-            "default": "ready"
-          },
-          "duration_seconds": {
-            "type": "integer",
-            "minimum": 0,
-            "maximum": 604800,
-            "default": 0,
-            "description": "Ready: zero. Construction: 60..604800 real seconds, paused time excluded."
-          },
           "materials": {
             "type": "array",
+            "minItems": 1,
             "maxItems": 8,
             "items": {
               "type": "object",
@@ -1031,294 +904,67 @@
                 }
               },
               "additionalProperties": false
-            },
-            "description": "Ready: empty. Construction: 1..8 distinct active gathered raw materials; no tools, stations or chests."
-          },
-          "cancellation": {
-            "type": "string",
-            "enum": [
-              "full_refund_before_completion"
-            ]
+            }
           }
         },
         "required": [
           "id",
-          "template_revision_id",
+          "node_id",
+          "plot_id",
           "name",
-          "kind",
+          "status",
+          "revision",
+          "started_at",
+          "finish_at",
+          "remaining_seconds",
+          "room_id",
           "price",
-          "area",
-          "slots",
-          "lodging_places",
-          "expansion_limit",
-          "expansion_base_price",
-          "exposure_class",
-          "delivery",
-          "duration_seconds",
-          "materials",
-          "cancellation"
-        ],
-        "additionalProperties": false
+          "materials"
+        ]
       },
-      "Area": {
+      "State": {
         "type": "object",
-        "properties": {
-          "total": {
-            "type": "integer",
-            "minimum": 0
-          },
-          "used": {
-            "type": "integer",
-            "minimum": 0
-          },
-          "available": {
-            "type": "integer",
-            "minimum": 0
-          },
-          "unaccounted_building": {
-            "type": "boolean"
-          }
-        },
         "required": [
-          "total",
-          "used",
-          "available",
-          "unaccounted_building"
+          "node_id",
+          "items",
+          "_meta",
+          "writable",
+          "server_time"
         ],
-        "additionalProperties": false
-      },
-      "Meta": {
-        "type": "object",
-        "properties": {
-          "totalCount": {
-            "type": "integer",
-            "minimum": 0
-          },
-          "pageCount": {
-            "type": "integer",
-            "minimum": 0
-          },
-          "currentPage": {
-            "type": "integer",
-            "minimum": 1,
-            "maximum": 1000000
-          },
-          "perPage": {
-            "type": "integer",
-            "enum": [
-              20
-            ]
-          }
-        },
-        "required": [
-          "totalCount",
-          "pageCount",
-          "currentPage",
-          "perPage"
-        ],
-        "additionalProperties": false
-      },
-      "Catalog": {
-        "type": "object",
+        "additionalProperties": false,
         "properties": {
           "node_id": {
             "type": "integer",
             "minimum": 1,
             "maximum": 2147483647
           },
-          "settlement_id": {
-            "type": "integer",
-            "minimum": 1,
-            "maximum": 2147483647
-          },
-          "settlement_name": {
-            "type": "string",
-            "maxLength": 120
-          },
           "items": {
             "type": "array",
             "maxItems": 20,
             "items": {
-              "$ref": "#/components/schemas/Offer"
+              "$ref": "#/components/schemas/Project"
             }
           },
           "_meta": {
-            "$ref": "#/components/schemas/Meta"
+            "$ref": "world-premises.openapi.json#/components/schemas/Meta"
           },
-          "can_publish": {
+          "writable": {
             "type": "boolean"
-          },
-          "can_buy": {
-            "type": "boolean"
-          },
-          "area": {
-            "type": "object",
-            "nullable": true,
-            "properties": {
-              "total": {
-                "type": "integer",
-                "minimum": 0
-              },
-              "used": {
-                "type": "integer",
-                "minimum": 0
-              },
-              "available": {
-                "type": "integer",
-                "minimum": 0
-              },
-              "unaccounted_building": {
-                "type": "boolean"
-              }
-            },
-            "required": [
-              "total",
-              "used",
-              "available",
-              "unaccounted_building"
-            ],
-            "additionalProperties": false
           },
           "server_time": {
             "type": "integer"
           }
-        },
-        "required": [
-          "node_id",
-          "settlement_id",
-          "settlement_name",
-          "items",
-          "_meta",
-          "can_publish",
-          "can_buy",
-          "area",
-          "server_time"
-        ],
-        "additionalProperties": false
+        }
       },
-      "PublicationCommand": {
+      "Command": {
         "type": "object",
-        "properties": {
-          "name": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 120
-          },
-          "kind": {
-            "type": "string",
-            "enum": [
-              "canopy",
-              "workroom",
-              "house"
-            ]
-          },
-          "price": {
-            "type": "string",
-            "pattern": "^(0|[1-9][0-9]{0,14})\\.[0-9]{4}$",
-            "description": "Exact Cr; maximum 900000000000000.0000."
-          },
-          "area": {
-            "type": "integer",
-            "minimum": 1,
-            "maximum": 4
-          },
-          "slots": {
-            "type": "integer",
-            "minimum": 1,
-            "maximum": 4
-          },
-          "lodging_places": {
-            "type": "integer",
-            "enum": [
-              0,
-              1
-            ],
-            "description": "Derived by server: 1 for house, otherwise 0. Client cannot choose a different capacity."
-          },
-          "expansion_limit": {
-            "type": "integer",
-            "minimum": 1,
-            "maximum": 4,
-            "description": "Defaults to slots; must be between slots and area."
-          },
-          "expansion_base_price": {
-            "type": "string",
-            "pattern": "^(0|[1-9][0-9]{0,14})\\.[0-9]{4}$",
-            "description": "Positive only when expansion_limit exceeds slots; otherwise null. Each successive additional place costs another multiple of this price.",
-            "nullable": true
-          },
-          "request_key": {
-            "type": "string",
-            "pattern": "^[A-Za-z0-9_-]{16,80}$"
-          },
-          "quote_id": {
-            "type": "string",
-            "pattern": "^[a-f0-9]{32}$"
-          },
-          "expected_revisions": {
-            "$ref": "world.openapi.json#/components/schemas/Revisions"
-          },
-          "delivery": {
-            "type": "string",
-            "enum": [
-              "ready",
-              "construction"
-            ],
-            "default": "ready"
-          },
-          "duration_seconds": {
-            "type": "integer",
-            "minimum": 0,
-            "maximum": 604800,
-            "default": 0,
-            "description": "Ready: zero. Construction: 60..604800 real seconds, paused time excluded."
-          },
-          "materials": {
-            "type": "array",
-            "maxItems": 8,
-            "items": {
-              "type": "object",
-              "required": [
-                "item_id",
-                "quantity"
-              ],
-              "properties": {
-                "item_id": {
-                  "type": "integer",
-                  "minimum": 1,
-                  "maximum": 2147483647
-                },
-                "quantity": {
-                  "type": "integer",
-                  "minimum": 1,
-                  "maximum": 10000
-                }
-              },
-              "additionalProperties": false
-            },
-            "description": "Ready: empty. Construction: 1..8 distinct active gathered raw materials; no tools, stations or chests."
-          }
-        },
         "required": [
-          "name",
-          "kind",
-          "price",
-          "area",
-          "slots",
           "request_key",
           "quote_id",
           "expected_revisions"
         ],
-        "additionalProperties": false
-      },
-      "SelectionCommand": {
-        "type": "object",
+        "additionalProperties": false,
         "properties": {
-          "offer_id": {
-            "type": "integer",
-            "minimum": 1,
-            "maximum": 2147483647
-          },
           "request_key": {
             "type": "string",
             "pattern": "^[A-Za-z0-9_-]{16,80}$"
@@ -1330,14 +976,13 @@
           "expected_revisions": {
             "$ref": "world.openapi.json#/components/schemas/Revisions"
           }
-        },
-        "required": [
-          "offer_id",
-          "request_key",
-          "quote_id",
-          "expected_revisions"
-        ],
-        "additionalProperties": false
+        }
+      }
+    },
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer"
       }
     }
   }
