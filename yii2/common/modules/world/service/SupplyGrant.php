@@ -23,7 +23,7 @@ class SupplyGrant
         $items = []; $sizes = [];
         foreach ((new Query())->from('craft_item')->where(['active' => 1])->andWhere(['>', 'gather_quantity', 0])->orderBy(['id' => SORT_ASC])->all($this->db) as $item) {
             $base = (int)$item['gather_quantity'] * ($action === 'starter' ? 3 : 1);
-            $items[] = ['item_id' => (int)$item['id'], 'quantity' => max(1, intdiv($base * $efficiency, 10000))];
+            $items[] = ['item_id' => (int)$item['id'], 'name' => (string)$item['name'], 'quantity' => max(1, intdiv($base * $efficiency, 10000))];
             $sizes[(int)$item['id']] = (int)$item['stack_size'];
         }
         if (!$items) throw new GameError('SUPPLIES_UNAVAILABLE', 'Источники сырья пока не настроены.');

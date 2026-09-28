@@ -37,6 +37,17 @@ class WorldQuery
         $rows = $query->orderBy(['n.position' => SORT_ASC, 'n.id' => SORT_ASC])->offset(($page - 1) * $size)->limit($size)->all($this->db);
         return ['items' => $this->present($rows), '_meta' => ['totalCount' => $total, 'pageCount' => (int)ceil($total / $size), 'currentPage' => $page, 'perPage' => $size]];
     }
+    /** Map data is independent of list pagination and preserves absolute coordinates. */
+    public function map(int $id): array
+    {
+        $node = $this->node($id);
+        $rows = $this->visible()->andWhere(['n.parent_id' => $id])->orderBy(['n.id' => SORT_ASC])->all($this->db);
+        $cells = (new Query())->select(['x', 'y', 'state'])->from('world_map_cell')->where(['parent_id' => $id])->orderBy(['x' => SORT_ASC, 'y' => SORT_ASC])->all($this->db);
+        $garden = $node['type'] === 'PLOT' && (((array)$node['details'])['plot_kind'] ?? null) === 'garden';
+        return ['node_id' => $id, 'items' => $this->present($rows), 'cells' => array_map(static function (array $cell): array {
+            return ['x' => (int)$cell['x'], 'y' => (int)$cell['y'], 'state' => $cell['state']];
+        }, $cells), 'can_expand' => $node['permissions']['manage'] && !$garden && !in_array($node['type'], ['ROOM', 'BED'], true)];
+    }
     public function navigation(int $id): array
     {
         $node = $this->node($id);
@@ -81,7 +92,9 @@ class WorldQuery
             foreach (['template_revision_id', 'level', 'condition', 'max_condition', 'area', 'fertility', 'ordinal', 'unlocked', 'population', 'plot_limit', 'allow_building', 'garden_node_id', 'active_project_id'] as $field) if (isset($detail[$field])) $detail[$field] = (int)$detail[$field];
             $result[] = ['id' => (int)$row['id'], 'type' => $row['node_type'], 'parent_id' => $row['parent_id'] === null ? null : (int)$row['parent_id'],
                 'root_id' => (int)$row['root_id'], 'name' => $row['name'], 'status' => $row['status'], 'visibility' => $row['visibility'], 'revision' => (int)$row['revision'],
-                'coordinates' => ['x' => (int)$row['position_x'], 'y' => (int)$row['position_y']], 'child_count' => (int)($counts[$row['id']]['amount'] ?? 0),
+                'coordinates' => ['x' => (int)$row['position_x'], 'y' => (int)$row['position_y']],
+                'footprint' => $row['footprint_json'] === null ? null : json_decode($row['footprint_json'], true, 512, JSON_THROW_ON_ERROR),
+                'child_count' => (int)($counts[$row['id']]['amount'] ?? 0),
                 'details' => (object)$detail, 'permissions' => ['manage' => $owned, 'administer' => $this->policy->isAdmin(), 'storage' => $this->policy->ownsItems($row)],
                 'actions' => [['code' => 'open', 'allowed' => true, 'reasons' => []]]];
         }

@@ -12,6 +12,7 @@ $attributes = [['label' => 'ID', 'value' => $id], ['label' => 'Состояни�
 foreach (array_merge(['name', 'code', 'slug', 'parent_id', 'owner_user_id', 'visibility', 'position_x', 'position_y', 'position'], $model->detailFields()) as $field) {
     $value = $model->$field; $attributes[] = ['label' => $model->getAttributeLabel($field), 'value' => WorldNodeForm::choices()[$field][$value] ?? $value];
 }
+$attributes[] = ['label' => 'Полигон на карте', 'value' => $model->footprint ?: 'Одна ячейка'];
 ?>
 <div class="box box-primary"><div class="box-body">
     <p>
