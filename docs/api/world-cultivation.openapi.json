@@ -3,7 +3,7 @@
   "info": {
     "title": "World crop cultivation",
     "version": "1.0.0",
-    "description": "Prepared backend contract, schema 32. Not executed or deployed. Bearer authentication required. Commands use server preview, immutable quote and idempotency key. No frontend changes."
+    "description": "Cultivation on owned unlocked beds. Commands use server preview, immutable quote and idempotency key. Harvest terms include work_efficiency_bps and the exact health-adjusted item quantity; overdue night resolution blocks the harvest until the worker catches up."
   },
   "servers": [
     {

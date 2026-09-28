@@ -49,6 +49,8 @@ class NodeEconomy
         $catchingUp = $owner && isset($accounts['treasury']) && (new TreasuryLedger($this->db))->catchingUp((int)$accounts['treasury']['id'], time());
         return ['node_id' => $node, 'currency' => 'Cr', 'balances' => $balances, 'can_view_finances' => $owner, 'collection_rule' => $rule,
             'can_invest' => $writable,
+            'can_grant' => $writable && $owner && $balances !== null && !Money::parse($balances['available'])->isZero(),
+            'grant_preview' => '/v1/world/nodes/' . $node . '/budget-grant-preview', 'grant_execute' => '/v1/world/nodes/' . $node . '/budget-grant',
             'wallet_ready' => WalletSchema::ready($this->db), 'treasury_catching_up' => $catchingUp, 'collect_available' => $writable && !$catchingUp && $owner && $rule && $rule['status'] === 'published' && $rule['loss_policy'] !== null && $balances['treasury'] !== '0.0000',
             'can_pay' => $writable && $owner, 'entries' => ['items' => $entries, '_meta' => ['totalCount' => $total, 'pageCount' => (int)ceil($total / 50), 'currentPage' => $page, 'perPage' => 50]], 'server_time' => time()];
     }

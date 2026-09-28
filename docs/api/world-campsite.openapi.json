@@ -1,0 +1,74 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Ablaki World — starter campsite",
+    "version": "1.0.0",
+    "description": "Owner view and node-scoped commands for the starter campsite. The same budget grant operation accepts other owned financial parent/child nodes. Mutations require a quote and idempotency key. Legacy /v1/craft routes are deprecated."
+  },
+  "paths": {
+    "/world/nodes/{id}/campsite": {
+      "get": {
+        "operationId": "worldCampsite",
+        "summary": "Player's starter campsite and available actions",
+        "parameters": [{"name": "id", "in": "path", "required": true, "schema": {"type": "integer", "minimum": 1}}],
+        "responses": {
+          "200": {
+            "description": "Current campsite state; reads do not claim, collect, buy or resolve nights.",
+            "content": {"application/json": {"schema": {"$ref": "#/components/schemas/Campsite"}}}
+          },
+          "403": {"description": "The campsite is not the authenticated player's active starter site."},
+          "404": {"description": "The site is absent or invisible."},
+          "503": {"description": "World schema or read access is unavailable."}
+        }
+      }
+    },
+    "/world/nodes/{id}/budget-grant-preview": {
+      "post": {"operationId": "worldBudgetGrantPreview", "summary": "Quote a targeted transfer from this node's available budget", "parameters": [{"name": "id", "in": "path", "required": true, "schema": {"type": "integer"}}], "requestBody": {"required": true, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/GrantInput"}}}}, "responses": {"200": {"description": "Quote, exact balances and revisions"}, "403": {"description": "Ownership or parent relation failed"}, "409": {"description": "Insufficient unreserved funds"}}}
+    },
+    "/world/nodes/{id}/budget-grant": {
+      "post": {"operationId": "worldBudgetGrant", "summary": "Move credits atomically between owned budgets", "parameters": [{"name": "id", "in": "path", "required": true, "schema": {"type": "integer"}}], "requestBody": {"required": true, "content": {"application/json": {"schema": {"allOf": [{"$ref": "#/components/schemas/GrantInput"}, {"$ref": "#/components/schemas/Confirmation"}]}}}}, "responses": {"200": {"description": "Idempotent transfer and grant IDs"}, "409": {"description": "Quote or revision changed"}}}
+    },
+    "/world/nodes/{id}/supplies-starter-preview": {
+      "post": {"operationId": "worldStarterSuppliesPreview", "summary": "Quote the one-time starter materials", "parameters": [{"name": "id", "in": "path", "required": true, "schema": {"type": "integer"}}], "responses": {"200": {"description": "Quote and exact item quantities"}}}
+    },
+    "/world/nodes/{id}/supplies-starter": {
+      "post": {"operationId": "worldStarterSupplies", "summary": "Claim the one-time starter materials", "parameters": [{"name": "id", "in": "path", "required": true, "schema": {"type": "integer"}}], "requestBody": {"required": true, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/Confirmation"}}}}, "responses": {"200": {"description": "Idempotent grant"}}}
+    },
+    "/world/nodes/{id}/supplies-gather-preview": {
+      "post": {"operationId": "worldGatherSuppliesPreview", "summary": "Quote the daily gathering with current health modifier", "parameters": [{"name": "id", "in": "path", "required": true, "schema": {"type": "integer"}}], "responses": {"200": {"description": "Quote and exact item quantities"}, "409": {"description": "Night resolution is catching up"}}}
+    },
+    "/world/nodes/{id}/supplies-gather": {
+      "post": {"operationId": "worldGatherSupplies", "summary": "Collect today's materials", "parameters": [{"name": "id", "in": "path", "required": true, "schema": {"type": "integer"}}], "requestBody": {"required": true, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/Confirmation"}}}}, "responses": {"200": {"description": "Idempotent grant"}, "409": {"description": "Claimed already or night resolution is catching up"}}}
+    }
+  },
+  "components": {
+    "schemas": {
+      "GrantInput": {"type": "object", "required": ["destination_node_id", "amount", "purpose"], "properties": {"destination_node_id": {"type": "integer", "minimum": 1}, "amount": {"type": "string", "pattern": "^[0-9]+\\.[0-9]{4}$"}, "purpose": {"type": "string", "minLength": 1, "maxLength": 255}}},
+      "Confirmation": {"type": "object", "required": ["request_key", "quote_id", "expected_revisions"], "properties": {"request_key": {"type": "string"}, "quote_id": {"type": "string"}, "expected_revisions": {"type": "object", "additionalProperties": {"type": "integer"}}}},
+      "Campsite": {
+        "type": "object",
+        "properties": {
+          "node": {"type": "object"},
+          "shelter": {"type": "object"},
+          "nights": {"type": "object", "description": "Current calendar and health; history is available from /nights."},
+          "economy": {"type": "object", "description": "Campsite accounts and collection state; the journal is available from /economy."},
+          "wallet_credit": {"type": "string", "nullable": true, "description": "The owner's existing personal Cr balance, never a separate campsite wallet."},
+          "links": {"type": "object", "description": "Read endpoints for the campsite and its parent settlement."},
+          "premises": {"type": "object", "description": "First page of settlement offers and available campsite area."},
+          "garden": {"type": "object", "description": "Published garden offer or the purchased garden."},
+          "beds": {"type": "array", "items": {"type": "object"}, "description": "Purchased garden beds, prices and cultivation route templates (action is sow, water, harvest or cancel)."},
+          "orders": {"type": "object", "description": "First page of the parent settlement's funded orders."},
+          "supplies": {"type": "object", "description": "Availability of node-scoped one-time starter materials and daily gathering."},
+          "storages": {"type": "array", "items": {"type": "object"}},
+          "placement": {"type": "object", "nullable": true, "description": "Outdoor slots and installed equipment."},
+          "children": {"type": "object", "description": "Purchased buildings and the deployed shelter."},
+          "buildings": {"type": "array", "items": {"type": "object"}, "description": "Read links for each owned building and its rooms, including workspaces, equipment places and housing where present. Shelter actions use the campsite's shelter command."},
+          "actions": {"type": "array", "items": {"type": "object"}, "description": "Command routes; exact eligibility is determined by preview."},
+          "server_time": {"type": "integer"}
+        },
+        "required": ["node", "shelter", "nights", "economy", "wallet_credit", "links", "premises", "garden", "beds", "orders", "supplies", "storages", "placement", "children", "buildings", "actions", "server_time"],
+        "additionalProperties": false
+      }
+    }
+  }
+}

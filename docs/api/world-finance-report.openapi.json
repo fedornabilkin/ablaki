@@ -59,10 +59,12 @@
                 "all",
                 "other",
                 "personal_investment",
+                "budget_grant",
                 "treasury_collection",
                 "parent_payment",
                 "treasury_loss",
                 "order_payment",
+                "crop_purchase",
                 "premises_purchase",
                 "garden_purchase",
                 "garden_expansion",
@@ -340,7 +342,7 @@
                 "description": "Exact lifetime aggregate, up to 40 integer digits. Not a spendable balance; do not parse as a floating-point number or apply the wallet limit."
               }
             },
-            "description": "Unaffected by q/kind/direction/page. treasury_received excludes transfers from this same budget/treasury; parent_received/payments_received/other_received partition that total. treasury_to_budget and budget_to_treasury are internal regardless of kind. Remaining inflow/outflow categories exclude internal transfers. Payments group: order_payment, premises_purchase, garden_purchase, garden_expansion, equipment_expansion, building_repair. Unknown kinds are included under other, not dropped. No descendant aggregation or new-world-revenue claim."
+            "description": "Unaffected by q/kind/direction/page. treasury_received excludes transfers from this same budget/treasury; parent_received/payments_received/other_received partition that total. treasury_to_budget and budget_to_treasury are internal regardless of kind. Remaining inflow/outflow categories exclude internal transfers. Payments group: order_payment, crop_purchase, premises_purchase, garden_purchase, garden_expansion, equipment_expansion, building_repair. Budget grants appear as budget_other_in/out, not new revenue. Unknown kinds are included under other, not dropped."
           },
           "reconciliation": {
             "type": "object",

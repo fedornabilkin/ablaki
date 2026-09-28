@@ -1136,9 +1136,7 @@
           },
           "cultivation_enabled": {
             "type": "boolean",
-            "enum": [
-              false
-            ]
+            "description": "True when a purchased garden has a published crop and storage writes are available."
           },
           "server_time": {
             "type": "integer",
