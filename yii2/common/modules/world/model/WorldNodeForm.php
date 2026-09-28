@@ -20,6 +20,7 @@ class WorldNodeForm extends Model
     public $position_x = 0;
     public $position_y = 0;
     public $position = 0;
+    public $footprint = '';
     public $revision = 0;
     public $reason = '';
     public $climate = 'temperate';
@@ -73,6 +74,8 @@ class WorldNodeForm extends Model
             [['parent_id', 'owner_user_id'], 'integer', 'min' => 1, 'max' => 2147483647],
             [['position_x', 'position_y', 'position'], 'required'],
             [['position_x', 'position_y', 'position'], 'integer', 'min' => -1000000, 'max' => 1000000],
+            ['footprint', 'string', 'max' => 2048],
+            ['footprint', 'validateFootprint'],
             ['revision', 'integer', 'min' => 0, 'max' => 2147483647],
             ['visibility', 'in', 'range' => array_keys(self::choices()['visibility'])],
         ];
@@ -91,13 +94,20 @@ class WorldNodeForm extends Model
         foreach (array_merge(['name', 'code', 'slug', 'parent_id', 'owner_user_id', 'visibility', 'position_x', 'position_y', 'position', 'revision'], $this->detailFields()) as $field) {
             $this->$field = array_key_exists($field, $snapshot['node']) ? $snapshot['node'][$field] : ($snapshot['details'][$field] ?? $this->$field);
         }
+        $this->footprint = (string)($snapshot['node']['footprint_json'] ?? '');
+    }
+    public function validateFootprint($attribute): void
+    {
+        try { \common\modules\world\service\WorldMapGeometry::normalize((string)$this->footprint, (int)$this->position_x, (int)$this->position_y); }
+        catch (\common\services\game\GameError $error) { $this->addError($attribute, $error->getMessage()); }
     }
     public function payload(int $id = 0): array
     {
         $values = ['node_type' => $this->nodeType, 'name' => $this->name, 'code' => $this->code, 'slug' => $this->slug, 'visibility' => $this->visibility,
             'parent_id' => $this->parent_id === null ? null : (int)$this->parent_id,
             'owner_user_id' => $this->owner_user_id === null ? null : (int)$this->owner_user_id,
-            'position_x' => (int)$this->position_x, 'position_y' => (int)$this->position_y, 'position' => (int)$this->position];
+            'position_x' => (int)$this->position_x, 'position_y' => (int)$this->position_y, 'position' => (int)$this->position,
+            'footprint_json' => \common\modules\world\service\WorldMapGeometry::normalize((string)$this->footprint, (int)$this->position_x, (int)$this->position_y)];
         $details = [];
         foreach ($this->detailFields() as $field) $details[$field] = in_array($field, ['climate', 'settlement_kind', 'operational_status', 'exposure_class', 'plot_kind'], true) ? $this->$field : (int)$this->$field;
         if ($this->nodeType === 'BED') $details['garden_node_id'] = $values['parent_id'];
@@ -111,6 +121,7 @@ class WorldNodeForm extends Model
             'population' => 'Население', 'plot_limit' => 'Лимит участков', 'level' => 'Уровень', 'condition' => 'Прочность',
             'max_condition' => 'Максимальная прочность', 'operational_status' => 'Состояние постройки', 'area' => 'Площадь',
             'exposure_class' => 'Защита от среды', 'plot_kind' => 'Назначение участка', 'fertility' => 'Плодородие',
-            'allow_building' => 'Разрешено строительство', 'ordinal' => 'Номер грядки (1–10)', 'unlocked' => 'Грядка открыта'];
+            'allow_building' => 'Разрешено строительство', 'ordinal' => 'Номер грядки (1–10)', 'unlocked' => 'Грядка открыта',
+            'footprint' => 'Полигон на карте'];
     }
 }

@@ -334,57 +334,6 @@
               "minimum": 1,
               "maximum": 2147483647
             }
-          },
-          {
-            "name": "page",
-            "in": "query",
-            "schema": {
-              "type": "integer",
-              "minimum": 1,
-              "maximum": 1000000
-            }
-          },
-          {
-            "name": "per-page",
-            "in": "query",
-            "schema": {
-              "type": "integer",
-              "minimum": 1,
-              "maximum": 100
-            }
-          },
-          {
-            "name": "q",
-            "in": "query",
-            "schema": {
-              "type": "string",
-              "maxLength": 100
-            }
-          },
-          {
-            "name": "type",
-            "in": "query",
-            "schema": {
-              "type": "string",
-              "enum": [
-                "WORLD",
-                "REGION",
-                "SETTLEMENT",
-                "BUILDING",
-                "ROOM",
-                "PLOT",
-                "BED"
-              ]
-            }
-          },
-          {
-            "name": "bbox",
-            "in": "query",
-            "schema": {
-              "type": "string",
-              "pattern": "^-?\\d+,-?\\d+,-?\\d+,-?\\d+$",
-              "description": "Inclusive xMin,yMin,xMax,yMax, each within +/-1000000."
-            }
           }
         ],
         "responses": {
@@ -393,7 +342,14 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Page"
+                  "type": "object",
+                  "required": ["node_id", "items", "cells", "can_expand"],
+                  "properties": {
+                    "node_id": {"type": "integer"},
+                    "items": {"type": "array", "items": {"$ref": "#/components/schemas/Node"}},
+                    "cells": {"type": "array", "items": {"type": "object", "properties": {"x": {"type": "integer"}, "y": {"type": "integer"}, "state": {"type": "string", "enum": ["discovered", "open"]}}}},
+                    "can_expand": {"type": "boolean"}
+                  }
                 }
               }
             }
@@ -441,6 +397,38 @@
             }
           }
         }
+      }
+    },
+    "/world/nodes/{id}/map-explore-preview": {
+      "post": {
+        "operationId": "worldMapExplorePreview",
+        "parameters": [{"name": "id", "in": "path", "required": true, "schema": {"type": "integer", "minimum": 1}}],
+        "requestBody": {"required": true, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/MapCellInput"}}}},
+        "responses": {"200": {"description": "Exploration quote", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/Quote"}}}}}
+      }
+    },
+    "/world/nodes/{id}/map-explore": {
+      "post": {
+        "operationId": "worldMapExplore",
+        "parameters": [{"name": "id", "in": "path", "required": true, "schema": {"type": "integer", "minimum": 1}}],
+        "requestBody": {"required": true, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/MapCellCommand"}}}},
+        "responses": {"200": {"description": "Cell discovered", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/CommandResult"}}}}}
+      }
+    },
+    "/world/nodes/{id}/map-buy-preview": {
+      "post": {
+        "operationId": "worldMapBuyPreview",
+        "parameters": [{"name": "id", "in": "path", "required": true, "schema": {"type": "integer", "minimum": 1}}],
+        "requestBody": {"required": true, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/MapCellInput"}}}},
+        "responses": {"200": {"description": "Purchase quote", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/Quote"}}}}}
+      }
+    },
+    "/world/nodes/{id}/map-buy": {
+      "post": {
+        "operationId": "worldMapBuy",
+        "parameters": [{"name": "id", "in": "path", "required": true, "schema": {"type": "integer", "minimum": 1}}],
+        "requestBody": {"required": true, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/MapCellCommand"}}}},
+        "responses": {"200": {"description": "Cell purchased", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/CommandResult"}}}}}
       }
     },
     "/world/nodes/{id}/navigation": {
@@ -1489,6 +1477,13 @@
             ],
             "additionalProperties": false
           },
+          "footprint": {
+            "type": "array",
+            "nullable": true,
+            "minItems": 3,
+            "maxItems": 32,
+            "items": {"type": "object", "required": ["x", "y"], "properties": {"x": {"type": "integer"}, "y": {"type": "integer"}}}
+          },
           "child_count": {
             "type": "integer",
             "minimum": 0,
@@ -1546,6 +1541,7 @@
           "visibility",
           "revision",
           "coordinates",
+          "footprint",
           "child_count",
           "details",
           "permissions",
@@ -1715,6 +1711,23 @@
         },
         "maxProperties": 256,
         "description": "Keys: node:<id>, storage:<id>, inventory:<id>, instance:<id>, account:<id>, catalog, registry."
+      },
+      "MapCellInput": {
+        "type": "object",
+        "required": ["x", "y", "top_up"],
+        "properties": {
+          "x": {"type": "integer", "minimum": -1000000, "maximum": 1000000},
+          "y": {"type": "integer", "minimum": -1000000, "maximum": 1000000},
+          "top_up": {"type": "boolean"}
+        }
+      },
+      "MapCellCommand": {
+        "allOf": [
+          {"$ref": "#/components/schemas/MapCellInput"},
+          {"type": "object", "required": ["request_key", "quote_id", "expected_revisions"], "properties": {
+            "request_key": {"type": "string"}, "quote_id": {"type": "string"}, "expected_revisions": {"type": "object"}
+          }}
+        ]
       },
       "Quote": {
         "type": "object",

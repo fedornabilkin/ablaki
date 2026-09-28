@@ -50,7 +50,9 @@ GET только читает. Списки используют `envelope=1`, `
 | `GET /v1/world/nodes/{id}` | Общий node DTO + типизированные details; public summary отделён от owner details. |
 | `GET /v1/world/nodes/{id}/children` | Пагинируемые видимые дочерние узлы. |
 | `GET /v1/world/nodes/{id}/navigation` | Крошки, разрешённый parent, соседние объекты первой страницы, child counts; приватные названия не раскрываются. |
-| `GET /v1/world/nodes/{id}/map` | Координаты текущего уровня, bbox/zoom, revision; без вложенного полного inventory. |
+| `GET /v1/world/nodes/{id}/map` | Все видимые прямые потомки без пагинации, абсолютные координаты, необязательный полигон, исследованные и открытые ячейки. Отсутствующая ячейка закрыта. |
+| `POST /v1/world/nodes/{id}/map-explore-preview`, `/map-explore` | Исследование соседней закрытой ячейки: бесплатный расчёт и подтверждение командой. |
+| `POST /v1/world/nodes/{id}/map-buy-preview`, `/map-buy` | Покупка исследованной ячейки из бюджета объекта с явным пополнением недостающей суммы с баланса; цена 1, 2, 3… Cr. Платёж поступает в казну родителя. |
 | `GET /v1/world/nodes/{id}/actions` | Серверные разрешённые действия и typed reasons блокировки. |
 | `GET /v1/craft/workspace?node_id={id}` | Новый DTO: рюкзак, доступные storage summaries, станции, выбранный контекст, revisions; node необязателен. |
 | `GET /v1/craft/storages/{id}` | Содержимое только доступного storage, вместимость, placements, readonly reasons, revision. |

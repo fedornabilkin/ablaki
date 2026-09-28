@@ -36,16 +36,32 @@ class WorldTree
         if (!$this->db->getTransaction()) throw new \LogicException('World writes require a transaction.');
         $parent = isset($values['parent_id']) ? $this->get((int)$values['parent_id']) : null;
         $type = $values['node_type']; $this->assertParent($type, $parent);
+        if ($parent && !isset($values['position_x']) && !isset($values['position_y'])) {
+            $position = $this->nextPosition((int)$parent['id']);
+            $values['position_x'] = $position['x']; $values['position_y'] = $position['y'];
+        }
         if (!preg_match('/^[a-z0-9][a-z0-9-]{0,79}$/D', $values['code']) || !preg_match('/^[a-z0-9][a-z0-9-]{0,79}$/D', $values['slug'])) throw new GameError('INVALID_NODE', 'Некорректный код объекта.', 422);
         if (!is_string($values['name']) || trim($values['name']) === '' || mb_strlen($values['name'], 'UTF-8') > 120) throw new GameError('INVALID_NODE', 'Некорректное название.', 422);
         $row = ['parent_id' => $parent ? (int)$parent['id'] : null, 'root_id' => $parent ? (int)$parent['root_id'] : null, 'node_type' => $type,
             'code' => $values['code'], 'slug' => $values['slug'], 'name' => trim($values['name']), 'owner_user_id' => $values['owner_user_id'] ?? null,
             'visibility' => $values['visibility'] ?? 'public', 'status' => 'active', 'depth' => $parent ? (int)$parent['depth'] + 1 : 0,
             'position_x' => $values['position_x'] ?? 0, 'position_y' => $values['position_y'] ?? 0, 'position' => $values['position'] ?? 0,
+            'footprint_json' => WorldMapGeometry::normalize($values['footprint_json'] ?? null, $values['position_x'] ?? 0, $values['position_y'] ?? 0),
             'revision' => 1, 'created_at' => time(), 'updated_at' => time()];
         if (!in_array($row['visibility'], ['public', 'private'], true)) throw new GameError('INVALID_VISIBILITY', 'Некорректная видимость.', 422);
         foreach (['position_x', 'position_y', 'position'] as $field) if (!is_int($row[$field]) || abs($row[$field]) > 1000000) throw new GameError('INVALID_POSITION', 'Некорректная позиция.', 422);
+        if ($parent) foreach (WorldMapGeometry::cells($row['footprint_json'], (int)$row['position_x'], (int)$row['position_y']) as $cell) {
+            $this->assertFreePosition((int)$parent['id'], $cell['x'], $cell['y']);
+            if ($row['footprint_json'] !== null && !(new Query())->from('world_map_cell')->where(['parent_id' => $parent['id'], 'x' => $cell['x'], 'y' => $cell['y'], 'state' => 'open'])->exists($this->db))
+                throw new GameError('MAP_CELL_CLOSED', 'Сначала откройте все ячейки полигона.', 422);
+        }
         $this->db->createCommand()->insert('world_node', $row)->execute(); $id = (int)$this->db->getLastInsertID();
+        if ($parent && !($type === 'BED' && empty($details['unlocked']))) {
+            $where = ['parent_id' => (int)$parent['id'], 'x' => $row['position_x'], 'y' => $row['position_y']];
+            $cell = (new Query())->from('world_map_cell')->where($where)->one($this->db);
+            if (!$cell) $this->db->createCommand()->insert('world_map_cell', $where + ['state' => 'open', 'price' => '0.0000', 'operation_id' => null, 'created_at' => time(), 'updated_at' => time()])->execute();
+            elseif ($cell['state'] !== 'open') $this->db->createCommand()->update('world_map_cell', ['state' => 'open', 'updated_at' => time()], $where)->execute();
+        }
         if (!$parent) $this->db->createCommand()->update('world_node', ['root_id' => $id], ['id' => $id])->execute();
         $this->db->createCommand()->insert('world_node_closure', ['ancestor_id' => $id, 'descendant_id' => $id, 'distance' => 0])->execute();
         if ($parent) foreach ((new Query())->from('world_node_closure')->where(['descendant_id' => $parent['id']])->all($this->db) as $ancestor) {
@@ -61,6 +77,28 @@ class WorldTree
         $this->touchAncestors($id);
         return $this->get($id);
     }
+    public function assertFreePosition(int $parent, int $x, int $y, ?int $except = null): void
+    {
+        $query = (new Query())->select(['id', 'position_x', 'position_y', 'footprint_json'])->from('world_node')->where(['parent_id' => $parent])->andWhere(['<>', 'status', 'archived']);
+        if ($except !== null) $query->andWhere(['<>', 'id', $except]);
+        foreach ($query->all($this->db) as $row)
+            if (WorldMapGeometry::covers($row['footprint_json'], (int)$row['position_x'], (int)$row['position_y'], $x, $y))
+                throw new GameError('MAP_CELL_OCCUPIED', 'В этих координатах уже расположен объект.', 422);
+    }
+    public function nextPosition(int $parent): array
+    {
+        $occupied = [];
+        foreach ((new Query())->select(['position_x', 'position_y', 'footprint_json'])->from('world_node')->where(['parent_id' => $parent])->andWhere(['<>', 'status', 'archived'])->all($this->db) as $row)
+            foreach (WorldMapGeometry::cells($row['footprint_json'], (int)$row['position_x'], (int)$row['position_y']) as $cell)
+                $occupied[$cell['x'] . ':' . $cell['y']] = true;
+        foreach ((new Query())->select(['x', 'y'])->from('world_map_cell')->where(['parent_id' => $parent, 'state' => 'open'])->orderBy(['y' => SORT_ASC, 'x' => SORT_ASC])->all($this->db) as $cell)
+            if (!isset($occupied[$cell['x'] . ':' . $cell['y']])) return ['x' => (int)$cell['x'], 'y' => (int)$cell['y']];
+        for ($i = 0; $i < 100000; $i++) {
+            $x = $i % 316; $y = intdiv($i, 316);
+            if (!isset($occupied[$x . ':' . $y]) && !(new Query())->from('world_map_cell')->where(['parent_id' => $parent, 'x' => $x, 'y' => $y])->exists($this->db)) return compact('x', 'y');
+        }
+        throw new GameError('MAP_FULL', 'На карте не осталось свободных координат.', 422);
+    }
     /** Also used by preview: an invalid action must not produce a confirmable quote. */
     public function previewMove(int $id, int $parentId): array
     {
@@ -75,6 +113,9 @@ class WorldTree
         if ((int)$node['parent_id'] === $parentId) throw new GameError('SAME_PARENT', 'Объект уже находится здесь.');
         if ($node['node_type'] === 'WORLD' || (int)$node['root_id'] !== (int)$parent['root_id']) throw new GameError('CROSS_WORLD_MOVE', 'Перенос между мирами недоступен.');
         if ($node['node_type'] === 'BED') throw new GameError('FIXED_GARDEN_BED', 'Грядка закреплена за своим огородом.');
+        if ($node['footprint_json'] !== null) throw new GameError('MAP_FOOTPRINT_MOVE_REQUIRED', 'Сначала верните объект к размеру одной ячейки.', 422);
+        if ((new Query())->from('world_map_cell')->where(['parent_id' => $id])->andWhere(['or', ['state' => 'discovered'], ['>', 'price', 0]])->exists($this->db))
+            throw new GameError('MAP_RIGHTS_MOVE_REQUIRED', 'Объект с исследованными или купленными ячейками нельзя переносить обычной командой.', 422);
         $this->assertParent($node['node_type'], $parent);
         $descendants = (new Query())->from('world_node_closure')->where(['ancestor_id' => $id])->all($this->db);
         if (count($descendants) > 10000) throw new GameError('TREE_TOO_LARGE', 'Перенос требует отдельного задания.');
@@ -91,6 +132,7 @@ class WorldTree
         if (!$this->db->getTransaction()) throw new \LogicException('World writes require a transaction.');
         $prepared = $this->previewMove($id, $parentId);
         $node = $prepared['node']; $parent = $prepared['parent']; $descendants = $prepared['descendants']; $ids = $prepared['ids'];
+        $position = $this->nextPosition($parentId);
         $ancestors = (new Query())->from('world_node_closure')->where(['descendant_id' => $parentId])->all($this->db);
         $this->touchAncestors($id);
         $this->db->createCommand()->delete('world_node_closure', ['and', ['descendant_id' => $ids], ['not in', 'ancestor_id', $ids]])->execute();
@@ -99,7 +141,9 @@ class WorldTree
         }
         $delta = (int)$parent['depth'] + 1 - (int)$node['depth'];
         $this->db->createCommand()->update('world_node', ['depth' => new Expression('[[depth]] + :delta', [':delta' => $delta]), 'revision' => new Expression('[[revision]] + 1'), 'updated_at' => time()], ['id' => $ids])->execute();
-        $this->db->createCommand()->update('world_node', ['parent_id' => $parentId], ['id' => $id])->execute();
+        $this->db->createCommand()->update('world_node', ['parent_id' => $parentId, 'position_x' => $position['x'], 'position_y' => $position['y']], ['id' => $id])->execute();
+        if (!(new Query())->from('world_map_cell')->where(['parent_id' => $parentId, 'x' => $position['x'], 'y' => $position['y']])->exists($this->db))
+            $this->db->createCommand()->insert('world_map_cell', ['parent_id' => $parentId, 'x' => $position['x'], 'y' => $position['y'], 'state' => 'open', 'price' => '0.0000', 'operation_id' => null, 'created_at' => time(), 'updated_at' => time()])->execute();
         $this->touchAncestors($id);
         return $this->get($id);
     }

@@ -29,6 +29,7 @@ $choices = WorldNodeForm::choices();
                 <div class="col-md-4"><?= $form->field($model, $field)->input('number', ['min' => -1000000, 'max' => 1000000]) ?></div>
             <?php endforeach ?>
         </div>
+        <?= $form->field($model, 'footprint')->textarea(['rows' => 3, 'maxlength' => 2048])->hint('Необязательно. Абсолютные вершины JSON, например [{"x":0,"y":0},{"x":2,"y":0},{"x":2,"y":1},{"x":0,"y":1}]. Пустое поле = одна ячейка.') ?>
         <?php foreach ($model->detailFields() as $field): ?>
             <?= isset($choices[$field]) ? $form->field($model, $field)->dropDownList($choices[$field]) : ($field === 'climate' ? $form->field($model, $field)->textInput(['maxlength' => 24]) : $form->field($model, $field)->input('number')) ?>
         <?php endforeach ?>

@@ -191,6 +191,11 @@ class WorldGarden
                     foreach ($terms['unit_prices'] as $unit) {
                         $bed = $this->one('world_bed', ['garden_node_id' => $gardenId, 'ordinal' => $unit['ordinal'], 'unlocked' => 0]);
                         if (!$bed || $this->db->createCommand()->update('world_bed', ['unlocked' => 1], ['node_id' => $bed['node_id'], 'unlocked' => 0])->execute() !== 1) throw new \RuntimeException('Bed opening failed.');
+                        $bedNode = $tree->get((int)$bed['node_id']);
+                        $cell = ['parent_id' => $gardenId, 'x' => (int)$bedNode['position_x'], 'y' => (int)$bedNode['position_y']];
+                        if ((new Query())->from('world_map_cell')->where($cell)->exists($this->db))
+                            $this->db->createCommand()->update('world_map_cell', ['state' => 'open', 'price' => $unit['price'], 'operation_id' => $operation, 'updated_at' => $now], $cell)->execute();
+                        else $this->db->createCommand()->insert('world_map_cell', $cell + ['state' => 'open', 'price' => $unit['price'], 'operation_id' => $operation, 'created_at' => $now, 'updated_at' => $now])->execute();
                         $this->entitle($terms['policy_id'], (int)$bed['node_id'], $unit['ordinal'], $unit['price'], $terms['policy_revision'], $transfer, $operation, $now); $changed[] = (int)$bed['node_id'];
                     }
                 }

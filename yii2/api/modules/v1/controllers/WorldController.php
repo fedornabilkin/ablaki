@@ -164,7 +164,23 @@ class WorldController extends \yii\rest\Controller
     }
     public function actionChildren($id): array { return $this->reader()->children($this->id($id), Yii::$app->request->queryParams); }
     public function actionNavigation($id): array { return $this->reader()->navigation($this->id($id)); }
-    public function actionMap($id): array { return $this->reader()->children($this->id($id), Yii::$app->request->queryParams); }
+    public function actionMap($id): array { return $this->reader()->map($this->id($id)); }
+    private function mapCellCommand($id, string $action, bool $preview): array
+    {
+        if (!Yii::$app->request->isPost) throw new \yii\web\MethodNotAllowedHttpException('Используйте POST.');
+        $body = Yii::$app->request->bodyParams;
+        if (!is_array($body)) throw new GameError('INVALID_COMMAND', 'Укажите ячейку карты.', 422);
+        $service = new \common\modules\world\service\WorldMapCells(Yii::$app->db, $this->flags(), $this->policy());
+        $input = $service->input($this->id($id), $body); $user = (int)Yii::$app->user->id;
+        if ($preview) return $service->preview($user, $input, $action);
+        if (!is_string($body['request_key'] ?? null) || !is_string($body['quote_id'] ?? null) || !is_array($body['expected_revisions'] ?? null))
+            throw new GameError('INVALID_COMMAND', 'Требуется подтверждённый расчёт.', 422);
+        return $service->execute($user, $body['request_key'], $input, $body['quote_id'], $body['expected_revisions'], $action);
+    }
+    public function actionMapExplorePreview($id): array { return $this->mapCellCommand($id, 'explore', true); }
+    public function actionMapExplore($id): array { return $this->mapCellCommand($id, 'explore', false); }
+    public function actionMapBuyPreview($id): array { return $this->mapCellCommand($id, 'buy', true); }
+    public function actionMapBuy($id): array { return $this->mapCellCommand($id, 'buy', false); }
     public function actionStatistics($id): array { return ['items' => $this->reader()->statistics($this->id($id))]; }
     public function actionActions($id): array
     {

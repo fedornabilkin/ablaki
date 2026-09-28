@@ -217,7 +217,7 @@ class TreasuryLedger
     public function receiveBudgetPayment(int $budget, int $recipientNode, Money $amount, string $operation, string $purpose, string $kind = 'order_payment'): int
     {
         $this->writable();
-        if (!in_array($kind, ['order_payment', 'crop_purchase', 'premises_purchase', 'garden_purchase', 'garden_expansion', 'equipment_expansion', 'building_repair'], true)) throw new \LogicException('Unsupported budget payment kind.');
+        if (!in_array($kind, ['order_payment', 'crop_purchase', 'premises_purchase', 'garden_purchase', 'garden_expansion', 'equipment_expansion', 'building_repair', 'map_cell_purchase'], true)) throw new \LogicException('Unsupported budget payment kind.');
         if ($this->account($budget)['role'] !== 'budget') throw new \LogicException('Expected a budget source.');
         $policy = $this->published($recipientNode); $accounts = (new EconomyHierarchy($this->db))->accounts($recipientNode);
         $transfer = $this->transfer($budget, (int)$accounts['treasury']['id'], $amount, $operation, 'budget-payment', $kind, $purpose);

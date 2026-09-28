@@ -51,6 +51,8 @@ class WorldNodeEditor
                 ['id' => (new Query())->select('storage_id')->from('craft_inventory')->where(['>', 'item_quantity', 0])]]);
             if ($query->exists($this->db)) $found[] = $table;
         }
+        if ($this->db->schema->getTableSchema('world_map_cell') && (new Query())->from('world_map_cell')->where(['parent_id' => $ids])
+            ->andWhere(['or', ['state' => 'discovered'], ['>', 'price', 0]])->exists($this->db)) $found[] = 'world_map_cell';
         return $found;
     }
     private function requireUnused(int $id, bool $archiving = false, bool $emptyPlacementAllowed = false): void
@@ -114,6 +116,15 @@ class WorldNodeEditor
             if (!$d['allow_building'] && (new Query())->from('world_node')->where(['parent_id' => $input['id'], 'node_type' => 'BUILDING', 'status' => 'active'])->exists($this->db)) throw new GameError('PLOT_HAS_BUILDINGS', 'На участке уже есть постройки.');
         }
         if ($type === 'BED' && (new Query())->from('world_bed')->where(['garden_node_id' => $v['parent_id'], 'ordinal' => $d['ordinal']])->andWhere(['<>', 'node_id', $input['id']])->exists($this->db)) throw new GameError('BED_OCCUPIED', 'Этот номер грядки уже занят, в том числе архивной записью.', 422);
+        if ($parent && (!$before || (int)$before['node']['parent_id'] !== (int)$v['parent_id']
+            || (int)$before['node']['position_x'] !== (int)$v['position_x'] || (int)$before['node']['position_y'] !== (int)$v['position_y']
+            || $before['node']['footprint_json'] !== $v['footprint_json'])) {
+            foreach (WorldMapGeometry::cells($v['footprint_json'], $v['position_x'], $v['position_y']) as $cell) {
+                $tree->assertFreePosition((int)$parent['id'], $cell['x'], $cell['y'], $input['id'] ?: null);
+                if ($v['footprint_json'] !== null && !(new Query())->from('world_map_cell')->where(['parent_id' => $parent['id'], 'x' => $cell['x'], 'y' => $cell['y'], 'state' => 'open'])->exists($this->db))
+                    throw new GameError('MAP_CELL_CLOSED', 'Сначала откройте все ячейки полигона.', 422);
+            }
+        }
         return ['terms' => ['before' => $before, 'after' => ['node' => $v, 'details' => $d]], 'revisions' => $revisions];
     }
     public function preview(int $user, array $input, string $action): array
@@ -138,6 +149,13 @@ class WorldNodeEditor
                         if ($input['details']) $this->db->createCommand()->update('world_' . strtolower($before['node']['node_type']), $input['details'], ['node_id' => $id])->execute();
                     }
                     $this->db->createCommand()->update('world_node', $values, ['id' => $id])->execute();
+                    if ($input['values']['parent_id'] !== null && $input['values']['footprint_json'] === null
+                        && !($before['node']['node_type'] === 'BED' && empty($input['details']['unlocked']))) {
+                        $cell = ['parent_id' => (int)$input['values']['parent_id'], 'x' => (int)$input['values']['position_x'], 'y' => (int)$input['values']['position_y']];
+                        $existing = (new Query())->from('world_map_cell')->where($cell)->one($this->db);
+                        if (!$existing) $this->db->createCommand()->insert('world_map_cell', $cell + ['state' => 'open', 'price' => '0.0000', 'operation_id' => $operation, 'created_at' => time(), 'updated_at' => time()])->execute();
+                        elseif ($existing['state'] !== 'open') $this->db->createCommand()->update('world_map_cell', ['state' => 'open', 'operation_id' => $operation, 'updated_at' => time()], $cell)->execute();
+                    }
                     $ancestors = (new Query())->select('ancestor_id')->from('world_node_closure')->where(['descendant_id' => $id])->column($this->db);
                     $this->db->createCommand()->update('world_node', ['revision' => new Expression('[[revision]]+1'), 'updated_at' => time()], ['id' => $ancestors])->execute();
                 }
