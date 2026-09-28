@@ -46,8 +46,10 @@ class StarterOrders
     }
     private function item(int $id): array
     {
-        $item = (new Query())->from('craft_item')->where(['id' => $id, 'active' => 1, 'kind' => 'material', 'storage_kind' => 'none'])->andWhere(['>', 'gather_quantity', 0])->one($this->db);
-        if (!$item || (new EquipmentInstances($this->db))->tracked($item)) throw new GameError('STARTER_ITEM_UNAVAILABLE', 'Начальный заказ принимает только доступное для сбора сырьё из каталога.', 422);
+        $item = (new Query())->from('craft_item')->where(['id' => $id, 'active' => 1, 'kind' => 'material', 'storage_kind' => 'none'])->one($this->db);
+        $crop = $this->db->schema->getTableSchema('world_crop_revision')
+            && (new Query())->from('world_crop_revision')->where(['yield_item_id' => $id, 'status' => 'published'])->exists($this->db);
+        if (!$item || ((int)$item['gather_quantity'] < 1 && !$crop) || (new EquipmentInstances($this->db))->tracked($item)) throw new GameError('ORDER_ITEM_UNAVAILABLE', 'Заказ принимает собираемое сырьё или урожай опубликованной культуры.', 422);
         return $item;
     }
     private function meta(int $total, int $page, int $size = 20): array { return ['totalCount' => $total, 'pageCount' => (int)ceil($total / $size), 'currentPage' => $page, 'perPage' => $size]; }
@@ -74,9 +76,12 @@ class StarterOrders
     {
         $this->settlement($user, $node);
         if ($page < 1 || $page > 1000000 || mb_strlen($search, 'UTF-8') > 120) throw new GameError('INVALID_ORDER_FILTER', 'Некорректные параметры списка.', 422);
-        $query = (new Query())->from(['i' => 'craft_item'])->where(['i.active' => 1, 'i.kind' => 'material', 'i.storage_kind' => 'none'])->andWhere(['>', 'i.gather_quantity', 0])
+        $query = (new Query())->from(['i' => 'craft_item'])->where(['i.active' => 1, 'i.kind' => 'material', 'i.storage_kind' => 'none'])
             ->andWhere(['not exists', (new Query())->from('craft_station')->where(new Expression('[[item_id]]=[[i.id]]'))])
             ->andWhere(['not exists', (new Query())->from('craft_recipe_tool')->where(new Expression('[[item_id]]=[[i.id]]'))]);
+        if ($this->db->schema->getTableSchema('world_crop_revision')) $query->andWhere(['or', ['>', 'i.gather_quantity', 0],
+            ['exists', (new Query())->from('world_crop_revision')->where(['status' => 'published'])->andWhere(new Expression('[[yield_item_id]]=[[i.id]]'))]]);
+        else $query->andWhere(['>', 'i.gather_quantity', 0]);
         if ($search !== '') $query->andWhere(['like', 'i.name', $search]);
         $total = (int)(clone $query)->count('*', $this->db); $items = [];
         foreach ($query->orderBy(['i.id' => SORT_DESC])->offset(($page - 1) * 20)->limit(20)->all($this->db) as $row) $items[] = ['id' => (int)$row['id'], 'name' => trim($row['name'])];
@@ -125,6 +130,18 @@ class StarterOrders
                 if ((int)$order['expires_at'] <= time()) throw new GameError('ORDER_EXPIRED', 'Срок заказа истёк.');
                 $site = $this->site($user, $place);
                 if (!$site) throw new GameError('STARTER_SITE_REQUIRED', 'Для сдачи заказа нужна собственная стартовая стоянка в этом поселении.');
+                $incomeNode = (int)($input['income_node_id'] ?? $site['id']);
+                if ($incomeNode !== (int)$site['id']) {
+                    $bed = (new Query())->from(['b' => 'world_bed'])->innerJoin(['n' => 'world_node'], '[[n.id]]=[[b.node_id]]')
+                        ->innerJoin(['p' => 'world_garden_purchase'], '[[p.node_id]]=[[b.garden_node_id]]')
+                        ->innerJoin(['g' => 'world_node'], '[[g.id]]=[[p.node_id]] AND [[n.parent_id]]=[[g.id]]')
+                        ->innerJoin(['m' => 'world_membership'], '[[m.id]]=[[p.membership_id]]')
+                        ->where(['b.node_id' => $incomeNode, 'b.unlocked' => 1, 'n.status' => 'active', 'n.owner_user_id' => $user,
+                            'g.status' => 'active', 'g.owner_user_id' => $user, 'g.parent_id' => $place['id'],
+                            'm.user_id' => $user, 'm.starter_site_id' => $site['id']])->exists($this->db);
+                    $crop = (new Query())->from('world_crop_revision')->where(['yield_item_id' => $order['item_id'], 'status' => ['published', 'superseded']])->exists($this->db);
+                    if (!$bed || !$crop) throw new GameError('BED_INCOME_UNAVAILABLE', 'Доход от урожая можно направить только в казну своей открытой грядки.', 403);
+                }
                 $used = (int)(new Query())->from('economy_order_fulfillment')->where(['order_id' => $order['id'], 'user_id' => $user])->sum('quantity', $this->db);
                 if ($input['quantity'] > (int)$order['remaining_quantity'] || $input['quantity'] > (int)$order['per_user_limit'] - $used) throw new GameError('ORDER_QUANTITY_CHANGED', 'Превышен остаток заказа или ваш лимит.');
                 $selected = (new CanonicalInventory(new CraftStorage($this->db)))->inspectOrderDelivery($user, $input['inventory_id'], (int)$order['item_id'], $input['quantity']);
@@ -132,13 +149,17 @@ class StarterOrders
                 (new BudgetSpending($this->db))->allocation((int)$budget['id'], $earning);
                 $hold = (new BudgetSpending($this->db))->commitment((int)$order['commitment_id']);
                 if ((int)$hold['account_id'] !== (int)$budget['id'] || Money::parse((string)$hold['remaining_amount'])->compare($earning) < 0) throw new \RuntimeException('Order funding mismatch.');
-                $policy = (new StarterIncomePolicy($this->db))->preview((int)$site['id'], $place['id'], (int)$order['starter_history_id']);
-                $target = (new EconomyHierarchy($this->db))->accounts((int)$site['id']);
+                $policy = $incomeNode === (int)$site['id']
+                    ? (new StarterIncomePolicy($this->db))->preview((int)$site['id'], $place['id'], (int)$order['starter_history_id'])
+                    : (new TreasuryLedger($this->db))->published($incomeNode);
+                $target = (new EconomyHierarchy($this->db))->accounts($incomeNode);
                 Money::parse((string)($target['treasury']['amount'] ?? '0'))->add($earning);
                 $revisions['node:' . $site['id']] = (int)$site['revision'];
+                if ($incomeNode !== (int)$site['id']) $revisions['node:' . $incomeNode] = (int)(new Query())->select('revision')->from('world_node')->where(['id' => $incomeNode])->scalar($this->db);
                 $revisions['inventory:' . $selected['row']['id']] = (int)$selected['row']['revision'];
                 $revisions['storage:' . $selected['storage']['id']] = (int)$selected['storage']['revision'];
-                $terms += ['item_id' => (int)$order['item_id'], 'site_node_id' => (int)$site['id'], 'earned' => $earning->decimal(), 'destination' => 'site_treasury', 'income_policy' => $policy, 'goods_consumed' => true];
+                $terms += ['item_id' => (int)$order['item_id'], 'site_node_id' => (int)$site['id'], 'income_node_id' => $incomeNode,
+                    'earned' => $earning->decimal(), 'destination' => $incomeNode === (int)$site['id'] ? 'site_treasury' : 'bed_treasury', 'income_policy' => $policy, 'goods_consumed' => true];
                 $result['site'] = $site;
             }
         }
@@ -171,17 +192,17 @@ class StarterOrders
                 $id = (int)$p['order']['id']; $this->close($p['order'], 'cancelled', $operation);
             } else {
                 $order = $p['order']; $id = (int)$order['id']; $site = (int)$p['site']['id'];
-                (new StarterIncomePolicy($this->db))->initialize($site, $payload['node_id'], (int)$order['starter_history_id'], $operation, $id);
+                if ($terms['income_node_id'] === $site) (new StarterIncomePolicy($this->db))->initialize($site, $payload['node_id'], (int)$order['starter_history_id'], $operation, $id);
                 $store = new CraftStorage($this->db); $store->operationId = $operation;
                 $storages[] = (new CanonicalInventory($store))->deliverOrder($user, $payload['inventory_id'], (int)$order['item_id'], $payload['quantity']);
-                $transfer = $spend->pay((int)$order['commitment_id'], $site, Money::parse($terms['earned']), $operation);
+                $transfer = $spend->pay((int)$order['commitment_id'], $terms['income_node_id'], Money::parse($terms['earned']), $operation, $terms['destination'] === 'bed_treasury' ? 'crop_purchase' : 'order_payment');
                 $left = (int)$order['remaining_quantity'] - $payload['quantity'];
                 if ($this->db->createCommand()->update('economy_purchase_order', ['remaining_quantity' => $left, 'status' => $left ? 'open' : 'fulfilled', 'revision' => new Expression('[[revision]]+1'),
                     'closed_at' => $left ? null : $now, 'close_operation_id' => $left ? null : $operation], ['id' => $id, 'revision' => $order['revision'], 'status' => 'open'])->execute() !== 1) throw new \RuntimeException('Order update failed.');
                 $this->db->createCommand()->insert('economy_order_fulfillment', ['order_id' => $id, 'user_id' => $user, 'site_node_id' => $site, 'inventory_id' => $payload['inventory_id'],
                     'quantity' => $payload['quantity'], 'transfer_id' => $transfer, 'operation_id' => $operation, 'created_at' => $now])->execute();
-                $event = ['fulfillment_id' => (int)$this->db->getLastInsertID(), 'item_id' => (int)$order['item_id'], 'quantity' => $payload['quantity'], 'site_node_id' => $site, 'earned' => $terms['earned']];
-                $changed[] = $site;
+                $event = ['fulfillment_id' => (int)$this->db->getLastInsertID(), 'item_id' => (int)$order['item_id'], 'quantity' => $payload['quantity'], 'site_node_id' => $site, 'income_node_id' => $terms['income_node_id'], 'earned' => $terms['earned']];
+                $changed[] = $site; $changed[] = $terms['income_node_id'];
             }
             $bus->emit($operation, $user, 'world.orders.' . $action, ['order_id' => $id, 'changed_node_ids' => $changed] + $event);
             return ['changed_node_ids' => $changed, 'changed_storage_ids' => $storages];

@@ -76,6 +76,9 @@
           "can_invest": {
             "type": "boolean"
           },
+          "can_grant": {"type": "boolean", "description": "The owner has an available budget balance; destination eligibility is checked by preview."},
+          "grant_preview": {"type": "string"},
+          "grant_execute": {"type": "string"},
           "wallet_ready": {
             "type": "boolean"
           },
@@ -183,6 +186,9 @@
           "balances",
           "can_view_finances",
           "can_invest",
+          "can_grant",
+          "grant_preview",
+          "grant_execute",
           "wallet_ready",
           "collect_available",
           "entries",

@@ -3,7 +3,7 @@
   "info": {
     "title": "Ablaki World API — implemented foundation",
     "version": "1.0.0",
-    "description": "Implemented world foundation. Storage routes are defined in world-storage.openapi.json. No migrations or runtime checks have been performed. Commands require a server quote and exact replay of request_key, payload, quote_id and expected_revisions. Feature flags default off. Workspace and recovery routes are defined in world-workspace.openapi.json; equipment instance revisions are supported."
+    "description": "World API with node-scoped storage, crafting, economy, housing and cultivation. Commands require a server quote and exact replay of request_key, payload, quote_id and expected_revisions. The test environment has applied schema 34; the latest campsite changes still require runtime acceptance."
   },
   "servers": [
     {
@@ -1216,6 +1216,27 @@
     "/world/storage/recover": {
       "$ref": "world-workspace.openapi.json#/paths/~1world~1storage~1recover"
     },
+    "/world/nodes/{id}/campsite": {
+      "$ref": "world-campsite.openapi.json#/paths/~1world~1nodes~1{id}~1campsite"
+    },
+    "/world/nodes/{id}/budget-grant-preview": {
+      "$ref": "world-campsite.openapi.json#/paths/~1world~1nodes~1{id}~1budget-grant-preview"
+    },
+    "/world/nodes/{id}/budget-grant": {
+      "$ref": "world-campsite.openapi.json#/paths/~1world~1nodes~1{id}~1budget-grant"
+    },
+    "/world/nodes/{id}/supplies-starter-preview": {
+      "$ref": "world-campsite.openapi.json#/paths/~1world~1nodes~1{id}~1supplies-starter-preview"
+    },
+    "/world/nodes/{id}/supplies-starter": {
+      "$ref": "world-campsite.openapi.json#/paths/~1world~1nodes~1{id}~1supplies-starter"
+    },
+    "/world/nodes/{id}/supplies-gather-preview": {
+      "$ref": "world-campsite.openapi.json#/paths/~1world~1nodes~1{id}~1supplies-gather-preview"
+    },
+    "/world/nodes/{id}/supplies-gather": {
+      "$ref": "world-campsite.openapi.json#/paths/~1world~1nodes~1{id}~1supplies-gather"
+    },
     "/world/nodes/{id}/economy": {
       "$ref": "world-economy.openapi.json#/paths/~1world~1nodes~1{id}~1economy"
     },
@@ -1375,6 +1396,19 @@
               "$ref": "#/components/schemas/Reason"
             },
             "maxItems": 100
+          },
+          "preview": {
+            "type": "string",
+            "nullable": true,
+            "description": "POST path for a command preview when this action has one."
+          },
+          "execute": {
+            "type": "string",
+            "description": "POST path for the idempotent command when this action has one."
+          },
+          "payload": {
+            "type": "object",
+            "description": "Fixed command fields; append request_key and any other required fields from the command contract."
           }
         },
         "required": [
@@ -2087,12 +2121,19 @@
       "Actions": {
         "type": "object",
         "properties": {
+          "node_id": {
+            "type": "integer",
+            "minimum": 1
+          },
           "items": {
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/Action"
             },
             "maxItems": 100
+          },
+          "server_time": {
+            "type": "integer"
           }
         },
         "required": [

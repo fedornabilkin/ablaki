@@ -17,7 +17,7 @@ class WorldController extends \yii\rest\Controller
 {
     use AuthTrait;
     public function authExceptAction(): array { return ['options']; }
-    protected function verbs() { return ['index' => ['GET'], 'node' => ['GET'], 'children' => ['GET'], 'navigation' => ['GET'], 'map' => ['GET'], 'statistics' => ['GET'], 'actions' => ['GET'], 'onboarding' => ['GET'], 'join-preview' => ['POST'], 'join' => ['POST'], 'move-preview' => ['POST'], 'move' => ['POST'], 'archive-preview' => ['POST'], 'archive' => ['POST'], 'storages' => ['GET'], 'storage' => ['GET'], 'storage-transfer-preview' => ['POST'], 'storage-transfer' => ['POST']]; }
+    protected function verbs() { return ['index' => ['GET'], 'node' => ['GET'], 'children' => ['GET'], 'navigation' => ['GET'], 'map' => ['GET'], 'statistics' => ['GET'], 'actions' => ['GET'], 'campsite' => ['GET'], 'onboarding' => ['GET'], 'join-preview' => ['POST'], 'join' => ['POST'], 'move-preview' => ['POST'], 'move' => ['POST'], 'archive-preview' => ['POST'], 'archive' => ['POST'], 'storages' => ['GET'], 'storage' => ['GET'], 'storage-transfer-preview' => ['POST'], 'storage-transfer' => ['POST']]; }
     public function runAction($id, $params = [])
     {
         try { return parent::runAction($id, $params); }
@@ -149,12 +149,32 @@ class WorldController extends \yii\rest\Controller
         $result['world'] = $reader->node($id); $result['regions'] = $reader->children($id, Yii::$app->request->queryParams);
         return $result;
     }
-    public function actionNode($id): array { return $this->reader()->node($this->id($id)); }
+    private function campsiteActions(array $node): ?array
+    {
+        if ($node['type'] !== 'PLOT' || (((array)$node['details'])['plot_kind'] ?? null) !== 'campsite' || !$node['permissions']['storage']) return null;
+        $user = (int)Yii::$app->user->id;
+        if (!(new Query())->from('world_membership')->where(['user_id' => $user, 'world_id' => $node['root_id'], 'starter_site_id' => $node['id']])->exists(Yii::$app->db)) return null;
+        return (new \common\modules\world\service\WorldCampsite(Yii::$app->db, $this->flags()))->actions($user, (int)$node['id']);
+    }
+    public function actionNode($id): array
+    {
+        $node = $this->reader()->node($this->id($id)); $actions = $this->campsiteActions($node);
+        if ($actions) $node['actions'] = $actions['items'];
+        return $node;
+    }
     public function actionChildren($id): array { return $this->reader()->children($this->id($id), Yii::$app->request->queryParams); }
     public function actionNavigation($id): array { return $this->reader()->navigation($this->id($id)); }
     public function actionMap($id): array { return $this->reader()->children($this->id($id), Yii::$app->request->queryParams); }
     public function actionStatistics($id): array { return ['items' => $this->reader()->statistics($this->id($id))]; }
-    public function actionActions($id): array { return ['items' => $this->reader()->node($this->id($id))['actions']]; }
+    public function actionActions($id): array
+    {
+        $node = $this->reader()->node($this->id($id));
+        return $this->campsiteActions($node) ?: ['items' => $node['actions']];
+    }
+    public function actionCampsite($id): array
+    {
+        return (new \common\modules\world\service\WorldCampsite(Yii::$app->db, $this->flags()))->state((int)Yii::$app->user->id, $this->id($id));
+    }
     public function actionOnboarding(): array { return (new WorldOnboarding(Yii::$app->db, $this->flags()))->state((int)Yii::$app->user->id); }
     public function actionStorages(): array
     {
@@ -260,6 +280,38 @@ class WorldController extends \yii\rest\Controller
     }
     public function actionInvestPreview($id): array { return $this->investment($id, true); }
     public function actionInvest($id): array { return $this->investment($id, false); }
+    private function budgetGrant($id, bool $preview): array
+    {
+        if (!Yii::$app->request->isPost) throw new \yii\web\MethodNotAllowedHttpException('Используйте POST.');
+        $body = Yii::$app->request->bodyParams;
+        if (!is_array($body) || !is_string($body['amount'] ?? null) || !is_string($body['purpose'] ?? null)
+            || trim($body['purpose']) === '' || mb_strlen($body['purpose'], 'UTF-8') > 255) throw new GameError('INVALID_GRANT', 'Укажите сумму и назначение перевода.', 422);
+        try { $amount = \common\modules\economy\value\Money::parse($body['amount']); }
+        catch (\InvalidArgumentException $e) { throw new GameError('INVALID_AMOUNT', 'Укажите сумму с точностью до четырёх знаков после точки.', 422); }
+        catch (\OverflowException $e) { throw new GameError('INVALID_AMOUNT', 'Сумма превышает допустимый предел.', 422); }
+        if ($amount->isZero() || $amount->isNegative()) throw new GameError('INVALID_AMOUNT', 'Укажите положительную сумму.', 422);
+        $input = ['source_node_id' => $this->id($id), 'destination_node_id' => $this->id($body['destination_node_id'] ?? null),
+            'amount' => $amount->decimal(), 'purpose' => trim($body['purpose'])];
+        $service = new \common\modules\economy\service\BudgetGrants(Yii::$app->db, $this->flags()); $user = (int)Yii::$app->user->id;
+        if ($preview) return $service->preview($user, $input);
+        if (!is_string($body['request_key'] ?? null) || !is_string($body['quote_id'] ?? null) || !is_array($body['expected_revisions'] ?? null)) throw new GameError('INVALID_COMMAND', 'Требуется подтверждённый расчёт.', 422);
+        return $service->execute($user, $body['request_key'], $input, $body['quote_id'], $body['expected_revisions']);
+    }
+    public function actionBudgetGrantPreview($id): array { return $this->budgetGrant($id, true); }
+    public function actionBudgetGrant($id): array { return $this->budgetGrant($id, false); }
+    private function supplies($id, string $operation, bool $preview): array
+    {
+        if (!Yii::$app->request->isPost) throw new \yii\web\MethodNotAllowedHttpException('Используйте POST.');
+        $body = Yii::$app->request->bodyParams;
+        if (!is_array($body)) throw new GameError('INVALID_COMMAND', 'Некорректное действие.', 422);
+        $input = ['node_id' => $this->id($id), 'action' => $operation];
+        $service = new \common\modules\world\service\WorldSupplies(Yii::$app->db, $this->flags()); $user = (int)Yii::$app->user->id;
+        if ($preview) return $service->preview($user, $input);
+        if (!is_string($body['request_key'] ?? null) || !is_string($body['quote_id'] ?? null) || !is_array($body['expected_revisions'] ?? null)) throw new GameError('INVALID_COMMAND', 'Требуется подтверждённый расчёт.', 422);
+        return $service->execute($user, $body['request_key'], $input, $body['quote_id'], $body['expected_revisions']);
+    }
+    public function actionSuppliesPreview($id, string $operation): array { return $this->supplies($id, $operation, true); }
+    public function actionSuppliesExecute($id, string $operation): array { return $this->supplies($id, $operation, false); }
     public function actionObligations($id): array
     {
         if (!Yii::$app->request->isGet) throw new \yii\web\MethodNotAllowedHttpException('Используйте GET.');
@@ -359,6 +411,7 @@ class WorldController extends \yii\rest\Controller
             $input['order_id'] = $this->id($body['order_id'] ?? null);
             if ($action === 'deliver') {
                 $input['inventory_id'] = $this->id($body['inventory_id'] ?? null); $input['quantity'] = $this->id($body['quantity'] ?? null);
+                if (array_key_exists('income_node_id', $body)) $input['income_node_id'] = $this->id($body['income_node_id']);
                 if ($input['quantity'] > 10000) throw new GameError('INVALID_QUANTITY', 'Можно сдать до 10000 предметов за раз.', 422);
             }
         }

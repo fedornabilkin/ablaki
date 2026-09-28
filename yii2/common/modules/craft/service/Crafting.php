@@ -114,14 +114,8 @@ class Crafting
     }
     private function supplies(int $user,string $action): string
     {
-        $query=(new Query())->from('craft_event')->where(['user_id'=>$user,'action'=>$action]);
-        if($action==='gather')$query->andWhere(['>=','created_at',(new \DateTimeImmutable('today',new \DateTimeZone('Europe/Moscow')))->getTimestamp()]);
-        if($query->exists($this->s->db))throw new ConflictHttpException($action==='starter'?'Стартовый набор уже получен.':'Сырьё на сегодня уже собрано.');
-        $items=(new Query())->from('craft_item')->where(['active'=>1])->andWhere(['>','gather_quantity',0])->all($this->s->db);
-        if(!$items)throw new ConflictHttpException('Источники сырья пока не настроены.');
-        $total=0; foreach($items as $item) { $amount=(int)$item['gather_quantity']*($action==='starter'?3:1); $this->s->move($user,$item,$amount);$total+=$amount; }
-        $this->event($user,$action,$total);
-        return $action==='starter'?'Стартовые материалы получены.':'Сырьё на сегодня собрано.';
+        try { return (new \common\modules\world\service\SupplyGrant($this->s->db))->grant($this->s, $user, $action); }
+        catch (\common\services\game\GameError $error) { throw new ConflictHttpException($error->getMessage()); }
     }
     public function recipeInputs(int $user, int $id, int $qty): array
     {
@@ -183,7 +177,9 @@ class Crafting
         $where=['user_id'=>$user,'recipe_id'=>$id]; $known=$this->one('craft_known',$where);
         $write=$known?$this->s->db->createCommand()->update('craft_known',['quantity'=>(int)$known['quantity']+$qty],$where):$this->s->db->createCommand()->insert('craft_known',$where+['quantity'=>$qty]);
         if($write->execute()!==1)throw new \RuntimeException('Recipe progress write failed.');
-        $this->xp($user,(int)$recipe['category_id'],(int)$recipe['experience']*$qty);
+        $baseXp = (int)$recipe['experience']*$qty;
+        $efficiency = (new \common\modules\world\service\NightWorkEfficiency($this->s->db))->basisPoints($user);
+        $this->xp($user,(int)$recipe['category_id'],$baseXp ? max(1, intdiv($baseXp*$efficiency, 10000)) : 0);
         $this->s->insert('craft_history',['user_id'=>$user,'recipe_id'=>$id,'item_id'=>$output['id'],'created_at'=>time()]);
         $this->event($user,'craft',(int)$recipe['output_quantity']*$qty,['recipe_id'=>$id,'item_id'=>$output['id'],'credit_change'=>-$cost]);
         $module = \Yii::$app->getModule('world');

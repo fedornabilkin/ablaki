@@ -97,6 +97,9 @@ class CraftWorkspace
         if (!$plan['output_fits']) $reasons[] = 'В выбранном хранилище недостаточно места для результата или оно не подходит для предмета.';
         $meta = (new Query())->from('craft_meta')->where(['id' => 1])->one($this->db);
         $cost = (int)$meta['charge_credits'] === 1 ? (int)$input['recipe']['cost_credits'] * $payload['quantity'] : 0;
+        $efficiency = (new \common\modules\world\service\NightWorkEfficiency($this->db))->basisPoints($user);
+        $baseExperience = (int)$input['recipe']['experience'] * $payload['quantity'];
+        $experience = $baseExperience ? max(1, intdiv($baseExperience * $efficiency, 10000)) : 0;
         $person = (new Query())->from('persone')->where(['user_id' => $user])->one($this->db);
         if (!$person || (float)$person['credit'] < $cost) $reasons[] = 'Не хватает кредитов.';
         if ($cost) (new CraftInventory($store))->requireTransactionalBalance();
@@ -108,7 +111,8 @@ class CraftWorkspace
         }
         $terms = ['materials' => $plan['materials'], 'consume' => $plan['consume'], 'grant' => $plan['grant'], 'equipment' => $selected,
             'output' => ['item_id' => (int)$input['output']['id'], 'name' => trim($input['output']['name']), 'quantity' => (int)$input['recipe']['output_quantity'] * $payload['quantity'], 'storage_id' => (int)$target['id'], 'fits' => $plan['output_fits']],
-            'price' => $cost . '.0000', 'currency' => 'Cr', 'experience' => (int)$input['recipe']['experience'] * $payload['quantity'], 'reasons' => array_values(array_unique($reasons))];
+            'price' => $cost . '.0000', 'currency' => 'Cr', 'experience' => $experience, 'work_efficiency_bps' => $efficiency,
+            'reasons' => array_values(array_unique($reasons))];
         return compact('store', 'input', 'sources', 'target', 'plan', 'selected', 'cost', 'revisions', 'terms');
     }
     public function preview(int $user, array $payload): array

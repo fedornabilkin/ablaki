@@ -355,10 +355,8 @@ class CanonicalInventory
         $stack = $chest ? 1 : (int)$item['stack_size'];
         if ($target['kind'] === 'placement') {
             $slot = (new Query())->from('world_slot')->where(['storage_id' => $destination, 'position' => $position, 'status' => 'active'])->one($this->db);
-            $station = (new Query())->from('craft_station')->where(['item_id' => $item['id'], 'active' => 1])->exists($this->db);
-            if (!$slot || (int)$slot['size'] < 1 || !$item['active'] || (!$chest && !$station) || ($slot['slot_type'] !== 'equipment' && $slot['slot_type'] !== ($chest ? 'chest' : 'station'))) throw new ConflictHttpException('Предмет не подходит для этого места.');
-            $compatibility = json_decode($slot['compatibility_json'], true, 512, JSON_THROW_ON_ERROR);
-            if (!is_array($compatibility) || (isset($compatibility['item_codes']) && !in_array($item['code'], $compatibility['item_codes'], true))) throw new ConflictHttpException('Назначение места не подходит предмету.');
+            if (!$slot) throw new ConflictHttpException('Предмет не подходит для этого места.');
+            (new EquipmentPlacementPolicy($this->db))->assertAllowed($item, $target, $slot);
             if ($quantity !== 1 || $occupied) throw new ConflictHttpException('В монтажном слоте размещается одна вещь.');
             $stack = 1;
         }

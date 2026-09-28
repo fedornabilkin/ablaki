@@ -48,7 +48,7 @@ class WorldNights
         if ($health) {
             $result['health'] = ['severity' => (int)$health['severity'], 'recovery_progress' => (int)$health['recovery_progress'], 'exposure_nights' => (int)$health['exposure_nights'],
                 'onset_at' => $health['onset_at'] === null ? null : (int)$health['onset_at'], 'processed_until' => $health['processed_until'] === null ? null : (int)$health['processed_until'],
-                'next_sequence' => (int)$health['next_sequence'], 'revision' => (int)$health['revision'], 'work_efficiency_bps' => NightCalendar::efficiency($policy, (int)$health['severity']), 'work_penalty_applied' => false];
+                'next_sequence' => (int)$health['next_sequence'], 'revision' => (int)$health['revision'], 'work_efficiency_bps' => NightCalendar::efficiency($policy, (int)$health['severity']), 'work_penalty_applied' => (int)$health['severity'] > 0];
             $query = (new Query())->select(['r.id', 'r.outcome', 'r.severity_before', 'r.severity_after', 'r.recovery_progress', 'r.resolved_at', 'p.sequence', 'p.started_at', 'p.ended_at'])
                 ->from(['r' => 'world_night_resolution'])->innerJoin(['p' => 'world_night_period'], '[[p.id]]=[[r.period_id]]')->where(['r.actor_id' => $actor['id'], 'p.policy_id' => $policy['id']]);
             // Results are immutable; pin the journal to the health checkpoint read above.

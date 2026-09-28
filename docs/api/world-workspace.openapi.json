@@ -3,7 +3,7 @@
   "info": {
     "title": "Ablaki World Workspace and Recovery API",
     "version": "1.0.0",
-    "description": "Implemented code; not runtime-tested or deployed. Requires world_read/storage_v2, writes require world_write. Storage activation remains gated. Only own local storages are available. Recipe prices and XP use the existing craft engine. Quote terms are recalculated under locks, including wear. New instance:<id> revision. Recovery moves a whole inventory row without changing its physical identity or chest contents; it cannot be used as general-purpose free storage."
+    "description": "Own local storage and installed stations are selected by node. Recipe prices, equipment wear and health-adjusted experience are quoted under locks. A station must still satisfy its slot compatibility and room rules when selected. Recovery preserves the inventory row and chest contents."
   },
   "servers": [
     {
@@ -632,6 +632,7 @@
             "minimum": 0,
             "maximum": 100000
           },
+          "work_efficiency_bps": {"type": "integer", "minimum": 1, "maximum": 10000},
           "reasons": {
             "type": "array",
             "items": {
@@ -650,6 +651,7 @@
           "price",
           "currency",
           "experience",
+          "work_efficiency_bps",
           "reasons"
         ],
         "additionalProperties": false

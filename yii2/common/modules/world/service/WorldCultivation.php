@@ -115,13 +115,15 @@ class WorldCultivation
         if ($action === 'sow') $required[(int)$rules['seed_item_id']] = (int)$rules['seed_quantity'];
         if (in_array($action, ['sow', 'water'], true) && $rules['water_item_id'] !== null) $required[(int)$rules['water_item_id']] = ($required[(int)$rules['water_item_id']] ?? 0) + (int)$rules['water_quantity'];
         $items = []; foreach ($required as $id => $quantity) $items[$id] = $this->resource($id);
-        $output = $this->resource((int)$rules['yield_item_id']); $quantity = $action === 'harvest' ? (int)$rules['yield_quantity'] : 0;
+        $output = $this->resource((int)$rules['yield_item_id']);
+        $efficiency = $action === 'harvest' ? (new NightWorkEfficiency($this->db))->basisPoints($user) : 10000;
+        $quantity = $action === 'harvest' ? max(1, intdiv((int)$rules['yield_quantity'] * $efficiency, 10000)) : 0;
         $store = new CraftStorage($this->db); $inventory = new CanonicalInventory($store); $backpack = $inventory->backpack($user);
         if (!$backpack) throw new GameError('BACKPACK_UNAVAILABLE', 'Рюкзак ещё не подготовлен.');
         $target = (new StorageAccessPolicy($this->db))->storage($user, (int)$backpack['id'], true);
         $plan = $inventory->planCraft([$target], $target, $required, $items, $output, $quantity);
         $revisions['storage:' . $target['id']] = (int)$target['revision']; $revisions['catalog'] = (int)$this->one('craft_meta', ['id' => 1])['revision'];
-        $terms += ['materials' => $plan['materials'], 'consume' => $plan['consume'], 'grant' => $plan['grant'], 'output' => ['item_id' => (int)$output['id'], 'quantity' => $quantity, 'storage_id' => (int)$target['id'], 'fits' => $plan['output_fits']]];
+        $terms += ['work_efficiency_bps' => $efficiency, 'materials' => $plan['materials'], 'consume' => $plan['consume'], 'grant' => $plan['grant'], 'output' => ['item_id' => (int)$output['id'], 'quantity' => $quantity, 'storage_id' => (int)$target['id'], 'fits' => $plan['output_fits']]];
         return $c + compact('rules', 'terms', 'revisions', 'store', 'items', 'output', 'target', 'plan');
     }
     public function preview(int $user, string $action, array $input): array

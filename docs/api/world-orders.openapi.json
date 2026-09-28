@@ -3,7 +3,7 @@
   "info": {
     "title": "Ablaki funded starter orders",
     "version": "1.0.0",
-    "description": "Code only, not tested or deployed. Finite municipal demand for existing gatherable materials. Fully reserved real budget; no minting. Selected backpack goods are consumed with a funded receipt in the player campsite treasury. Expiry jobs release unused reserves. Publication is allowed to the settlement owner or world administrators for unowned system settlements. Initial income terms require explicit publication and delivery confirmation."
+    "description": "Finite municipal demand for gatherable materials or published crop yields. The buyer fully reserves real budget. Delivery consumes selected backpack goods; payment enters the campsite treasury or, for a published crop yield, an owned unlocked bed's treasury when income_node_id is supplied. Expiry releases unused reserves."
   },
   "servers": [
     {
@@ -258,6 +258,11 @@
             "type": "integer",
             "minimum": 1,
             "maximum": 10000
+          },
+          "income_node_id": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Optional owned unlocked bed. Omit to credit the starter campsite."
           }
         },
         "required": [
@@ -659,6 +664,11 @@
             "minimum": 1,
             "maximum": 10000
           },
+          "income_node_id": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Optional owned unlocked bed for crop-sale income. Must match the preview payload."
+          },
           "request_key": {
             "type": "string",
             "pattern": "^[A-Za-z0-9_-]{16,80}$"
@@ -719,6 +729,7 @@
             "minimum": 1,
             "maximum": 2147483647
           },
+          "income_node_id": {"type": "integer", "minimum": 1},
           "earned": {
             "type": "string",
             "pattern": "^(0|[1-9][0-9]{0,14})\\.[0-9]{4}$",
@@ -727,25 +738,10 @@
           "destination": {
             "type": "string",
             "enum": [
-              "site_treasury"
+              "site_treasury", "bed_treasury"
             ]
           },
-          "income_policy": {
-            "type": "object",
-            "properties": {
-              "initialize": {
-                "type": "boolean"
-              },
-              "policy": {
-                "$ref": "#/components/schemas/IncomePolicy"
-              }
-            },
-            "required": [
-              "initialize",
-              "policy"
-            ],
-            "additionalProperties": false
-          },
+          "income_policy": {"type": "object", "description": "Site starter policy or the bed's published collection policy."},
           "goods_consumed": {
             "type": "boolean",
             "enum": [
@@ -761,6 +757,7 @@
           "order_revision",
           "item_id",
           "site_node_id",
+          "income_node_id",
           "earned",
           "destination",
           "income_policy",

@@ -101,7 +101,11 @@ class WorldGarden
             'offer' => $offer ? ['id' => (int)$offer['id'], 'name' => $offer['name'], 'price' => Money::parse((string)$offer['price'])->decimal(), 'base_price' => Money::parse((string)$offer['base_price'])->decimal()] : null,
             'garden' => $garden, 'can_publish' => $c['node']['type'] === 'SETTLEMENT' && $c['manager'] && $this->flags->capabilities()['world_write'],
             'can_buy' => $c['membership'] !== null && !$garden && $offer !== null && $this->ready(),
-            'can_expand' => $garden && $garden['node_id'] === $id && $garden['unlocked'] < 10 && $this->ready(), 'cultivation_enabled' => false, 'server_time' => time()];
+            'can_expand' => $garden && $garden['node_id'] === $id && $garden['unlocked'] < 10 && $this->ready(),
+            'cultivation_enabled' => $garden !== null && $this->flags->capabilities()['world_write'] && $this->flags->capabilities()['storage_v2']
+                && $this->db->schema->getTableSchema('world_crop_revision') !== null
+                && (new Query())->from('world_crop_revision')->where(['status' => 'published'])->exists($this->db),
+            'server_time' => time()];
     }
     private function prepare(int $user, array $input, string $action): array
     {

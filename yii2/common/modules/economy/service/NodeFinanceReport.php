@@ -14,8 +14,8 @@ use yii\db\Query;
 /** One owned object's lifetime flows. Never sums descendants or calls transfers new world revenue. */
 class NodeFinanceReport
 {
-    private const PAYMENTS = ['order_payment', 'premises_purchase', 'garden_purchase', 'garden_expansion', 'equipment_expansion', 'building_repair'];
-    private const KINDS = ['personal_investment', 'treasury_collection', 'parent_payment', 'treasury_loss', 'order_payment', 'premises_purchase', 'garden_purchase', 'garden_expansion', 'equipment_expansion', 'building_repair'];
+    private const PAYMENTS = ['order_payment', 'crop_purchase', 'premises_purchase', 'garden_purchase', 'garden_expansion', 'equipment_expansion', 'building_repair'];
+    private const KINDS = ['personal_investment', 'budget_grant', 'treasury_collection', 'parent_payment', 'treasury_loss', 'order_payment', 'crop_purchase', 'premises_purchase', 'garden_purchase', 'garden_expansion', 'equipment_expansion', 'building_repair'];
     private $db;
     private $flags;
     public function __construct(Connection $db, WorldFlags $flags) { $this->db = $db; $this->flags = $flags; }

@@ -268,10 +268,7 @@
           },
           "work_penalty_applied": {
             "type": "boolean",
-            "enum": [
-              false
-            ],
-            "description": "Reserved for future timed work. Immediate craft rewards and costs are unchanged."
+            "description": "True while illness reduces daily gathering, harvested quantities and craft experience. Recipe outputs and credit costs retain their published values."
           }
         },
         "required": [
@@ -551,10 +548,7 @@
               },
               "work_penalty_applied": {
                 "type": "boolean",
-                "enum": [
-                  false
-                ],
-                "description": "Reserved for future timed work. Immediate craft rewards and costs are unchanged."
+                "description": "True while illness reduces daily gathering, harvested quantities and craft experience."
               }
             },
             "required": [
