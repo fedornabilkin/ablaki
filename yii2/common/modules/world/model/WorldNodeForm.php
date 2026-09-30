@@ -17,6 +17,7 @@ class WorldNodeForm extends Model
     public $parent_id;
     public $owner_user_id;
     public $visibility = 'public';
+    public $portable = 0;
     public $position_x = 0;
     public $position_y = 0;
     public $position = 0;
@@ -72,6 +73,7 @@ class WorldNodeForm extends Model
             [['code', 'slug'], 'match', 'pattern' => '/^[a-z0-9][a-z0-9-]{0,79}$/D'],
             [['parent_id', 'owner_user_id'], 'default', 'value' => null],
             [['parent_id', 'owner_user_id'], 'integer', 'min' => 1, 'max' => 2147483647],
+            ['portable', 'in', 'range' => [0, 1]],
             [['position_x', 'position_y', 'position'], 'required'],
             [['position_x', 'position_y', 'position'], 'integer', 'min' => -1000000, 'max' => 1000000],
             ['footprint', 'string', 'max' => 2048],
@@ -91,7 +93,7 @@ class WorldNodeForm extends Model
     }
     public function populate(array $snapshot): void
     {
-        foreach (array_merge(['name', 'code', 'slug', 'parent_id', 'owner_user_id', 'visibility', 'position_x', 'position_y', 'position', 'revision'], $this->detailFields()) as $field) {
+        foreach (array_merge(['name', 'code', 'slug', 'parent_id', 'owner_user_id', 'visibility', 'portable', 'position_x', 'position_y', 'position', 'revision'], $this->detailFields()) as $field) {
             $this->$field = array_key_exists($field, $snapshot['node']) ? $snapshot['node'][$field] : ($snapshot['details'][$field] ?? $this->$field);
         }
         $this->footprint = (string)($snapshot['node']['footprint_json'] ?? '');
@@ -105,7 +107,7 @@ class WorldNodeForm extends Model
     {
         $values = ['node_type' => $this->nodeType, 'name' => $this->name, 'code' => $this->code, 'slug' => $this->slug, 'visibility' => $this->visibility,
             'parent_id' => $this->parent_id === null ? null : (int)$this->parent_id,
-            'owner_user_id' => $this->owner_user_id === null ? null : (int)$this->owner_user_id,
+            'owner_user_id' => $this->owner_user_id === null ? null : (int)$this->owner_user_id, 'portable' => (int)$this->portable,
             'position_x' => (int)$this->position_x, 'position_y' => (int)$this->position_y, 'position' => (int)$this->position,
             'footprint_json' => \common\modules\world\service\WorldMapGeometry::normalize((string)$this->footprint, (int)$this->position_x, (int)$this->position_y)];
         $details = [];
@@ -116,7 +118,7 @@ class WorldNodeForm extends Model
     public function attributeLabels(): array
     {
         return ['name' => 'Название', 'code' => 'Постоянный код', 'slug' => 'Адрес внутри родителя', 'parent_id' => 'Родительский объект, ID',
-            'owner_user_id' => 'Владелец, ID пользователя', 'visibility' => 'Видимость', 'position_x' => 'Координата X', 'position_y' => 'Координата Y',
+            'owner_user_id' => 'Владелец, ID пользователя', 'visibility' => 'Видимость', 'portable' => 'Можно перемещать', 'position_x' => 'Координата X', 'position_y' => 'Координата Y',
             'position' => 'Порядок', 'reason' => 'Причина изменения', 'climate' => 'Климат (код)', 'settlement_kind' => 'Тип поселения',
             'population' => 'Население', 'plot_limit' => 'Лимит участков', 'level' => 'Уровень', 'condition' => 'Прочность',
             'max_condition' => 'Максимальная прочность', 'operational_status' => 'Состояние постройки', 'area' => 'Площадь',

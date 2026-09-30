@@ -9,7 +9,7 @@ $this->title = $node['name'];
 $this->params['breadcrumbs'][] = ['label' => WorldNodeForm::TYPES[$model->type()], 'url' => ['index']];
 $this->params['breadcrumbs'][] = $this->title;
 $attributes = [['label' => 'ID', 'value' => $id], ['label' => 'Состояние', 'value' => $node['status'] === 'archived' ? 'В архиве' : 'Действует'], ['label' => 'Версия', 'value' => $node['revision']]];
-foreach (array_merge(['name', 'code', 'slug', 'parent_id', 'owner_user_id', 'visibility', 'position_x', 'position_y', 'position'], $model->detailFields()) as $field) {
+foreach (array_merge(['name', 'code', 'slug', 'parent_id', 'owner_user_id', 'visibility', 'portable', 'position_x', 'position_y', 'position'], $model->detailFields()) as $field) {
     $value = $model->$field; $attributes[] = ['label' => $model->getAttributeLabel($field), 'value' => WorldNodeForm::choices()[$field][$value] ?? $value];
 }
 $attributes[] = ['label' => 'Полигон на карте', 'value' => $model->footprint ?: 'Одна ячейка'];

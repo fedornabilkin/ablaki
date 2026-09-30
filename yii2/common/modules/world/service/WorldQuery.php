@@ -101,7 +101,7 @@ class WorldQuery
             unset($detail['node_id']);
             foreach (['template_revision_id', 'level', 'condition', 'max_condition', 'area', 'fertility', 'ordinal', 'unlocked', 'population', 'plot_limit', 'allow_building', 'garden_node_id', 'active_project_id'] as $field) if (isset($detail[$field])) $detail[$field] = (int)$detail[$field];
             $result[] = ['id' => (int)$row['id'], 'type' => $row['node_type'], 'parent_id' => $row['parent_id'] === null ? null : (int)$row['parent_id'],
-                'root_id' => (int)$row['root_id'], 'name' => $row['name'], 'status' => $row['status'], 'visibility' => $row['visibility'], 'revision' => (int)$row['revision'],
+                'root_id' => (int)$row['root_id'], 'name' => $row['name'], 'status' => $row['status'], 'visibility' => $row['visibility'], 'revision' => (int)$row['revision'], 'portable' => (bool)$row['portable'],
                 'coordinates' => ['x' => (int)$row['position_x'], 'y' => (int)$row['position_y']],
                 'footprint' => $row['footprint_json'] === null ? null : json_decode($row['footprint_json'], true, 512, JSON_THROW_ON_ERROR),
                 'child_count' => (int)($counts[$row['id']]['amount'] ?? 0),
