@@ -47,10 +47,10 @@ class FiveService
         });
     }
 
-    public function move(GameFive $game, Person $person, int $ball, int $roundId = null)
+    public function move(GameFive $game, Person $person, int $ball, int $roundId = null, string $roundStatus = null)
     {
         if ($ball < 1 || $ball > 5) throw new ConflictHttpException('Invalid move.');
-        return Yii::$app->db->transaction(function () use ($game, $person, $ball, $roundId) {
+        return Yii::$app->db->transaction(function () use ($game, $person, $ball, $roundId, $roundStatus) {
             $this->lock($game);
             $userId = (int)$person->user_id;
             if ($game->isFinished()) throw new ConflictHttpException('Game is finished.');
@@ -60,6 +60,9 @@ class FiveService
             }
             $last = $game->getLastHod();
             if ($roundId !== null && ($last === null || (int)$last->id !== $roundId)) {
+                throw new ConflictHttpException('Round has changed. Refresh the game.');
+            }
+            if ($roundStatus !== null && ($last === null || $last->status !== $roundStatus)) {
                 throw new ConflictHttpException('Round has changed. Refresh the game.');
             }
             // Stable account order also covers games involving the same pair in opposite roles.
@@ -78,6 +81,9 @@ class FiveService
                 $game->status = GameFive::STATUS_PLAY;
                 $this->changePerson($people[$userId], $game, -$game->kon, 0, 'Join game five #' . $game->id);
             } elseif ($last !== null && !$last->isWait()) {
+                if ($game->isGamer($userId) && $roundStatus === null) {
+                    throw new ConflictHttpException('Round state required. Refresh the game.');
+                }
                 $this->createHod($game, $ball, $game->isCreator($userId));
                 $this->save($game);
                 return null;

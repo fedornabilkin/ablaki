@@ -119,11 +119,16 @@ class FiveController extends ActiveController
         if ($roundId !== null && (!is_scalar($roundId) || !ctype_digit((string)$roundId) || (int)$roundId < 1)) {
             throw new BadRequestHttpException('Invalid round.');
         }
+        $roundStatus = Yii::$app->request->post('round_status');
+        if ($roundStatus !== null && !in_array($roundStatus, ['wait', 'draw', 'user', 'gamer'], true)) {
+            throw new BadRequestHttpException('Invalid round status.');
+        }
         $hod = (new FiveService())->move(
             $model,
             App::user()->identity->person,
             (int)$model->ball,
-            $roundId === null ? null : (int)$roundId
+            $roundId === null ? null : (int)$roundId,
+            $roundStatus
         );
 
         return [

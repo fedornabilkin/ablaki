@@ -154,7 +154,7 @@ list(, $independent) = fiveRequest('POST', '', 1, ['kon'=>1, 'ball'=>2]);
 $independentId = (int)$independent['id'];
 $independentRound = (int)$independent['last_hod']['id'];
 fiveRequest('POST', '/play/' . $independentId, 2, ['ball'=>3, 'round_id'=>$independentRound]);
-$pending = fiveRequest('POST', '/play/' . $independentId, 2, ['ball'=>5, 'round_id'=>$independentRound]);
+$pending = fiveRequest('POST', '/play/' . $independentId, 2, ['ball'=>5, 'round_id'=>$independentRound, 'round_status'=>'user']);
 $pendingRound = (int)$pending[1]['game']['last_hod']['id'];
 checkFive($pending[0] === 200 && $pendingRound !== $independentRound && $pending[1]['game']['turn'] === 'user', 'opponent may start the next round independently');
 $creatorView = fiveRequest('GET', '/' . $independentId, 1, [], ['expand' => 'rounds'])[1];
@@ -162,9 +162,11 @@ $opponentView = fiveRequest('GET', '/' . $independentId, 2, [], ['expand' => 'ro
 checkFive(!isset($creatorView['last_hod']['gamer_ball']) && $opponentView['last_hod']['gamer_ball'] === 5
     && count($creatorView['rounds']) === 1, 'pending opponent choice stays private and only completed rounds appear');
 checkFive(fiveRequest('POST', '/play/' . $independentId, 2, ['ball'=>4, 'round_id'=>$pendingRound])[0] === 409, 'same player cannot make both moves');
-$settled = fiveRequest('POST', '/play/' . $independentId, 1, ['ball'=>4, 'round_id'=>$pendingRound]);
+$settled = fiveRequest('POST', '/play/' . $independentId, 1, ['ball'=>4, 'round_id'=>$pendingRound, 'round_status'=>'wait']);
 checkFive($settled[0] === 200 && $settled[1]['game']['turn'] === null && count($settled[1]['game']['rounds']) === 2
     && $settled[1]['game']['rounds'][0]['id'] === $pendingRound, 'creator completes opponent-first round and history is newest first');
+checkFive(fiveRequest('POST', '/play/' . $independentId, 1, ['ball'=>4, 'round_id'=>$pendingRound, 'round_status'=>'wait'])[0] === 409,
+    'retrying a settled move cannot start another round');
 
 // Exhaustively verify all 25 combinations of round rules.
 foreach (range(1,5) as $a) foreach (range(1,5) as $b) {
