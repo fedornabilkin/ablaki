@@ -30,7 +30,7 @@ $app = new \yii\console\Application([
 $db = $app->db;
 $tables = [
     'user' => ['id'=>'pk','username'=>'string','created_at'=>'integer','last_login_at'=>'integer'],
-    'persone' => ['id'=>'pk','user_id'=>'integer','credit'=>'decimal(18,5)','balance'=>'decimal(18,5)','rating'=>'decimal(18,5)','bonus_count'=>'integer NOT NULL DEFAULT 0'],
+    'persone' => ['id'=>'pk','user_id'=>'integer','credit'=>'decimal(18,5)','balance'=>'decimal(18,5)','rating'=>'decimal(18,5)','bonus_count'=>'integer NOT NULL DEFAULT 0','refovod'=>'integer NOT NULL DEFAULT 0','description'=>'string'],
     'history_balance' => ['id'=>'pk','user_id'=>'integer','balance'=>'decimal(18,5)','credit'=>'decimal(18,5)','balance_up'=>'decimal(18,5)','credit_up'=>'decimal(18,5)','type'=>'string','comment'=>'string','created_at'=>'integer'],
     'history_rating' => ['id'=>'pk','user_id'=>'integer','rating'=>'decimal(18,5)','rating_up'=>'decimal(18,5)','type'=>'string','comment'=>'string','created_at'=>'integer'],
     'comission' => ['id'=>'pk','type'=>'string','amount'=>'decimal(18,5)','created_at'=>'integer'],
