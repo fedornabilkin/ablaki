@@ -46,6 +46,7 @@ class FiveController extends ActiveController
 
         $actions['my'] = $actions['index'];
         $actions['history'] = $actions['index'];
+        $actions['recent'] = $actions['index'];
 
         $actions['my']['prepareDataProvider'] = function ($action, $filter) {
             return $this->prepareGames(true);
@@ -53,6 +54,10 @@ class FiveController extends ActiveController
 
         $actions['history']['prepareDataProvider'] = function ($action, $filter) {
             return $this->prepareHistoryList();
+        };
+
+        $actions['recent']['prepareDataProvider'] = function ($action, $filter) {
+            return $this->prepareHistoryList('recent');
         };
 
         $actions['index']['prepareDataProvider'] = function ($action, $filter) {

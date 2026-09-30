@@ -48,6 +48,7 @@ class DuelController extends ActiveController
 
         $actions['my'] = $actions['index'];
         $actions['history'] = $actions['index'];
+        $actions['recent'] = $actions['index'];
 
         $actions['my']['prepareDataProvider'] = function ($action, $filter) {
             $query = $this->lobbyQuery('my')->with('user.person');
@@ -57,6 +58,10 @@ class DuelController extends ActiveController
 
         $actions['history']['prepareDataProvider'] = function ($action, $filter) {
             return $this->prepareHistoryList();
+        };
+
+        $actions['recent']['prepareDataProvider'] = function ($action, $filter) {
+            return $this->prepareHistoryList('recent');
         };
 
         $actions['index']['prepareDataProvider'] = function ($action, $filter) {
