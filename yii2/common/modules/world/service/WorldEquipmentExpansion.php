@@ -44,7 +44,7 @@ class WorldEquipmentExpansion
         if (!$this->db->getTransaction()) throw new \LogicException('Purchase transaction required.');
         $extra = self::terms($config); $initial = $config['slots'];
         if ($extra['expansion_limit'] === $initial) return;
-        $this->db->createCommand()->insert('world_expansion_policy', ['node_id' => $room, 'kind' => 'equipment_place', 'initial_open' => $initial, 'place_limit' => $extra['expansion_limit'], 'base_price' => $extra['expansion_base_price'], 'curve' => 'linear', 'operation_id' => $operation])->execute(); $policy = (int)$this->db->getLastInsertID();
+        $this->db->createCommand()->insert('world_expansion_policy', ['node_id' => $room, 'kind' => 'equipment_place', 'initial_open' => $initial, 'place_limit' => $extra['expansion_limit'], 'base_price' => $extra['expansion_base_price'], 'curve' => 'progressive', 'operation_id' => $operation])->execute(); $policy = (int)$this->db->getLastInsertID();
         $this->db->createCommand()->insert('world_equipment_expansion', ['policy_id' => $policy, 'storage_id' => $storage, 'recipient_node_id' => $seller, 'template_revision_id' => $template])->execute();
         for ($position = 1; $position <= $extra['expansion_limit']; $position++) {
             if ($position > $initial) $this->db->createCommand()->insert('world_slot', ['storage_id' => $storage, 'code' => 'equipment-' . $position, 'position' => $position, 'slot_type' => 'equipment', 'size' => 1, 'exposure_class' => $config['exposure_class'], 'compatibility_json' => '{}', 'status' => 'locked'])->execute();
@@ -68,7 +68,7 @@ class WorldEquipmentExpansion
         $binding = $this->one('world_equipment_expansion', ['policy_id' => $policy['id']]);
         $storage = $binding ? $this->one('craft_storage', ['id' => $binding['storage_id'], 'node_id' => $node, 'kind' => 'placement', 'owner_user_id' => $user, 'status' => 'active']) : null;
         $sleepingArea = $this->one('world_housing_place', ['room_id' => $node]) ? 1 : 0;
-        if (!$purchase || !$storage || $policy['curve'] !== 'linear' || (int)$policy['initial_open'] < 1 || (int)$policy['place_limit'] <= (int)$policy['initial_open'] || (int)$policy['place_limit'] > 4 || (int)$policy['place_limit'] + $sleepingArea > (int)$room['details']['area']) throw new GameError('EXPANSION_STATE_INVALID', 'Права расширения требуют сверки.');
+        if (!$purchase || !$storage || !in_array($policy['curve'], ['linear', 'progressive'], true) || (int)$policy['initial_open'] < 1 || (int)$policy['place_limit'] <= (int)$policy['initial_open'] || (int)$policy['place_limit'] > 4 || (int)$policy['place_limit'] + $sleepingArea > (int)$room['details']['area']) throw new GameError('EXPANSION_STATE_INVALID', 'Права расширения требуют сверки.');
         $offer = $this->one('world_premises_offer', ['id' => $purchase['offer_id']]);
         if (!$offer || (int)$offer['settlement_id'] !== (int)$binding['recipient_node_id'] || (int)$offer['template_revision_id'] !== (int)$binding['template_revision_id']) throw new GameError('EXPANSION_STATE_INVALID', 'Условия покупки требуют сверки.');
         $slots = (new Query())->select(['s.*', 'entitlement_id' => 'e.id', 'policy_id' => 'e.policy_id', 'ordinal' => 'e.position'])->from(['s' => 'world_slot'])
@@ -80,7 +80,8 @@ class WorldEquipmentExpansion
             if ((int)$slot['position'] !== $i + 1 || !in_array($slot['status'], ['active', 'locked'], true) || $slot['slot_type'] !== 'equipment' || (int)$slot['size'] !== 1 || $slot['exposure_class'] !== $room['details']['exposure_class']
                 || ($open && $locked) || $open !== ($slot['entitlement_id'] !== null) || ($open && ((int)$slot['policy_id'] !== (int)$policy['id'] || (int)$slot['ordinal'] !== $i + 1))) throw new GameError('EXPANSION_STATE_INVALID', 'Последовательность купленных мест требует сверки.');
             if ($open) $unlocked++; else $locked = true;
-            $items[] = ['position' => $i + 1, 'unlocked' => $open, 'price' => Money::parse((string)$policy['base_price'])->multiply(max(0, $i + 1 - (int)$policy['initial_open']))->decimal()];
+            $ordinal = $i + 1; $extra = $ordinal <= (int)$policy['initial_open'] ? '0.0000' : (new ExpansionPolicy())->quote((int)$policy['initial_open'], $ordinal - 1, (int)$policy['place_limit'], (string)$policy['base_price'], 1, (string)$policy['curve'])['unit_prices'][0]['price'];
+            $items[] = ['position' => $ordinal, 'unlocked' => $open, 'price' => $extra];
         }
         if ($unlocked < (int)$policy['initial_open'] || $unlocked !== (int)$storage['capacity']) throw new GameError('EXPANSION_STATE_INVALID', 'Вместимость не соответствует купленным правам.');
         // A locked position must not silently legitimise misplaced items when bought.
@@ -104,7 +105,7 @@ class WorldEquipmentExpansion
     {
         $this->input($input); $this->flags->requireFlag('storage_v2'); WalletSchema::requireReady($this->db); $c = $this->context($user, $input['node_id']);
         if (!$c['policy'] || !$c['active']) throw new GameError('EXPANSION_UNAVAILABLE', 'Расширение этого помещения сейчас недоступно.');
-        $policy = $c['policy']; $terms = $input + (new ExpansionPolicy())->quote((int)$policy['initial_open'], $c['unlocked'], (int)$policy['place_limit'], (string)$policy['base_price'], $input['quantity']);
+        $policy = $c['policy']; $terms = $input + (new ExpansionPolicy())->quote((int)$policy['initial_open'], $c['unlocked'], (int)$policy['place_limit'], (string)$policy['base_price'], $input['quantity'], (string)$policy['curve']);
         $recipient = (new WorldQuery($this->db, new WorldAccessPolicy($user)))->node((int)$c['binding']['recipient_node_id']);
         if ($recipient['type'] !== 'SETTLEMENT' || $recipient['status'] !== 'active' || $recipient['root_id'] !== $c['room']['root_id']
             || (new Query())->from(['n' => 'world_node'])->innerJoin(['c' => 'world_node_closure'], '[[c.ancestor_id]]=[[n.id]]')->where(['c.descendant_id' => $recipient['id']])->andWhere(['<>', 'n.status', 'active'])->exists($this->db)) throw new GameError('EXPANSION_RECIPIENT_UNAVAILABLE', 'Поселение-поставщик недоступно.');

@@ -22,12 +22,13 @@ class WorldTree
     public function assertParent(string $type, ?array $parent): void
     {
         if ($parent && $this->isShelter((int)$parent['id'])) throw new GameError('SHELTER_NOT_A_ROOM', 'В шалаше нельзя создавать помещения или места оборудования.');
-        $allowed = ['WORLD' => ['REGION'], 'REGION' => ['SETTLEMENT'], 'SETTLEMENT' => ['BUILDING', 'PLOT'], 'BUILDING' => ['ROOM', 'PLOT'], 'PLOT' => ['BUILDING', 'BED'], 'ROOM' => [], 'BED' => []];
+        $allowed = ['WORLD' => ['REGION'], 'REGION' => ['SETTLEMENT'], 'SETTLEMENT' => ['BUILDING', 'PLOT'], 'BUILDING' => ['ROOM', 'PLOT'], 'PLOT' => ['BUILDING', 'BED', 'PLOT'], 'ROOM' => [], 'BED' => []];
         if (!in_array($type, self::TYPES, true) || (!$parent && $type !== 'WORLD') || ($parent && !in_array($type, $allowed[$parent['node_type']] ?? [], true))) throw new GameError('INVALID_PARENT', 'Здесь нельзя разместить такой объект.', 422);
         if (!$parent) return;
         if ($parent['status'] !== 'active' || (int)$parent['depth'] >= 32) throw new GameError('INVALID_PARENT', 'Родительский объект недоступен.');
         if ($parent['node_type'] === 'PLOT') {
             $plot = (new Query())->from('world_plot')->where(['node_id' => $parent['id']])->one($this->db);
+            if ($type === 'PLOT' && ($plot['plot_kind'] ?? '') !== 'campsite') throw new GameError('INCOMPATIBLE_PLOT', 'Nested plots are only allowed on an estate.');
             if (($type === 'BUILDING' && empty($plot['allow_building'])) || ($type === 'BED' && ($plot['plot_kind'] ?? '') !== 'garden')) throw new GameError('INCOMPATIBLE_PLOT', 'Назначение участка не подходит.');
         }
     }
@@ -36,6 +37,7 @@ class WorldTree
         if (!$this->db->getTransaction()) throw new \LogicException('World writes require a transaction.');
         $parent = isset($values['parent_id']) ? $this->get((int)$values['parent_id']) : null;
         $type = $values['node_type']; $this->assertParent($type, $parent);
+        if ($type === 'PLOT' && $parent && $parent['node_type'] === 'PLOT' && ($details['plot_kind'] ?? '') !== 'garden') throw new GameError('INCOMPATIBLE_PLOT', 'Only a garden can be placed on an estate.');
         if ($parent && !isset($values['position_x']) && !isset($values['position_y'])) {
             $position = $this->nextPosition((int)$parent['id']);
             $values['position_x'] = $position['x']; $values['position_y'] = $position['y'];
