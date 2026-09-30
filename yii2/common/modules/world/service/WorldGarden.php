@@ -38,7 +38,14 @@ class WorldGarden
                 if ($purchase) $membership = $this->one('world_membership', ['id' => $purchase['membership_id'], 'user_id' => $user]);
             }
             if (!$membership) throw new GameError('GARDEN_SITE_REQUIRED', 'Откройте свою стартовую стоянку или приобретённый огород.', 403);
-            $place = $reader->node($node['parent_id']);
+            $parent = $reader->node($node['parent_id']);
+            // Gardens belong to the starter estate. Keep the settlement as the
+            // financial/policy scope while allowing the garden itself to sit
+            // under the campsite on the world tree. Older gardens directly
+            // under a settlement remain readable.
+            $place = $parent['type'] === 'PLOT' && ($parent['details']['plot_kind'] ?? '') === 'campsite'
+                ? $reader->node($parent['parent_id'])
+                : $parent;
         } else throw new GameError('GARDEN_SITE_REQUIRED', 'Огород доступен в поселении и на собственной стоянке.', 403);
         if ($node['status'] !== 'active' || $place['type'] !== 'SETTLEMENT' || $place['status'] !== 'active' || $place['visibility'] !== 'public'
             || (new Query())->from(['n' => 'world_node'])->innerJoin(['c' => 'world_node_closure'], '[[c.ancestor_id]]=[[n.id]]')->where(['c.descendant_id' => $id])->andWhere(['<>', 'n.status', 'active'])->exists($this->db)) throw new GameError('GARDEN_UNAVAILABLE', 'Территория огорода недоступна.');
@@ -70,7 +77,7 @@ class WorldGarden
     private function beds(int $garden): array
     {
         $policy = $this->one('world_expansion_policy', ['node_id' => $garden, 'kind' => 'garden_bed']);
-        if (!$policy || (int)$policy['initial_open'] !== 1 || (int)$policy['place_limit'] !== 10 || $policy['curve'] !== 'linear') throw new GameError('GARDEN_STATE_INVALID', 'Права огорода требуют сверки.');
+        if (!$policy || (int)$policy['initial_open'] !== 1 || (int)$policy['place_limit'] !== 10 || !in_array($policy['curve'], ['linear', 'progressive'], true)) throw new GameError('GARDEN_STATE_INVALID', 'Права огорода требуют сверки.');
         $rows = (new Query())->select(['b.*', 'parent_id' => 'n.parent_id', 'n.status', 'entitlement_id' => 'e.id', 'policy_id' => 'e.policy_id', 'entitlement_ordinal' => 'e.ordinal'])
             ->from(['b' => 'world_bed'])->innerJoin(['n' => 'world_node'], '[[n.id]]=[[b.node_id]]')->leftJoin(['e' => 'world_expansion_entitlement'], '[[e.node_id]]=[[b.node_id]]')
             ->where(['b.garden_node_id' => $garden])->orderBy(['b.ordinal' => SORT_ASC])->limit(11)->all($this->db);
@@ -81,7 +88,8 @@ class WorldGarden
             if ((int)$row['ordinal'] !== $i + 1 || (int)$row['parent_id'] !== $garden || $row['status'] !== 'active' || ($open && $locked) || $open !== ($row['entitlement_id'] !== null)
                 || ($open && ((int)$row['policy_id'] !== (int)$policy['id'] || (int)$row['entitlement_ordinal'] !== $i + 1))) throw new GameError('GARDEN_STATE_INVALID', 'Последовательность прав грядок требует сверки.');
             if ($open) $unlocked++; else $locked = true;
-            $items[] = ['node_id' => (int)$row['node_id'], 'ordinal' => $i + 1, 'unlocked' => $open, 'price' => $i === 0 ? '0.0000' : Money::parse((string)$policy['base_price'])->multiply($i)->decimal()];
+            $quote = $i === 0 ? null : (new ExpansionPolicy())->quote(1, $i, 10, (string)$policy['base_price'], 1, $policy['curve']);
+            $items[] = ['node_id' => (int)$row['node_id'], 'ordinal' => $i + 1, 'unlocked' => $open, 'price' => $quote ? $quote['unit_prices'][0]['price'] : '0.0000'];
         }
         if (!$unlocked) throw new GameError('GARDEN_STATE_INVALID', 'Первая грядка должна быть доступна.');
         return compact('policy', 'unlocked', 'items');
@@ -128,7 +136,7 @@ class WorldGarden
         } else {
             if (!$c['purchase'] || (int)$c['purchase']['node_id'] !== $node['id']) throw new GameError('GARDEN_SITE_REQUIRED', 'Откройте приобретённый огород.');
             $beds = $this->beds($node['id']); $policy = $beds['policy'];
-            $terms += (new ExpansionPolicy())->quote(1, $beds['unlocked'], 10, (string)$policy['base_price'], $input['quantity']);
+            $terms += (new ExpansionPolicy())->quote(1, $beds['unlocked'], 10, (string)$policy['base_price'], $input['quantity'], (string)$policy['curve']);
             $terms += ['policy_id' => (int)$policy['id'], 'policy_revision' => (int)$policy['revision'], 'base_price' => Money::parse((string)$policy['base_price'])->decimal()];
         }
         $accounts = (new EconomyHierarchy($this->db))->accounts($node['id']); $budget = $accounts['budget'] ?? null;
@@ -176,10 +184,10 @@ class WorldGarden
                 $transfer = $spend->pay($hold, $terms['recipient_node_id'], $total, $operation, $action === 'buy' ? 'garden_purchase' : 'garden_expansion');
                 if ($action === 'buy') {
                     $code = 'garden-' . $operation;
-                    $garden = $tree->create(['code' => $code, 'slug' => $code, 'node_type' => 'PLOT', 'name' => $terms['name'], 'parent_id' => $p['place']['id'], 'owner_user_id' => $user, 'visibility' => 'private'], ['plot_kind' => 'garden', 'area' => 10, 'allow_building' => 0]);
+                    $garden = $tree->create(['code' => $code, 'slug' => $code, 'node_type' => 'PLOT', 'name' => $terms['name'], 'parent_id' => $p['node']['id'], 'owner_user_id' => $user, 'visibility' => 'private'], ['plot_kind' => 'garden', 'area' => 10, 'allow_building' => 0]);
                     $gardenId = (int)$garden['id'];
                     $this->db->createCommand()->insert('world_garden_purchase', ['node_id' => $gardenId, 'membership_id' => $p['membership']['id'], 'offer_id' => $terms['offer_id'], 'transfer_id' => $transfer, 'operation_id' => $operation, 'terms_json' => CanonicalJson::encode($terms), 'created_at' => $now])->execute();
-                    $this->db->createCommand()->insert('world_expansion_policy', ['node_id' => $gardenId, 'kind' => 'garden_bed', 'initial_open' => 1, 'place_limit' => 10, 'base_price' => $terms['base_price'], 'curve' => 'linear', 'operation_id' => $operation])->execute(); $policyId = (int)$this->db->getLastInsertID();
+                    $this->db->createCommand()->insert('world_expansion_policy', ['node_id' => $gardenId, 'kind' => 'garden_bed', 'initial_open' => 1, 'place_limit' => 10, 'base_price' => $terms['base_price'], 'curve' => 'progressive', 'operation_id' => $operation])->execute(); $policyId = (int)$this->db->getLastInsertID();
                     for ($ordinal = 1; $ordinal <= 10; $ordinal++) {
                         $bed = $tree->create(['code' => $code . '-bed-' . $ordinal, 'slug' => 'bed-' . $ordinal, 'node_type' => 'BED', 'name' => 'Грядка ' . $ordinal, 'parent_id' => $gardenId, 'owner_user_id' => $user, 'visibility' => 'private', 'position' => $ordinal], ['garden_node_id' => $gardenId, 'ordinal' => $ordinal, 'unlocked' => $ordinal === 1 ? 1 : 0]);
                         (new EconomyHierarchy($this->db))->provision((int)$bed['id'], $operation);
