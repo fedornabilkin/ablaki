@@ -84,6 +84,7 @@ class GameDuel extends AbstractGame implements HistorySaveInterface
             [['u1', 'b1'], 'required'],
             [['u2', 'b2'], 'required', 'on' => self::SCENARIO_PLAY],
             [['u1', 'u2', 'b1', 'b2'], 'integer', 'min' => self::ZONE_HEAD, 'max' => self::ZONE_LEGS],
+            [['count'], 'integer', 'min' => 1, 'max' => 100],
         ];
     }
 

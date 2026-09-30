@@ -90,11 +90,11 @@ class FiveController extends ActiveController
             throw new BadRequestHttpException('Ставка должна быть положительным целым числом.');
         }
 
-        (new FiveService())->create($model, App::user()->identity->person);
+        (new FiveService())->createBatch($model, App::user()->identity->person, (int)$model->count);
 
         App::response()->setStatusCode(201);
 
-        return $model;
+        return (int)$model->count === 1 ? $model : ['count' => (int)$model->count, 'game' => $model];
     }
 
     /**

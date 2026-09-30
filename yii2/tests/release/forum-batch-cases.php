@@ -60,6 +60,15 @@ try {
     $db->createCommand()->update('persone', ['credit' => 0], ['user_id' => 2])->execute();
     $bot->execute();
     routeCheck((int)$db->createCommand('SELECT COUNT(*) FROM game_duel')->queryScalar() === 38, 'empty balance never creates unfunded games');
+    routeCheck(dispatch('POST', 'v1/duel', true, [], ['kon' => 1, 'u1' => 1, 'b1' => 1, 'count' => 101])[0] === 400,
+        'duel batch above 100 is rejected');
+    list($duelStatus, $duelBatch) = dispatch('POST', 'v1/duel', true, [], ['kon' => 1, 'u1' => 1, 'b1' => 1, 'count' => 2]);
+    routeCheck($duelStatus === 201 && $duelBatch['count'] === 2
+        && (int)$db->createCommand('SELECT COUNT(*) FROM game_duel')->queryScalar() === 40
+        && (float)$db->createCommand('SELECT credit FROM persone WHERE user_id=1')->queryScalar() === 99.0,
+        'duel batch creates two games and reserves the whole stake');
+    routeCheck((int)$db->createCommand('SELECT COUNT(*) FROM game_duel WHERE user_id=1 AND u1 BETWEEN 1 AND 3 AND b1 BETWEEN 1 AND 3')->queryScalar() === 2,
+        'bulk duel strike and block are valid random zones');
     $db->createCommand()->update('user', ['username' => 'no-bot'], ['id' => 2])->execute();
     $bot->execute();
     routeCheck(true, 'missing bot is a safe no-op');
