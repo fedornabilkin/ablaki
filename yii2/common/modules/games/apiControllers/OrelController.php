@@ -99,7 +99,7 @@ class OrelController extends ActiveController
     public function actionPlay(int $id)
     {
         $result = \common\modules\games\service\GameParticipation::run('game_orel', $id, Yii::$app->user->identity->person,
-            function () use ($id) { return $this->playLocked($id); });
+            function (array $row) { return $this->playLocked($row); });
         if (isset($result['game'])) {
             Yii::$app->user->identity->person->refresh();
             $result['overview'] = GameOverview::snapshot($this->modelClass, App::user()->getId(), Yii::$app->timeZone);
@@ -107,9 +107,10 @@ class OrelController extends ActiveController
         return $result;
     }
 
-    private function playLocked(int $id)
+    private function playLocked(array $row)
     {
-        $model = $this->findModel($id);
+        $model = new GameOrel();
+        GameOrel::populateRecord($model, $row);
         $model->setScenario($model::SCENARIO_PLAY);
 
         if (!$model->load(Yii::$app->request->post(), '') || !$model->validate()) {

@@ -37,7 +37,7 @@ class PlayMiddleware extends AbstractMiddleware
             $this->insertNext($next);
 
             $this->updateModel();
-            return $this->stopProcessing($this->error);
+            return parent::check(); // Settle the creator and commission before reporting the loss.
         } else {
             $this->updateData();
         }
@@ -64,7 +64,7 @@ class PlayMiddleware extends AbstractMiddleware
     {
         $hod = 'hod' . $this->model->row;
         $this->model->$hod = $this->model->col;
-        $this->model->save();
+        if (!$this->model->save()) throw new \RuntimeException('Could not save game move.');
     }
 
     /**

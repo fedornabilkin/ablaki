@@ -74,12 +74,13 @@ class SaperController extends ActiveController
     public function actionStart($id)
     {
         return \common\modules\games\service\GameParticipation::run('game_saper', (int)$id, Yii::$app->user->identity->person,
-            function () use ($id) { return $this->startLocked($id); });
+            function (array $row) { return $this->startLocked($row); });
     }
 
-    private function startLocked($id)
+    private function startLocked(array $row)
     {
-        $model = $this->findModel($id);
+        $model = new GameSaper();
+        GameSaper::populateRecord($model, $row);
 
         $data = new GameDataMiddleware([
             'game' => $model,
@@ -108,7 +109,21 @@ class SaperController extends ActiveController
 
     public function actionPlay($id)
     {
-        $model = $this->findModel($id);
+        $lost = false;
+        $result = \common\modules\games\service\GameParticipation::run('game_saper', (int)$id, Yii::$app->user->identity->person,
+            function (array $row) use (&$lost) { return $this->playLocked($row, $lost); });
+        if (isset($result['game'])) {
+            if ($result['completed']) Yii::$app->user->identity->person->refresh();
+            $result['overview'] = $result['completed']
+                ? GameOverview::snapshot($this->modelClass, App::user()->getId(), Yii::$app->timeZone) : null;
+        }
+        return $result;
+    }
+
+    private function playLocked(array $row, bool &$lost)
+    {
+        $model = new GameSaper();
+        GameSaper::populateRecord($model, $row);
         $model->setScenario($model::SCENARIO_PLAY);
 
         if (!$model->load(Yii::$app->request->post(), '') || !$model->validate()) {
@@ -128,21 +143,18 @@ class SaperController extends ActiveController
             ->linkWith(new PlayMiddleware());
 
 
-        $succeeded = $middleware->check();
-        $completed = $model->isComplete();
-        $errors = $succeeded ? [] : $middleware->getErrors();
-        $lost = !$succeeded && $completed && in_array('Game lost', $errors, true);
-        if (!$succeeded && !$lost) {
+        if ($middleware->check()) {
+            $lost = (int)$model->etap === GameSaper::GAME_SAPER_ETAP_LOSE;
+        } else {
+            $errors = $middleware->getErrors();
             throw new MainException(Yii::t('games', $errors[0]));
         }
-        if ($completed) Yii::$app->user->identity->person->refresh();
 
         return [
             'game' => $model,
-            'completed' => $completed,
+            'completed' => $model->isComplete(),
             'lost' => $lost,
             'gamer' => Yii::$app->user->identity,
-            'overview' => $completed ? GameOverview::snapshot($this->modelClass, App::user()->getId(), Yii::$app->timeZone) : null,
         ];
     }
 
