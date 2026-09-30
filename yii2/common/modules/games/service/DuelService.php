@@ -10,7 +10,6 @@ use common\modules\games\models\GameDuel;
 use Throwable;
 use Yii;
 use yii\base\UserException;
-use yii\db\Query;
 
 /**
  * Игра «Дуэль» — одна схватка: удар + блок с каждой стороны.

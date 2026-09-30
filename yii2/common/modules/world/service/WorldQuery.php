@@ -67,6 +67,16 @@ class WorldQuery
         if (!$rows) return [];
         $ids = array_column($rows, 'id');
         $counts = $this->visible()->select(['parent_id' => 'n.parent_id', 'amount' => new \yii\db\Expression('COUNT(*)')])->andWhere(['n.parent_id' => $ids])->groupBy('n.parent_id')->indexBy('parent_id')->all($this->db);
+        $descendants = $this->visible()->innerJoin(['path' => 'world_node_closure'], '[[path.descendant_id]]=[[n.id]]')
+            ->select(['ancestor_id' => 'path.ancestor_id', 'amount' => new \yii\db\Expression('COUNT(*)')])
+            ->andWhere(['path.ancestor_id' => $ids])->andWhere(['>', 'path.distance', 0])
+            ->groupBy('path.ancestor_id')->indexBy('ancestor_id')->all($this->db);
+        $populations = (new Query())->from(['path' => 'world_node_closure'])
+            ->innerJoin(['n' => 'world_node'], '[[n.id]]=[[path.descendant_id]]')
+            ->innerJoin(['settlement' => 'world_settlement'], '[[settlement.node_id]]=[[n.id]]')
+            ->select(['ancestor_id' => 'path.ancestor_id', 'amount' => new \yii\db\Expression('SUM([[settlement.population]])')])
+            ->where(['path.ancestor_id' => $ids])->andWhere(['<>', 'n.status', 'archived'])
+            ->groupBy('path.ancestor_id')->indexBy('ancestor_id')->all($this->db);
         $details = [];
         foreach (array_unique(array_column($rows, 'node_type')) as $type) {
             if ($type === 'WORLD') continue;
@@ -95,6 +105,9 @@ class WorldQuery
                 'coordinates' => ['x' => (int)$row['position_x'], 'y' => (int)$row['position_y']],
                 'footprint' => $row['footprint_json'] === null ? null : json_decode($row['footprint_json'], true, 512, JSON_THROW_ON_ERROR),
                 'child_count' => (int)($counts[$row['id']]['amount'] ?? 0),
+                'descendant_count' => (int)($descendants[$row['id']]['amount'] ?? 0),
+                'population_total' => (int)($populations[$row['id']]['amount'] ?? 0),
+                'owned_by_me' => $this->policy->ownsItems($row),
                 'details' => (object)$detail, 'permissions' => ['manage' => $owned, 'administer' => $this->policy->isAdmin(), 'storage' => $this->policy->ownsItems($row)],
                 'actions' => [['code' => 'open', 'allowed' => true, 'reasons' => []]]];
         }
