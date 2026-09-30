@@ -22,9 +22,7 @@ use common\modules\games\middleware\orel\PlayMiddleware;
 use common\modules\games\middleware\orel\SwitchCreatorMiddleware;
 use common\modules\games\models\GameOrel;
 use Yii;
-use yii\base\DynamicModel;
 use yii\base\UserException;
-use yii\data\ActiveDataFilter;
 use yii\data\ActiveDataProvider;
 use yii\db\Exception;
 use yii\db\Query;
@@ -154,17 +152,4 @@ class OrelController extends ActiveController
         return $model;
     }
 
-    /**
-     * @return array
-     */
-    private function getFilter(): array
-    {
-        return [
-            'class' => ActiveDataFilter::class,
-            'searchModel' => function () {
-                return (new DynamicModel(['kon' => null]))
-                    ->addRule('kon', 'number');
-            },
-        ];
-    }
 }

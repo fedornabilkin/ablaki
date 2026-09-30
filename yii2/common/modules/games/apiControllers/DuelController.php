@@ -7,8 +7,10 @@ use common\helpers\App;
 use common\modules\games\apiActions\duel\DeleteAction;
 use common\modules\games\models\GameDuel;
 use common\modules\games\service\DuelService;
+use common\modules\games\service\GameOverview;
 use Yii;
 use yii\base\UserException;
+use api\components\ApiList;
 use yii\data\ActiveDataProvider;
 use yii\rest\ActiveController;
 use yii\web\BadRequestHttpException;
@@ -34,6 +36,11 @@ class DuelController extends ActiveController
         return;
     }
 
+    public function actionSummary(): array
+    {
+        return GameOverview::summary($this->modelClass, App::user()->getId(), Yii::$app->timeZone);
+    }
+
     public function actions(): array
     {
         $actions = parent::actions();
@@ -45,9 +52,7 @@ class DuelController extends ActiveController
         $actions['my']['prepareDataProvider'] = function ($action, $filter) {
             $query = $this->lobbyQuery('my')->with('user.person');
             $this->applyStakeFilter($query);
-            return new ActiveDataProvider([
-                'query' => $query,
-            ]);
+            return ApiList::provider($query, [], ['id', 'created_at', 'kon']);
         };
 
         $actions['history']['prepareDataProvider'] = function ($action, $filter) {
