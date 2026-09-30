@@ -83,12 +83,15 @@ class DuelController extends ActiveController
             $errors = $model->getFirstErrors();
             throw new BadRequestHttpException(reset($errors));
         }
+        if (!is_numeric($model->kon) || (float)$model->kon !== floor((float)$model->kon)) {
+            throw new BadRequestHttpException('Ставка должна быть положительным целым числом.');
+        }
 
-        (new DuelService())->create($model, App::user()->identity->person);
+        (new DuelService())->createBatch($model, App::user()->identity->person, (int)$model->count);
 
         App::response()->setStatusCode(201);
 
-        return $model;
+        return (int)$model->count === 1 ? $model : ['count' => (int)$model->count, 'game' => $model];
     }
 
     /**
