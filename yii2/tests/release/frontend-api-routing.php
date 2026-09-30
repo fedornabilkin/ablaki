@@ -213,6 +213,7 @@ try {
     }
     $db->createCommand('CREATE TABLE game_duel (id INTEGER PRIMARY KEY, user_id INTEGER, user_gamer INTEGER, kon NUMERIC, u1 INTEGER, u2 INTEGER, b1 INTEGER, b2 INTEGER, created_at INTEGER, updated_at INTEGER)')->execute();
     $db->createCommand('CREATE TABLE game_five (id INTEGER PRIMARY KEY, user_id INTEGER, user_gamer INTEGER, kon NUMERIC, status TEXT, user_amount INTEGER, gamer_amount INTEGER, created_at INTEGER, updated_at INTEGER)')->execute();
+    $db->createCommand('CREATE TABLE game_five_hod (id INTEGER PRIMARY KEY, game_five_id INTEGER, user_id INTEGER, user_gamer INTEGER, user_ball INTEGER, gamer_ball INTEGER, status TEXT, user_amount INTEGER, gamer_amount INTEGER, created_at INTEGER)')->execute();
     foreach (['orel', 'saper', 'duel', 'five'] as $kind) {
         $values = ['id' => 1, 'user_id' => 1, 'user_gamer' => 2, 'kon' => 5, 'created_at' => 1];
         $values[$kind === 'saper' ? 'time_over_at' : 'updated_at'] = time();
