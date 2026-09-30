@@ -28,6 +28,7 @@ services:
       - ./yii2/:/web/yii2/
       - ./.env:/etc/environment
       - ./docker/php/entrypoint.sh:/entrypoint.sh
+      - ./docker/php/cron:/etc/ablaki-cron:ro
     entrypoint: /entrypoint.sh
 
   composer:

@@ -66,7 +66,7 @@ $db->createCommand()->batchInsert('game_saper', ['id', 'user_id', 'user_gamer', 
     [1, 1, 2, 1, 0, $from, $from + 1], [2, 1, 2, 1, 10, $from, $from + 2],
     [3, 2, 1, 1, 0, $from, $from + 3], [4, 2, 1, 1, 3, $from, $from + 4],
     [5, 1, 0, 10, 5, $from, $from], [6, 1, 2, 1, 0, $from - 2, $from - 1],
-    [7, 3, 2, 1, 0, $from, $from + 1],
+    [7, 3, 2, 1, 0, $from, $from + 1], [8, 2, 0, 10, 5, $from, $from],
 ])->execute();
 $db->createCommand()->batchInsert('history_balance', ['user_id', 'type', 'balance_up', 'credit_up', 'created_at'], [
     [1, 'game_orel', 0, -10, $from], [1, 'game_orel', 0, 18, $from + 1], [1, 'game_orel', 0, -5, $until - 1],
@@ -103,6 +103,10 @@ check($provider->getTotalCount() === 0, 'search cannot include another user\'s g
 $app->request->setQueryParams([]);
 $saperController = new SaperController('saper', $app);
 $saperActions = $saperController->actions();
+$app->request->setQueryParams(['filter' => ['kon' => '10'], 'per-page' => '20']);
+$saperAvailable = $saperActions['index']['prepareDataProvider'](null, null);
+check($saperAvailable->getTotalCount() === 1 && (int)$saperAvailable->getModels()[0]->id === 8, 'stake filter applies before pagination to available sapper games');
+$app->request->setQueryParams([]);
 $history = $saperActions['history']['prepareDataProvider'](null, [])->getModels();
 check(array_map(static function ($game) { return (int)$game->id; }, $history) === [3, 2, 1, 6], 'mine history contains only completed games involving the current account');
 $recent = $saperActions['recent']['prepareDataProvider'](null, [])->getModels();
@@ -188,10 +192,24 @@ foreach (['orel' => OrelController::class, 'saper' => SaperController::class,
         try { $prepare(null, null); throw new RuntimeException('Invalid list period accepted'); }
         catch (\yii\web\BadRequestHttpException $expected) { echo "PASS malformed list period rejected\n"; }
     }
-    if (in_array($kind, ['orel', 'saper'], true)) {
-        $app->request->setQueryParams(['scope' => 'recent', 'period' => 'all']);
-        $recentCount = $controller->actions()['recent']['prepareDataProvider'](null, null)->getTotalCount();
-        check(array_sum(array_column($controller->actionHistoryKons(), 'count')) === $recentCount, $kind . ' recent stakes use the global completed scope');
+    $app->request->setQueryParams(['scope' => 'recent', 'period' => 'all']);
+    $recentCount = $controller->actions()['recent']['prepareDataProvider'](null, null)->getTotalCount();
+    check(array_sum(array_column($controller->actionHistoryKons(), 'count')) === $recentCount, $kind . ' recent stakes use the global completed scope');
+}
+foreach ([\common\modules\games\models\GameDuel::class, \common\modules\games\models\GameFive::class] as $modelClass) {
+    $summary = GameOverview::summary($modelClass, 1, 'Europe/Moscow', $today + 100);
+    check($summary['today']['played'] === 1 && $summary['today']['wins'] === 1, $modelClass . ' counts completed wins today');
+    check($summary['own'] === ['count' => 1, 'amount' => 5.0], $modelClass . ' reserves only own open stakes');
+    $opponent = GameOverview::summary($modelClass, 2, 'Europe/Moscow', $today + 100);
+    check($opponent['today']['played'] === 1 && $opponent['today']['wins'] === 0, $modelClass . ' distinguishes the losing opponent');
+}
+foreach ([GameOrel::class, GameSaper::class, \common\modules\games\models\GameDuel::class, \common\modules\games\models\GameFive::class] as $modelClass) {
+    $snapshot = GameOverview::snapshot($modelClass, 1, 'Europe/Moscow');
+    check(isset($snapshot['summary']['today'], $snapshot['summary']['own']) && count($snapshot['recent']) <= 5,
+        $modelClass . ' command snapshot contains totals and at most five completed games');
+    foreach ($snapshot['recent'] as $game) {
+        check(isset($game['id'], $game['creator'], $game['player'], $game['completed_at'])
+            && !isset($game['pole1']), $modelClass . ' recent row is safe for immediate rendering');
     }
 }
 $db->createCommand('CREATE TABLE period_boundary (id INTEGER PRIMARY KEY, completed_at INTEGER)')->execute();

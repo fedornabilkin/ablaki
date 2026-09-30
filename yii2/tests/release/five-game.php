@@ -83,7 +83,7 @@ $other = fiveRequest('GET', '/' . $id, 2)[1];
 checkFive(!isset($other['last_hod']['user_ball']) && !isset($other['creator']['email'], $other['creator']['person']['credit']), 'opponent sees neither hidden move nor private creator fields');
 checkFive(fiveRequest('POST', '/play/' . $id, 1, ['ball'=>5, 'round_id'=>$round])[0] === 403, 'creator cannot join own game');
 list($status, $move) = fiveRequest('POST', '/play/' . $id, 2, ['ball'=>5, 'round_id'=>$round]);
-checkFive($status === 200 && $move['game']['user_points'] === 9 && $move['game']['turn'] === 'user' && $balance(2) === 90.0, 'joining reserves opponent stake and resolves first round');
+checkFive($status === 200 && $move['game']['user_points'] === 9 && $move['game']['turn'] === null && $balance(2) === 90.0, 'joining reserves opponent stake and lets either player start the next round');
 checkFive(fiveRequest('POST', '/play/' . $id, 2, ['ball'=>5, 'round_id'=>$round])[0] === 409 && $count('history_balance') === 2, 'repeated response does not debit or score twice');
 checkFive(fiveRequest('POST', '/play/' . $id, 3, ['ball'=>1, 'round_id'=>$round])[0] === 403, 'third player cannot enter an active game');
 checkFive(fiveRequest('DELETE', '/' . $id, 1)[0] === 409, 'active game cannot be cancelled');
@@ -103,6 +103,7 @@ checkFive($balance(1) === 109.0 && $balance(2) === 90.0 && $count('history_balan
 checkFive(fiveRequest('POST', '/play/' . $id, 2, ['ball'=>5, 'round_id'=>$round])[0] === 409 && $balance(1) === 109.0, 'finished game cannot be paid again');
 list($status, $history) = fiveRequest('GET', '/history', 2, [], ['envelope'=>1, 'period'=>'today']);
 checkFive($status === 200 && $history['_meta']['totalCount'] === 1 && $history['items'][0]['status'] === 'user', 'finished game appears in participant history');
+
 
 list(, $free) = fiveRequest('POST', '', 1, ['kon'=>5, 'ball'=>2]);
 $cancelId = (int)$free['id'];
@@ -149,6 +150,24 @@ for ($i=0; $i<2; $i++) {
 }
 checkFive($result[1]['game']['status']==='gamer' && $balance(1)===$before1-10 && $balance(2)===$before2+9, 'opponent winner receives net payout after successful retry');
 
+list(, $independent) = fiveRequest('POST', '', 1, ['kon'=>1, 'ball'=>2]);
+$independentId = (int)$independent['id'];
+$independentRound = (int)$independent['last_hod']['id'];
+fiveRequest('POST', '/play/' . $independentId, 2, ['ball'=>3, 'round_id'=>$independentRound]);
+$pending = fiveRequest('POST', '/play/' . $independentId, 2, ['ball'=>5, 'round_id'=>$independentRound, 'round_status'=>'user']);
+$pendingRound = (int)$pending[1]['game']['last_hod']['id'];
+checkFive($pending[0] === 200 && $pendingRound !== $independentRound && $pending[1]['game']['turn'] === 'user', 'opponent may start the next round independently');
+$creatorView = fiveRequest('GET', '/' . $independentId, 1, [], ['expand' => 'rounds'])[1];
+$opponentView = fiveRequest('GET', '/' . $independentId, 2, [], ['expand' => 'rounds'])[1];
+checkFive(!isset($creatorView['last_hod']['gamer_ball']) && $opponentView['last_hod']['gamer_ball'] === 5
+    && count($creatorView['rounds']) === 1, 'pending opponent choice stays private and only completed rounds appear');
+checkFive(fiveRequest('POST', '/play/' . $independentId, 2, ['ball'=>4, 'round_id'=>$pendingRound])[0] === 409, 'same player cannot make both moves');
+$settled = fiveRequest('POST', '/play/' . $independentId, 1, ['ball'=>4, 'round_id'=>$pendingRound, 'round_status'=>'wait']);
+checkFive($settled[0] === 200 && $settled[1]['game']['turn'] === null && count($settled[1]['game']['rounds']) === 2
+    && $settled[1]['game']['rounds'][0]['id'] === $pendingRound, 'creator completes opponent-first round and history is newest first');
+checkFive(fiveRequest('POST', '/play/' . $independentId, 1, ['ball'=>4, 'round_id'=>$pendingRound, 'round_status'=>'wait'])[0] === 409,
+    'retrying a settled move cannot start another round');
+
 // Exhaustively verify all 25 combinations of round rules.
 foreach (range(1,5) as $a) foreach (range(1,5) as $b) {
     $hod = new \common\modules\games\models\GameFiveHod(['user_ball'=>$a, 'gamer_ball'=>$b]);
@@ -156,4 +175,11 @@ foreach (range(1,5) as $a) foreach (range(1,5) as $b) {
     $amount = $a===$b ? 0 : (abs($a-$b)===1 ? $a+$b : abs($a-$b));
     checkFive($hod->getWinnerStatus()===$winner && $hod->getWinAmount()===$amount, 'round rules ' . $a . ':' . $b);
 }
+$beforeBatch = $balance(1);
+checkFive(fiveRequest('POST', '', 1, ['kon'=>1, 'ball'=>1, 'count'=>101])[0] === 400, 'batch size above 100 rejected');
+list($batchStatus, $batch) = fiveRequest('POST', '', 1, ['kon'=>1, 'ball'=>1, 'count'=>2]);
+checkFive($batchStatus === 201 && $batch['count'] === 2 && $balance(1) === $beforeBatch - 2,
+    'bulk creation reserves the full stake atomically');
+$batchHods = $db->createCommand('SELECT user_ball FROM game_five_hod WHERE game_five_id >= :id ORDER BY id DESC LIMIT 2', [':id'=>$batch['game']['id']])->queryColumn();
+checkFive(count($batchHods) === 2 && min($batchHods) >= 1 && max($batchHods) <= 5, 'bulk first moves use valid random choices');
 echo "Five game REST cycle passed on disposable SQLite; PostgreSQL/MySQL locks require target-engine validation.\n";

@@ -5,7 +5,6 @@ namespace common\modules\games\apiControllers;
 use api\components\ApiList;
 use common\helpers\App;
 use common\models\user\User;
-use common\modules\games\models\GameOrel;
 use common\modules\games\models\GameSaper;
 use common\modules\games\service\GameOverview;
 use common\modules\games\service\HistoryPeriod;
@@ -21,10 +20,9 @@ trait GameHistoryTrait
     {
         $query = $this->modelClass::find();
         $saper = is_a($this->modelClass, GameSaper::class, true);
-        $hasRecent = $saper || is_a($this->modelClass, GameOrel::class, true);
         if ($scope === 'history') $query->listHistory(App::user()->identity);
-        elseif ($scope !== 'recent' || !$hasRecent) throw new BadRequestHttpException('Invalid history scope.');
-        if ($hasRecent) GameOverview::completed($query, $saper);
+        elseif ($scope !== 'recent') throw new BadRequestHttpException('Invalid history scope.');
+        GameOverview::completed($query, $saper);
         HistoryPeriod::apply($query, $saper ? 'time_over_at' : 'updated_at', Yii::$app->request->get('period', 'all'));
         return $query;
     }

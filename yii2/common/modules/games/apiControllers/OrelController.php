@@ -21,10 +21,9 @@ use common\modules\games\middleware\GamerCheckCreditMiddleware;
 use common\modules\games\middleware\orel\PlayMiddleware;
 use common\modules\games\middleware\orel\SwitchCreatorMiddleware;
 use common\modules\games\models\GameOrel;
+use common\modules\games\service\GameOverview;
 use Yii;
-use yii\base\DynamicModel;
 use yii\base\UserException;
-use yii\data\ActiveDataFilter;
 use yii\data\ActiveDataProvider;
 use yii\db\Exception;
 use yii\db\Query;
@@ -99,8 +98,13 @@ class OrelController extends ActiveController
      */
     public function actionPlay(int $id)
     {
-        return \common\modules\games\service\GameParticipation::run('game_orel', $id, Yii::$app->user->identity->person,
+        $result = \common\modules\games\service\GameParticipation::run('game_orel', $id, Yii::$app->user->identity->person,
             function (array $row) { return $this->playLocked($row); });
+        if (isset($result['game'])) {
+            Yii::$app->user->identity->person->refresh();
+            $result['overview'] = GameOverview::snapshot($this->modelClass, App::user()->getId(), Yii::$app->timeZone);
+        }
+        return $result;
     }
 
     private function playLocked(array $row)
@@ -155,17 +159,4 @@ class OrelController extends ActiveController
         return $model;
     }
 
-    /**
-     * @return array
-     */
-    private function getFilter(): array
-    {
-        return [
-            'class' => ActiveDataFilter::class,
-            'searchModel' => function () {
-                return (new DynamicModel(['kon' => null]))
-                    ->addRule('kon', 'number');
-            },
-        ];
-    }
 }

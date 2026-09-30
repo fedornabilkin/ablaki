@@ -14,6 +14,9 @@ use yii\widgets\ActiveForm;
 
     <?= $form->field($model, 'title')->textInput(['maxlength' => true]) ?>
     <?= $form->field($model, 'is_private')->checkbox(['role' => 'switch']) ?>
+    <?php if (!$model->isNewRecord): ?>
+        <?= $form->field($model, 'is_closed')->checkbox(['role' => 'switch']) ?>
+    <?php endif ?>
 
     <div class="form-group">
         <?= Html::submitButton(Yii::t('forum', 'Save'), ['class' => 'btn btn-success']) ?>

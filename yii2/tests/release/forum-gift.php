@@ -38,7 +38,7 @@ try {
     $db = giftConnection($file);
     $db->createCommand('CREATE TABLE persone (id INTEGER PRIMARY KEY, user_id INTEGER UNIQUE, credit NUMERIC NOT NULL, balance NUMERIC NOT NULL)')->execute();
     $db->createCommand('CREATE TABLE forum_comment (id INTEGER PRIMARY KEY, user_id INTEGER, active INTEGER, comment TEXT, theme_id INTEGER, created_at INTEGER)')->execute();
-    $db->createCommand('CREATE TABLE forum_theme (id INTEGER PRIMARY KEY, user_id INTEGER, title TEXT, view INTEGER NOT NULL, last_post INTEGER DEFAULT 0, created_at INTEGER, is_private INTEGER NOT NULL DEFAULT 0)')->execute();
+    $db->createCommand('CREATE TABLE forum_theme (id INTEGER PRIMARY KEY, user_id INTEGER, title TEXT, view INTEGER NOT NULL, last_post INTEGER DEFAULT 0, created_at INTEGER, is_private INTEGER NOT NULL DEFAULT 0, is_closed INTEGER NOT NULL DEFAULT 0)')->execute();
     $db->createCommand('CREATE TABLE forum_comment_gift (id INTEGER PRIMARY KEY, amount INTEGER NOT NULL DEFAULT 1, comment_id INTEGER NOT NULL, user_id INTEGER NOT NULL, recipient_id INTEGER NOT NULL, created_at INTEGER, UNIQUE(comment_id, user_id))')->execute();
     $db->createCommand('CREATE TABLE history_balance (id INTEGER PRIMARY KEY, user_id INTEGER, balance NUMERIC, credit NUMERIC, balance_up NUMERIC, credit_up NUMERIC, type TEXT, comment TEXT, created_at INTEGER)')->execute();
     $db->createCommand('CREATE TABLE user (id INTEGER PRIMARY KEY, username TEXT)')->execute();
@@ -115,6 +115,12 @@ try {
     giftCheck($provider->getTotalCount() === 1 && $provider->getModels()[0]['username'] === 'FirstDonor', 'donor list supports server search and complete pagination count');
     Yii::$app->request->setQueryParams(['q' => 'missing']);
     giftCheck($controller->actionGifts(1)->getTotalCount() === 0, 'donor search does not leak gifts of another message');
+    $historyCount = (int)$db->createCommand('SELECT COUNT(*) FROM history_balance')->queryScalar();
+    \common\modules\forum\services\ThemeDeleteService::delete($db, (int)$theme->id);
+    giftCheck((int)$db->createCommand('SELECT COUNT(*) FROM forum_comment')->queryScalar() === 0
+        && (int)$db->createCommand('SELECT COUNT(*) FROM forum_comment_gift')->queryScalar() === 0
+        && (int)$db->createCommand('SELECT COUNT(*) FROM history_balance')->queryScalar() === $historyCount,
+        'deleting a theme removes messages and gifts but retains financial history');
     echo "Forum gift regression passed (SQLite). PostgreSQL/MySQL row locks require target-engine integration.\n";
 } finally {
     foreach ($processes as [$process, $pipes]) {

@@ -47,7 +47,7 @@ try {
     }
     $db->pdo->exec('DROP TRIGGER reject_rating');
 
-    $db->createCommand('CREATE TABLE game_five_hod (id INTEGER PRIMARY KEY, game_five_id INTEGER)')->execute();
+    $db->createCommand('CREATE TABLE IF NOT EXISTS game_five_hod (id INTEGER PRIMARY KEY, game_five_id INTEGER)')->execute();
     foreach (['orel', 'saper', 'duel', 'five'] as $kind) {
         $table = 'game_' . $kind;
         $currency = $kind === 'saper' ? 'balance' : 'credit';

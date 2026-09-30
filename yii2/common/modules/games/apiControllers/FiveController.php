@@ -7,6 +7,7 @@ use api\components\ApiList;
 use common\helpers\App;
 use common\modules\games\models\GameFive;
 use common\modules\games\service\FiveService;
+use common\modules\games\service\GameOverview;
 use Yii;
 use yii\base\UserException;
 use yii\data\ActiveDataProvider;
@@ -34,12 +35,18 @@ class FiveController extends ActiveController
         return;
     }
 
+    public function actionSummary(): array
+    {
+        return GameOverview::summary($this->modelClass, App::user()->getId(), Yii::$app->timeZone);
+    }
+
     public function actions(): array
     {
         $actions = parent::actions();
 
         $actions['my'] = $actions['index'];
         $actions['history'] = $actions['index'];
+        $actions['recent'] = $actions['index'];
 
         $actions['my']['prepareDataProvider'] = function ($action, $filter) {
             return $this->prepareGames(true);
@@ -47,6 +54,10 @@ class FiveController extends ActiveController
 
         $actions['history']['prepareDataProvider'] = function ($action, $filter) {
             return $this->prepareHistoryList();
+        };
+
+        $actions['recent']['prepareDataProvider'] = function ($action, $filter) {
+            return $this->prepareHistoryList('recent');
         };
 
         $actions['index']['prepareDataProvider'] = function ($action, $filter) {
@@ -86,12 +97,15 @@ class FiveController extends ActiveController
             $errors = $model->getFirstErrors();
             throw new BadRequestHttpException(reset($errors));
         }
+        if (!is_numeric($model->kon) || (float)$model->kon !== floor((float)$model->kon)) {
+            throw new BadRequestHttpException('Ставка должна быть положительным целым числом.');
+        }
 
-        (new FiveService())->create($model, App::user()->identity->person);
+        (new FiveService())->createBatch($model, App::user()->identity->person, (int)$model->count);
 
         App::response()->setStatusCode(201);
 
-        return $model;
+        return (int)$model->count === 1 ? $model : ['count' => (int)$model->count, 'game' => $model];
     }
 
     /**
@@ -116,17 +130,24 @@ class FiveController extends ActiveController
         if ($roundId !== null && (!is_scalar($roundId) || !ctype_digit((string)$roundId) || (int)$roundId < 1)) {
             throw new BadRequestHttpException('Invalid round.');
         }
+        $roundStatus = Yii::$app->request->post('round_status');
+        if ($roundStatus !== null && !in_array($roundStatus, ['wait', 'draw', 'user', 'gamer'], true)) {
+            throw new BadRequestHttpException('Invalid round status.');
+        }
         $hod = (new FiveService())->move(
             $model,
             App::user()->identity->person,
             (int)$model->ball,
-            $roundId === null ? null : (int)$roundId
+            $roundId === null ? null : (int)$roundId,
+            $roundStatus
         );
+        Yii::$app->user->identity->person->refresh();
 
         return [
             'gamer' => Yii::$app->user->identity,
-            'game' => $model,
+            'game' => $model->toArray([], ['rounds']),
             'hod' => $hod,
+            'overview' => GameOverview::snapshot($this->modelClass, App::user()->getId(), Yii::$app->timeZone),
         ];
     }
 

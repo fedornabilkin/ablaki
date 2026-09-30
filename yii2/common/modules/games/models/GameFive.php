@@ -95,6 +95,7 @@ class GameFive extends AbstractGame implements HistorySaveInterface
             [['status'], 'string', 'max' => 50],
             [['ball'], 'required'],
             [['ball'], 'integer', 'min' => self::MIN_BALL, 'max' => self::MAX_BALL],
+            [['count'], 'integer', 'min' => 1, 'max' => 100],
         ];
     }
 
@@ -175,10 +176,10 @@ class GameFive extends AbstractGame implements HistorySaveInterface
 
         $hod = $this->getLastHod();
         if ($hod !== null && $hod->isWait()) {
-            return self::TURN_GAMER;
+            return (int)$hod->user_ball === 0 ? self::TURN_USER : self::TURN_GAMER;
         }
 
-        return self::TURN_USER;
+        return null;
     }
 
     /**
@@ -253,6 +254,10 @@ class GameFive extends AbstractGame implements HistorySaveInterface
     {
         return [
             'hods' => 'gameFiveHods',
+            'rounds' => static function (self $model) {
+                return array_values(array_filter($model->getGameFiveHods()->orderBy(['id' => SORT_DESC])->all(),
+                    static function (GameFiveHod $round): bool { return !$round->isWait(); }));
+            },
         ];
     }
 }

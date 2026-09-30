@@ -22,7 +22,7 @@ class ThemeController extends ActiveController
 
     protected function verbs()
     {
-        return array_merge(parent::verbs(), ['visit' => ['POST']]);
+        return array_merge(parent::verbs(), ['visit' => ['POST'], 'close' => ['PATCH'], 'delete' => ['DELETE']]);
     }
 
     public function actionVisit(int $id): array
@@ -35,12 +35,37 @@ class ThemeController extends ActiveController
         return ['view' => (int)(new \yii\db\Query())->select('view')->from('forum_theme')->where(['id' => $id])->scalar()];
     }
 
+    public function actionClose(int $id): array
+    {
+        $theme = $this->modelClass::findOne($id);
+        if (!$theme) throw new \yii\web\NotFoundHttpException();
+        if ((int)$theme->user_id !== (int)App::user()->id && !Yii::$app->user->can('/forum/theme/update')) {
+            throw new ForbiddenHttpException();
+        }
+        $closed = Yii::$app->request->getBodyParam('is_closed');
+        if (!in_array($closed, [true, false, 0, 1, '0', '1'], true)) {
+            throw new \yii\web\UnprocessableEntityHttpException('Укажите состояние темы.');
+        }
+        $theme->is_closed = (int)(bool)$closed;
+        if (!$theme->save(false, ['is_closed'])) throw new \yii\web\ServerErrorHttpException('Не удалось изменить тему.');
+        return ['id' => (int)$theme->id, 'is_closed' => (bool)$theme->is_closed];
+    }
+
+    public function actionDelete(int $id): array
+    {
+        if (!Yii::$app->user->can('/forum/theme/delete')) throw new ForbiddenHttpException();
+        \common\modules\forum\services\ThemeDeleteService::delete(Yii::$app->db, $id);
+        return ['deleted' => true];
+    }
+
     public function actions()
     {
         $actions = parent::actions();
 
         $actions['index']['prepareDataProvider'] = function () {
-            $provider = ApiList::provider($this->modelClass::find(), ['title'], ['id', 'user_id', 'created_at', 'last_post', 'title', 'last_comment_text', 'last_comment_username', 'last_comment_created_at', 'first_comment_user_id', 'first_comment_username']);
+            $query = $this->modelClass::find();
+            if (!trim((string)Yii::$app->request->get('q', ''))) $query->andWhere(['forum_theme.is_closed' => 0]);
+            $provider = ApiList::provider($query, ['title'], ['id', 'user_id', 'created_at', 'last_post', 'title', 'last_comment_text', 'last_comment_username', 'last_comment_created_at', 'first_comment_user_id', 'first_comment_username']);
             $provider->sort->attributes['last_comment_created_at'] = ['asc' => ['last_comment_sort' => SORT_ASC, 'id' => SORT_DESC], 'desc' => ['last_comment_sort' => SORT_DESC, 'id' => SORT_DESC]];
             return $provider;
         };
@@ -51,7 +76,7 @@ class ThemeController extends ActiveController
         $actions['create']['scenario'] = 'create';
         $actions['update']['scenario'] = 'update';
 
-        unset($actions['delete']); // remove awards and history balance?
+        unset($actions['delete']);
         return $actions;
     }
 

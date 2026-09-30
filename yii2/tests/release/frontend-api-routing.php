@@ -11,8 +11,14 @@ error_reporting(E_ALL & ~E_DEPRECATED);
 class RoutingIdentity implements \yii\web\IdentityInterface
 {
     public $id = 1;
+    public $person;
     public static function findIdentity($id) { return null; }
-    public static function findIdentityByAccessToken($token, $type = null) { return $token === 'local-test-token' ? new self() : null; }
+    public static function findIdentityByAccessToken($token, $type = null) {
+        if ($token !== 'local-test-token') return null;
+        $identity = new self();
+        $identity->person = \common\models\user\Person::findOne(['user_id' => $identity->id]);
+        return $identity;
+    }
     public function getId() { return $this->id; }
     public function getAuthKey() { return ''; }
     public function validateAuthKey($key) { return false; }
@@ -73,7 +79,7 @@ try {
     $db = $app->db;
     $db->createCommand('CREATE TABLE user (id INTEGER PRIMARY KEY, username TEXT, email TEXT, created_at INTEGER, last_login_at INTEGER)')->execute();
     $db->createCommand('CREATE TABLE persone (id INTEGER PRIMARY KEY, user_id INTEGER UNIQUE, balance NUMERIC, credit NUMERIC, rating NUMERIC, description TEXT, refovod INTEGER, bonus_count INTEGER)')->execute();
-    $db->createCommand('CREATE TABLE forum_theme (id INTEGER PRIMARY KEY, user_id INTEGER, title TEXT, created_at INTEGER, last_post INTEGER, view INTEGER, is_private INTEGER NOT NULL DEFAULT 0)')->execute();
+    $db->createCommand('CREATE TABLE forum_theme (id INTEGER PRIMARY KEY, user_id INTEGER, title TEXT, created_at INTEGER, last_post INTEGER, view INTEGER, is_private INTEGER NOT NULL DEFAULT 0, is_closed INTEGER NOT NULL DEFAULT 0)')->execute();
     $db->createCommand('CREATE TABLE forum_comment (id INTEGER PRIMARY KEY, user_id INTEGER, theme_id INTEGER, comment TEXT, active INTEGER, created_at INTEGER)')->execute();
     $db->createCommand('CREATE TABLE forum_comment_gift (id INTEGER PRIMARY KEY, amount INTEGER NOT NULL DEFAULT 1, comment_id INTEGER, user_id INTEGER, recipient_id INTEGER, created_at INTEGER, UNIQUE(comment_id,user_id))')->execute();
     $db->createCommand('CREATE TABLE history_balance (id INTEGER PRIMARY KEY, user_id INTEGER, balance NUMERIC, credit NUMERIC, balance_up NUMERIC, credit_up NUMERIC, type TEXT, comment TEXT, created_at INTEGER)')->execute();
@@ -85,12 +91,35 @@ try {
     $db->createCommand('CREATE TABLE fact (id INTEGER PRIMARY KEY, title TEXT, type TEXT, hide INTEGER)')->execute();
     $db->createCommand("INSERT INTO user VALUES (1,'Donor','private1',1,1),(2,'Author','private2',2,2)")->execute();
     $db->createCommand("INSERT INTO persone VALUES (1,1,10,2,1,'',0,0),(2,2,10,1,2,'',1,0)")->execute();
+    $db->createCommand('ALTER TABLE persone ADD COLUMN description_approved INTEGER NOT NULL DEFAULT 0')->execute();
+    $db->schema->refreshTableSchema('persone');
     $db->createCommand("INSERT INTO forum_theme (id,user_id,title,created_at,last_post,view) VALUES (1,2,'Topic',1,1,0)")->execute();
     $db->createCommand("INSERT INTO forum_comment VALUES (1,2,1,'Message',1,1)")->execute();
     $db->createCommand("INSERT INTO forum_comment VALUES (2,2,1,'Hidden message',0,2)")->execute();
     list($themeStatus, $themeList) = dispatch('GET', 'v1/forum-theme', false, ['envelope' => '1']);
     routeCheck($themeStatus === 200 && $themeList['items'][0]['comment_count'] === 1
         && $themeList['items'][0]['view'] === 0, 'topic list returns visible comment and view counts');
+    routeCheck(dispatch('PATCH', 'v1/forum-theme/1/close', true, [], ['is_closed' => true])[0] === 403,
+        'another user cannot close the theme');
+    $db->createCommand()->update('forum_theme', ['is_closed' => 1], ['id' => 1])->execute();
+    routeCheck(dispatch('GET', 'v1/forum-theme', false, ['envelope' => '1'])[1]['_meta']['totalCount'] === 0,
+        'closed theme is absent from ordinary list');
+    routeCheck(dispatch('GET', 'v1/forum-theme', false, ['envelope' => '1', 'q' => 'Topic'])[1]['_meta']['totalCount'] === 1,
+        'closed theme remains searchable');
+    dispatch('POST', 'v1/forum-comment', true, [], ['theme_id' => 1, 'comment' => 'Should not appear']);
+    routeCheck((int)$db->createCommand('SELECT COUNT(*) FROM forum_comment')->queryScalar() === 2,
+        'closed theme rejects new replies');
+    $db->createCommand()->update('forum_theme', ['is_closed' => 0], ['id' => 1])->execute();
+    list($wallStatus) = dispatch('PATCH', 'v1/users/wall', true, [], ['description' => 'Текст для проверки']);
+    routeCheck($wallStatus === 200 && (int)$db->createCommand('SELECT description_approved FROM persone WHERE user_id=1')->queryScalar() === 0,
+        'editing wall saves text and resets approval');
+    routeCheck(dispatch('GET', 'v1/users/wall/Donor', false)[1]['person']['description'] === null,
+        'unapproved wall text stays private');
+    routeCheck(dispatch('GET', 'v1/users/wall/Donor', true)[1]['person']['description'] === 'Текст для проверки',
+        'owner sees pending wall text');
+    $db->createCommand()->update('persone', ['description_approved' => 1], ['user_id' => 1])->execute();
+    routeCheck(dispatch('GET', 'v1/users/wall/Donor', false)[1]['person']['description'] === 'Текст для проверки',
+        'approved wall text becomes public');
     foreach (['v1/users','v1/users/online','v1/forum-theme','v1/forum-comment'] as $path) {
         list($status, $data) = dispatch('GET', $path, false, ['envelope' => '1']);
         routeCheck($status === 200 && isset($data['items'], $data['_meta']['pageCount']), 'public list dispatch and serializer: ' . $path);
@@ -105,7 +134,7 @@ try {
         $dates = [$yesterday - 1, $yesterday, $today - 1, $today, time(), time() + 86400];
         $tables = [
             'user' => ['username' => 'StatUser'],
-            'game_orel' => ['user_id' => 1, 'user_gamer' => 2],
+            'game_orel' => ['user_id' => 1, 'user_gamer' => 2, 'hod' => 1],
             'game_saper' => ['user_id' => 1, 'user_gamer' => 2, 'etap' => 0],
             'forum_theme' => ['user_id' => 1],
             'forum_comment' => ['user_id' => 1, 'active' => 1, 'theme_id' => 1],
@@ -115,7 +144,9 @@ try {
         foreach ($tables as $table => $fields) {
             $db->createCommand()->delete($table)->execute();
             foreach ($dates as $index => $date) {
-                $db->createCommand()->insert($table, array_merge($fields, ['id' => $index + 1, 'created_at' => $date]))->execute();
+                $completed = $table === 'game_orel' ? ['updated_at' => $date]
+                    : ($table === 'game_saper' ? ['time_over_at' => $date] : []);
+                $db->createCommand()->insert($table, array_merge($fields, $completed, ['id' => $index + 1, 'created_at' => $date]))->execute();
             }
         }
         $db->createCommand()->insert('game_orel', ['id' => 7, 'created_at' => $today, 'user_gamer' => 0])->execute();
@@ -135,6 +166,10 @@ try {
             && $periodStat['games']['saper'] === 6 && $periodStat['exchange'] === 6,
             'legacy scalar totals are preserved and unfinished games/orders are excluded');
         routeCheck(dispatch('GET', 'v1/stat')[1] === $periodStat, 'cached statistics preserves the complete period contract');
+        $db->createCommand()->update('game_orel', ['updated_at' => $today], ['id' => 1])->execute();
+        $app->cache->flush();
+        routeCheck(dispatch('GET', 'v1/stat')[1]['periods']['games']['orel']['today'] === 3,
+            'game statistics use completion date rather than creation date');
         foreach (array_keys($tables) as $table) $db->createCommand()->delete($table)->execute();
         $app->cache->flush();
         $emptyStats = dispatch('GET', 'v1/stat')[1];
@@ -184,6 +219,7 @@ try {
     }
     $db->createCommand('CREATE TABLE game_duel (id INTEGER PRIMARY KEY, user_id INTEGER, user_gamer INTEGER, kon NUMERIC, u1 INTEGER, u2 INTEGER, b1 INTEGER, b2 INTEGER, created_at INTEGER, updated_at INTEGER)')->execute();
     $db->createCommand('CREATE TABLE game_five (id INTEGER PRIMARY KEY, user_id INTEGER, user_gamer INTEGER, kon NUMERIC, status TEXT, user_amount INTEGER, gamer_amount INTEGER, created_at INTEGER, updated_at INTEGER)')->execute();
+    $db->createCommand('CREATE TABLE game_five_hod (id INTEGER PRIMARY KEY, game_five_id INTEGER, user_id INTEGER, user_gamer INTEGER, user_ball INTEGER, gamer_ball INTEGER, status TEXT, user_amount INTEGER, gamer_amount INTEGER, created_at INTEGER)')->execute();
     foreach (['orel', 'saper', 'duel', 'five'] as $kind) {
         $values = ['id' => 1, 'user_id' => 1, 'user_gamer' => 2, 'kon' => 5, 'created_at' => 1];
         $values[$kind === 'saper' ? 'time_over_at' : 'updated_at'] = time();

@@ -1,5 +1,6 @@
 #!/bin/bash
 
+crontab /etc/ablaki-cron && \
 service cron start && \
 service rsyslog start && \
 

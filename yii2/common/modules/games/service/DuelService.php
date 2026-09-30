@@ -10,6 +10,7 @@ use common\modules\games\models\GameDuel;
 use Throwable;
 use Yii;
 use yii\base\UserException;
+use yii\db\Query;
 
 /**
  * Игра «Дуэль» — одна схватка: удар + блок с каждой стороны.
@@ -26,31 +27,36 @@ class DuelService
      */
     public function create(GameDuel $game, Person $person): GameDuel
     {
-        if ($person->credit < $game->kon) {
-            throw new UserException(Yii::t('games', 'Insufficient funds'));
-        }
-
-        $transaction = Yii::$app->db->beginTransaction();
-        try {
-            \common\modules\economy\service\WalletMaintenance::writable(Yii::$app->db);
-            $row = (new \common\services\user\CreditLedger(Yii::$app->db))->lock('persone', ['user_id' => (int)$person->user_id]);
-            if (!$row) throw new \RuntimeException('Player unavailable.');
-            Person::populateRecord($person, $row);
-            if (\common\modules\economy\service\WalletSchema::ready(Yii::$app->db)) \common\modules\economy\service\LegacyCreditPolicy::game($game->kon);
-            if ($person->credit < $game->kon) throw new UserException(Yii::t('games', 'Insufficient funds'));
-            $game->user_id = $person->user_id;
-            $game->user_gamer = 0;
-            if (!$game->save(false)) throw new \RuntimeException('Could not create duel.');
-
-            $this->changePerson($person, $game, 0 - $game->kon, 0, 'Create game duel #' . $game->id);
-
-            $transaction->commit();
-        } catch (Throwable $e) {
-            $transaction->rollBack();
-            throw $e;
-        }
-
+        $this->createBatch($game, $person, 1);
         return $game;
+    }
+
+    public function createBatch(GameDuel $game, Person $person, int $count): void
+    {
+        if ($count < 1 || $count > 100) throw new UserException('Invalid game count.');
+        Yii::$app->db->transaction(function () use ($game, $person, $count): void {
+            $db = Yii::$app->db;
+            \common\modules\economy\service\WalletMaintenance::writable($db);
+            $row = (new \common\services\user\CreditLedger($db))->lock('persone', ['user_id' => (int)$person->user_id]);
+            if (!$row) throw new UserException('Account not found.');
+            Person::populateRecord($person, $row);
+            if (\common\modules\economy\service\WalletSchema::ready($db)) \common\modules\economy\service\LegacyCreditPolicy::game($game->kon);
+            if ($person->credit < $game->kon * $count) {
+                throw new UserException(Yii::t('games', 'Insufficient funds'));
+            }
+            for ($i = 0; $i < $count; $i++) {
+                $entry = $i === 0 ? $game : new GameDuel();
+                $entry->kon = $game->kon;
+                $entry->user_id = $person->user_id;
+                $entry->user_gamer = 0;
+                $entry->u1 = $count === 1 ? $game->u1 : random_int(1, 3);
+                $entry->b1 = $count === 1 ? $game->b1 : random_int(1, 3);
+                $entry->u2 = 0;
+                $entry->b2 = 0;
+                if (!$entry->save(false)) throw new \RuntimeException('Failed to create duel.');
+            }
+            $this->changePerson($person, $game, -$game->kon * $count, 0, 'Create ' . $count . ' game duel');
+        });
     }
 
     /**

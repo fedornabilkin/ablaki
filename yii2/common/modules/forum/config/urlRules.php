@@ -15,6 +15,8 @@ return [
         'pluralize' => false,
         'extraPatterns' => [
             'POST <id:\d+>/visit' => 'visit',
+            'PATCH <id:\d+>/close' => 'close',
+            'DELETE <id:\d+>' => 'delete',
             'OPTIONS <id:\d+>/visit' => 'options',
             'GET my' => 'my',
         ],

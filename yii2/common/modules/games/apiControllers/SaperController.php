@@ -24,10 +24,9 @@ use common\modules\games\middleware\saper\PlayMiddleware;
 use common\modules\games\middleware\saper\StartMiddleware;
 use common\modules\games\middleware\saper\ValidateHodMiddleware;
 use common\modules\games\models\GameSaper;
+use common\modules\games\service\GameOverview;
 use Yii;
-use yii\base\DynamicModel;
 use yii\base\UserException;
-use yii\data\ActiveDataFilter;
 use yii\data\ActiveDataProvider;
 use yii\rest\ActiveController;
 
@@ -113,8 +112,11 @@ class SaperController extends ActiveController
         $lost = false;
         $result = \common\modules\games\service\GameParticipation::run('game_saper', (int)$id, Yii::$app->user->identity->person,
             function (array $row) use (&$lost) { return $this->playLocked($row, $lost); });
-        // Losing is a committed game result, not a transaction failure. Preserve the old message.
-        if ($lost) throw new MainException(Yii::t('games', 'Game lost'));
+        if (isset($result['game'])) {
+            if ($result['completed']) Yii::$app->user->identity->person->refresh();
+            $result['overview'] = $result['completed']
+                ? GameOverview::snapshot($this->modelClass, App::user()->getId(), Yii::$app->timeZone) : null;
+        }
         return $result;
     }
 
@@ -143,13 +145,18 @@ class SaperController extends ActiveController
 
         if ($middleware->check()) {
             $lost = (int)$model->etap === GameSaper::GAME_SAPER_ETAP_LOSE;
-            if (!$lost) Yii::$app->getResponse()->setStatusCode(204);
+            // A completed game returns its result and overview to the client.
         } else {
             $errors = $middleware->getErrors();
             throw new MainException(Yii::t('games', $errors[0]));
         }
 
-        return true;
+        return [
+            'game' => $model,
+            'completed' => $model->isComplete(),
+            'lost' => $lost,
+            'gamer' => Yii::$app->user->identity,
+        ];
     }
 
     public function actionDouble($id)
@@ -173,17 +180,4 @@ class SaperController extends ActiveController
         return $model;
     }
 
-    /**
-     * @return array
-     */
-    private function getFilter(): array
-    {
-        return [
-            'class' => ActiveDataFilter::class,
-            'searchModel' => function () {
-                return (new DynamicModel(['kon' => null]))
-                    ->addRule('kon', 'number');
-            },
-        ];
-    }
 }
