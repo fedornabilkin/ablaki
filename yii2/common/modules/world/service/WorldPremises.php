@@ -55,17 +55,22 @@ class WorldPremises
         $query = (new Query())->select(['o.*', 'r.config_json'])->from(['o' => 'world_premises_offer'])->innerJoin(['r' => 'world_template_revision'], '[[r.id]]=[[o.template_revision_id]]')
             ->where(['o.settlement_id' => $c['settlement']['id'], 'o.status' => 'published', 'r.status' => 'published']);
         if ($search !== '') $query->andWhere(['like', 'o.name', $search]);
-        $total = (int)(clone $query)->count('*', $this->db); $items = []; $requirements = new RequirementEvaluator($this->db);
+        $total = (int)(clone $query)->count('*', $this->db); $items = []; $requirements = new RequirementEvaluator($this->db); $availableBudget = null;
+        if ($c['site']) {
+            $accounts = (new EconomyHierarchy($this->db))->accounts((int)$c['site']['id']);
+            if (isset($accounts['budget'])) $availableBudget = (new BudgetSpending($this->db))->available((int)$accounts['budget']['id'])->decimal();
+        }
         foreach ($query->orderBy(['o.id' => SORT_DESC])->offset(($page - 1) * 20)->limit(20)->all($this->db) as $row) {
             $config = json_decode($row['config_json'], true, 512, JSON_THROW_ON_ERROR);
             $items[] = ['id' => (int)$row['id'], 'name' => $row['name'], 'template_revision_id' => (int)$row['template_revision_id'], 'kind' => $config['kind'],
                 'price' => $config['price'], 'area' => $config['area'], 'slots' => $config['slots'], 'lodging_places' => $config['lodging_places'] ?? 0, 'exposure_class' => $config['exposure_class'],
-                'repair' => $config['repair'] ?? null, 'repair_for_existing' => $config['repair_for_existing'] ?? false, 'requirements' => $config['requirements'] ?? ['all' => []], 'requirements_status' => $requirements->evaluate($user, $config['requirements'] ?? [])] + WorldEquipmentExpansion::terms($config) + ConstructionSpec::presentation($config);
+                'repair' => $config['repair'] ?? null, 'repair_for_existing' => $config['repair_for_existing'] ?? false, 'requirements' => $config['requirements'] ?? ['all' => []], 'requirements_status' => $requirements->evaluate($user, $config['requirements'] ?? []),
+                'budget_available' => $availableBudget, 'can_afford' => $availableBudget === null ? null : Money::parse((string)$config['price'])->compare(Money::parse($availableBudget)) <= 0] + WorldEquipmentExpansion::terms($config) + ConstructionSpec::presentation($config);
         }
         return ['node_id' => $id, 'settlement_id' => $c['settlement']['id'], 'settlement_name' => $c['settlement']['name'], 'items' => $items,
             '_meta' => ['totalCount' => $total, 'pageCount' => (int)ceil($total / 20), 'currentPage' => $page, 'perPage' => 20],
             'can_publish' => !$c['site'] && $c['manager'] && $this->flags->capabilities()['world_write'], 'can_buy' => $c['site'] !== null && $this->ready(),
-            'area' => $c['site'] ? $this->area($c['site']) : null, 'server_time' => time()];
+            'area' => $c['site'] ? $this->area($c['site']) : null, 'budget_available' => $availableBudget, 'server_time' => time()];
     }
     /** Used by the HTTP boundary and again by the domain; prices have no automatic default. */
     public function publication(array $body): array
