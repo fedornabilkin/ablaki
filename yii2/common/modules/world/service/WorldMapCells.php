@@ -44,13 +44,6 @@ class WorldMapCells
         (new WorldTree($this->db))->assertFreePosition((int)$node['id'], $input['x'], $input['y']);
         if ($action === 'explore') {
             if ($cell) throw new GameError('MAP_CELL_EXPLORED', 'Ячейка уже исследована.', 422);
-            $neighbours = ['or'];
-            foreach ([[1, 0], [-1, 0], [0, 1], [0, -1]] as $offset)
-                $neighbours[] = ['and', ['x' => $input['x'] + $offset[0]], ['y' => $input['y'] + $offset[1]]];
-            $any = (new Query())->from('world_map_cell')->where(['parent_id' => $node['id']])->exists($this->db);
-            if ($any && !(new Query())->from('world_map_cell')->where(['parent_id' => $node['id']])->andWhere($neighbours)->exists($this->db))
-                throw new GameError('MAP_CELL_TOO_FAR', 'Исследуйте соседнюю ячейку.', 422);
-            if (!$any && ($input['x'] !== 0 || $input['y'] !== 0)) throw new GameError('MAP_CELL_TOO_FAR', 'Начните исследование с координат 0, 0.', 422);
             return ['revisions' => ['node:' . $node['id'] => (int)$node['revision']],
                 'terms' => ['node_id' => (int)$node['id'], 'x' => $input['x'], 'y' => $input['y'], 'action' => $action, 'price' => '0.0000', 'currency' => 'Cr']];
         }

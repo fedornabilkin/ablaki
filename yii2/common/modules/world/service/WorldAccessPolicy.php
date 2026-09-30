@@ -2,7 +2,6 @@
 namespace common\modules\world\service;
 
 use common\services\game\GameError;
-use yii\db\Expression;
 use yii\db\Query;
 
 class WorldAccessPolicy
@@ -16,13 +15,9 @@ class WorldAccessPolicy
     public function filter(Query $query, string $alias = 'n'): Query
     {
         if ($this->admin) return $query;
-        $hidden = (new Query())->select(new Expression('1'))->from(['path' => 'world_node_closure'])
-            ->innerJoin(['ancestor' => 'world_node'], '[[ancestor.id]]=[[path.ancestor_id]]')
-            ->where(new Expression('[[path.descendant_id]]=[[' . $alias . '.id]]'))
-            ->andWhere(['or', ['ancestor.status' => 'archived'], ['and', ['<>', 'ancestor.visibility', 'public'], ['or', ['ancestor.owner_user_id' => null], ['<>', 'ancestor.owner_user_id', $this->userId]]]]);
-        return $query->andWhere(['<>', $alias . '.status', 'archived'])
-            ->andWhere(['or', [$alias . '.visibility' => 'public'], [$alias . '.owner_user_id' => $this->userId]])
-            ->andWhere(['not exists', $hidden]);
+        // World maps show every active object, regardless of its owner. Management
+        // permissions and private details remain restricted by the owner check.
+        return $query->andWhere(['<>', $alias . '.status', 'archived']);
     }
     public function requireManage(array $node): void
     {
