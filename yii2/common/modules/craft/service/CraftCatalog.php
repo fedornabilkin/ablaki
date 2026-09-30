@@ -108,7 +108,14 @@ class CraftCatalog
             $equipmentCodes = [];
             foreach ($data['stations'] as $entry) if (!empty($entry['item'])) $equipmentCodes[$entry['item']] = true;
             foreach ($data['recipes'] as $entry) foreach ($entry['tools'] as $code) $equipmentCodes[$code] = true;
-            $upsert=function($table,$r) use($s) { $old=(new \yii\db\Query())->from($table)->where(['code'=>$r['code']])->one($s->db); if($old){$s->db->createCommand()->update($table,$r,['id'=>$old['id']])->execute();return (int)$old['id'];} return $s->insert($table,$r); };
+            $upsert=function($table,$r) use($s) {
+                // Catalog imports must remain usable while an additive migration is pending.
+                $schema=$s->db->schema->getTableSchema($table,true);
+                if($schema)$r=array_intersect_key($r,$schema->columns);
+                $old=(new \yii\db\Query())->from($table)->where(['code'=>$r['code']])->one($s->db);
+                if($old){$s->db->createCommand()->update($table,$r,['id'=>$old['id']])->execute();return (int)$old['id'];}
+                return $s->insert($table,$r);
+            };
             foreach($data['categories'] as $r) $maps['categories'][$r['code']]=$upsert('craft_category',['code'=>$r['code'],'name'=>$r['name'],'description'=>$r['description']??'']);
             foreach($data['items'] as $r) {
                 $old=(new \yii\db\Query())->from('craft_item')->where(['code'=>$r['code']])->one($s->db);
