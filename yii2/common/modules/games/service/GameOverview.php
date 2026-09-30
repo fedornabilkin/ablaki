@@ -71,4 +71,20 @@ class GameOverview
             'own' => ['count' => (int)(clone $own)->count(), 'amount' => (float)$own->sum('kon')],
         ];
     }
+
+    /** State returned with a successful game command so the page needs no follow-up GETs. */
+    public static function snapshot($modelClass, $userId, $timezone): array
+    {
+        $saper = is_a($modelClass, GameSaper::class, true);
+        $dateColumn = $saper ? 'time_over_at' : 'updated_at';
+        $recent = self::completed($modelClass::find(), $saper)
+            ->with(['user.person', 'userGamer.person'])
+            ->orderBy([$dateColumn => SORT_DESC, 'id' => SORT_DESC])
+            ->limit(5)->all();
+
+        return [
+            'summary' => self::summary($modelClass, $userId, $timezone),
+            'recent' => array_map(static function ($game) { return $game->toArray(); }, $recent),
+        ];
+    }
 }

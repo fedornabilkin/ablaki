@@ -122,10 +122,12 @@ class DuelController extends ActiveController
         }
 
         (new DuelService())->play($model, App::user()->identity->person);
+        Yii::$app->user->identity->person->refresh();
 
         return [
             'gamer' => Yii::$app->user->identity,
             'game' => $model,
+            'overview' => GameOverview::snapshot($this->modelClass, App::user()->getId(), Yii::$app->timeZone),
         ];
     }
 

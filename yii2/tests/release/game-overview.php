@@ -203,6 +203,15 @@ foreach ([\common\modules\games\models\GameDuel::class, \common\modules\games\mo
     $opponent = GameOverview::summary($modelClass, 2, 'Europe/Moscow', $today + 100);
     check($opponent['today']['played'] === 1 && $opponent['today']['wins'] === 0, $modelClass . ' distinguishes the losing opponent');
 }
+foreach ([GameOrel::class, GameSaper::class, \common\modules\games\models\GameDuel::class, \common\modules\games\models\GameFive::class] as $modelClass) {
+    $snapshot = GameOverview::snapshot($modelClass, 1, 'Europe/Moscow');
+    check(isset($snapshot['summary']['today'], $snapshot['summary']['own']) && count($snapshot['recent']) <= 5,
+        $modelClass . ' command snapshot contains totals and at most five completed games');
+    foreach ($snapshot['recent'] as $game) {
+        check(isset($game['id'], $game['creator'], $game['player'], $game['completed_at'])
+            && !isset($game['pole1']), $modelClass . ' recent row is safe for immediate rendering');
+    }
+}
 $db->createCommand('CREATE TABLE period_boundary (id INTEGER PRIMARY KEY, completed_at INTEGER)')->execute();
 foreach ([0, -1, -86400, -86401, -6*86400, -6*86400-1, -29*86400, -29*86400-1, 86400] as $id => $offset) {
     $db->createCommand()->insert('period_boundary', ['id' => $id, 'completed_at' => $today + $offset])->execute();

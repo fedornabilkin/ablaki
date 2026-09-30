@@ -24,6 +24,7 @@ use common\modules\games\middleware\saper\PlayMiddleware;
 use common\modules\games\middleware\saper\StartMiddleware;
 use common\modules\games\middleware\saper\ValidateHodMiddleware;
 use common\modules\games\models\GameSaper;
+use common\modules\games\service\GameOverview;
 use Yii;
 use yii\base\UserException;
 use yii\data\ActiveDataProvider;
@@ -127,14 +128,22 @@ class SaperController extends ActiveController
             ->linkWith(new PlayMiddleware());
 
 
-        if ($middleware->check()) {
-            Yii::$app->getResponse()->setStatusCode(204);
-        } else {
-            $errors = $middleware->getErrors();
+        $succeeded = $middleware->check();
+        $completed = $model->isComplete();
+        $errors = $succeeded ? [] : $middleware->getErrors();
+        $lost = !$succeeded && $completed && in_array('Game lost', $errors, true);
+        if (!$succeeded && !$lost) {
             throw new MainException(Yii::t('games', $errors[0]));
         }
+        if ($completed) Yii::$app->user->identity->person->refresh();
 
-        return true;
+        return [
+            'game' => $model,
+            'completed' => $completed,
+            'lost' => $lost,
+            'gamer' => Yii::$app->user->identity,
+            'overview' => $completed ? GameOverview::snapshot($this->modelClass, App::user()->getId(), Yii::$app->timeZone) : null,
+        ];
     }
 
     public function actionDouble($id)
