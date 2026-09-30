@@ -3,6 +3,7 @@
 namespace api\modules\v1\controllers;
 
 use api\components\ApiList;
+use api\filters\Auth;
 use api\modules\v1\models\Person;
 use api\modules\v1\models\User;
 use api\modules\v1\traites\AuthTrait;
@@ -14,7 +15,15 @@ use yii\web\NotFoundHttpException;
 
 class UserController extends Controller
 {
-    use AuthTrait;
+    use AuthTrait { behaviors as private configuredAuthBehaviors; }
+
+    public function behaviors(): array
+    {
+        $behaviors = $this->configuredAuthBehaviors();
+        $behaviors[Auth::class]['except'] = array_values(array_diff($behaviors[Auth::class]['except'], ['wall']));
+        $behaviors[Auth::class]['optional'] = ['wall'];
+        return $behaviors;
+    }
 
     public function authExceptAction(): array
     {
