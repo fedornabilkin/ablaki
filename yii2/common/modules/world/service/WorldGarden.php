@@ -97,6 +97,12 @@ class WorldGarden
     public function state(int $user, int $id): array
     {
         $c = $this->context($user, $id); $offer = $this->one('world_garden_offer', ['active_settlement_id' => $c['place']['id']]);
+        $siteBudgetAvailable = null;
+        if ($c['membership']) {
+            $accounts = (new EconomyHierarchy($this->db))->accounts((int)$c['membership']['starter_site_id']);
+            if (isset($accounts['budget'])) $siteBudgetAvailable = (new BudgetSpending($this->db))->available((int)$accounts['budget']['id'])->decimal();
+        }
+        if ($offer) $offer['can_afford'] = $siteBudgetAvailable === null ? null : Money::parse((string)$offer['price'])->compare(Money::parse($siteBudgetAvailable)) <= 0;
         $garden = null;
         if ($c['purchase']) {
             $gardenId = (int)$c['purchase']['node_id']; $ownedGarden = (new WorldQuery($this->db, new WorldAccessPolicy($user)))->node($gardenId);
@@ -106,7 +112,8 @@ class WorldGarden
                 'available_budget' => isset($accounts['budget']) ? (new BudgetSpending($this->db))->available((int)$accounts['budget']['id'])->decimal() : '0.0000'];
         }
         return ['node_id' => $id, 'settlement_id' => $c['place']['id'], 'settlement_name' => $c['place']['name'],
-            'offer' => $offer ? ['id' => (int)$offer['id'], 'name' => $offer['name'], 'price' => Money::parse((string)$offer['price'])->decimal(), 'base_price' => Money::parse((string)$offer['base_price'])->decimal()] : null,
+            'offer' => $offer ? ['id' => (int)$offer['id'], 'name' => $offer['name'], 'price' => Money::parse((string)$offer['price'])->decimal(), 'base_price' => Money::parse((string)$offer['base_price'])->decimal(), 'can_afford' => $offer['can_afford']] : null,
+            'site_budget_available' => $siteBudgetAvailable,
             'garden' => $garden, 'can_publish' => $c['node']['type'] === 'SETTLEMENT' && $c['manager'] && $this->flags->capabilities()['world_write'],
             'can_buy' => $c['membership'] !== null && !$garden && $offer !== null && $this->ready(),
             'can_expand' => $garden && $garden['node_id'] === $id && $garden['unlocked'] < 10 && $this->ready(),
