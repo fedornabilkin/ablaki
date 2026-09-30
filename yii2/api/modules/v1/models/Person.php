@@ -26,8 +26,12 @@ class Person extends \common\models\user\Person
                 return UserHelper::ratingRound($model->rating);
             },
             'description' => static function (self $model) {
-                // Older profile schemas may not have this optional column yet.
-                return $model->getAttribute('description');
+                $own = !App::user()->getIsGuest() && (int)App::user()->id === (int)$model->user_id;
+                return $own || !$model->hasAttribute('description_approved') || (bool)$model->description_approved
+                    ? $model->getAttribute('description') : null;
+            },
+            'description_approved' => static function (self $model) {
+                return $model->hasAttribute('description_approved') && (bool)$model->description_approved;
             },
             'forum_credits_sent' => static function (self $model): int {
                 return \common\modules\forum\services\CommentGiftSchema::sent(\Yii::$app->db, (int)$model->user_id);

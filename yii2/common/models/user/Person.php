@@ -23,6 +23,7 @@ use yii\db\ActiveRecord;
  * @property int $autoriz
  * @property int $last_cleaning_at
  * @property string $description
+ * @property bool $description_approved
  *
  * @property User $user
  * @property User $refovodUser

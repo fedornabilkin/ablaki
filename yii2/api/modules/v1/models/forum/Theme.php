@@ -77,6 +77,12 @@ class Theme extends ForumTheme
         $fields['first_comment_username'] = static function ($model) {
             return $model->first_comment_username === null ? null : trim($model->first_comment_username);
         };
+        $fields['can_moderate'] = static function () {
+            return !\Yii::$app->user->isGuest && \Yii::$app->user->can('/forum/theme/update');
+        };
+        $fields['can_delete'] = static function () {
+            return !\Yii::$app->user->isGuest && \Yii::$app->user->can('/forum/theme/delete');
+        };
         return $fields;
     }
 

@@ -39,6 +39,7 @@ YiiAsset::register($this);
                 }
             ],
             'title',
+            'is_closed:boolean',
             'view',
             [
                 'attribute' => 'last_post',

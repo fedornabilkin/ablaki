@@ -32,8 +32,14 @@ class UserController extends Controller
             throw new NotFoundHttpException('Person not found.');
         }
 
-        $person->description = App::request()->getBodyParam('description');
-        if (!$person->save(true, ['description'])) {
+        $description = App::request()->getBodyParam('description');
+        if (!is_string($description)) {
+            App::response()->setStatusCode(422);
+            return ['errors' => ['description' => ['Укажите текст описания.']]];
+        }
+        $person->description = $description;
+        $person->description_approved = 0;
+        if (!$person->save(true, ['description', 'description_approved'])) {
             App::response()->setStatusCode(422);
             return ['errors' => $person->getErrors()];
         }
