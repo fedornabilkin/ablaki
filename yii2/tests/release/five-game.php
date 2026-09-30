@@ -157,8 +157,8 @@ fiveRequest('POST', '/play/' . $independentId, 2, ['ball'=>3, 'round_id'=>$indep
 $pending = fiveRequest('POST', '/play/' . $independentId, 2, ['ball'=>5, 'round_id'=>$independentRound]);
 $pendingRound = (int)$pending[1]['game']['last_hod']['id'];
 checkFive($pending[0] === 200 && $pendingRound !== $independentRound && $pending[1]['game']['turn'] === 'user', 'opponent may start the next round independently');
-$creatorView = fiveRequest('GET', '/' . $independentId, 1)[1];
-$opponentView = fiveRequest('GET', '/' . $independentId, 2)[1];
+$creatorView = fiveRequest('GET', '/' . $independentId, 1, [], ['expand' => 'rounds'])[1];
+$opponentView = fiveRequest('GET', '/' . $independentId, 2, [], ['expand' => 'rounds'])[1];
 checkFive(!isset($creatorView['last_hod']['gamer_ball']) && $opponentView['last_hod']['gamer_ball'] === 5
     && count($creatorView['rounds']) === 1, 'pending opponent choice stays private and only completed rounds appear');
 checkFive(fiveRequest('POST', '/play/' . $independentId, 2, ['ball'=>4, 'round_id'=>$pendingRound])[0] === 409, 'same player cannot make both moves');
