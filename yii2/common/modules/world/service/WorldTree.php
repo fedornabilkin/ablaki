@@ -45,7 +45,7 @@ class WorldTree
         if (!preg_match('/^[a-z0-9][a-z0-9-]{0,79}$/D', $values['code']) || !preg_match('/^[a-z0-9][a-z0-9-]{0,79}$/D', $values['slug'])) throw new GameError('INVALID_NODE', 'Некорректный код объекта.', 422);
         if (!is_string($values['name']) || trim($values['name']) === '' || mb_strlen($values['name'], 'UTF-8') > 120) throw new GameError('INVALID_NODE', 'Некорректное название.', 422);
         $row = ['parent_id' => $parent ? (int)$parent['id'] : null, 'root_id' => $parent ? (int)$parent['root_id'] : null, 'node_type' => $type,
-            'code' => $values['code'], 'slug' => $values['slug'], 'name' => trim($values['name']), 'owner_user_id' => $values['owner_user_id'] ?? null,
+            'code' => $values['code'], 'slug' => $values['slug'], 'name' => trim($values['name']), 'owner_user_id' => $values['owner_user_id'] ?? null, 'portable' => (int)($values['portable'] ?? 0),
             'visibility' => $values['visibility'] ?? 'public', 'status' => 'active', 'depth' => $parent ? (int)$parent['depth'] + 1 : 0,
             'position_x' => $values['position_x'] ?? 0, 'position_y' => $values['position_y'] ?? 0, 'position' => $values['position'] ?? 0,
             'footprint_json' => WorldMapGeometry::normalize($values['footprint_json'] ?? null, $values['position_x'] ?? 0, $values['position_y'] ?? 0),
@@ -112,6 +112,7 @@ class WorldTree
         if ($this->db->schema->getTableSchema('world_shelter_deployment') && (new Query())->from(['s' => 'world_shelter_deployment'])->innerJoin(['c' => 'world_node_closure'], '[[c.descendant_id]]=[[s.node_id]]')->where(['c.ancestor_id' => $id, 's.ended_at' => null])->exists($this->db)) throw new GameError('SHELTER_MOVE_REQUIRED', 'Перед переносом территории сложите размещённые шалаши: назначенный ночлег закреплён за местом.');
         if ($this->db->schema->getTableSchema('world_premises_purchase') && (new Query())->from('world_premises_purchase')->where(['or', ['building_id' => $id], ['room_id' => $id]])->exists($this->db)) throw new GameError('FIXED_PREMISES', 'Купленное помещение закреплено за площадкой. Для переезда нужна отдельная операция.');
         if ($node['status'] !== 'active') throw new GameError('NODE_INACTIVE', 'Объект недоступен.');
+        if (empty($node['portable'])) throw new GameError('NODE_NOT_PORTABLE', 'Этот объект закреплён на месте. Сначала включите параметр «Можно перемещать» в настройках объекта.');
         if ((int)$node['parent_id'] === $parentId) throw new GameError('SAME_PARENT', 'Объект уже находится здесь.');
         if ($node['node_type'] === 'WORLD' || (int)$node['root_id'] !== (int)$parent['root_id']) throw new GameError('CROSS_WORLD_MOVE', 'Перенос между мирами недоступен.');
         if ($node['node_type'] === 'BED') throw new GameError('FIXED_GARDEN_BED', 'Грядка закреплена за своим огородом.');
