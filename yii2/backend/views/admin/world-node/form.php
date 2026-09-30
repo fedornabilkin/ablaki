@@ -24,6 +24,7 @@ $choices = WorldNodeForm::choices();
         <?php endif ?>
         <?= $form->field($model, 'owner_user_id')->input('number', ['min' => 1])->hint('Пустое значение — системный объект. Создание объекта не выдаёт вещи, кредиты или платные права.') ?>
         <?= $form->field($model, 'visibility')->dropDownList($choices['visibility']) ?>
+        <?= $form->field($model, 'portable')->checkbox()->hint('РџРѕ СѓРјРѕР»С‡Р°РЅРёСЋ РѕР±СЉРµРєС‚ Р·Р°РєСЂРµРїР»С‘РЅ РЅР° РјРµСЃС‚Рµ. Р’РєР»СЋС‡РёС‚Рµ, С‚РѕР»СЊРєРѕ РµСЃР»Рё РµРіРѕ Р±РµР·РѕРїР°СЃРЅРѕ РїРµСЂРµРЅРѕСЃРёС‚СЊ.') ?>
         <div class="row">
             <?php foreach (['position_x', 'position_y', 'position'] as $field): ?>
                 <div class="col-md-4"><?= $form->field($model, $field)->input('number', ['min' => -1000000, 'max' => 1000000]) ?></div>
