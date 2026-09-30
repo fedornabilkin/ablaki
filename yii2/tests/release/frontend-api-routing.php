@@ -11,8 +11,14 @@ error_reporting(E_ALL & ~E_DEPRECATED);
 class RoutingIdentity implements \yii\web\IdentityInterface
 {
     public $id = 1;
+    public $person;
     public static function findIdentity($id) { return null; }
-    public static function findIdentityByAccessToken($token, $type = null) { return $token === 'local-test-token' ? new self() : null; }
+    public static function findIdentityByAccessToken($token, $type = null) {
+        if ($token !== 'local-test-token') return null;
+        $identity = new self();
+        $identity->person = \common\models\user\Person::findOne(['user_id' => $identity->id]);
+        return $identity;
+    }
     public function getId() { return $this->id; }
     public function getAuthKey() { return ''; }
     public function validateAuthKey($key) { return false; }
