@@ -38,6 +38,7 @@ $this->params['breadcrumbs'][] = $this->title;
                 }
             ],
             'view',
+            'is_closed:boolean',
             [
                 'attribute' => 'last_post',
                 'class' => CreatedAtColumn::class

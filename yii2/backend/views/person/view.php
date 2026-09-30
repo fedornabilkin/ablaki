@@ -29,6 +29,8 @@ YiiAsset::register($this);
             ],
             'balance',
             'credit',
+            ['attribute' => 'description', 'format' => 'ntext'],
+            ['attribute' => 'description_approved', 'format' => 'boolean'],
             [
                 'attribute' => 'refovod',
                 'format' => 'raw',
@@ -50,6 +52,12 @@ YiiAsset::register($this);
 //            ],
         ],
     ]) ?>
+
+    <?php if (trim((string)$model->description) !== '' && !$model->description_approved && Yii::$app->user->can('/person/approve')): ?>
+        <?= Html::beginForm(['approve', 'id' => $model->id], 'post') ?>
+        <?= Html::submitButton('Утвердить описание', ['class' => 'btn btn-primary']) ?>
+        <?= Html::endForm() ?>
+    <?php endif ?>
 
 </div>
 

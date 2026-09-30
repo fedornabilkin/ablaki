@@ -86,12 +86,15 @@ class FiveController extends ActiveController
             $errors = $model->getFirstErrors();
             throw new BadRequestHttpException(reset($errors));
         }
+        if (!is_numeric($model->kon) || (float)$model->kon !== floor((float)$model->kon)) {
+            throw new BadRequestHttpException('Ставка должна быть положительным целым числом.');
+        }
 
-        (new FiveService())->create($model, App::user()->identity->person);
+        (new FiveService())->createBatch($model, App::user()->identity->person, (int)$model->count);
 
         App::response()->setStatusCode(201);
 
-        return $model;
+        return (int)$model->count === 1 ? $model : ['count' => (int)$model->count, 'game' => $model];
     }
 
     /**
@@ -116,16 +119,21 @@ class FiveController extends ActiveController
         if ($roundId !== null && (!is_scalar($roundId) || !ctype_digit((string)$roundId) || (int)$roundId < 1)) {
             throw new BadRequestHttpException('Invalid round.');
         }
+        $roundStatus = Yii::$app->request->post('round_status');
+        if ($roundStatus !== null && !in_array($roundStatus, ['wait', 'draw', 'user', 'gamer'], true)) {
+            throw new BadRequestHttpException('Invalid round status.');
+        }
         $hod = (new FiveService())->move(
             $model,
             App::user()->identity->person,
             (int)$model->ball,
-            $roundId === null ? null : (int)$roundId
+            $roundId === null ? null : (int)$roundId,
+            $roundStatus
         );
 
         return [
             'gamer' => Yii::$app->user->identity,
-            'game' => $model,
+            'game' => $model->toArray([], ['rounds']),
             'hod' => $hod,
         ];
     }

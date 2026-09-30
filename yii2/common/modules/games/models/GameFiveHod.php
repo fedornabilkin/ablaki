@@ -65,7 +65,7 @@ class GameFiveHod extends AbstractGame
         return [
             [['game_five_id', 'user_id', 'user_gamer', 'user_amount', 'gamer_amount', 'created_at'], 'integer'],
             [['user_ball'], 'required'],
-            [['user_ball'], 'integer', 'min' => GameFive::MIN_BALL, 'max' => GameFive::MAX_BALL],
+            [['user_ball'], 'integer', 'min' => 0, 'max' => GameFive::MAX_BALL],
             [['gamer_ball'], 'integer', 'min' => 0, 'max' => GameFive::MAX_BALL],
             [['status'], 'string', 'max' => 50],
         ];
@@ -146,18 +146,20 @@ class GameFiveHod extends AbstractGame
         $fields = [
             'id',
             'game_five_id',
-            'gamer_ball',
             'user_amount',
             'gamer_amount',
             'status',
             'created_at',
         ];
 
-        // скрытый ход создателя виден после розыгрыша раунда или самому создателю
+        // Pending choices are visible only to the player who submitted them.
         if (!$this->isWait()) {
             $fields[] = 'user_ball';
-        } elseif (!App::user()->getIsGuest() && (int)App::user()->getId() === (int)$this->user_id) {
+            $fields[] = 'gamer_ball';
+        } elseif (!App::user()->getIsGuest() && (int)App::user()->getId() === (int)$this->user_id && (int)$this->user_ball > 0) {
             $fields[] = 'user_ball';
+        } elseif (!App::user()->getIsGuest() && (int)App::user()->getId() === (int)$this->user_gamer && (int)$this->gamer_ball > 0) {
+            $fields[] = 'gamer_ball';
         }
 
         return $fields;

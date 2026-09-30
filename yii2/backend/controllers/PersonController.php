@@ -24,6 +24,7 @@ class PersonController extends Controller
                 'class' => VerbFilter::class,
                 'actions' => [
                     'delete' => ['POST'],
+                    'approve' => ['POST'],
                 ],
             ],
         ];
@@ -48,6 +49,19 @@ class PersonController extends Controller
         return $this->render('view', [
             'model' => $this->findModel($id),
         ]);
+    }
+
+    public function actionApprove($id)
+    {
+        $model = $this->findModel($id);
+        if (!is_string($model->description) || trim($model->description) === '') {
+            throw new \yii\web\BadRequestHttpException('Описание пустое.');
+        }
+        $model->description_approved = 1;
+        if (!$model->save(false, ['description_approved'])) {
+            throw new \yii\web\ServerErrorHttpException('Не удалось утвердить описание.');
+        }
+        return $this->redirect(['view', 'id' => $id]);
     }
 
     protected function findModel($id)

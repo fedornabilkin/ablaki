@@ -36,6 +36,9 @@ build-php-with-xdebug:
 # up/down
 docker-up:
 	docker-compose up --detach --remove-orphans
+	docker-compose exec -T php crontab /etc/ablaki-cron
+	docker-compose exec -T nginx nginx -t
+	docker-compose exec -T nginx nginx -s reload
 	docker-compose ps
 up-php:
 	docker-compose up --detach php

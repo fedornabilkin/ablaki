@@ -21,25 +21,35 @@ class FiveService
 {
     public function create(GameFive $game, Person $person): GameFive
     {
-        return Yii::$app->db->transaction(function () use ($game, $person) {
+        $this->createBatch($game, $person, 1);
+        return $game;
+    }
+
+    public function createBatch(GameFive $game, Person $person, int $count): void
+    {
+        if ($count < 1 || $count > 100) throw new ConflictHttpException('Invalid game count.');
+        Yii::$app->db->transaction(function () use ($game, $person, $count) {
             $this->lock($person);
-            $this->requireFunds($person, (float)$game->kon);
-            $game->user_id = $person->user_id;
-            $game->user_gamer = 0;
-            $game->user_amount = 0;
-            $game->gamer_amount = 0;
-            $game->status = GameFive::STATUS_FREE;
-            $this->save($game);
-            $this->createHod($game, (int)$game->ball);
-            $this->changePerson($person, $game, -$game->kon, 0, 'Create game five #' . $game->id);
-            return $game;
+            $this->requireFunds($person, (float)$game->kon * $count);
+            for ($i = 0; $i < $count; $i++) {
+                $entry = $i === 0 ? $game : new GameFive();
+                $entry->kon = $game->kon;
+                $entry->user_id = $person->user_id;
+                $entry->user_gamer = 0;
+                $entry->user_amount = 0;
+                $entry->gamer_amount = 0;
+                $entry->status = GameFive::STATUS_FREE;
+                $this->save($entry);
+                $this->createHod($entry, $count === 1 ? (int)$game->ball : random_int(1, 5));
+            }
+            $this->changePerson($person, $game, -$game->kon * $count, 0, 'Create ' . $count . ' game five');
         });
     }
 
-    public function move(GameFive $game, Person $person, int $ball, int $roundId = null)
+    public function move(GameFive $game, Person $person, int $ball, int $roundId = null, string $roundStatus = null)
     {
         if ($ball < 1 || $ball > 5) throw new ConflictHttpException('Invalid move.');
-        return Yii::$app->db->transaction(function () use ($game, $person, $ball, $roundId) {
+        return Yii::$app->db->transaction(function () use ($game, $person, $ball, $roundId, $roundStatus) {
             $this->lock($game);
             $userId = (int)$person->user_id;
             if ($game->isFinished()) throw new ConflictHttpException('Game is finished.');
@@ -49,6 +59,9 @@ class FiveService
             }
             $last = $game->getLastHod();
             if ($roundId !== null && ($last === null || (int)$last->id !== $roundId)) {
+                throw new ConflictHttpException('Round has changed. Refresh the game.');
+            }
+            if ($roundStatus !== null && ($last === null || $last->status !== $roundStatus)) {
                 throw new ConflictHttpException('Round has changed. Refresh the game.');
             }
             // Stable account order also covers games involving the same pair in opposite roles.
@@ -66,15 +79,28 @@ class FiveService
                 $game->user_gamer = $userId;
                 $game->status = GameFive::STATUS_PLAY;
                 $this->changePerson($people[$userId], $game, -$game->kon, 0, 'Join game five #' . $game->id);
-            } elseif ($game->isCreator($userId)) {
-                if ($last !== null && $last->isWait()) throw new ConflictHttpException('Not your turn.');
-                $this->createHod($game, $ball);
+            } elseif ($last !== null && !$last->isWait()) {
+                if ($game->isGamer($userId) && $roundStatus === null) {
+                    throw new ConflictHttpException('Round state required. Refresh the game.');
+                }
+                $this->createHod($game, $ball, $game->isCreator($userId));
                 $this->save($game);
                 return null;
             }
             if ($last === null || !$last->isWait()) throw new ConflictHttpException('Not your turn.');
+            if ($game->isCreator($userId)) {
+                if ((int)$last->user_ball !== 0) throw new ConflictHttpException('Already moved.');
+                $last->user_ball = $ball;
+            } else {
+                if ((int)$last->gamer_ball !== 0) throw new ConflictHttpException('Already moved.');
+                $last->gamer_ball = $ball;
+            }
+            if ((int)$last->user_ball === 0 || (int)$last->gamer_ball === 0) {
+                $this->save($last);
+                $this->save($game);
+                return null;
+            }
             $last->user_gamer = $game->user_gamer;
-            $last->gamer_ball = $ball;
             $last->status = $last->getWinnerStatus();
             $amount = $last->getWinAmount();
             if ($last->status === GameFiveHod::STATUS_USER) {
@@ -112,11 +138,11 @@ class FiveService
         });
     }
 
-    private function createHod(GameFive $game, int $ball): void
+    private function createHod(GameFive $game, int $ball, bool $creator = true): void
     {
         $hod = new GameFiveHod();
         $hod->setAttributes(['game_five_id' => $game->id, 'user_id' => $game->user_id,
-            'user_gamer' => (int)$game->user_gamer, 'user_ball' => $ball, 'gamer_ball' => 0,
+            'user_gamer' => (int)$game->user_gamer, 'user_ball' => $creator ? $ball : 0, 'gamer_ball' => $creator ? 0 : $ball,
             'user_amount' => 0, 'gamer_amount' => 0, 'status' => GameFiveHod::STATUS_WAIT]);
         $this->save($hod);
     }
