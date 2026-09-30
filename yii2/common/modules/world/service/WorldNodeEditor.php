@@ -144,7 +144,7 @@ class WorldNodeEditor
                     $id = $input['id'];
                     if ($action === 'delete') $values = ['status' => 'archived'];
                     else {
-                        $values = $input['values']; unset($values['node_type'], $values['code'], $values['parent_id']);
+                        $values = $input['values']; $values['label'] = $values['name']; unset($values['node_type'], $values['code'], $values['parent_id']);
                         if ((int)$before['node']['parent_id'] !== (int)$input['values']['parent_id']) $tree->move($id, $input['values']['parent_id']);
                         if ($input['details']) $this->db->createCommand()->update('world_' . strtolower($before['node']['node_type']), $input['details'], ['node_id' => $id])->execute();
                     }

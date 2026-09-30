@@ -17,7 +17,7 @@ class CraftCatalog
         $out=['version'=>1,'categories'=>[],'items'=>[],'stations'=>[],'recipes'=>[]];
         foreach($categories as $r) $out['categories'][]=['code'=>trim($r['code']),'name'=>trim($r['name']),'description'=>trim((string)$r['description'])];
         foreach($items as $r) {
-            $entry=['code'=>trim($r['code']),'name'=>trim($r['name']),'description'=>trim((string)$r['description']),'category'=>$cat[$r['category_id']]];
+            $entry=['code'=>trim($r['code']),'name'=>trim($r['name']),'label'=>trim((string)($r['label']??$r['name'])),'description'=>trim((string)$r['description']),'category'=>$cat[$r['category_id']]];
             foreach(['kind','rarity','icon'] as $field) $entry[$field]=trim($r[$field]);
             $entry['storage_kind']=trim($r['storage_kind']??'none');
             foreach(['stack_size','destroyable','use_xp','gather_quantity','active'] as $field) $entry[$field]=(int)$r[$field];
@@ -45,6 +45,8 @@ class CraftCatalog
                 if (!is_array($row)||!isset($row['code'],$row['name'])||!is_string($row['code'])||!preg_match('/^[a-z][a-z0-9_-]{0,63}$/D',$row['code'])||!is_string($row['name'])||trim($row['name'])===''||mb_strlen($row['name'])>50) $this->fail('Неверные код или имя в '.$group.'.');
                 if (isset($sets[$group][$row['code']])) $this->fail('Повтор кода '.$row['code']);
                 if (isset($row['description'])&&(!is_string($row['description'])||mb_strlen($row['description'])>5000)) $this->fail('Слишком длинное описание.');
+                if (isset($row['label'])&&(!is_string($row['label'])||trim($row['label'])===''||mb_strlen($row['label'])>120)) $this->fail('РќРµРІРµСЂРЅС‹Р№ label РІ '.$group.'.');
+                if ($group === 'items') $row['label'] = trim($row['label'] ?? $row['name']);
                 $sets[$group][$row['code']]=$row;
             }
         }
@@ -116,7 +118,7 @@ class CraftCatalog
                 }
                 if($old&&($old['storage_kind']??'none')!==($r['storage_kind']??'none')&&(new \yii\db\Query())->from('craft_inventory')->where(['item_id'=>$old['id']])->andWhere(['>','item_quantity',0])->exists($s->db))$this->fail('Нельзя менять назначение хранилища у предметов в инвентарях. Создайте новый предмет.');
                 if($old&&$old['kind']!==$r['kind']&&(new \yii\db\Query())->from('craft_inventory')->where(['item_id'=>$old['id']])->andWhere(['>','item_quantity',0])->exists($s->db))$this->fail('Нельзя менять тип предмета с существующими экземплярами. Создайте новый предмет.');
-                $row=array_intersect_key($r,array_flip(['code','name','description','kind','rarity','icon','stack_size','destroyable','use_xp','gather_quantity','active','storage_kind']));$row['category_id']=$maps['categories'][$r['category']];$maps['items'][$r['code']]=$upsert('craft_item',$row);
+                $row=array_intersect_key($r,array_flip(['code','name','label','description','kind','rarity','icon','stack_size','destroyable','use_xp','gather_quantity','active','storage_kind']));$row['category_id']=$maps['categories'][$r['category']];$maps['items'][$r['code']]=$upsert('craft_item',$row);
             }
             foreach($data['stations'] as $r) $maps['stations'][$r['code']]=$upsert('craft_station',['code'=>$r['code'],'name'=>$r['name'],'active'=>$r['active'],'item_id'=>empty($r['item'])?null:$maps['items'][$r['item']]]);
             foreach($data['recipes'] as $r) {
