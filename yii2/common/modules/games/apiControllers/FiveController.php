@@ -128,7 +128,7 @@ class FiveController extends ActiveController
 
         return [
             'gamer' => Yii::$app->user->identity,
-            'game' => $model,
+            'game' => $model->toArray([], ['rounds']),
             'hod' => $hod,
         ];
     }

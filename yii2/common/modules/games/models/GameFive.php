@@ -232,10 +232,6 @@ class GameFive extends AbstractGame implements HistorySaveInterface
                 // Completed history needs no extra round query; active players need the current round token.
                 return $model->isFinished() ? null : $model->getLastHod();
             },
-            'rounds' => static function (self $model) {
-                return array_values(array_filter($model->getGameFiveHods()->orderBy(['id' => SORT_DESC])->all(),
-                    static function (GameFiveHod $round): bool { return !$round->isWait(); }));
-            },
             'status',
             'user_points' => static function (self $model) {
                 return (int)$model->user_amount;
@@ -258,6 +254,10 @@ class GameFive extends AbstractGame implements HistorySaveInterface
     {
         return [
             'hods' => 'gameFiveHods',
+            'rounds' => static function (self $model) {
+                return array_values(array_filter($model->getGameFiveHods()->orderBy(['id' => SORT_DESC])->all(),
+                    static function (GameFiveHod $round): bool { return !$round->isWait(); }));
+            },
         ];
     }
 }
