@@ -2,7 +2,7 @@
 // Included by the isolated routing suite.
 $batch = $db->beginTransaction();
 try {
-    $db->createCommand('CREATE TABLE game_five_hod (id INTEGER PRIMARY KEY, game_five_id INTEGER)')->execute();
+    $db->createCommand('CREATE TABLE IF NOT EXISTS game_five_hod (id INTEGER PRIMARY KEY, game_five_id INTEGER)')->execute();
     $db->schema->refresh();
     foreach (['orel', 'saper', 'duel', 'five'] as $kind) {
         $table = 'game_' . $kind;
