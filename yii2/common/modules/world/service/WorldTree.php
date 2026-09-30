@@ -45,7 +45,7 @@ class WorldTree
         if (!preg_match('/^[a-z0-9][a-z0-9-]{0,79}$/D', $values['code']) || !preg_match('/^[a-z0-9][a-z0-9-]{0,79}$/D', $values['slug'])) throw new GameError('INVALID_NODE', 'Некорректный код объекта.', 422);
         if (!is_string($values['name']) || trim($values['name']) === '' || mb_strlen($values['name'], 'UTF-8') > 120) throw new GameError('INVALID_NODE', 'Некорректное название.', 422);
         $row = ['parent_id' => $parent ? (int)$parent['id'] : null, 'root_id' => $parent ? (int)$parent['root_id'] : null, 'node_type' => $type,
-            'code' => $values['code'], 'slug' => $values['slug'], 'name' => trim($values['name']), 'owner_user_id' => $values['owner_user_id'] ?? null, 'portable' => (int)($values['portable'] ?? 0),
+            'code' => $values['code'], 'slug' => $values['slug'], 'name' => trim($values['name']), 'label' => trim((string)($values['label'] ?? $values['name'])), 'owner_user_id' => $values['owner_user_id'] ?? null, 'portable' => (int)($values['portable'] ?? 0),
             'visibility' => $values['visibility'] ?? 'public', 'status' => 'active', 'depth' => $parent ? (int)$parent['depth'] + 1 : 0,
             'position_x' => $values['position_x'] ?? 0, 'position_y' => $values['position_y'] ?? 0, 'position' => $values['position'] ?? 0,
             'footprint_json' => WorldMapGeometry::normalize($values['footprint_json'] ?? null, $values['position_x'] ?? 0, $values['position_y'] ?? 0),

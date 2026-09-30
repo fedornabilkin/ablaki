@@ -198,7 +198,7 @@ class Crafting
     public function state(int $user): array
     {
         $s=$this->s; $person=$this->one('persone',['user_id'=>$user]); if(!$person)throw new ConflictHttpException('Профиль недоступен.');
-        $items=[]; foreach($s->rows('craft_item') as $r) { foreach(['name','code','kind','rarity','icon','description'] as $field)$r[$field]=trim((string)$r[$field]); foreach(['id','category_id','stack_size','destroyable','use_xp','gather_quantity','active'] as $field)$r[$field]=(int)$r[$field]; $items[]=$r; }
+        $items=[]; foreach($s->rows('craft_item') as $r) { foreach(['name','code','kind','rarity','icon','description'] as $field)$r[$field]=trim((string)$r[$field]); $r['label']=trim((string)($r['label']??$r['name'])); foreach(['id','category_id','stack_size','destroyable','use_xp','gather_quantity','active'] as $field)$r[$field]=(int)$r[$field]; $items[]=$r; }
         $known=[]; foreach($s->rows('craft_known',['user_id'=>$user]) as $r)$known[(int)$r['recipe_id']]=(int)$r['quantity'];
         $recipes=[]; foreach($s->rows('craft_recipe',['active'=>1]) as $r) {
             foreach(['id','category_id','item_id','output_quantity','cost_credits','experience','min_level'] as $field)$r[$field]=(int)$r[$field];
