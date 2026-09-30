@@ -141,11 +141,13 @@ class FiveController extends ActiveController
             $roundId === null ? null : (int)$roundId,
             $roundStatus
         );
+        Yii::$app->user->identity->person->refresh();
 
         return [
             'gamer' => Yii::$app->user->identity,
             'game' => $model->toArray([], ['rounds']),
             'hod' => $hod,
+            'overview' => GameOverview::snapshot($this->modelClass, App::user()->getId(), Yii::$app->timeZone),
         ];
     }
 
