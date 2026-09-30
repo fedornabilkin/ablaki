@@ -25,9 +25,7 @@ use common\modules\games\middleware\saper\StartMiddleware;
 use common\modules\games\middleware\saper\ValidateHodMiddleware;
 use common\modules\games\models\GameSaper;
 use Yii;
-use yii\base\DynamicModel;
 use yii\base\UserException;
-use yii\data\ActiveDataFilter;
 use yii\data\ActiveDataProvider;
 use yii\rest\ActiveController;
 
@@ -160,17 +158,4 @@ class SaperController extends ActiveController
         return $model;
     }
 
-    /**
-     * @return array
-     */
-    private function getFilter(): array
-    {
-        return [
-            'class' => ActiveDataFilter::class,
-            'searchModel' => function () {
-                return (new DynamicModel(['kon' => null]))
-                    ->addRule('kon', 'number');
-            },
-        ];
-    }
 }

@@ -16,7 +16,6 @@ trait GameListsTrait
     private function configureGameLists(array $actions): array
     {
         $index = $actions['index'];
-        $index['dataFilter'] = $this->getFilter();
         foreach (['index', 'my', 'history', 'recent'] as $mode) {
             $actions[$mode] = $index;
             if (in_array($mode, ['history', 'recent'], true)) unset($actions[$mode]['dataFilter']);
@@ -29,6 +28,7 @@ trait GameListsTrait
                     $query->listGame(App::user()->identity);
                 }
                 $query->andFilterWhere($filter === null ? [] : $filter);
+                $this->applyStakeFilter($query);
                 $dateColumn = is_a($this->modelClass, GameSaper::class, true) ? 'time_over_at' : 'updated_at';
                 return ApiList::provider($query, [], ['id', 'created_at', $dateColumn, 'kon'],
                     static function ($query, $search) {

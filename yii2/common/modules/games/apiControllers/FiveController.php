@@ -7,6 +7,7 @@ use api\components\ApiList;
 use common\helpers\App;
 use common\modules\games\models\GameFive;
 use common\modules\games\service\FiveService;
+use common\modules\games\service\GameOverview;
 use Yii;
 use yii\base\UserException;
 use yii\data\ActiveDataProvider;
@@ -32,6 +33,11 @@ class FiveController extends ActiveController
     public function checkAccess($action, $model = null, $params = []): void
     {
         return;
+    }
+
+    public function actionSummary(): array
+    {
+        return GameOverview::summary($this->modelClass, App::user()->getId(), Yii::$app->timeZone);
     }
 
     public function actions(): array
