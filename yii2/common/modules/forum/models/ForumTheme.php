@@ -60,7 +60,9 @@ class ForumTheme extends ActiveRecord implements UserRelationInterface
     {
         return [
             [['is_private'], 'default', 'value' => 0, 'isEmpty' => static function ($value) { return $value === null; }],
+            [['is_closed'], 'default', 'value' => 0, 'isEmpty' => static function ($value) { return $value === null; }],
             [['is_private'], 'in', 'range' => [0, 1, '0', '1'], 'strict' => true, 'skipOnEmpty' => false],
+            [['is_closed'], 'in', 'range' => [0, 1, '0', '1'], 'strict' => true, 'skipOnEmpty' => false],
             [['user_id', 'view', 'last_post', 'created_at'], 'default', 'value' => null],
             [['user_id', 'view', 'last_post', 'created_at'], 'integer'],
             [['title'], 'filter', 'filter' => static function ($value) { return is_string($value) ? preg_replace('/^[\s\p{Z}\p{Cf}]+|[\s\p{Z}\p{Cf}]+$/u', '', $value) : $value; }, 'skipOnArray' => true],
@@ -80,6 +82,7 @@ class ForumTheme extends ActiveRecord implements UserRelationInterface
             'user_id' => Yii::t('forum', 'User ID'),
             'title' => Yii::t('forum', 'Title'),
             'is_private' => 'Только для участников',
+            'is_closed' => 'Тема закрыта',
             'view' => Yii::t('forum', 'View'),
             'last_post' => Yii::t('forum', 'Last Post'),
             'created_at' => Yii::t('forum', 'Created At'),
@@ -90,6 +93,7 @@ class ForumTheme extends ActiveRecord implements UserRelationInterface
     {
         $fields = parent::fields();
         $fields['is_private'] = static function ($model) { return (bool)$model->is_private; };
+        $fields['is_closed'] = static function ($model) { return (bool)$model->is_closed; };
 
         $fields['title'] = static function ($model) {
             return trim($model->title);

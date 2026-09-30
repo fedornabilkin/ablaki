@@ -31,6 +31,8 @@ class ThemeController extends Controller
                         ['allow' => true, 'actions' => ['update', 'delete'], 'roles' => ['@'], 'matchCallback' => function () {
                             return (int)$this->findModel(Yii::$app->request->get('id'))->user_id === (int)Yii::$app->user->id;
                         }],
+                        ['allow' => true, 'actions' => ['update'], 'roles' => ['/forum/theme/update']],
+                        ['allow' => true, 'actions' => ['delete'], 'roles' => ['/forum/theme/delete']],
                     ],
                 ],
                 'verbs' => [
@@ -110,7 +112,7 @@ class ThemeController extends Controller
 
         if ($this->request->isPost) {
             $input = $this->request->post($model->formName(), []);
-            $model->setAttributes(array_intersect_key((array)$input, array_flip(['title', 'is_private'])));
+            $model->setAttributes(array_intersect_key((array)$input, array_flip(['title', 'is_private', 'is_closed'])));
             if ($model->save()) return $this->redirect(['view', 'id' => $model->id]);
         }
 
@@ -128,7 +130,7 @@ class ThemeController extends Controller
      */
     public function actionDelete($id)
     {
-        $this->findModel($id)->delete();
+        \common\modules\forum\services\ThemeDeleteService::delete(Yii::$app->db, (int)$id);
 
         return $this->redirect(['index']);
     }

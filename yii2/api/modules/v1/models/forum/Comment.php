@@ -52,7 +52,18 @@ class Comment extends ForumComment
 
     public function rules(): array
     {
-        return array_merge(parent::rules(), [[['theme_id'], 'required', 'on' => 'create']]);
+        return array_merge(parent::rules(), [
+            [['theme_id'], 'required', 'on' => 'create'],
+            [['theme_id'], 'validateThemeOpen', 'on' => 'create'],
+        ]);
+    }
+
+    public function validateThemeOpen($attribute): void
+    {
+        $theme = \common\modules\forum\models\ForumTheme::findOne((int)$this->$attribute);
+        if (!$theme || (int)$theme->is_closed === 1) {
+            $this->addError($attribute, 'Тема закрыта или недоступна.');
+        }
     }
 
     public function extraFields(): array

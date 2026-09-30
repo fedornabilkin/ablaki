@@ -86,6 +86,9 @@ class FiveController extends ActiveController
             $errors = $model->getFirstErrors();
             throw new BadRequestHttpException(reset($errors));
         }
+        if (!is_numeric($model->kon) || (float)$model->kon !== floor((float)$model->kon)) {
+            throw new BadRequestHttpException('Ставка должна быть положительным целым числом.');
+        }
 
         (new FiveService())->create($model, App::user()->identity->person);
 

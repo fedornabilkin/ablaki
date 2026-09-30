@@ -61,23 +61,24 @@ class StatController extends Controller
         $yesterday = $today->modify('-1 day')->getTimestamp();
         $now = time();
         // Version the payload and change the key at local midnight, even within the cache TTL.
-        $cacheKey = [self::CACHE_KEY, 'periods-v3', $timezone->getName(), $start];
+        $cacheKey = [self::CACHE_KEY, 'periods-v4', $timezone->getName(), $start];
         return Yii::$app->cache->getOrSet($cacheKey, function () use ($start, $yesterday, $now) {
             $queries = [
                 'users' => User::find(),
-                'orel' => GameOrel::find()->notFree(),
-                'saper' => GameSaper::find()->andWhere(['etap' => [GameSaper::GAME_SAPER_ETAP_WIN, GameSaper::GAME_SAPER_ETAP_LOSE]]),
+                'orel' => \common\modules\games\service\GameOverview::completed(GameOrel::find(), false),
+                'saper' => \common\modules\games\service\GameOverview::completed(GameSaper::find(), true),
                 'themes' => ForumTheme::find(),
                 'comments' => ForumComment::find(),
                 'transfers' => CreditTransfer::find(),
                 'exchange' => CreditExchange::find()->notFree(),
             ];
+            $dateColumns = ['orel' => 'updated_at', 'saper' => 'time_over_at'];
             $stats = [];
             foreach ($queries as $name => $query) {
-                $stats[$name] = $this->periodStats($query, $start, $yesterday, $now);
+                $stats[$name] = $this->periodStats($query, $start, $yesterday, $now, $dateColumns[$name] ?? 'created_at');
             }
             $series = [];
-            foreach ($queries as $name => $query) $series[$name] = $this->dailySeries($query, $start, $now);
+            foreach ($queries as $name => $query) $series[$name] = $this->dailySeries($query, $start, $now, $dateColumns[$name] ?? 'created_at');
             $combine = static function (array $left, array $right): array {
                 foreach ($left as $i => &$point) $point['value'] += $right[$i]['value'];
                 return $left;
@@ -118,27 +119,28 @@ class StatController extends Controller
         }, self::CACHE_DURATION);
     }
 
-    private function periodStats(Query $query, int $today, int $yesterday, int $now): array
+    private function periodStats(Query $query, int $today, int $yesterday, int $now, string $dateColumn): array
     {
         return [
             'total' => (int)(clone $query)->count(),
-            'today' => (int)(clone $query)->andWhere(['>=', 'created_at', $today])->andWhere(['<=', 'created_at', $now])->count(),
-            'yesterday' => (int)(clone $query)->andWhere(['>=', 'created_at', $yesterday])->andWhere(['<', 'created_at', $today])->count(),
+            'today' => (int)(clone $query)->andWhere(['>=', $dateColumn, $today])->andWhere(['<=', $dateColumn, $now])->count(),
+            'yesterday' => (int)(clone $query)->andWhere(['>=', $dateColumn, $yesterday])->andWhere(['<', $dateColumn, $today])->count(),
         ];
     }
 
     /** One portable aggregate query for all seven Moscow calendar days. */
-    private function dailySeries(Query $query, int $today, int $now): array
+    private function dailySeries(Query $query, int $today, int $now, string $dateColumn): array
     {
         $columns = [];
         $points = [];
         for ($i = 0; $i < 7; $i++) {
             $from = $today - (6 - $i) * 86400;
             $to = min($from + 86400, $now + 1);
-            $columns['day' . $i] = new \yii\db\Expression('COALESCE(SUM(CASE WHEN [[created_at]] >= ' . $from . ' AND [[created_at]] < ' . $to . ' THEN 1 ELSE 0 END), 0)');
+            $quotedDate = '[[' . $dateColumn . ']]';
+            $columns['day' . $i] = new \yii\db\Expression('COALESCE(SUM(CASE WHEN ' . $quotedDate . ' >= ' . $from . ' AND ' . $quotedDate . ' < ' . $to . ' THEN 1 ELSE 0 END), 0)');
             $points[] = ['date' => gmdate('Y-m-d', $from + 10800), 'value' => 0];
         }
-        $values = (clone $query)->select($columns)->andWhere(['>=', 'created_at', $today - 6 * 86400])->asArray()->one();
+        $values = (clone $query)->select($columns)->andWhere(['>=', $dateColumn, $today - 6 * 86400])->asArray()->one();
         foreach ($points as $i => &$point) $point['value'] = (int)$values['day' . $i];
         return $points;
     }
