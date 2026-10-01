@@ -89,6 +89,8 @@ try {
     $db->createCommand('CREATE TABLE credit_transfer (id INTEGER PRIMARY KEY, user_id INTEGER, user_buyer INTEGER, amount NUMERIC, password TEXT, created_at INTEGER, updated_at INTEGER)')->execute();
     $db->createCommand('CREATE TABLE credit_exchange (id INTEGER PRIMARY KEY, user_id INTEGER, user_buyer INTEGER, amount NUMERIC, credit NUMERIC, type TEXT, created_at INTEGER, updated_at INTEGER)')->execute();
     $db->createCommand('CREATE TABLE fact (id INTEGER PRIMARY KEY, title TEXT, type TEXT, hide INTEGER)')->execute();
+    routeCheck(dispatch('POST', 'v1/world/nodes/8/map-explore-preview')[0] === 401,
+        'map exploration preview resolves its route and still requires authentication');
     $db->createCommand("INSERT INTO user VALUES (1,'Donor','private1',1,1),(2,'Author','private2',2,2)")->execute();
     $db->createCommand("INSERT INTO persone VALUES (1,1,10,2,1,'',0,0),(2,2,10,1,2,'',1,0)")->execute();
     $db->createCommand('ALTER TABLE persone ADD COLUMN description_approved INTEGER NOT NULL DEFAULT 0')->execute();
