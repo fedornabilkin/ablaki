@@ -45,18 +45,19 @@ class WorldConstruction
     {
         if (!$this->db->getTransaction()) throw new \LogicException('Construction requires the purchase transaction.');
         $tree = new WorldTree($this->db); $config = $terms['config']; $code = 'construction-' . $operation; $now = time();
-        $building = $tree->create(['code' => $code, 'slug' => $code, 'node_type' => 'BUILDING', 'name' => $config['name'], 'parent_id' => $terms['node_id'], 'owner_user_id' => $user, 'visibility' => 'private'], ['operational_status' => 'constructing', 'template_revision_id' => $terms['template_revision_id']]);
+        $plotId = (int)($terms['site_node_id'] ?? $terms['node_id']);
+        $building = $tree->create(['code' => $code, 'slug' => $code, 'node_type' => 'BUILDING', 'name' => $config['name'], 'parent_id' => $plotId, 'owner_user_id' => $user, 'visibility' => 'private'], ['operational_status' => 'constructing', 'template_revision_id' => $terms['template_revision_id']]);
         $storage = $this->inventory($operation)->reserveConstruction($user, $terms['material_plan'], $operation);
         $project = ['node_id' => (int)$building['id'], 'owner_user_id' => $user, 'template_revision_id' => $terms['template_revision_id'], 'status' => 'constructing',
             'started_at' => $now, 'finish_at' => $now + $config['duration_seconds'], 'operation_id' => $operation, 'terms_json' => CanonicalJson::encode($terms), 'revision' => 1];
         $this->db->createCommand()->insert('world_construction', $project)->execute(); $project['id'] = (int)$this->db->getLastInsertID();
-        $this->db->createCommand()->insert('world_construction_site', ['project_id' => $project['id'], 'plot_id' => $terms['node_id'], 'area' => $config['area'], 'commitment_id' => $hold, 'storage_id' => $storage])->execute();
+        $this->db->createCommand()->insert('world_construction_site', ['project_id' => $project['id'], 'plot_id' => $plotId, 'area' => $config['area'], 'commitment_id' => $hold, 'storage_id' => $storage])->execute();
         $this->update('world_building', ['active_project_id' => $project['id']], ['node_id' => $building['id']]);
         $this->schedule($project);
-        (new CommandBus($this->db, $this->flags))->emit($operation, $user, 'world.construction.started', ['project_id' => $project['id'], 'node_id' => (int)$building['id'], 'plot_id' => $terms['node_id'], 'finish_at' => $project['finish_at']]);
+        (new CommandBus($this->db, $this->flags))->emit($operation, $user, 'world.construction.started', ['project_id' => $project['id'], 'node_id' => (int)$building['id'], 'plot_id' => $plotId, 'finish_at' => $project['finish_at']]);
         $tree->audit($user, 'world.construction.start', 'Начало строительства с резервом бюджета и материалов', [], ['id' => $building['id'], 'project_id' => $project['id'], 'terms' => $terms], $operation);
         return ['building_id' => (int)$building['id'], 'project_id' => $project['id'], 'finish_at' => $project['finish_at'],
-            'changed_node_ids' => [$terms['node_id'], $terms['recipient_node_id'], (int)$building['id']],
+            'changed_node_ids' => [$plotId, $terms['recipient_node_id'], (int)$building['id']],
             'changed_storage_ids' => array_values(array_unique(array_merge([$storage], array_column($terms['material_plan'], 'storage_id'))))];
     }
     public function listing(int $user, int $nodeId, int $page, string $q, string $status): array

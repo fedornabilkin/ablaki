@@ -114,6 +114,8 @@ class WorldPremises
         } elseif ($action === 'buy') {
             $this->flags->requireFlag('storage_v2'); WalletSchema::requireReady($this->db); $site = $c['site'];
             if (!$site) throw new GameError('PREMISES_SITE_REQUIRED', 'Покупка выполняется из собственной площадки.', 403);
+            // Bind delivery to its direct plot explicitly; finance still uses settlement scope.
+            $terms['site_node_id'] = (int)$site['id'];
             $offer = $this->offer($place['id'], $input['offer_id']); $config = json_decode($offer['config_json'], true, 512, JSON_THROW_ON_ERROR);
             (new RequirementEvaluator($this->db))->requireSatisfied($user, $config['requirements'] ?? []);
             if ($config['kind'] === 'house' && !(new Query())->from('world_membership')->where(['user_id' => $user, 'starter_site_id' => $site['id'], 'world_id' => $site['root_id']])->exists($this->db)) throw new GameError('HOUSING_SITE_REQUIRED', 'Дом с ночлегом можно купить на своей стартовой стоянке.');
