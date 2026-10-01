@@ -66,6 +66,11 @@ class WorldQuery
     {
         if (!$rows) return [];
         $ids = array_column($rows, 'id');
+        $purchasedRooms = [];
+        if ($this->db->schema->getTableSchema('world_premises_purchase')) {
+            $purchasedRooms = (new Query())->select(['room_id' => 'p.room_id', 'building_name' => 'b.name'])->from(['p' => 'world_premises_purchase'])
+                ->innerJoin(['b' => 'world_node'], '[[b.id]]=[[p.building_id]]')->where(['p.room_id' => $ids])->indexBy('room_id')->all($this->db);
+        }
         $counts = $this->visible()->select(['parent_id' => 'n.parent_id', 'amount' => new \yii\db\Expression('COUNT(*)')])->andWhere(['n.parent_id' => $ids])->groupBy('n.parent_id')->indexBy('parent_id')->all($this->db);
         $descendants = $this->visible()->innerJoin(['path' => 'world_node_closure'], '[[path.descendant_id]]=[[n.id]]')
             ->select(['ancestor_id' => 'path.ancestor_id', 'amount' => new \yii\db\Expression('COUNT(*)')])
@@ -100,8 +105,12 @@ class WorldQuery
             if (!$owned) $detail = array_intersect_key($detail, array_flip(['settlement_kind', 'population', 'climate', 'plot_kind', 'ordinal', 'unlocked']));
             unset($detail['node_id']);
             foreach (['template_revision_id', 'level', 'condition', 'max_condition', 'area', 'fertility', 'ordinal', 'unlocked', 'population', 'plot_limit', 'allow_building', 'garden_node_id', 'active_project_id'] as $field) if (isset($detail[$field])) $detail[$field] = (int)$detail[$field];
+            $label = ($row['label'] ?? '') ?: $row['name'];
+            // Legacy purchases named their single room after the house, which
+            // made the correctly nested room look like another house on maps.
+            if ($row['node_type'] === 'ROOM' && isset($purchasedRooms[$row['id']]) && $label === $purchasedRooms[$row['id']]['building_name']) $label = 'Комната';
             $result[] = ['id' => (int)$row['id'], 'type' => $row['node_type'], 'parent_id' => $row['parent_id'] === null ? null : (int)$row['parent_id'],
-                'root_id' => (int)$row['root_id'], 'code' => $row['code'], 'name' => $row['name'], 'label' => ($row['label'] ?? '') ?: $row['name'], 'status' => $row['status'], 'visibility' => $row['visibility'], 'revision' => (int)$row['revision'], 'portable' => (bool)$row['portable'],
+                'root_id' => (int)$row['root_id'], 'code' => $row['code'], 'name' => $row['name'], 'label' => $label, 'status' => $row['status'], 'visibility' => $row['visibility'], 'revision' => (int)$row['revision'], 'portable' => (bool)$row['portable'],
                 'coordinates' => ['x' => (int)$row['position_x'], 'y' => (int)$row['position_y']],
                 'footprint' => $row['footprint_json'] === null ? null : json_decode($row['footprint_json'], true, 512, JSON_THROW_ON_ERROR),
                 'child_count' => (int)($counts[$row['id']]['amount'] ?? 0),
