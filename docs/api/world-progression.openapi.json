@@ -682,7 +682,7 @@
             }
           }
         },
-        "description": "Requires world-manage permission. First level XP=0 and no achievements; subsequent thresholds strictly increase. Source keys: craft.completed, world.orders.deliver, world.construction.finished, world.crop.harvested, production.completed, npc.training.finished, world.quest.claimed. Reward is per unique event, not per item. Daily cap uses event time in Europe/Moscow. Unimplemented producers do not emit events. No HTTP XP award endpoint."
+        "description": "Requires world-manage permission. First level XP=0 and no achievements; subsequent thresholds strictly increase. Source keys: world.map.explore, craft.completed, world.orders.deliver, world.construction.finished, world.crop.harvested, production.completed, npc.training.finished, world.quest.claimed. Reward is per unique event, not per item. Daily cap uses event time in Europe/Moscow. Unimplemented producers do not emit events. No HTTP XP award endpoint."
       }
     },
     "/world/professions/publish": {
@@ -787,7 +787,7 @@
             }
           }
         },
-        "description": "Requires world-manage permission. First level XP=0 and no achievements; subsequent thresholds strictly increase. Source keys: craft.completed, world.orders.deliver, world.construction.finished, world.crop.harvested, production.completed, npc.training.finished, world.quest.claimed. Reward is per unique event, not per item. Daily cap uses event time in Europe/Moscow. Unimplemented producers do not emit events. No HTTP XP award endpoint."
+        "description": "Requires world-manage permission. First level XP=0 and no achievements; subsequent thresholds strictly increase. Source keys: world.map.explore, craft.completed, world.orders.deliver, world.construction.finished, world.crop.harvested, production.completed, npc.training.finished, world.quest.claimed. Reward is per unique event, not per item. Daily cap uses event time in Europe/Moscow. Unimplemented producers do not emit events. No HTTP XP award endpoint."
       }
     },
     "/world/achievements": {

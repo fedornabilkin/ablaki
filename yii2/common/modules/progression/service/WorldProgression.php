@@ -17,7 +17,7 @@ use yii\db\Query;
 class WorldProgression
 {
     public const MAX_XP = 9000000000000;
-    public const SOURCES = ['craft.completed', 'world.orders.deliver', 'world.construction.finished', 'world.crop.harvested', 'production.completed', 'npc.training.finished', 'world.quest.claimed'];
+    public const SOURCES = ['world.map.explore', 'craft.completed', 'world.orders.deliver', 'world.construction.finished', 'world.crop.harvested', 'production.completed', 'npc.training.finished', 'world.quest.claimed'];
     private $db;
     private $flags;
     private $access;

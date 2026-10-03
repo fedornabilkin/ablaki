@@ -97,12 +97,19 @@ class WorldTree
         foreach ((new Query())->select(['position_x', 'position_y', 'footprint_json'])->from('world_node')->where(['parent_id' => $parent])->andWhere(['<>', 'status', 'archived'])->all($this->db) as $row)
             foreach (WorldMapGeometry::cells($row['footprint_json'], (int)$row['position_x'], (int)$row['position_y']) as $cell)
                 $occupied[$cell['x'] . ':' . $cell['y']] = true;
-        foreach ((new Query())->select(['x', 'y'])->from('world_map_cell')->where(['parent_id' => $parent, 'state' => 'open'])->orderBy(['y' => SORT_ASC, 'x' => SORT_ASC])->all($this->db) as $cell)
-            if (WorldLayout::contains($bounds, (int)$cell['x'], (int)$cell['y']) && !isset($occupied[$cell['x'] . ':' . $cell['y']])) return ['x' => (int)$cell['x'], 'y' => (int)$cell['y']];
-        for ($i = 0; $i < (int)$bounds['map_width'] * (int)$bounds['map_height']; $i++) {
-            $x = (int)$bounds['map_origin_x'] + $i % (int)$bounds['map_width']; $y = (int)$bounds['map_origin_y'] + intdiv($i, (int)$bounds['map_width']);
-            if (!isset($occupied[$x . ':' . $y]) && !(new Query())->from('world_map_cell')->where(['parent_id' => $parent, 'x' => $x, 'y' => $y])->exists($this->db)) return compact('x', 'y');
-        }
+        $known = [];
+        foreach ((new Query())->select(['x', 'y', 'state'])->from('world_map_cell')->where(['parent_id' => $parent])->all($this->db) as $cell)
+            $known[$cell['x'] . ':' . $cell['y']] = $cell['state'];
+        $best = null; $score = null;
+        for ($y = (int)$bounds['map_origin_y']; $y < (int)$bounds['map_origin_y'] + (int)$bounds['map_height']; $y++)
+            for ($x = (int)$bounds['map_origin_x']; $x < (int)$bounds['map_origin_x'] + (int)$bounds['map_width']; $x++) {
+                if (isset($occupied[$x . ':' . $y])) continue;
+                $state = $known[$x . ':' . $y] ?? null;
+                if ($state !== null && $state !== 'open') continue;
+                $candidate = [$state === 'open' ? 0 : 1, max(abs($x), abs($y)), abs($x) + abs($y), $y, $x];
+                if ($score === null || $candidate < $score) { $score = $candidate; $best = compact('x', 'y'); }
+            }
+        if ($best !== null) return $best;
         throw new GameError('MAP_FULL', 'На карте не осталось свободных координат.', 422);
     }
     /** Also used by preview: an invalid action must not produce a confirmable quote. */

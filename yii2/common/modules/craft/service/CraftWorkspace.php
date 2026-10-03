@@ -76,6 +76,7 @@ class CraftWorkspace
                 $storages[] = $header + ['output_allowed' => $incoming];
             } catch (\yii\web\HttpException $e) { continue; } catch (GameError $e) { continue; }
         }
+        $recipes = (new WorkspaceAvailability($this->db))->recipes($user, $store, $catalog, $recipes, $storages);
         return ['node_id' => $node, 'name' => $place['name'], 'recipe_id' => $selected ? (int)$selected['id'] : null, 'recipes' => $recipes, 'equipment' => $equipment, 'storages' => $storages, 'writable' => $this->flags->capabilities()['world_write'], 'server_time' => time()];
     }
     private function prepare(int $user, array $payload): array

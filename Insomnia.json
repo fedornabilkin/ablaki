@@ -6730,11 +6730,11 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/nodes/{{ _.world_node_id }}/map-explore-preview",
       "name": "POST /world/nodes/{id}/map-explore-preview",
-      "description": "Источник: docs/api/world.openapi.json.  Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело.",
+      "description": "Источник: docs/api/world.openapi.json.  Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело. Новый контракт: cells; x/y deprecated. Исследование одной ячейки: уровень 1–3 или use_elixir=true (один эликсир в рюкзаке). Город и выше пока закрыты. Покупка нескольких исследованных ячеек атомарна; от 3 действует скидка 5%. Цены для UI приходят в GET map и navigation?include=map.",
       "method": "POST",
       "body": {
         "mimeType": "application/json",
-        "text": "{\n  \"x\": 1,\n  \"y\": 0,\n  \"top_up\": false\n}"
+        "text": "{\n  \"cells\": [\n    {\n      \"x\": -1,\n      \"y\": 0\n    }\n  ],\n  \"top_up\": true,\n  \"use_elixir\": false\n}"
       },
       "parameters": [],
       "headers": [
@@ -6765,11 +6765,11 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/nodes/{{ _.world_node_id }}/map-explore",
       "name": "POST /world/nodes/{id}/map-explore",
-      "description": "Источник: docs/api/world.openapi.json.  Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело.",
+      "description": "Источник: docs/api/world.openapi.json.  Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело. Новый контракт: cells; x/y deprecated. Исследование одной ячейки: уровень 1–3 или use_elixir=true (один эликсир в рюкзаке). Город и выше пока закрыты. Покупка нескольких исследованных ячеек атомарна; от 3 действует скидка 5%. Цены для UI приходят в GET map и navigation?include=map.",
       "method": "POST",
       "body": {
         "mimeType": "application/json",
-        "text": "{\n  \"x\": 1,\n  \"y\": 0,\n  \"top_up\": false,\n  \"request_key\": \"{{ _.world_request_key }}\",\n  \"quote_id\": \"{{ _.world_quote_id }}\",\n  \"expected_revisions\": {{ _.world_expected_revisions }}\n}"
+        "text": "{\n  \"cells\": [\n    {\n      \"x\": -1,\n      \"y\": 0\n    }\n  ],\n  \"top_up\": true,\n  \"use_elixir\": false,\n  \"request_key\": \"{{ _.world_request_key }}\",\n  \"quote_id\": \"{{ _.world_quote_id }}\",\n  \"expected_revisions\": {{ _.world_expected_revisions }}\n}"
       },
       "parameters": [],
       "headers": [
@@ -6800,11 +6800,11 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/nodes/{{ _.world_node_id }}/map-buy-preview",
       "name": "POST /world/nodes/{id}/map-buy-preview",
-      "description": "Источник: docs/api/world.openapi.json.  Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело.",
+      "description": "Источник: docs/api/world.openapi.json.  Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело. Новый контракт: cells; x/y deprecated. Исследование одной ячейки: уровень 1–3 или use_elixir=true (один эликсир в рюкзаке). Город и выше пока закрыты. Покупка нескольких исследованных ячеек атомарна; от 3 действует скидка 5%. Цены для UI приходят в GET map и navigation?include=map.",
       "method": "POST",
       "body": {
         "mimeType": "application/json",
-        "text": "{\n  \"x\": 1,\n  \"y\": 0,\n  \"top_up\": false\n}"
+        "text": "{\n  \"cells\": [\n    {\n      \"x\": -1,\n      \"y\": 0\n    },\n    {\n      \"x\": 0,\n      \"y\": 1\n    },\n    {\n      \"x\": 1,\n      \"y\": 0\n    }\n  ],\n  \"top_up\": true,\n  \"use_elixir\": false\n}"
       },
       "parameters": [],
       "headers": [
@@ -6835,11 +6835,11 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/nodes/{{ _.world_node_id }}/map-buy",
       "name": "POST /world/nodes/{id}/map-buy",
-      "description": "Источник: docs/api/world.openapi.json.  Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело.",
+      "description": "Источник: docs/api/world.openapi.json.  Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело. Новый контракт: cells; x/y deprecated. Исследование одной ячейки: уровень 1–3 или use_elixir=true (один эликсир в рюкзаке). Город и выше пока закрыты. Покупка нескольких исследованных ячеек атомарна; от 3 действует скидка 5%. Цены для UI приходят в GET map и navigation?include=map.",
       "method": "POST",
       "body": {
         "mimeType": "application/json",
-        "text": "{\n  \"x\": 1,\n  \"y\": 0,\n  \"top_up\": false,\n  \"request_key\": \"{{ _.world_request_key }}\",\n  \"quote_id\": \"{{ _.world_quote_id }}\",\n  \"expected_revisions\": {{ _.world_expected_revisions }}\n}"
+        "text": "{\n  \"cells\": [\n    {\n      \"x\": -1,\n      \"y\": 0\n    },\n    {\n      \"x\": 0,\n      \"y\": 1\n    },\n    {\n      \"x\": 1,\n      \"y\": 0\n    }\n  ],\n  \"top_up\": true,\n  \"use_elixir\": false,\n  \"request_key\": \"{{ _.world_request_key }}\",\n  \"quote_id\": \"{{ _.world_quote_id }}\",\n  \"expected_revisions\": {{ _.world_expected_revisions }}\n}"
       },
       "parameters": [],
       "headers": [

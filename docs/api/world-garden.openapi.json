@@ -1438,6 +1438,18 @@
             "type": "string",
             "pattern": "^(0|[1-9]\\d{0,14})\\.\\d{4}$"
           },
+          "gross_total": {
+            "type": "string",
+            "pattern": "^(0|[1-9]\\d{0,14})\\.\\d{4}$"
+          },
+          "discount_bps": {
+            "type": "integer",
+            "enum": [0, 500]
+          },
+          "discount_amount": {
+            "type": "string",
+            "pattern": "^(0|[1-9]\\d{0,14})\\.\\d{4}$"
+          },
           "base_price": {
             "type": "string",
             "pattern": "^(0|[1-9]\\d{0,14})\\.\\d{4}$"
@@ -1665,6 +1677,10 @@
                 "price": {
                   "type": "string",
                   "pattern": "^(0|[1-9]\\d{0,14})\\.\\d{4}$"
+                },
+                "gross_price": {
+                  "type": "string",
+                  "pattern": "^(0|[1-9]\\d{0,14})\\.\\d{4}$"
                 }
               },
               "required": [
@@ -1684,9 +1700,7 @@
           },
           "curve": {
             "type": "string",
-            "enum": [
-              "linear"
-            ]
+            "enum": ["linear", "progressive"]
           }
         },
         "required": [
@@ -1704,6 +1718,9 @@
           "recipient_account_id",
           "recipient_policy_id",
           "total",
+          "gross_total",
+          "discount_bps",
+          "discount_amount",
           "base_price",
           "initial_open",
           "limit",
