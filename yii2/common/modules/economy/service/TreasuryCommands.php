@@ -18,6 +18,7 @@ class TreasuryCommands
     {
         $this->flags->requireFlag('world_read'); WalletSchema::requireReady($this->db);
         $node = (new WorldQuery($this->db, new WorldAccessPolicy($user)))->node($input['node_id']);
+        if (!$node['has_finances']) throw new GameError('PARENT_BUDGET_REQUIRED', 'У этого объекта нет отдельной казны. Откройте родительский объект.', 422);
         if (!$node['permissions']['storage']) throw new GameError('FINANCE_OWNER_REQUIRED', 'Казной и бюджетом распоряжается владелец объекта.', 403);
         if ($node['status'] !== 'active') throw new GameError('FINANCE_UNAVAILABLE', 'Объект недоступен.');
         $accounts = (new EconomyHierarchy($this->db))->accounts($node['id']);

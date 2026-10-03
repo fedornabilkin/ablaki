@@ -18,11 +18,12 @@ class CraftWorkspace
     public function __construct(Connection $db, WorldFlags $flags) { $this->db = $db; $this->flags = $flags; }
     private function context(int $user, int $node): array
     {
-        $this->flags->requireFlag('world_read'); $this->flags->requireFlag('storage_v2');
-        $place = (new WorldQuery($this->db, new WorldAccessPolicy($user)))->node($node);
-        if (!$place['permissions']['storage'] || $place['status'] !== 'active' || !in_array($place['type'], ['PLOT', 'BUILDING', 'ROOM'], true)) throw new GameError('WORKSPACE_UNAVAILABLE', 'Выберите собственную действующую площадку или помещение.');
+        $this->flags->requireFlags(['world_read', 'storage_v2']);
+        $place = (new WorldQuery($this->db, new WorldAccessPolicy($user)))->record($node);
+        if ((int)$place['owner_user_id'] !== $user || $place['status'] !== 'active' || !in_array($place['node_type'], ['PLOT', 'BUILDING', 'ROOM'], true)) throw new GameError('WORKSPACE_UNAVAILABLE', 'Выберите собственную действующую площадку или помещение.');
         if (!(new Query())->from('world_membership')->where(['user_id' => $user, 'world_id' => $place['root_id']])->exists($this->db)) throw new GameError('WORLD_MEMBERSHIP_REQUIRED', 'Сначала вступите в этот мир.');
         if ((new Query())->from(['b' => 'world_building'])->innerJoin(['p' => 'world_node_closure'], '[[p.ancestor_id]]=[[b.node_id]]')->where(['p.descendant_id' => $node])->andWhere(['or', ['<>', 'b.operational_status', 'active'], ['<', 'b.condition', 1]])->exists($this->db)) throw new GameError('WORKSPACE_UNAVAILABLE', 'Постройка недоступна для работы.');
+        $place['id'] = (int)$place['id']; $place['revision'] = (int)$place['revision'];
         return $place;
     }
     private function store(int $node): CraftStorage { $store = new CraftStorage($this->db); $store->workspaceNodeId = $node; return $store; }
@@ -35,7 +36,7 @@ class CraftWorkspace
             $outer = (new Query())->from('craft_inventory')->where(['id' => $row['container_inventory_id'], 'user_id' => $user])->one($this->db);
             $location = (new StorageAccessPolicy($this->db))->storage($user, (int)$outer['storage_id'], true);
         }
-        if ($location['kind'] !== 'backpack' && (!in_array($location['kind'], ['placement', 'stockpile'], true) || (int)$location['node_id'] !== $node)) throw new GameError('REMOTE_CRAFT_STORAGE', 'Выберите хранилище в этом месте или в своём рюкзаке.');
+        if ($location['kind'] !== 'backpack' && (!in_array($location['kind'], ['placement', 'stockpile'], true) || !in_array((int)$location['node_id'], WorkspaceScope::nodes($this->db, $node), true))) throw new GameError('REMOTE_CRAFT_STORAGE', 'Выберите хранилище в этом месте или в своём рюкзаке.');
         return $row;
     }
     private function roles(array $recipe): array
@@ -53,10 +54,13 @@ class CraftWorkspace
     {
         $place = $this->context($user, $node); $store = $this->store($node); $craft = new Crafting($store);
         $recipes = []; $selected = null;
-        foreach ((new Query())->from('craft_recipe')->where(['active' => 1])->orderBy(['id' => SORT_ASC])->limit(2000)->all($this->db) as $recipe) {
-            $output = (new Query())->from('craft_item')->where(['id' => $recipe['item_id'], 'active' => 1])->one($this->db); if (!$output) continue;
+        $catalog = (new Query())->from('craft_recipe')->where(['active' => 1])->orderBy(['id' => SORT_ASC])->limit(2000)->all($this->db);
+        $outputs = $catalog ? (new Query())->from('craft_item')->where(['id' => array_values(array_unique(array_column($catalog, 'item_id'))), 'active' => 1])->indexBy('id')->all($this->db) : [];
+        $requirements = $craft->requirementsBatch($user, $catalog);
+        foreach ($catalog as $recipe) {
+            $output = $outputs[$recipe['item_id']] ?? null; if (!$output) continue;
             if (($recipeId === null && $selected === null) || (int)$recipe['id'] === $recipeId) $selected = $recipe;
-            $recipes[] = ['id' => (int)$recipe['id'], 'name' => trim($output['name']), 'quantity' => (int)$recipe['output_quantity'], 'locked_reasons' => $craft->requirements($user, $recipe)];
+            $recipes[] = ['id' => (int)$recipe['id'], 'name' => trim($output['name']), 'quantity' => (int)$recipe['output_quantity'], 'locked_reasons' => $requirements[(int)$recipe['id']]];
         }
         if ($recipeId !== null && (!$selected || (int)$selected['id'] !== $recipeId)) throw new GameError('RECIPE_UNAVAILABLE', 'Рецепт недоступен.');
         $equipment = [];

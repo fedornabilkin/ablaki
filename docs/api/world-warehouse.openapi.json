@@ -1,0 +1,456 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "World warehouses",
+    "version": "1.0.0",
+    "description": "Owned production stockpile or standalone warehouse. A paid expansion adds one item slot. Price is base_price * (capacity - initial_capacity + 1). Default base 5 Cr; production 4 to 40 slots, warehouse 20 to 200. Admin may configure price and limit without granting slots. Optional personal top-up fills the exact budget shortfall. Payment reaches settlement treasury atomically with capacity change; replay cannot double-charge."
+  },
+  "servers": [
+    {
+      "url": "/v1"
+    }
+  ],
+  "security": [
+    {
+      "bearerAuth": []
+    }
+  ],
+  "paths": {
+    "/world/nodes/{id}/warehouse": {
+      "get": {
+        "operationId": "worldWarehouse",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/State"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "World error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "World error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "World error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "World error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "World error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "World error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "World error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Warehouse state",
+        "description": "Owned production stockpile or standalone warehouse. A paid expansion adds one item slot. Price is base_price * (capacity - initial_capacity + 1). Default base 5 Cr; production 4 to 40 slots, warehouse 20 to 200. Admin may configure price and limit without granting slots. Optional personal top-up fills the exact budget shortfall. Payment reaches settlement treasury atomically with capacity change; replay cannot double-charge."
+      },
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "description": "Owned production building or warehouse node ID",
+          "schema": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          }
+        }
+      ]
+    },
+    "/world/nodes/{id}/warehouse-expand-preview": {
+      "post": {
+        "operationId": "worldWarehousePreview",
+        "description": "Owned production stockpile or standalone warehouse. A paid expansion adds one item slot. Price is base_price * (capacity - initial_capacity + 1). Default base 5 Cr; production 4 to 40 slots, warehouse 20 to 200. Admin may configure price and limit without granting slots. Optional personal top-up fills the exact budget shortfall. Payment reaches settlement treasury atomically with capacity change; replay cannot double-charge.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Input"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Quote"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "World error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "World error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "World error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "World error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "World error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "World error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "World error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Preview warehouse expansion"
+      },
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "description": "Owned production building or warehouse node ID",
+          "schema": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          }
+        }
+      ]
+    },
+    "/world/nodes/{id}/warehouse-expand": {
+      "post": {
+        "operationId": "worldWarehouseExpand",
+        "description": "Owned production stockpile or standalone warehouse. A paid expansion adds one item slot. Price is base_price * (capacity - initial_capacity + 1). Default base 5 Cr; production 4 to 40 slots, warehouse 20 to 200. Admin may configure price and limit without granting slots. Optional personal top-up fills the exact budget shortfall. Payment reaches settlement treasury atomically with capacity change; replay cannot double-charge.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Commit"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./world.openapi.json#/components/schemas/CommandResult"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "World error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "World error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "World error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "World error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "World error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "World error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "World error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./world.openapi.json#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Expand warehouse by one slot"
+      },
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "description": "Owned production building or warehouse node ID",
+          "schema": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          }
+        }
+      ]
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer"
+      }
+    },
+    "schemas": {
+      "Input": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "top_up": {
+            "type": "boolean",
+            "default": false
+          }
+        }
+      },
+      "Commit": {
+        "type": "object",
+        "required": [
+          "request_key",
+          "quote_id",
+          "expected_revisions"
+        ],
+        "properties": {
+          "request_key": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_-]{16,80}$"
+          },
+          "quote_id": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{32}$"
+          },
+          "expected_revisions": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 2147483647
+            }
+          },
+          "top_up": {
+            "type": "boolean",
+            "default": false
+          }
+        }
+      },
+      "State": {
+        "type": "object",
+        "required": [
+          "node_id",
+          "storage_id",
+          "capacity",
+          "used",
+          "limit",
+          "next_price",
+          "finance_node_id",
+          "writable",
+          "server_time"
+        ],
+        "properties": {
+          "node_id": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          },
+          "storage_id": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          },
+          "capacity": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          },
+          "used": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          },
+          "next_price": {
+            "type": "string",
+            "nullable": true,
+            "pattern": "^\\d+\\.\\d{4}$"
+          },
+          "finance_node_id": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          },
+          "writable": {
+            "type": "boolean"
+          },
+          "server_time": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
+      "Quote": {
+        "$ref": "world.openapi.json#/components/schemas/Quote"
+      }
+    }
+  }
+}

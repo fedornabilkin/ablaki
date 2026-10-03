@@ -21,14 +21,23 @@ class Crafting
     }
     public function requirements(int $user,array $recipe): array
     {
-        $reasons=[];
-        $skill=$this->one('craft_skill',['user_id'=>$user,'category_id'=>$recipe['category_id']]);
-        if(1+intdiv((int)($skill['experience']??0),100)<(int)$recipe['min_level'])$reasons[]='Нужен уровень '.$recipe['min_level'];
-        foreach($this->s->rows('craft_dependency',['recipe_id'=>$recipe['id']]) as $dep) if(!$this->one('craft_known',['user_id'=>$user,'recipe_id'=>$dep['requires_id']])) {
-            $parent=$this->one('craft_recipe',['id'=>$dep['requires_id']]);
-            $output=$parent?$this->one('craft_item',['id'=>$parent['item_id']]):null;
-            $reasons[]='Сначала создайте: '.trim($output['name']??preg_replace('/^Создать:\s*/u','',$parent['name']??'рецепт #'.$dep['requires_id']));
+        return $this->requirementsBatch($user, [$recipe])[(int)$recipe['id']];
+    }
+    /** Read skills and unmet dependencies once for the whole recipe list. */
+    public function requirementsBatch(int $user, array $recipes): array
+    {
+        if (!$recipes) return [];
+        $skills = (new Query())->from('craft_skill')->where(['user_id' => $user, 'category_id' => array_values(array_unique(array_column($recipes, 'category_id')))])->indexBy('category_id')->all($this->s->db);
+        $reasons = [];
+        foreach ($recipes as $recipe) {
+            $skill = $skills[$recipe['category_id']] ?? [];
+            $reasons[(int)$recipe['id']] = 1 + intdiv((int)($skill['experience'] ?? 0), 100) < (int)$recipe['min_level'] ? ['Нужен уровень ' . $recipe['min_level']] : [];
         }
+        $dependencies = (new Query())->select(['d.recipe_id', 'd.requires_id', 'recipe_name' => 'r.name', 'output_name' => 'i.name'])->from(['d' => 'craft_dependency'])
+            ->leftJoin(['k' => 'craft_known'], '[[k.recipe_id]]=[[d.requires_id]] AND [[k.user_id]]=:requirementUser', [':requirementUser' => $user])
+            ->leftJoin(['r' => 'craft_recipe'], '[[r.id]]=[[d.requires_id]]')->leftJoin(['i' => 'craft_item'], '[[i.id]]=[[r.item_id]]')
+            ->where(['d.recipe_id' => array_column($recipes, 'id'), 'k.recipe_id' => null])->orderBy(['d.recipe_id' => SORT_ASC, 'd.requires_id' => SORT_ASC])->all($this->s->db);
+        foreach ($dependencies as $dependency) $reasons[(int)$dependency['recipe_id']][] = 'Сначала создайте: ' . trim($dependency['output_name'] ?? preg_replace('/^Создать:\s*/u', '', $dependency['recipe_name'] ?? 'рецепт #' . $dependency['requires_id']));
         return $reasons;
     }
     private function event(int $user,string $action,int $qty,array $extra=[]): void

@@ -3,7 +3,7 @@
   "info": {
     "title": "Ablaki World Storage API",
     "version": "1.0.0",
-    "description": "Implemented storage slice, not deployed or runtime-tested. Requires storage_v2 and world_read. Writes also require world_write. All items are owner-private; public node access grants no storage rights. Transfer quote includes the physical equipment IDs. Repair quote terms.repair preserves the existing repair DTO and includes missing materials. New revision keys: storage:<id>, inventory:<id>. Activation requires the separate offline baseline/freeze/reconciliation workflow; it has not been executed or runtime-tested."
+    "description": "Owner-private storage and transfers. Requires storage_v2/world_read; writes also require world_write. Building and its same-owner active rooms share the workspace, deployed stations and stockpile; another building remains remote. Inventory storage capacity is enforced by canonical inventory, including atomic rejection of production into a full stockpile. Warehouses expand through world-warehouse.openapi.json. Existing chest repair and transfer quote contracts are retained."
   },
   "servers": [
     {

@@ -58,6 +58,9 @@ class TestWorldDefaults
             'workroom' => ['name' => 'Мастерская', 'kind' => 'workroom', 'area' => 2, 'slots' => 1, 'expansion_limit' => 2, 'expansion_base_price' => '10.0000', 'price' => '40.0000'],
             'house' => ['name' => 'Дом', 'kind' => 'house', 'area' => 3, 'slots' => 1, 'expansion_limit' => 2, 'expansion_base_price' => '10.0000', 'price' => '100.0000'],
         ];
+        $definitions['forge'] = ['name' => 'Кузница', 'kind' => 'forge', 'area' => 2, 'slots' => 2, 'price' => '80.0000'];
+        $definitions['workshop'] = ['name' => 'Столярная мастерская', 'kind' => 'workshop', 'area' => 2, 'slots' => 2, 'price' => '60.0000'];
+        $definitions['warehouse'] = ['name' => 'Большой склад', 'kind' => 'warehouse', 'area' => 2, 'slots' => 1, 'price' => '120.0000'];
         if ($raw) $definitions['house-construction'] = $definitions['house'] + ['delivery' => 'construction', 'duration_seconds' => 300, 'materials' => [['item_id' => (int)$raw['id'], 'quantity' => 2]]];
         foreach ($definitions as $code => $input) {
             $key = 'test-premises-' . $settlement . '-' . $code;

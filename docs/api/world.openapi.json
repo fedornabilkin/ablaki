@@ -70,6 +70,17 @@
               "pattern": "^-?\\d+,-?\\d+,-?\\d+,-?\\d+$",
               "description": "Inclusive xMin,yMin,xMax,yMax, each within +/-1000000."
             }
+          },
+          {
+            "name": "view",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "home"
+              ]
+            },
+            "description": "Return the Screen envelope in one request. Omit this parameter to retain the original response."
           }
         ],
         "responses": {
@@ -78,7 +89,14 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Root"
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/Root"
+                    },
+                    {
+                      "$ref": "#/components/schemas/Screen"
+                    }
+                  ]
                 }
               }
             }
@@ -125,7 +143,8 @@
               }
             }
           }
-        }
+        },
+        "description": "view=home resolves the current user home, falling back to the active world. The Screen response includes capabilities and replaces separate root, navigation and map requests. The default contract is unchanged."
       }
     },
     "/world/nodes/{id}": {
@@ -342,14 +361,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "required": ["node_id", "items", "cells", "can_expand"],
-                  "properties": {
-                    "node_id": {"type": "integer"},
-                    "items": {"type": "array", "items": {"$ref": "#/components/schemas/Node"}},
-                    "cells": {"type": "array", "items": {"type": "object", "properties": {"x": {"type": "integer"}, "y": {"type": "integer"}, "state": {"type": "string", "enum": ["discovered", "open"]}}}},
-                    "can_expand": {"type": "boolean"}
-                  }
+                  "$ref": "#/components/schemas/Map"
                 }
               }
             }
@@ -402,33 +414,153 @@
     "/world/nodes/{id}/map-explore-preview": {
       "post": {
         "operationId": "worldMapExplorePreview",
-        "parameters": [{"name": "id", "in": "path", "required": true, "schema": {"type": "integer", "minimum": 1}}],
-        "requestBody": {"required": true, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/MapCellInput"}}}},
-        "responses": {"200": {"description": "Exploration quote", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/Quote"}}}}}
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MapCellInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Exploration quote",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Quote"
+                }
+              }
+            }
+          }
+        }
       }
     },
     "/world/nodes/{id}/map-explore": {
       "post": {
         "operationId": "worldMapExplore",
-        "parameters": [{"name": "id", "in": "path", "required": true, "schema": {"type": "integer", "minimum": 1}}],
-        "requestBody": {"required": true, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/MapCellCommand"}}}},
-        "responses": {"200": {"description": "Cell discovered", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/CommandResult"}}}}}
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MapCellCommand"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Cell discovered",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommandResult"
+                }
+              }
+            }
+          }
+        }
       }
     },
     "/world/nodes/{id}/map-buy-preview": {
       "post": {
         "operationId": "worldMapBuyPreview",
-        "parameters": [{"name": "id", "in": "path", "required": true, "schema": {"type": "integer", "minimum": 1}}],
-        "requestBody": {"required": true, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/MapCellInput"}}}},
-        "responses": {"200": {"description": "Purchase quote", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/Quote"}}}}}
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MapCellInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Purchase quote",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Quote"
+                }
+              }
+            }
+          }
+        }
       }
     },
     "/world/nodes/{id}/map-buy": {
       "post": {
         "operationId": "worldMapBuy",
-        "parameters": [{"name": "id", "in": "path", "required": true, "schema": {"type": "integer", "minimum": 1}}],
-        "requestBody": {"required": true, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/MapCellCommand"}}}},
-        "responses": {"200": {"description": "Cell purchased", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/CommandResult"}}}}}
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MapCellCommand"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Cell purchased",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommandResult"
+                }
+              }
+            }
+          }
+        }
       }
     },
     "/world/nodes/{id}/navigation": {
@@ -444,6 +576,17 @@
               "minimum": 1,
               "maximum": 2147483647
             }
+          },
+          {
+            "name": "include",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "map"
+              ]
+            },
+            "description": "Return the Screen envelope in one request. Omit this parameter to retain the original response."
           }
         ],
         "responses": {
@@ -452,7 +595,14 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Navigation"
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/Navigation"
+                    },
+                    {
+                      "$ref": "#/components/schemas/Screen"
+                    }
+                  ]
                 }
               }
             }
@@ -499,7 +649,8 @@
               }
             }
           }
-        }
+        },
+        "description": "include=map returns the requested node page. The Screen response includes capabilities and replaces separate root, navigation and map requests. The default contract is unchanged."
       }
     },
     "/world/nodes/{id}/statistics": {
@@ -1482,7 +1633,21 @@
             "nullable": true,
             "minItems": 3,
             "maxItems": 32,
-            "items": {"type": "object", "required": ["x", "y"], "properties": {"x": {"type": "integer"}, "y": {"type": "integer"}}}
+            "items": {
+              "type": "object",
+              "required": [
+                "x",
+                "y"
+              ],
+              "properties": {
+                "x": {
+                  "type": "integer"
+                },
+                "y": {
+                  "type": "integer"
+                }
+              }
+            }
           },
           "child_count": {
             "type": "integer",
@@ -1529,6 +1694,13 @@
               "$ref": "#/components/schemas/Action"
             },
             "maxItems": 100
+          },
+          "map": {
+            "$ref": "#/components/schemas/MapBounds"
+          },
+          "has_finances": {
+            "type": "boolean",
+            "description": "False for rooms, beds, warehouses and shelters. Expenses use the financial parent."
           }
         },
         "required": [
@@ -1545,7 +1717,9 @@
           "child_count",
           "details",
           "permissions",
-          "actions"
+          "actions",
+          "map",
+          "has_finances"
         ],
         "additionalProperties": false
       },
@@ -1660,6 +1834,13 @@
           },
           "regions": {
             "$ref": "#/components/schemas/Page"
+          },
+          "home_node_id": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647,
+            "nullable": true,
+            "description": "Owned active house with assigned lodging, otherwise first owned house, otherwise starter campsite; null before joining. May be omitted when the world is unavailable."
           }
         },
         "required": [
@@ -1714,19 +1895,51 @@
       },
       "MapCellInput": {
         "type": "object",
-        "required": ["x", "y", "top_up"],
+        "required": [
+          "x",
+          "y",
+          "top_up"
+        ],
         "properties": {
-          "x": {"type": "integer", "minimum": -1000000, "maximum": 1000000},
-          "y": {"type": "integer", "minimum": -1000000, "maximum": 1000000},
-          "top_up": {"type": "boolean"}
+          "x": {
+            "type": "integer",
+            "minimum": -1000000,
+            "maximum": 1000000
+          },
+          "y": {
+            "type": "integer",
+            "minimum": -1000000,
+            "maximum": 1000000
+          },
+          "top_up": {
+            "type": "boolean"
+          }
         }
       },
       "MapCellCommand": {
         "allOf": [
-          {"$ref": "#/components/schemas/MapCellInput"},
-          {"type": "object", "required": ["request_key", "quote_id", "expected_revisions"], "properties": {
-            "request_key": {"type": "string"}, "quote_id": {"type": "string"}, "expected_revisions": {"type": "object"}
-          }}
+          {
+            "$ref": "#/components/schemas/MapCellInput"
+          },
+          {
+            "type": "object",
+            "required": [
+              "request_key",
+              "quote_id",
+              "expected_revisions"
+            ],
+            "properties": {
+              "request_key": {
+                "type": "string"
+              },
+              "quote_id": {
+                "type": "string"
+              },
+              "expected_revisions": {
+                "type": "object"
+              }
+            }
+          }
         ]
       },
       "Quote": {
@@ -2153,6 +2366,125 @@
           "items"
         ],
         "additionalProperties": false
+      },
+      "MapBounds": {
+        "type": "object",
+        "required": [
+          "x",
+          "y",
+          "width",
+          "height"
+        ],
+        "properties": {
+          "x": {
+            "type": "integer"
+          },
+          "y": {
+            "type": "integer"
+          },
+          "width": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "height": {
+            "type": "integer",
+            "minimum": 1
+          }
+        },
+        "description": "Fixed map bounds, edited in admin. Defaults: room 2x3, building 3x3, campsite 5x5, garden 5x2, settlement 12x12, region 20x20, world 32x32. Existing occupied coordinates are preserved by migration."
+      },
+      "Map": {
+        "type": "object",
+        "required": [
+          "node_id",
+          "items",
+          "cells",
+          "can_expand",
+          "bounds"
+        ],
+        "properties": {
+          "node_id": {
+            "type": "integer"
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Node"
+            }
+          },
+          "cells": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "x": {
+                  "type": "integer"
+                },
+                "y": {
+                  "type": "integer"
+                },
+                "state": {
+                  "type": "string",
+                  "enum": [
+                    "discovered",
+                    "open"
+                  ]
+                }
+              }
+            }
+          },
+          "can_expand": {
+            "type": "boolean"
+          },
+          "bounds": {
+            "$ref": "#/components/schemas/MapBounds"
+          }
+        }
+      },
+      "Screen": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "contract_version",
+          "server_time",
+          "capabilities",
+          "navigation",
+          "map"
+        ],
+        "properties": {
+          "contract_version": {
+            "type": "integer",
+            "enum": [
+              1
+            ]
+          },
+          "server_time": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "capabilities": {
+            "$ref": "#/components/schemas/Capabilities"
+          },
+          "navigation": {
+            "type": "object",
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Navigation"
+              }
+            ]
+          },
+          "map": {
+            "type": "object",
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Map"
+              }
+            ]
+          }
+        },
+        "description": "One coherent read of the selected node, breadcrumbs, siblings and its complete map. navigation and map are both null when the world is unavailable or empty. No cross-request cache."
       }
     }
   }

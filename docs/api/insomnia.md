@@ -10,6 +10,10 @@
 
 ## Мир: preview и подтверждение
 
+В навигации добавлены варианты `GET /world?view=home` и `GET /world/nodes/{id}/navigation?include=map`: страница, крошки и карта одним запросом. Они возвращают `Screen`; отдельные root/navigation/map остаются доступны с прежним форматом ответа.
+
+Добавлены `beds/{id}/dig-preview`, `beds/{id}/dig`, `nodes/{id}/warehouse`, `nodes/{id}/warehouse-expand-preview` и `nodes/{id}/warehouse-expand`. Для склада `world_node_id` должен указывать на производственное здание или большой склад. В публикации культуры можно задать `water_window_seconds` и `harvest_window_seconds`. Правила: [дом, выращивание и склады](../implementation/world/world-living-spaces.md).
+
 Запросы разделены на навигацию и карту, стоянку, финансы, помещения, ночлег, огород, крафт, хранилища, профессии и другие механизмы. Источник тела запроса указан в его описании: `docs/api/*.openapi.json`.
 
 Для большинства изменений выполняются два запроса:

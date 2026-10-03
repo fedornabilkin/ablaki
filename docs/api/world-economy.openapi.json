@@ -3,7 +3,7 @@
   "info": {
     "title": "Ablaki World Economy",
     "version": "1.1.0",
-    "description": "Code prepared, not tested or deployed. Exact existing wallet requires explicit offline activation. Owner-only balances, FIFO manual collection, reserved obligations and funded parent payments. Versioned policy publication requires world-manage and p-admin. Losses run only in the trusted worker; HTTP waits for catch-up. No minting or personal withdrawals."
+    "description": "Code prepared, not tested or deployed. Exact existing wallet requires explicit offline activation. Owner-only balances, FIFO manual collection, reserved obligations and funded parent payments. Versioned policy publication requires world-manage and p-admin. Losses run only in the trusted worker; HTTP waits for catch-up. No minting or personal withdrawals. Rooms, beds and warehouses have no independent finances. Commands collect/pay/invest/grant/policy reject those nodes with PARENT_BUDGET_REQUIRED. Their expenses use the same-owner financial parent. Migration transfers existing balances, reserves and outstanding settlement references, while retaining historical transfer records."
   },
   "servers": [
     {
@@ -76,9 +76,16 @@
           "can_invest": {
             "type": "boolean"
           },
-          "can_grant": {"type": "boolean", "description": "The owner has an available budget balance; destination eligibility is checked by preview."},
-          "grant_preview": {"type": "string"},
-          "grant_execute": {"type": "string"},
+          "can_grant": {
+            "type": "boolean",
+            "description": "The owner has an available budget balance; destination eligibility is checked by preview."
+          },
+          "grant_preview": {
+            "type": "string"
+          },
+          "grant_execute": {
+            "type": "string"
+          },
           "wallet_ready": {
             "type": "boolean"
           },
@@ -178,6 +185,14 @@
           },
           "collection_rule": {
             "$ref": "#/components/schemas/CollectionRule"
+          },
+          "has_finances": {
+            "type": "boolean"
+          },
+          "finance_node_id": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
           }
         },
         "required": [

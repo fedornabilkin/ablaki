@@ -111,6 +111,8 @@ use mdm\admin\components\Helper;
                 ['label' => 'Комнаты', 'icon' => 'home', 'url' => ['/world-room/index']],
                 ['label' => 'Участки', 'icon' => 'map-o', 'url' => ['/world-plot/index']],
                 ['label' => 'Грядки', 'icon' => 'leaf', 'url' => ['/world-bed/index']],
+                ['label' => 'Культуры и выращивание', 'icon' => 'pagelines', 'url' => ['/world-crop/index']],
+                ['label' => 'Склады', 'icon' => 'archive', 'url' => ['/world-warehouse/index']],
                 ['label' => 'Места оборудования', 'icon' => 'th', 'url' => ['/world-slot/index']],
                 ['label' => 'Журнал изменений', 'icon' => 'history', 'url' => ['/world-admin/audit']],
             ]],

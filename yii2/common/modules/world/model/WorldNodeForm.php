@@ -22,6 +22,11 @@ class WorldNodeForm extends Model
     public $position_y = 0;
     public $position = 0;
     public $footprint = '';
+    public $map_width;
+    public $map_height;
+    public $map_origin_x = 0;
+    public $map_origin_y = 0;
+    public $building_kind = 'house';
     public $revision = 0;
     public $reason = '';
     public $climate = 'temperate';
@@ -44,6 +49,7 @@ class WorldNodeForm extends Model
     {
         if (!isset(self::TYPES[$type])) throw new \InvalidArgumentException('Unknown world node type.');
         $this->nodeType = $type;
+        foreach (\common\modules\world\service\WorldLayout::defaults($type) as $key => $value) $this->$key = $value;
         parent::__construct($config);
     }
     public function type(): string { return $this->nodeType; }
@@ -51,13 +57,13 @@ class WorldNodeForm extends Model
     {
         return [
             'WORLD' => [], 'REGION' => ['climate'], 'SETTLEMENT' => ['settlement_kind', 'population', 'plot_limit'],
-            'BUILDING' => ['level', 'condition', 'max_condition', 'operational_status'], 'ROOM' => ['area', 'exposure_class'],
+            'BUILDING' => ['building_kind', 'level', 'condition', 'max_condition', 'operational_status'], 'ROOM' => ['area', 'exposure_class'],
             'PLOT' => ['plot_kind', 'area', 'fertility', 'allow_building'], 'BED' => ['ordinal', 'unlocked'],
         ][$this->nodeType];
     }
     public static function choices(): array
     {
-        return ['visibility' => ['public' => 'Общедоступный', 'private' => 'Личный'],
+        return ['building_kind' => ['house' => 'Жилой дом', 'forge' => 'Кузница', 'workshop' => 'Мастерская', 'workroom' => 'Рабочее помещение', 'warehouse' => 'Большой склад', 'canopy' => 'Навес'], 'visibility' => ['public' => 'Общедоступный', 'private' => 'Личный'],
             'settlement_kind' => ['city' => 'Город', 'village' => 'Деревня'],
             'operational_status' => ['planned' => 'Запланирована', 'constructing' => 'Строится', 'active' => 'Действует', 'paused' => 'Приостановлена', 'damaged' => 'Повреждена', 'destroyed' => 'Разрушена'],
             'exposure_class' => ['outdoor' => 'Улица', 'covered' => 'Под навесом', 'indoor' => 'В помещении'],
@@ -76,6 +82,9 @@ class WorldNodeForm extends Model
             ['portable', 'in', 'range' => [0, 1]],
             [['position_x', 'position_y', 'position'], 'required'],
             [['position_x', 'position_y', 'position'], 'integer', 'min' => -1000000, 'max' => 1000000],
+            [['map_width', 'map_height', 'map_origin_x', 'map_origin_y'], 'required'],
+            [['map_width', 'map_height'], 'integer', 'min' => 1, 'max' => 1000],
+            [['map_origin_x', 'map_origin_y'], 'integer', 'min' => -1000000, 'max' => 1000000],
             ['footprint', 'string', 'max' => 2048],
             ['footprint', 'validateFootprint'],
             ['revision', 'integer', 'min' => 0, 'max' => 2147483647],
@@ -93,7 +102,7 @@ class WorldNodeForm extends Model
     }
     public function populate(array $snapshot): void
     {
-        foreach (array_merge(['name', 'code', 'slug', 'parent_id', 'owner_user_id', 'visibility', 'portable', 'position_x', 'position_y', 'position', 'revision'], $this->detailFields()) as $field) {
+        foreach (array_merge(['name', 'code', 'slug', 'parent_id', 'owner_user_id', 'visibility', 'portable', 'position_x', 'position_y', 'position', 'revision', 'map_width', 'map_height', 'map_origin_x', 'map_origin_y'], $this->detailFields()) as $field) {
             $this->$field = array_key_exists($field, $snapshot['node']) ? $snapshot['node'][$field] : ($snapshot['details'][$field] ?? $this->$field);
         }
         $this->footprint = (string)($snapshot['node']['footprint_json'] ?? '');
@@ -110,14 +119,15 @@ class WorldNodeForm extends Model
             'owner_user_id' => $this->owner_user_id === null ? null : (int)$this->owner_user_id, 'portable' => (int)$this->portable,
             'position_x' => (int)$this->position_x, 'position_y' => (int)$this->position_y, 'position' => (int)$this->position,
             'footprint_json' => \common\modules\world\service\WorldMapGeometry::normalize((string)$this->footprint, (int)$this->position_x, (int)$this->position_y)];
+        foreach (['map_width', 'map_height', 'map_origin_x', 'map_origin_y'] as $key) $values[$key] = (int)$this->$key;
         $details = [];
-        foreach ($this->detailFields() as $field) $details[$field] = in_array($field, ['climate', 'settlement_kind', 'operational_status', 'exposure_class', 'plot_kind'], true) ? $this->$field : (int)$this->$field;
+        foreach ($this->detailFields() as $field) $details[$field] = in_array($field, ['building_kind', 'climate', 'settlement_kind', 'operational_status', 'exposure_class', 'plot_kind'], true) ? $this->$field : (int)$this->$field;
         if ($this->nodeType === 'BED') $details['garden_node_id'] = $values['parent_id'];
         return ['id' => $id, 'revision' => (int)$this->revision, 'reason' => $this->reason, 'values' => $values, 'details' => $details];
     }
     public function attributeLabels(): array
     {
-        return ['name' => 'Название', 'code' => 'Постоянный код', 'slug' => 'Адрес внутри родителя', 'parent_id' => 'Родительский объект, ID',
+        return ['map_width' => 'Ширина карты, ячеек', 'map_height' => 'Высота карты, ячеек', 'map_origin_x' => 'Начало карты X', 'map_origin_y' => 'Начало карты Y', 'building_kind' => 'Назначение постройки', 'name' => 'Название', 'code' => 'Постоянный код', 'slug' => 'Адрес внутри родителя', 'parent_id' => 'Родительский объект, ID',
             'owner_user_id' => 'Владелец, ID пользователя', 'visibility' => 'Видимость', 'portable' => 'Можно перемещать', 'position_x' => 'Координата X', 'position_y' => 'Координата Y',
             'position' => 'Порядок', 'reason' => 'Причина изменения', 'climate' => 'Климат (код)', 'settlement_kind' => 'Тип поселения',
             'population' => 'Население', 'plot_limit' => 'Лимит участков', 'level' => 'Уровень', 'condition' => 'Прочность',

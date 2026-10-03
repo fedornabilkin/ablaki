@@ -31,7 +31,7 @@ class NodeEconomy
     /** No GET side effect: absent accounts are represented as zero until a domain command creates them. */
     public function view(int $user, int $node, int $page = 1): array
     {
-        $place = $this->node($user, $node); $owner = $place['permissions']['storage'];
+        $place = $this->node($user, $node); $owner = $place['permissions']['storage'] && $place['has_finances'];
         if ($page < 1 || $page > 1000000) throw new GameError('INVALID_PAGINATION', 'Некорректная страница.', 422);
         $accounts = $owner ? $this->accounts($node) : []; $balances = null; $entries = []; $total = 0;
         if ($owner) {
@@ -45,9 +45,9 @@ class NodeEconomy
             }
         }
         $rule = $owner ? (new EconomyHierarchy($this->db))->current($node) : null;
-        $writable = $place['status'] === 'active' && !(new \common\modules\world\service\WorldTree($this->db))->isShelter($node) && WalletSchema::ready($this->db) && $this->flags->capabilities()['world_write'];
+        $writable = $place['has_finances'] && $place['status'] === 'active' && !(new \common\modules\world\service\WorldTree($this->db))->isShelter($node) && WalletSchema::ready($this->db) && $this->flags->capabilities()['world_write'];
         $catchingUp = $owner && isset($accounts['treasury']) && (new TreasuryLedger($this->db))->catchingUp((int)$accounts['treasury']['id'], time());
-        return ['node_id' => $node, 'currency' => 'Cr', 'balances' => $balances, 'can_view_finances' => $owner, 'collection_rule' => $rule,
+        return ['node_id' => $node, 'finance_node_id' => (new EconomyHierarchy($this->db))->financialNode($node), 'has_finances' => $place['has_finances'], 'currency' => 'Cr', 'balances' => $balances, 'can_view_finances' => $owner, 'collection_rule' => $rule,
             'can_invest' => $writable,
             'can_grant' => $writable && $owner && $balances !== null && !Money::parse($balances['available'])->isZero(),
             'grant_preview' => '/v1/world/nodes/' . $node . '/budget-grant-preview', 'grant_execute' => '/v1/world/nodes/' . $node . '/budget-grant',
@@ -78,6 +78,7 @@ class NodeEconomy
     {
         $place = $this->node($user, $input['node_id']); WalletSchema::requireReady($this->db);
         if ((new \common\modules\world\service\WorldTree($this->db))->isShelter($place['id'])) throw new GameError('SHELTER_HAS_NO_BUDGET', 'Вкладывайте кредиты в бюджет стоянки. Шалаш — переносной предмет.');
+        if (!$place['has_finances']) throw new GameError('PARENT_BUDGET_REQUIRED', 'Этот объект использует бюджет родителя. Откройте родительский объект.');
         if ($place['status'] !== 'active') throw new GameError('INVESTMENT_UNAVAILABLE', 'Объект недоступен для вложений.');
         $amount = Money::parse($input['amount']);
         if ($amount->isZero() || $amount->isNegative()) throw new GameError('INVALID_AMOUNT', 'Укажите положительную сумму.', 422);

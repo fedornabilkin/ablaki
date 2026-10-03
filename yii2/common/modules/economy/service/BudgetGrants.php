@@ -27,6 +27,7 @@ class BudgetGrants
             throw new GameError('ECONOMY_NOT_READY', 'Схема целевого финансирования ещё не подготовлена.', 503);
         $reader = new WorldQuery($this->db, new WorldAccessPolicy($user));
         $source = $reader->node($input['source_node_id']); $target = $reader->node($input['destination_node_id']);
+        if (!$source['has_finances'] || !$target['has_finances']) throw new GameError('PARENT_BUDGET_REQUIRED', 'Комнаты, грядки и склады используют бюджет родительского объекта.', 422);
         if ($source['id'] === $target['id'] || $source['root_id'] !== $target['root_id'] || $source['status'] !== 'active' || $target['status'] !== 'active'
             || !$source['permissions']['storage'] || !$target['permissions']['storage']) {
             throw new GameError('GRANT_FORBIDDEN', 'Перевод доступен между собственными действующими объектами одного мира.', 403);

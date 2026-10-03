@@ -8,7 +8,7 @@ use yii\db\Query;
 
 class WorldFlags
 {
-    public const SCHEMA_VERSION = 35;
+    public const SCHEMA_VERSION = 36;
     private $db;
     private $module;
     public function __construct(Connection $db, Module $module) { $this->db = $db; $this->module = $module; }
@@ -27,8 +27,14 @@ class WorldFlags
     }
     public function requireFlag(string $flag): void
     {
+        $this->requireFlags([$flag]);
+    }
+    /** Validate a group against one fresh read, without caching across operations. */
+    public function requireFlags(array $required): array
+    {
         $flags = $this->capabilities();
         if (!$flags['schema_ready']) throw new GameError('SCHEMA_NOT_READY', 'Мир готовится к открытию.', 503);
-        if (empty($flags[$flag])) throw new GameError('FEATURE_DISABLED', 'Это действие сейчас недоступно.', 503, ['feature' => $flag]);
+        foreach ($required as $flag) if (empty($flags[$flag])) throw new GameError('FEATURE_DISABLED', 'Это действие сейчас недоступно.', 503, ['feature' => $flag]);
+        return $flags;
     }
 }

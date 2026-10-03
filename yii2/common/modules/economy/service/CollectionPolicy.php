@@ -34,6 +34,7 @@ class CollectionPolicy
     {
         $this->access->requireAdmin(); WalletSchema::requireReady($this->db);
         $node = (new WorldQuery($this->db, $this->access))->node($input['node_id']);
+        if (!$node['has_finances']) throw new GameError('PARENT_BUDGET_REQUIRED', 'У этого объекта нет отдельного бюджета. Настройте финансы родителя.', 422);
         if ($node['status'] !== 'active') throw new GameError('FINANCE_UNAVAILABLE', 'Объект недоступен.');
         $current = (new EconomyHierarchy($this->db))->current($node['id']);
         $parent = $current ? $current['parent_node_id'] : $node['parent_id'];

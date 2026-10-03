@@ -50,6 +50,8 @@ class WorldTree
             'position_x' => $values['position_x'] ?? 0, 'position_y' => $values['position_y'] ?? 0, 'position' => $values['position'] ?? 0,
             'footprint_json' => WorldMapGeometry::normalize($values['footprint_json'] ?? null, $values['position_x'] ?? 0, $values['position_y'] ?? 0),
             'revision' => 1, 'created_at' => time(), 'updated_at' => time()];
+        $row += array_intersect_key($values, WorldLayout::defaults($type, $details)) + WorldLayout::defaults($type, $details);
+        WorldLayout::resize($this->db, 0, $row);
         if (!in_array($row['visibility'], ['public', 'private'], true)) throw new GameError('INVALID_VISIBILITY', 'Некорректная видимость.', 422);
         foreach (['position_x', 'position_y', 'position'] as $field) if (!is_int($row[$field]) || abs($row[$field]) > 1000000) throw new GameError('INVALID_POSITION', 'Некорректная позиция.', 422);
         if ($parent) foreach (WorldMapGeometry::cells($row['footprint_json'], (int)$row['position_x'], (int)$row['position_y']) as $cell) {
@@ -71,16 +73,18 @@ class WorldTree
         }
         if ($type !== 'WORLD') {
             $table = 'world_' . strtolower($type);
-            $allowedDetails = ['REGION' => ['climate'], 'SETTLEMENT' => ['settlement_kind', 'population', 'plot_limit'], 'BUILDING' => ['level', 'condition', 'max_condition', 'operational_status'], 'ROOM' => ['area', 'exposure_class'], 'PLOT' => ['plot_kind', 'area', 'fertility', 'allow_building'], 'BED' => ['garden_node_id', 'ordinal', 'unlocked']];
+            $allowedDetails = ['REGION' => ['climate'], 'SETTLEMENT' => ['settlement_kind', 'population', 'plot_limit'], 'BUILDING' => ['building_kind', 'level', 'condition', 'max_condition', 'operational_status'], 'ROOM' => ['area', 'exposure_class'], 'PLOT' => ['plot_kind', 'area', 'fertility', 'allow_building'], 'BED' => ['garden_node_id', 'ordinal', 'unlocked']];
             $detailRow = array_intersect_key($details, array_flip(array_merge($allowedDetails[$type], ['template_revision_id'])));
             if ($type === 'BED' && (($details['garden_node_id'] ?? null) !== (int)$parent['id'] || !is_int($details['ordinal'] ?? null) || $details['ordinal'] < 1 || $details['ordinal'] > 10)) throw new GameError('INVALID_BED', 'Некорректная грядка.', 422);
             $this->db->createCommand()->insert($table, ['node_id' => $id] + $detailRow)->execute();
         }
+        if ($type === 'BUILDING' && $row['owner_user_id'] !== null) BuildingFacilities::stockpile($this->db, $id, (int)$row['owner_user_id'], $details['building_kind'] ?? 'house');
         $this->touchAncestors($id);
         return $this->get($id);
     }
     public function assertFreePosition(int $parent, int $x, int $y, ?int $except = null): void
     {
+        WorldLayout::assertCell($this->get($parent), $x, $y);
         $query = (new Query())->select(['id', 'position_x', 'position_y', 'footprint_json'])->from('world_node')->where(['parent_id' => $parent])->andWhere(['<>', 'status', 'archived']);
         if ($except !== null) $query->andWhere(['<>', 'id', $except]);
         foreach ($query->all($this->db) as $row)
@@ -89,14 +93,14 @@ class WorldTree
     }
     public function nextPosition(int $parent): array
     {
-        $occupied = [];
+        $bounds = $this->get($parent); $occupied = [];
         foreach ((new Query())->select(['position_x', 'position_y', 'footprint_json'])->from('world_node')->where(['parent_id' => $parent])->andWhere(['<>', 'status', 'archived'])->all($this->db) as $row)
             foreach (WorldMapGeometry::cells($row['footprint_json'], (int)$row['position_x'], (int)$row['position_y']) as $cell)
                 $occupied[$cell['x'] . ':' . $cell['y']] = true;
         foreach ((new Query())->select(['x', 'y'])->from('world_map_cell')->where(['parent_id' => $parent, 'state' => 'open'])->orderBy(['y' => SORT_ASC, 'x' => SORT_ASC])->all($this->db) as $cell)
-            if (!isset($occupied[$cell['x'] . ':' . $cell['y']])) return ['x' => (int)$cell['x'], 'y' => (int)$cell['y']];
-        for ($i = 0; $i < 100000; $i++) {
-            $x = $i % 316; $y = intdiv($i, 316);
+            if (WorldLayout::contains($bounds, (int)$cell['x'], (int)$cell['y']) && !isset($occupied[$cell['x'] . ':' . $cell['y']])) return ['x' => (int)$cell['x'], 'y' => (int)$cell['y']];
+        for ($i = 0; $i < (int)$bounds['map_width'] * (int)$bounds['map_height']; $i++) {
+            $x = (int)$bounds['map_origin_x'] + $i % (int)$bounds['map_width']; $y = (int)$bounds['map_origin_y'] + intdiv($i, (int)$bounds['map_width']);
             if (!isset($occupied[$x . ':' . $y]) && !(new Query())->from('world_map_cell')->where(['parent_id' => $parent, 'x' => $x, 'y' => $y])->exists($this->db)) return compact('x', 'y');
         }
         throw new GameError('MAP_FULL', 'На карте не осталось свободных координат.', 422);

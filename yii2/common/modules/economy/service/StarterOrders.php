@@ -132,16 +132,19 @@ class StarterOrders
                 if (!$site) throw new GameError('STARTER_SITE_REQUIRED', 'Для сдачи заказа нужна собственная стартовая стоянка в этом поселении.');
                 $incomeNode = (int)($input['income_node_id'] ?? $site['id']);
                 if ($incomeNode !== (int)$site['id']) {
-                    $bed = (new Query())->from(['b' => 'world_bed'])->innerJoin(['n' => 'world_node'], '[[n.id]]=[[b.node_id]]')
-                        ->innerJoin(['p' => 'world_garden_purchase'], '[[p.node_id]]=[[b.garden_node_id]]')
-                        ->innerJoin(['g' => 'world_node'], '[[g.id]]=[[p.node_id]] AND [[n.parent_id]]=[[g.id]]')
+                    // Deprecated bed IDs remain accepted; all new clients select the garden's finances.
+                    $bed = (new Query())->select(['b.garden_node_id', 'n.revision'])->from(['b' => 'world_bed'])->innerJoin(['n' => 'world_node'], '[[n.id]]=[[b.node_id]]')
+                        ->where(['b.node_id' => $incomeNode, 'b.unlocked' => 1, 'n.status' => 'active', 'n.owner_user_id' => $user])->one($this->db);
+                    if ($bed) { $revisions['node:' . $incomeNode] = (int)$bed['revision']; $incomeNode = (int)$bed['garden_node_id']; }
+                    $garden = (new Query())->from(['p' => 'world_garden_purchase'])
+                        ->innerJoin(['g' => 'world_node'], '[[g.id]]=[[p.node_id]]')
                         ->innerJoin(['m' => 'world_membership'], '[[m.id]]=[[p.membership_id]]')
-                        ->where(['b.node_id' => $incomeNode, 'b.unlocked' => 1, 'n.status' => 'active', 'n.owner_user_id' => $user,
-                            'g.status' => 'active', 'g.owner_user_id' => $user, 'g.parent_id' => $place['id'],
+                        ->where(['g.id' => $incomeNode, 'g.status' => 'active', 'g.owner_user_id' => $user, 'g.parent_id' => $site['id'],
                             'm.user_id' => $user, 'm.starter_site_id' => $site['id']])->exists($this->db);
-                    $crop = (new Query())->from('world_crop_revision')->where(['yield_item_id' => $order['item_id'], 'status' => ['published', 'superseded']])->exists($this->db);
-                    if (!$bed || !$crop) throw new GameError('BED_INCOME_UNAVAILABLE', 'Доход от урожая можно направить только в казну своей открытой грядки.', 403);
+                    $crop = (new Query())->from('world_crop_revision')->where(['yield_item_id' => $order['item_id'], 'status' => ['published', 'superseded', 'withdrawn']])->exists($this->db);
+                    if (!$garden || !$crop) throw new GameError('GARDEN_INCOME_UNAVAILABLE', 'Доход от урожая можно направить в казну своего огорода на этой стоянке.', 403);
                 }
+                $terms['income_node_id'] = $incomeNode;
                 $used = (int)(new Query())->from('economy_order_fulfillment')->where(['order_id' => $order['id'], 'user_id' => $user])->sum('quantity', $this->db);
                 if ($input['quantity'] > (int)$order['remaining_quantity'] || $input['quantity'] > (int)$order['per_user_limit'] - $used) throw new GameError('ORDER_QUANTITY_CHANGED', 'Превышен остаток заказа или ваш лимит.');
                 $selected = (new CanonicalInventory(new CraftStorage($this->db)))->inspectOrderDelivery($user, $input['inventory_id'], (int)$order['item_id'], $input['quantity']);
@@ -159,7 +162,7 @@ class StarterOrders
                 $revisions['inventory:' . $selected['row']['id']] = (int)$selected['row']['revision'];
                 $revisions['storage:' . $selected['storage']['id']] = (int)$selected['storage']['revision'];
                 $terms += ['item_id' => (int)$order['item_id'], 'site_node_id' => (int)$site['id'], 'income_node_id' => $incomeNode,
-                    'earned' => $earning->decimal(), 'destination' => $incomeNode === (int)$site['id'] ? 'site_treasury' : 'bed_treasury', 'income_policy' => $policy, 'goods_consumed' => true];
+                    'earned' => $earning->decimal(), 'destination' => $incomeNode === (int)$site['id'] ? 'site_treasury' : 'garden_treasury', 'income_policy' => $policy, 'goods_consumed' => true];
                 $result['site'] = $site;
             }
         }
@@ -195,7 +198,7 @@ class StarterOrders
                 if ($terms['income_node_id'] === $site) (new StarterIncomePolicy($this->db))->initialize($site, $payload['node_id'], (int)$order['starter_history_id'], $operation, $id);
                 $store = new CraftStorage($this->db); $store->operationId = $operation;
                 $storages[] = (new CanonicalInventory($store))->deliverOrder($user, $payload['inventory_id'], (int)$order['item_id'], $payload['quantity']);
-                $transfer = $spend->pay((int)$order['commitment_id'], $terms['income_node_id'], Money::parse($terms['earned']), $operation, $terms['destination'] === 'bed_treasury' ? 'crop_purchase' : 'order_payment');
+                $transfer = $spend->pay((int)$order['commitment_id'], $terms['income_node_id'], Money::parse($terms['earned']), $operation, $terms['destination'] === 'garden_treasury' ? 'crop_purchase' : 'order_payment');
                 $left = (int)$order['remaining_quantity'] - $payload['quantity'];
                 if ($this->db->createCommand()->update('economy_purchase_order', ['remaining_quantity' => $left, 'status' => $left ? 'open' : 'fulfilled', 'revision' => new Expression('[[revision]]+1'),
                     'closed_at' => $left ? null : $now, 'close_operation_id' => $left ? null : $operation], ['id' => $id, 'revision' => $order['revision'], 'status' => 'open'])->execute() !== 1) throw new \RuntimeException('Order update failed.');

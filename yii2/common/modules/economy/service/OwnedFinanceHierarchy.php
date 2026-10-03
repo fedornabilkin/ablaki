@@ -19,6 +19,7 @@ class OwnedFinanceHierarchy
         $policy = new WorldAccessPolicy($user);
         $node = (new WorldQuery($this->db, $policy))->node($root);
         if (!$node['permissions']['storage']) throw new GameError('FINANCE_OWNER_REQUIRED', 'Финансовая иерархия доступна владельцу исходного объекта.', 403);
+        if (!$node['has_finances']) throw new GameError('PARENT_BUDGET_REQUIRED', 'Откройте финансовый отчёт родительского объекта.', 422);
         $subject = (new Query())->select('id')->from('economy_subject')->where(['node_id' => $root])->scalar($this->db);
         $nodes = [$root => ['id' => $root, 'name' => $node['name'], 'type' => $node['type'], 'parent_node_id' => null, 'depth' => 0]];
         $frontier = $subject === false ? [] : [(int)$subject]; $subjects = $subject === false ? [] : [(int)$subject => $root]; $depth = 0;
@@ -28,7 +29,10 @@ class OwnedFinanceHierarchy
                 ->innerJoin(['r' => 'economy_parent_rule'], '[[r.history_id]]=[[h.id]] AND [[r.subject_id]]=[[h.subject_id]] AND [[r.revision]]=[[h.revision]]')
                 ->innerJoin(['s' => 'economy_subject'], '[[s.id]]=[[h.subject_id]]')
                 ->innerJoin(['n' => 'world_node'], '[[n.id]]=[[s.node_id]]')
-                ->where(['h.parent_subject_id' => $frontier, 'h.effective_to' => null, 'n.owner_user_id' => $user]);
+                ->leftJoin(['b' => 'world_building'], '[[b.node_id]]=[[n.id]]')
+                ->where(['h.parent_subject_id' => $frontier, 'h.effective_to' => null, 'n.owner_user_id' => $user])
+                ->andWhere(['not in', 'n.node_type', ['ROOM', 'BED']])
+                ->andWhere(['or', ['b.building_kind' => null], ['<>', 'b.building_kind', 'warehouse']]);
             $rows = $policy->filter($query)->orderBy(['n.id' => SORT_ASC])->limit(self::MAX_NODES - count($nodes) + 1)->all($this->db);
             if (!$rows) break;
             if (++$depth > self::MAX_DEPTH || count($nodes) + count($rows) > self::MAX_NODES) throw new GameError('FINANCE_SCOPE_TOO_LARGE', 'Выберите меньшую финансовую ветвь для отчёта.', 422, ['max_nodes' => self::MAX_NODES, 'max_depth' => self::MAX_DEPTH]);

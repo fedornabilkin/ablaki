@@ -43,6 +43,7 @@ class EconomyAccountBackfill
     /** Current physical chain selects eligibility only; existing financial parents are retained. */
     private function chain(array $node): array
     {
+        if ((new EconomyHierarchy($this->db))->financialNode((int)$node['id']) !== (int)$node['id']) return ['nodes' => [], 'skip' => 'parent_budget'];
         $chain = []; $cursor = $node; $inactive = false;
         while ($cursor) {
             $id = (int)$cursor['id'];

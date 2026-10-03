@@ -45,8 +45,9 @@ class WorldNodeEditor
             if (!$this->db->schema->getTableSchema($table)) continue;
             $where = ['or']; foreach ($columns as $column) $where[] = [$column => $ids];
             $query = (new Query())->from($table)->where($where);
-            if ($emptyPlacementAllowed && $table === 'craft_storage') $query->andWhere(['or', ['<>', 'kind', 'placement'],
-                ['id' => (new Query())->select('storage_id')->from('craft_inventory')->where(['>', 'item_quantity', 0])]]);
+            if ($emptyPlacementAllowed && $table === 'craft_storage') $query->andWhere(['or', ['not in', 'kind', ['placement', 'stockpile']],
+                ['id' => (new Query())->select('storage_id')->from('craft_inventory')->where(['>', 'item_quantity', 0])],
+                ['id' => (new Query())->select('p.storage_id')->from(['p' => 'world_warehouse_policy'])->innerJoin(['s' => 'craft_storage'], '[[s.id]]=[[p.storage_id]]')->where('[[s.capacity]]>[[p.initial_capacity]]')]]);
             if ($archiving && $table === 'craft_storage') $query->andWhere(['or', ['<>', 'status', 'retired'], ['>', 'capacity', 0],
                 ['id' => (new Query())->select('storage_id')->from('craft_inventory')->where(['>', 'item_quantity', 0])]]);
             if ($query->exists($this->db)) $found[] = $table;
@@ -69,7 +70,7 @@ class WorldNodeEditor
             $revisions['node:' . $input['id']] = $input['revision'];
         }
         if ($action === 'delete') {
-            $this->requireUnused($input['id'], true);
+            $this->requireUnused($input['id'], true, true);
             if ((new Query())->from('world_registry')->where(['active_world_id' => $input['id']])->exists($this->db)) throw new GameError('ACTIVE_WORLD', 'Действующий мир нельзя удалить.');
             if ((new Query())->from('world_node')->where(['parent_id' => $input['id'], 'status' => 'active'])->exists($this->db)) throw new GameError('NODE_NOT_EMPTY', 'Сначала удалите или перенесите дочерние объекты.');
             return ['terms' => ['before' => $before, 'after' => ['status' => 'archived']], 'revisions' => $revisions];
@@ -82,6 +83,7 @@ class WorldNodeEditor
         $parent = $v['parent_id'] ? $tree->get($v['parent_id']) : null;
         $tree->assertParent($type, $parent);
         if ($parent && in_array($type, ['ROOM', 'BED'], true) && (int)$v['owner_user_id'] !== (int)$parent['owner_user_id']) throw new GameError('OWNER_MISMATCH', 'Комната или грядка должна принадлежать владельцу родительского объекта.', 422);
+        if ($parent && $type === 'BUILDING' && $d['building_kind'] === 'warehouse' && (int)$v['owner_user_id'] !== (int)$parent['owner_user_id']) throw new GameError('OWNER_MISMATCH', 'Склад должен принадлежать владельцу родительского объекта.', 422);
         if ($parent) {
             $revisions['node:' . $parent['id']] = (int)$parent['revision'];
             if ((new Query())->from(['c' => 'world_node_closure'])->innerJoin(['n' => 'world_node'], '[[n.id]]=[[c.ancestor_id]]')->where(['c.descendant_id' => $parent['id']])->andWhere(['<>', 'n.status', 'active'])->exists($this->db)) throw new GameError('INVALID_PARENT', 'Родитель находится в архиве.');
@@ -92,6 +94,7 @@ class WorldNodeEditor
         if (!$before && $parent && in_array($parent['node_type'], ['BUILDING', 'PLOT'], true)) $this->requireUnused((int)$parent['id'], false, $parent['node_type'] === 'BUILDING');
         if ($before) {
             $old = new WorldNodeForm($type); $old->populate($before); $oldInput = $old->payload($input['id']);
+            if ($type === 'BUILDING' && $oldInput['details']['building_kind'] !== $d['building_kind'] && (new Query())->from('craft_storage')->where(['node_id' => $input['id'], 'kind' => 'stockpile'])->exists($this->db)) throw new GameError('BUILDING_KIND_FIXED', 'Постройка уже имеет склад. Назначение такой постройки сохраняется.', 422);
             if ($oldInput['details'] !== $d) $this->requireUnused($input['id'], false, in_array($type, ['BUILDING', 'ROOM'], true));
             $structural = false;
             foreach (['parent_id', 'owner_user_id', 'visibility'] as $field) $structural = $structural || $oldInput['values'][$field] !== $v[$field];
@@ -125,6 +128,7 @@ class WorldNodeEditor
                     throw new GameError('MAP_CELL_CLOSED', 'Сначала откройте все ячейки полигона.', 422);
             }
         }
+        WorldLayout::resize($this->db, (int)$input['id'], $v);
         return ['terms' => ['before' => $before, 'after' => ['node' => $v, 'details' => $d]], 'revisions' => $revisions];
     }
     public function preview(int $user, array $input, string $action): array
@@ -142,11 +146,15 @@ class WorldNodeEditor
                 if ($action === 'create') $id = (int)$tree->create($input['values'], $input['details'])['id'];
                 else {
                     $id = $input['id'];
-                    if ($action === 'delete') $values = ['status' => 'archived'];
+                    if ($action === 'delete') {
+                        $values = ['status' => 'archived'];
+                        $this->db->createCommand()->update('craft_storage', ['status' => 'retired', 'capacity' => 0, 'revision' => new Expression('[[revision]]+1')], ['node_id' => $id, 'kind' => ['placement', 'stockpile']])->execute();
+                    }
                     else {
                         $values = $input['values']; $values['label'] = $values['name']; unset($values['node_type'], $values['code'], $values['parent_id']);
                         if ((int)$before['node']['parent_id'] !== (int)$input['values']['parent_id']) $tree->move($id, $input['values']['parent_id']);
                         if ($input['details']) $this->db->createCommand()->update('world_' . strtolower($before['node']['node_type']), $input['details'], ['node_id' => $id])->execute();
+                        if ($before['node']['node_type'] === 'BUILDING' && $values['owner_user_id'] !== null) BuildingFacilities::stockpile($this->db, $id, (int)$values['owner_user_id'], $input['details']['building_kind']);
                     }
                     $this->db->createCommand()->update('world_node', $values, ['id' => $id])->execute();
                     if ($input['values']['parent_id'] !== null && $input['values']['footprint_json'] === null

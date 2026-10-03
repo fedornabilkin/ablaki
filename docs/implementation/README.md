@@ -5,4 +5,6 @@
 
 Точки входа: [общее устройство мира](world/world-implementation.md), [админка и CRUD](world/world-admin-crud.md), [размещение и крафт](world/world-workspace-implementation.md), [хранилища](world/world-storage-implementation.md), [классический крафт](craft/classic-craft.md).
 
+Дом, фиксированные карты, выращивание и производственные склады описаны в [world-living-spaces](world/world-living-spaces.md).
+
 Статус оставшихся задач ведётся в [планах](../plan/); инструкции выкладки находятся в [operations](../operations/), а контракты — в [api](../api/).

@@ -3,7 +3,7 @@
   "info": {
     "title": "Ablaki funded starter orders",
     "version": "1.0.0",
-    "description": "Finite municipal demand for gatherable materials or published crop yields. The buyer fully reserves real budget. Delivery consumes selected backpack goods; payment enters the campsite treasury or, for a published crop yield, an owned unlocked bed's treasury when income_node_id is supplied. Expiry releases unused reserves."
+    "description": "Finite municipal demand for gatherable materials or published crop yields. The buyer fully reserves real budget. Delivery consumes selected backpack goods; payment enters the campsite treasury or, for a published crop yield, an owned unlocked bed's treasury when income_node_id is supplied. Expiry releases unused reserves. For crop revenue select income_node_id of the owned garden inside the starter campsite. Bed IDs are deprecated compatibility input and normalize to the garden; no bed treasury is created."
   },
   "servers": [
     {
@@ -729,7 +729,10 @@
             "minimum": 1,
             "maximum": 2147483647
           },
-          "income_node_id": {"type": "integer", "minimum": 1},
+          "income_node_id": {
+            "type": "integer",
+            "minimum": 1
+          },
           "earned": {
             "type": "string",
             "pattern": "^(0|[1-9][0-9]{0,14})\\.[0-9]{4}$",
@@ -738,10 +741,14 @@
           "destination": {
             "type": "string",
             "enum": [
-              "site_treasury", "bed_treasury"
+              "site_treasury",
+              "garden_treasury"
             ]
           },
-          "income_policy": {"type": "object", "description": "Site starter policy or the bed's published collection policy."},
+          "income_policy": {
+            "type": "object",
+            "description": "Site starter policy or the bed's published collection policy."
+          },
           "goods_consumed": {
             "type": "boolean",
             "enum": [

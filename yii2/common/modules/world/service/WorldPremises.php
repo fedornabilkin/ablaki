@@ -37,17 +37,13 @@ class WorldPremises
     private function ready(): bool { return $this->flags->capabilities()['world_write'] && $this->flags->capabilities()['storage_v2'] && WalletSchema::ready($this->db); }
     private function area(array $site): array
     {
-        // Unaccounted buildings cannot be silently assigned zero footprint.
-        $unknown = (new Query())->from(['n' => 'world_node'])->leftJoin(['p' => 'world_premises_purchase'], '[[p.building_id]]=[[n.id]]')
-            ->leftJoin(['s' => 'world_shelter_deployment'], '[[s.node_id]]=[[n.id]]')
-            ->leftJoin(['c' => 'world_construction'], '[[c.node_id]]=[[n.id]]')
-            ->leftJoin(['cs' => 'world_construction_site'], '[[cs.project_id]]=[[c.id]]')
-            ->where(['n.parent_id' => $site['id'], 'n.node_type' => 'BUILDING', 'p.id' => null, 's.id' => null, 'cs.project_id' => null])->andWhere(['<>', 'n.status', 'archived'])->exists($this->db);
-        $used = (int)(new Query())->from(['p' => 'world_premises_purchase'])->leftJoin(['d' => 'world_building_demolition'], '[[d.purchase_id]]=[[p.id]]')
-            ->where(['p.plot_id' => $site['id'], 'd.id' => null])->sum('p.area', $this->db);
-        $used += (int)(new Query())->from(['s' => 'world_construction_site'])->innerJoin(['c' => 'world_construction'], '[[c.id]]=[[s.project_id]]')->where(['s.plot_id' => $site['id'], 'c.status' => ['constructing', 'paused']])->sum('s.area', $this->db);
-        return ['total' => (int)$site['details']['area'], 'used' => $used, 'available' => $unknown ? 0 : max(0, (int)$site['details']['area'] - $used), 'unaccounted_building' => $unknown];
+        $occupied = [];
+        foreach ((new Query())->from('world_node')->where(['parent_id' => $site['id']])->andWhere(['<>', 'status', 'archived'])->all($this->db) as $child)
+            foreach (WorldMapGeometry::cells($child['footprint_json'], (int)$child['position_x'], (int)$child['position_y']) as $cell) $occupied[$cell['x'] . ':' . $cell['y']] = true;
+        $total = $site['map']['width'] * $site['map']['height']; $used = count($occupied);
+        return ['total' => $total, 'used' => $used, 'available' => max(0, $total - $used), 'unaccounted_building' => false];
     }
+
     public function listing(int $user, int $id, int $page, string $search): array
     {
         $c = $this->context($user, $id);
@@ -77,7 +73,7 @@ class WorldPremises
     {
         $existingRepair = $body['repair_for_existing'] ?? false;
         if (!is_bool($existingRepair) || ($existingRepair && empty($body['repair']))) throw new GameError('INVALID_REPAIR_POLICY', 'Для предложения ремонта прежним зданиям задайте условия ремонта.', 422);
-        if (!is_string($body['name'] ?? null) || trim($body['name']) === '' || mb_strlen($body['name'], 'UTF-8') > 120 || !in_array($body['kind'] ?? null, ['canopy', 'workroom', 'house'], true)) throw new GameError('INVALID_PREMISES', 'Укажите название и тип помещения.', 422);
+        if (!is_string($body['name'] ?? null) || trim($body['name']) === '' || mb_strlen($body['name'], 'UTF-8') > 120 || !in_array($body['kind'] ?? null, ['canopy', 'workroom', 'house', 'forge', 'workshop', 'warehouse'], true)) throw new GameError('INVALID_PREMISES', 'Укажите название и тип помещения.', 422);
         foreach (['area', 'slots'] as $key) if (!is_int($body[$key] ?? null) || $body[$key] < 1 || $body[$key] > 4) throw new GameError('INVALID_PREMISES', 'Площадь и количество мест должны быть от 1 до 4.', 422);
         if ($body['slots'] > $body['area']) throw new GameError('INVALID_PREMISES', 'Для каждого места оборудования нужна единица площади.', 422);
         if (!is_string($body['price'] ?? null)) throw new GameError('INVALID_AMOUNT', 'Укажите цену строкой.', 422);
@@ -120,7 +116,7 @@ class WorldPremises
             (new RequirementEvaluator($this->db))->requireSatisfied($user, $config['requirements'] ?? []);
             if ($config['kind'] === 'house' && !(new Query())->from('world_membership')->where(['user_id' => $user, 'starter_site_id' => $site['id'], 'world_id' => $site['root_id']])->exists($this->db)) throw new GameError('HOUSING_SITE_REQUIRED', 'Дом с ночлегом можно купить на своей стартовой стоянке.');
             $area = $this->area($site);
-            if ($area['available'] < $config['area']) throw new GameError('PREMISES_AREA_REQUIRED', 'На площадке недостаточно свободной площади.');
+            if ($area['available'] < 1) throw new GameError('PREMISES_AREA_REQUIRED', 'На площадке недостаточно свободной площади.');
             $accounts = (new EconomyHierarchy($this->db))->accounts($site['id']); $budget = $accounts['budget'] ?? null;
             if (!$budget) throw new GameError('INSUFFICIENT_BUDGET', 'Сначала пополните бюджет площадки.');
             $spend = new BudgetSpending($this->db); $price = Money::parse($config['price']);

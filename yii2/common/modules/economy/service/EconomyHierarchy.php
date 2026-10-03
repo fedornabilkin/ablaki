@@ -12,8 +12,27 @@ class EconomyHierarchy
     private $db;
     public function __construct(Connection $db) { $this->db = $db; }
 
+    public function financialNode(int $node): int
+    {
+        $origin = $node; $owner = null;
+        for ($depth = 0; $depth < 33; $depth++) {
+            $row = (new Query())->from('world_node')->where(['id' => $node])->one($this->db);
+            if (!$row) throw new \common\services\game\GameError('NODE_NOT_FOUND', 'Объект не найден.', 404);
+            if ($depth === 0) $owner = $row['owner_user_id'];
+            $warehouse = $row['node_type'] === 'BUILDING' && (new Query())->from('world_building')->where(['node_id' => $node, 'building_kind' => 'warehouse'])->exists($this->db);
+            if (!in_array($row['node_type'], ['ROOM', 'BED'], true) && !$warehouse) {
+                if ($origin !== $node && $row['owner_user_id'] != $owner) throw new \common\services\game\GameError('FINANCIAL_OWNER_MISMATCH', 'Владельцы объекта и его финансового родителя должны совпадать. Обратитесь к администратору.');
+                return $node;
+            }
+            if (!$row['parent_id']) throw new \LogicException('Financial parent missing.');
+            $node = (int)$row['parent_id'];
+        }
+        throw new \LogicException('Financial ancestry cycle.');
+    }
+
     public function accounts(int $node): array
     {
+        $node = $this->financialNode($node);
         return (new Query())->select('a.*')->from(['a' => 'economy_account'])->innerJoin(['s' => 'economy_subject'], '[[s.id]]=[[a.subject_id]]')
             ->where(['s.node_id' => $node, 'a.currency' => 'Cr'])->indexBy('role')->all($this->db);
     }
@@ -23,6 +42,7 @@ class EconomyHierarchy
     {
         if (!$this->db->getTransaction()) throw new \LogicException('Economy provisioning requires a world command transaction.');
         if ((new \common\modules\world\service\WorldTree($this->db))->isShelter($node)) throw new \common\services\game\GameError('SHELTER_HAS_NO_BUDGET', 'Переносной шалаш не имеет отдельного бюджета. Для развития используйте бюджет стоянки.');
+        $node = $this->financialNode($node);
         WalletMaintenance::writable($this->db);
         if (!(new Locks($this->db))->row('world_registry', ['id' => 1])) throw new \RuntimeException('World registry unavailable.');
         if (!(new Query())->from('game_operation')->where(['id' => $operation])->exists($this->db)) throw new \LogicException('Economy provisioning requires an existing operation.');
@@ -39,6 +59,7 @@ class EconomyHierarchy
         if (!$top || $top['node_type'] !== 'WORLD') throw new \RuntimeException('Financial ancestry needs a world root.');
         $parent = null;
         foreach (array_reverse($chain, true) as $place) {
+            if ($this->financialNode((int)$place['id']) !== (int)$place['id']) continue;
             $subject = (new Query())->from('economy_subject')->where(['node_id' => $place['id']])->one($this->db); $changed = false;
             if (!$subject) {
                 $this->db->createCommand()->insert('economy_subject', ['node_id' => $place['id'], 'actor_id' => null, 'asset_instance_id' => null, 'created_at' => time()])->execute();
@@ -70,6 +91,7 @@ class EconomyHierarchy
     /** Private financial metadata; the caller must check ownership before exposing this. */
     public function current(int $node): ?array
     {
+        $node = $this->financialNode($node);
         $row = (new Query())->select(['h.*', 'parent_node_id' => 'p.node_id'])->from(['s' => 'economy_subject'])
             ->innerJoin(['r' => 'economy_parent_rule'], '[[r.subject_id]]=[[s.id]]')
             ->innerJoin(['h' => 'economy_parent_history'], '[[h.id]]=[[r.history_id]] AND [[h.subject_id]]=[[s.id]] AND [[h.revision]]=[[r.revision]]')

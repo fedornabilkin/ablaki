@@ -8,7 +8,7 @@ $this->params['breadcrumbs'][] = ['label' => 'Мир', 'url' => ['index']];
 $this->params['breadcrumbs'][] = ['label' => $context['settlement_name'], 'url' => ['view', 'id' => $context['settlement_id']]];
 $this->params['breadcrumbs'][] = 'Каталог построек';
 $id = $context['settlement_id'];
-$kinds = ['canopy' => 'Навес', 'workroom' => 'Мастерская', 'house' => 'Дом'];
+$kinds = ['canopy' => 'Навес', 'workroom' => 'Мастерская', 'house' => 'Дом', 'forge' => 'Кузница', 'workshop' => 'Столярная мастерская', 'warehouse' => 'Большой склад'];
 ?>
 <div class="box box-primary"><div class="box-body">
     <p>Готовые постройки приобретаются из бюджета участка. Оплата поступает в казну поселения.
