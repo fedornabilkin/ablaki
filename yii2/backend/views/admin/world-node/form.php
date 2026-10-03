@@ -24,10 +24,17 @@ $choices = WorldNodeForm::choices();
         <?php endif ?>
         <?= $form->field($model, 'owner_user_id')->input('number', ['min' => 1])->hint('Пустое значение — системный объект. Создание объекта не выдаёт вещи, кредиты или платные права.') ?>
         <?= $form->field($model, 'visibility')->dropDownList($choices['visibility']) ?>
-        <?= $form->field($model, 'portable')->checkbox()->hint('РџРѕ СѓРјРѕР»С‡Р°РЅРёСЋ РѕР±СЉРµРєС‚ Р·Р°РєСЂРµРїР»С‘РЅ РЅР° РјРµСЃС‚Рµ. Р’РєР»СЋС‡РёС‚Рµ, С‚РѕР»СЊРєРѕ РµСЃР»Рё РµРіРѕ Р±РµР·РѕРїР°СЃРЅРѕ РїРµСЂРµРЅРѕСЃРёС‚СЊ.') ?>
+        <?= $form->field($model, 'portable')->checkbox()->hint('По умолчанию объект закреплён на месте. Включайте перенос только для подходящих объектов.') ?>
         <div class="row">
             <?php foreach (['position_x', 'position_y', 'position'] as $field): ?>
                 <div class="col-md-4"><?= $form->field($model, $field)->input('number', ['min' => -1000000, 'max' => 1000000]) ?></div>
+            <?php endforeach ?>
+        </div>
+        <h3>Карта внутри объекта</h3>
+        <p>Уменьшение возможно, только если все объекты и исследованные ячейки остаются внутри карты.</p>
+        <div class="row">
+            <?php foreach (['map_width', 'map_height', 'map_origin_x', 'map_origin_y'] as $field): ?>
+                <div class="col-md-3"><?= $form->field($model, $field)->input('number') ?></div>
             <?php endforeach ?>
         </div>
         <?= $form->field($model, 'footprint')->textarea(['rows' => 3, 'maxlength' => 2048])->hint('Необязательно. Абсолютные вершины JSON, например [{"x":0,"y":0},{"x":2,"y":0},{"x":2,"y":1},{"x":0,"y":1}]. Пустое поле = одна ячейка.') ?>

@@ -16,6 +16,6 @@ class FinanceReadSnapshot
             // Yii sets the begin() isolation argument before BEGIN. PostgreSQL needs it inside.
             if ($this->db->driverName === 'pgsql') $this->db->getTransaction()->setIsolationLevel(Transaction::REPEATABLE_READ);
             return $read();
-        }, $this->db->driverName === 'pgsql' ? null : Transaction::REPEATABLE_READ);
+        }, $this->db->driverName === 'pgsql' ? null : ($this->db->driverName === 'sqlite' ? Transaction::SERIALIZABLE : Transaction::REPEATABLE_READ));
     }
 }

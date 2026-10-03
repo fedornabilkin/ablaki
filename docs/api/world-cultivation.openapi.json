@@ -2,8 +2,8 @@
   "openapi": "3.0.3",
   "info": {
     "title": "World crop cultivation",
-    "version": "1.0.0",
-    "description": "Cultivation on owned unlocked beds. Commands use server preview, immutable quote and idempotency key. Harvest terms include work_efficiency_bps and the exact health-adjusted item quantity; overdue night resolution blocks the harvest until the worker catches up."
+    "version": "1.1.0",
+    "description": "Owned, unlocked, paid bed and membership required. Dig before each sow. Seeds and initial water come from the backpack. Water is due at water_due_at and on time strictly before water_deadline_at. Missing any watering window halves yield once (integer floor, minimum one item), with existing health efficiency applied. Growth does not pause or shift. Harvest is permitted from ready_at until strictly before expires_at. Expired crops grant nothing and must be cleared using cancel. Cancel refunds no resources. Preview may report missing materials or output fits=false; execution rejects atomically. GET projects elapsed time without writes. Commands require preview, revisions and an idempotency key."
   },
   "servers": [
     {
@@ -155,7 +155,8 @@
                     "bed_id",
                     "cycle",
                     "writable",
-                    "server_time"
+                    "server_time",
+                    "dug"
                   ],
                   "properties": {
                     "bed_id": {
@@ -178,6 +179,9 @@
                       "type": "integer",
                       "minimum": 1,
                       "maximum": 2147483647
+                    },
+                    "dug": {
+                      "type": "boolean"
                     }
                   }
                 }
@@ -387,7 +391,7 @@
             }
           }
         },
-        "description": "world_read, world_write, storage_v2; owned active paid bed and membership required. Backpack sources/output use canonical inventory. Sow consumes seeds and initial water. Water is available only when due; missed time extends ready_at. Harvest consumes the cycle only after successful deposit. Cancel has no refund. Preview may show missing materials/output fits=false; execute then rejects atomically."
+        "description": "Owned, unlocked, paid bed and membership required. Dig before each sow. Seeds and initial water come from the backpack. Water is due at water_due_at and on time strictly before water_deadline_at. Missing any watering window halves yield once (integer floor, minimum one item), with existing health efficiency applied. Growth does not pause or shift. Harvest is permitted from ready_at until strictly before expires_at. Expired crops grant nothing and must be cleared using cancel. Cancel refunds no resources. Preview may report missing materials or output fits=false; execution rejects atomically. GET projects elapsed time without writes. Commands require preview, revisions and an idempotency key."
       }
     },
     "/world/beds/{id}/sow": {
@@ -514,7 +518,7 @@
             }
           }
         },
-        "description": "world_read, world_write, storage_v2; owned active paid bed and membership required. Backpack sources/output use canonical inventory. Sow consumes seeds and initial water. Water is available only when due; missed time extends ready_at. Harvest consumes the cycle only after successful deposit. Cancel has no refund. Preview may show missing materials/output fits=false; execute then rejects atomically."
+        "description": "Owned, unlocked, paid bed and membership required. Dig before each sow. Seeds and initial water come from the backpack. Water is due at water_due_at and on time strictly before water_deadline_at. Missing any watering window halves yield once (integer floor, minimum one item), with existing health efficiency applied. Growth does not pause or shift. Harvest is permitted from ready_at until strictly before expires_at. Expired crops grant nothing and must be cleared using cancel. Cancel refunds no resources. Preview may report missing materials or output fits=false; execution rejects atomically. GET projects elapsed time without writes. Commands require preview, revisions and an idempotency key."
       }
     },
     "/world/beds/{id}/water-preview": {
@@ -626,7 +630,7 @@
             }
           }
         },
-        "description": "world_read, world_write, storage_v2; owned active paid bed and membership required. Backpack sources/output use canonical inventory. Sow consumes seeds and initial water. Water is available only when due; missed time extends ready_at. Harvest consumes the cycle only after successful deposit. Cancel has no refund. Preview may show missing materials/output fits=false; execute then rejects atomically."
+        "description": "Owned, unlocked, paid bed and membership required. Dig before each sow. Seeds and initial water come from the backpack. Water is due at water_due_at and on time strictly before water_deadline_at. Missing any watering window halves yield once (integer floor, minimum one item), with existing health efficiency applied. Growth does not pause or shift. Harvest is permitted from ready_at until strictly before expires_at. Expired crops grant nothing and must be cleared using cancel. Cancel refunds no resources. Preview may report missing materials or output fits=false; execution rejects atomically. GET projects elapsed time without writes. Commands require preview, revisions and an idempotency key."
       }
     },
     "/world/beds/{id}/water": {
@@ -745,7 +749,7 @@
             }
           }
         },
-        "description": "world_read, world_write, storage_v2; owned active paid bed and membership required. Backpack sources/output use canonical inventory. Sow consumes seeds and initial water. Water is available only when due; missed time extends ready_at. Harvest consumes the cycle only after successful deposit. Cancel has no refund. Preview may show missing materials/output fits=false; execute then rejects atomically."
+        "description": "Owned, unlocked, paid bed and membership required. Dig before each sow. Seeds and initial water come from the backpack. Water is due at water_due_at and on time strictly before water_deadline_at. Missing any watering window halves yield once (integer floor, minimum one item), with existing health efficiency applied. Growth does not pause or shift. Harvest is permitted from ready_at until strictly before expires_at. Expired crops grant nothing and must be cleared using cancel. Cancel refunds no resources. Preview may report missing materials or output fits=false; execution rejects atomically. GET projects elapsed time without writes. Commands require preview, revisions and an idempotency key."
       }
     },
     "/world/beds/{id}/harvest-preview": {
@@ -857,7 +861,7 @@
             }
           }
         },
-        "description": "world_read, world_write, storage_v2; owned active paid bed and membership required. Backpack sources/output use canonical inventory. Sow consumes seeds and initial water. Water is available only when due; missed time extends ready_at. Harvest consumes the cycle only after successful deposit. Cancel has no refund. Preview may show missing materials/output fits=false; execute then rejects atomically."
+        "description": "Owned, unlocked, paid bed and membership required. Dig before each sow. Seeds and initial water come from the backpack. Water is due at water_due_at and on time strictly before water_deadline_at. Missing any watering window halves yield once (integer floor, minimum one item), with existing health efficiency applied. Growth does not pause or shift. Harvest is permitted from ready_at until strictly before expires_at. Expired crops grant nothing and must be cleared using cancel. Cancel refunds no resources. Preview may report missing materials or output fits=false; execution rejects atomically. GET projects elapsed time without writes. Commands require preview, revisions and an idempotency key."
       }
     },
     "/world/beds/{id}/harvest": {
@@ -976,7 +980,7 @@
             }
           }
         },
-        "description": "world_read, world_write, storage_v2; owned active paid bed and membership required. Backpack sources/output use canonical inventory. Sow consumes seeds and initial water. Water is available only when due; missed time extends ready_at. Harvest consumes the cycle only after successful deposit. Cancel has no refund. Preview may show missing materials/output fits=false; execute then rejects atomically."
+        "description": "Owned, unlocked, paid bed and membership required. Dig before each sow. Seeds and initial water come from the backpack. Water is due at water_due_at and on time strictly before water_deadline_at. Missing any watering window halves yield once (integer floor, minimum one item), with existing health efficiency applied. Growth does not pause or shift. Harvest is permitted from ready_at until strictly before expires_at. Expired crops grant nothing and must be cleared using cancel. Cancel refunds no resources. Preview may report missing materials or output fits=false; execution rejects atomically. GET projects elapsed time without writes. Commands require preview, revisions and an idempotency key."
       }
     },
     "/world/beds/{id}/cancel-preview": {
@@ -1088,7 +1092,7 @@
             }
           }
         },
-        "description": "world_read, world_write, storage_v2; owned active paid bed and membership required. Backpack sources/output use canonical inventory. Sow consumes seeds and initial water. Water is available only when due; missed time extends ready_at. Harvest consumes the cycle only after successful deposit. Cancel has no refund. Preview may show missing materials/output fits=false; execute then rejects atomically."
+        "description": "Owned, unlocked, paid bed and membership required. Dig before each sow. Seeds and initial water come from the backpack. Water is due at water_due_at and on time strictly before water_deadline_at. Missing any watering window halves yield once (integer floor, minimum one item), with existing health efficiency applied. Growth does not pause or shift. Harvest is permitted from ready_at until strictly before expires_at. Expired crops grant nothing and must be cleared using cancel. Cancel refunds no resources. Preview may report missing materials or output fits=false; execution rejects atomically. GET projects elapsed time without writes. Commands require preview, revisions and an idempotency key."
       }
     },
     "/world/beds/{id}/cancel": {
@@ -1207,7 +1211,7 @@
             }
           }
         },
-        "description": "world_read, world_write, storage_v2; owned active paid bed and membership required. Backpack sources/output use canonical inventory. Sow consumes seeds and initial water. Water is available only when due; missed time extends ready_at. Harvest consumes the cycle only after successful deposit. Cancel has no refund. Preview may show missing materials/output fits=false; execute then rejects atomically."
+        "description": "Owned, unlocked, paid bed and membership required. Dig before each sow. Seeds and initial water come from the backpack. Water is due at water_due_at and on time strictly before water_deadline_at. Missing any watering window halves yield once (integer floor, minimum one item), with existing health efficiency applied. Growth does not pause or shift. Harvest is permitted from ready_at until strictly before expires_at. Expired crops grant nothing and must be cleared using cancel. Cancel refunds no resources. Preview may report missing materials or output fits=false; execution rejects atomically. GET projects elapsed time without writes. Commands require preview, revisions and an idempotency key."
       }
     },
     "/world/crops/publish-preview": {
@@ -1411,6 +1415,237 @@
           }
         },
         "description": "Requires world-manage. Resources must exist in current craft catalog, active and non-equipment/non-chest. water_item_id=null requires zero water quantity and interval; otherwise both are positive. Existing cycles retain rules. Credits are not minted on harvest; sales are a separate transaction."
+      }
+    },
+    "/world/beds/{id}/dig-preview": {
+      "post": {
+        "summary": "Dig empty bed preview",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Quote"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Rejected; no partial domain writes",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Rejected; no partial domain writes",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Rejected; no partial domain writes",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Rejected; no partial domain writes",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Rejected; no partial domain writes",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rejected; no partial domain writes",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Rejected; no partial domain writes",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 2147483647
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [],
+                "properties": {}
+              }
+            }
+          }
+        },
+        "description": "Owned, unlocked, paid bed and membership required. Dig before each sow. Seeds and initial water come from the backpack. Water is due at water_due_at and on time strictly before water_deadline_at. Missing any watering window halves yield once (integer floor, minimum one item), with existing health efficiency applied. Growth does not pause or shift. Harvest is permitted from ready_at until strictly before expires_at. Expired crops grant nothing and must be cleared using cancel. Cancel refunds no resources. Preview may report missing materials or output fits=false; execution rejects atomically. GET projects elapsed time without writes. Commands require preview, revisions and an idempotency key."
+      }
+    },
+    "/world/beds/{id}/dig": {
+      "post": {
+        "summary": "Dig empty bed",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Result"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Rejected; no partial domain writes",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Rejected; no partial domain writes",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Rejected; no partial domain writes",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Rejected; no partial domain writes",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Rejected; no partial domain writes",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rejected; no partial domain writes",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Rejected; no partial domain writes",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 2147483647
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "allOf": [
+                  {
+                    "type": "object",
+                    "required": [],
+                    "properties": {}
+                  },
+                  {
+                    "$ref": "#/components/schemas/Command"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "description": "Owned, unlocked, paid bed and membership required. Dig before each sow. Seeds and initial water come from the backpack. Water is due at water_due_at and on time strictly before water_deadline_at. Missing any watering window halves yield once (integer floor, minimum one item), with existing health efficiency applied. Growth does not pause or shift. Harvest is permitted from ready_at until strictly before expires_at. Expired crops grant nothing and must be cleared using cancel. Cancel refunds no resources. Preview may report missing materials or output fits=false; execution rejects atomically. GET projects elapsed time without writes. Commands require preview, revisions and an idempotency key."
       }
     }
   },
@@ -1640,6 +1875,18 @@
             "type": "integer",
             "minimum": 0,
             "maximum": 31536000
+          },
+          "water_window_seconds": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 31536000,
+            "default": 60
+          },
+          "harvest_window_seconds": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 31536000,
+            "default": 86400
           }
         }
       },
@@ -1658,7 +1905,9 @@
           "water_interval_seconds",
           "id",
           "crop_id",
-          "version"
+          "version",
+          "water_window_seconds",
+          "harvest_window_seconds"
         ],
         "properties": {
           "code": {
@@ -1725,6 +1974,18 @@
             "type": "integer",
             "minimum": 1,
             "maximum": 2147483647
+          },
+          "water_window_seconds": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 31536000,
+            "default": 60
+          },
+          "harvest_window_seconds": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 31536000,
+            "default": 86400
           }
         }
       },
@@ -1736,7 +1997,13 @@
           "state",
           "ready_at",
           "water_due_at",
-          "revision"
+          "revision",
+          "name",
+          "water_deadline_at",
+          "expires_at",
+          "water_missed",
+          "yield_factor_bps",
+          "can_water"
         ],
         "properties": {
           "id": {
@@ -1754,7 +2021,8 @@
             "enum": [
               "growing",
               "needs_water",
-              "ripe"
+              "ripe",
+              "expired"
             ]
           },
           "ready_at": {
@@ -1770,6 +2038,31 @@
             "type": "integer",
             "minimum": 1,
             "maximum": 2147483647
+          },
+          "name": {
+            "type": "string"
+          },
+          "water_deadline_at": {
+            "type": "integer",
+            "format": "int64",
+            "nullable": true
+          },
+          "expires_at": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "water_missed": {
+            "type": "boolean"
+          },
+          "yield_factor_bps": {
+            "type": "integer",
+            "enum": [
+              5000,
+              10000
+            ]
+          },
+          "can_water": {
+            "type": "boolean"
           }
         }
       }

@@ -53,6 +53,20 @@ class WorldController extends \yii\rest\Controller
     public function actionAchievementPublishPreview(): array { return $this->achievementPublish(true); }
     public function actionAchievementPublish(): array { return $this->achievementPublish(false); }
     private function cultivationService(): \common\modules\world\service\WorldCultivation { return new \common\modules\world\service\WorldCultivation(Yii::$app->db, $this->flags(), $this->policy()); }
+    private function warehouseService(): \common\modules\world\service\WorldWarehouse { return new \common\modules\world\service\WorldWarehouse(Yii::$app->db, $this->flags()); }
+    public function actionWarehouse($id): array { return $this->warehouseService()->state((int)Yii::$app->user->id, $this->id($id)); }
+    private function warehouseCommand($id, bool $preview): array
+    {
+        if (!Yii::$app->request->isPost) throw new \yii\web\MethodNotAllowedHttpException('Используйте POST.');
+        $body = Yii::$app->request->bodyParams;
+        if (!is_array($body) || !is_bool($body['top_up'] ?? false)) throw new GameError('INVALID_COMMAND', 'Некорректное действие.', 422);
+        $input = ['node_id' => $this->id($id), 'top_up' => $body['top_up'] ?? false]; $user = (int)Yii::$app->user->id;
+        if ($preview) return $this->warehouseService()->preview($user, $input);
+        if (!is_string($body['request_key'] ?? null) || !is_string($body['quote_id'] ?? null) || !is_array($body['expected_revisions'] ?? null)) throw new GameError('INVALID_COMMAND', 'Требуется подтверждённый расчёт.', 422);
+        return $this->warehouseService()->execute($user, $input, $body['request_key'], $body['quote_id'], $body['expected_revisions']);
+    }
+    public function actionWarehouseExpandPreview($id): array { return $this->warehouseCommand($id, true); }
+    public function actionWarehouseExpand($id): array { return $this->warehouseCommand($id, false); }
     public function actionCrops(): array
     {
         if (!Yii::$app->request->isGet) throw new \yii\web\MethodNotAllowedHttpException('Используйте GET.');
@@ -140,12 +154,14 @@ class WorldController extends \yii\rest\Controller
     }
     public function actionIndex(): array
     {
+        if (Yii::$app->request->get('view') === 'home') return $this->page(null);
         $capabilities = $this->flags()->capabilities();
         $result = ['contract_version' => 1, 'server_time' => time(), 'capabilities' => $capabilities, 'world' => null, 'regions' => ['items' => [], '_meta' => ['totalCount' => 0, 'pageCount' => 0, 'currentPage' => 1, 'perPage' => 20]]];
         if (!$capabilities['world_read']) return $result;
         $registry = (new Query())->from('world_registry')->where(['id' => 1])->one(Yii::$app->db);
         if (!$registry['active_world_id']) return $result;
         $reader = $this->reader(); $id = (int)$registry['active_world_id'];
+        $result['home_node_id'] = \common\modules\world\service\WorldHome::node(Yii::$app->db, (int)Yii::$app->user->id, $id);
         $result['world'] = $reader->node($id); $result['regions'] = $reader->children($id, Yii::$app->request->queryParams);
         return $result;
     }
@@ -163,7 +179,26 @@ class WorldController extends \yii\rest\Controller
         return $node;
     }
     public function actionChildren($id): array { return $this->reader()->children($this->id($id), Yii::$app->request->queryParams); }
-    public function actionNavigation($id): array { return $this->reader()->navigation($this->id($id)); }
+    public function actionNavigation($id): array
+    {
+        $node = $this->id($id);
+        return Yii::$app->request->get('include') === 'map' ? $this->page($node) : $this->reader()->navigation($node);
+    }
+    /** An opt-in page envelope keeps older navigation/root clients compatible. */
+    private function page(?int $id): array
+    {
+        return (new \common\modules\economy\service\FinanceReadSnapshot(Yii::$app->db))->run(function () use ($id): array {
+            $capabilities = $this->flags()->capabilities();
+            $result = ['contract_version' => 1, 'server_time' => time(), 'capabilities' => $capabilities, 'navigation' => null, 'map' => null];
+            if (!$capabilities['world_read']) return $result;
+            if ($id === null) {
+                $world = (new Query())->select('active_world_id')->from('world_registry')->where(['id' => 1])->scalar(Yii::$app->db);
+                if (!$world) return $result;
+                $id = \common\modules\world\service\WorldHome::node(Yii::$app->db, (int)Yii::$app->user->id, (int)$world) ?? (int)$world;
+            }
+            return array_replace($result, (new WorldQuery(Yii::$app->db, $this->policy()))->page($id));
+        });
+    }
     public function actionMap($id): array { return $this->reader()->map($this->id($id)); }
     private function mapCellCommand($id, string $action, bool $preview): array
     {

@@ -3,7 +3,7 @@
   "info": {
     "title": "Ablaki premises and timed construction",
     "version": "1.5.0",
-    "description": "Schema marker 19. Ready purchases remain immediate. Construction reserves plot budget and backpack raw materials; no room or usable equipment slots exist until the fenced worker completes. Purchase result has building_id, project_id and finish_at for construction, or building_id and room_id for ready delivery. Quotes last 300 seconds; material_plan pins inventory_id/storage_id/item_id/quantity and revisions. Cancellation before actual completion releases the full credit reserve and returns all materials to available backpack slots; a full backpack blocks cancellation without partial changes. No local/runtime acceptance performed. Optional immutable requirements apply to ready and timed purchases. The same evaluator is used by listing, preview and commit; unmet conditions return REQUIREMENTS_NOT_MET before reserves or debits. Legacy offers have no additional requirements. No new migration is needed."
+    "description": "Schema marker 19. Ready purchases remain immediate. Construction reserves plot budget and backpack raw materials; no room or usable equipment slots exist until the fenced worker completes. Purchase result has building_id, project_id and finish_at for construction, or building_id and room_id for ready delivery. Quotes last 300 seconds; material_plan pins inventory_id/storage_id/item_id/quantity and revisions. Cancellation before actual completion releases the full credit reserve and returns all materials to available backpack slots; a full backpack blocks cancellation without partial changes. No local/runtime acceptance performed. Optional immutable requirements apply to ready and timed purchases. The same evaluator is used by listing, preview and commit; unmet conditions return REQUIREMENTS_NOT_MET before reserves or debits. Legacy offers have no additional requirements. No new migration is needed. Buildings occupy one campsite map cell by default. area describes the initial internal room, not campsite occupancy. Forge/workshop/workroom starts with a 4-slot stockpile, standalone warehouse with 20 slots; both can be expanded through the warehouse API. Stations deployed in rooms can use their building stockpile."
   },
   "servers": [
     {
@@ -815,9 +815,12 @@
           "kind": {
             "type": "string",
             "enum": [
+              "house",
               "canopy",
               "workroom",
-              "house"
+              "forge",
+              "workshop",
+              "warehouse"
             ]
           },
           "price": {
@@ -990,9 +993,12 @@
           "kind": {
             "type": "string",
             "enum": [
+              "house",
               "canopy",
               "workroom",
-              "house"
+              "forge",
+              "workshop",
+              "warehouse"
             ]
           },
           "price": {
@@ -1318,9 +1324,12 @@
           "kind": {
             "type": "string",
             "enum": [
+              "house",
               "canopy",
               "workroom",
-              "house"
+              "forge",
+              "workshop",
+              "warehouse"
             ]
           },
           "price": {

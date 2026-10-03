@@ -21,13 +21,12 @@ class StorageAccessPolicy
         if (!in_array($row['kind'], ['backpack', 'chest', 'placement', 'stockpile', 'recovery'], true)) throw new ConflictHttpException('Неизвестное назначение хранилища.');
         if ($incoming && $row['kind'] === 'recovery') throw new ConflictHttpException('Из восстановления можно только забирать вещи.');
         if ($row['node_id'] !== null) {
-            $node = (new WorldQuery($this->db, new WorldAccessPolicy($user)))->node((int)$row['node_id']);
-            if (!$node['permissions']['manage']) throw new NotFoundHttpException('Хранилище недоступно.');
+            $node = (new WorldQuery($this->db, new WorldAccessPolicy($user)))->record((int)$row['node_id']);
+            if ((int)$node['owner_user_id'] !== $user) throw new NotFoundHttpException('Хранилище недоступно.');
             if ($incoming && $node['status'] !== 'active') throw new ConflictHttpException('Помещение недоступно.');
             if ($incoming && (new Query())->from(['b' => 'world_building'])->innerJoin(['p' => 'world_node_closure'], '[[p.ancestor_id]]=[[b.node_id]]')->where(['p.descendant_id' => $node['id']])->andWhere(['or', ['<>', 'b.operational_status', 'active'], ['<', 'b.condition', 1]])->exists($this->db)) throw new ConflictHttpException('Постройка недоступна для работы.');
-            if ($incoming && $node['type'] === 'BUILDING' && ($node['details']['operational_status'] ?? '') !== 'active') throw new ConflictHttpException('Постройка ещё не готова к работе.');
-            if ($incoming && $node['type'] === 'ROOM') {
-                $building = (new Query())->from('world_building')->where(['node_id' => $node['parent_id']])->one($this->db);
+            if ($incoming && in_array($node['node_type'], ['BUILDING', 'ROOM'], true)) {
+                $building = (new Query())->from('world_building')->where(['node_id' => $node['node_type'] === 'BUILDING' ? $node['id'] : $node['parent_id']])->one($this->db);
                 if (!$building || $building['operational_status'] !== 'active' || (int)$building['condition'] < 1) throw new ConflictHttpException('Постройка недоступна для размещения.');
             }
         }

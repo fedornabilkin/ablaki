@@ -40,7 +40,7 @@ class StationResolver
             try { $storage = (new StorageAccessPolicy($this->s->db))->storage($user, (int)$row['storage_id'], true); }
             catch (HttpException $error) { continue; }
             catch (\common\services\game\GameError $error) { continue; }
-            if ($joined && $this->s->workspaceNodeId !== null && (int)$storage['node_id'] !== $this->s->workspaceNodeId) continue;
+            if ($joined && $this->s->workspaceNodeId !== null && !in_array((int)$storage['node_id'], WorkspaceScope::nodes($this->s->db, $this->s->workspaceNodeId), true)) continue;
             if ($joined && $this->s->workspaceNodeId === null && (!$home || !(new Query())->from('world_node_closure')
                 ->where(['ancestor_id' => (int)$home, 'descendant_id' => (int)$storage['node_id']])->exists($this->s->db))) continue;
             if ($joined && (int)$row['item_quantity'] !== 1) continue;

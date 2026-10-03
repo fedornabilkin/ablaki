@@ -232,13 +232,15 @@ class CanonicalInventory
         if (count($grants) > 2000) throw new ConflictHttpException('Для возврата требуется слишком много ячеек. Объедините материалы в рюкзаке.');
         return compact('target', 'grants', 'items');
     }
-    /** Explicit selected backpack stack, ordinary gathered goods only. No equipment/chest consumption. */
+    /** Explicit backpack stack of gathered materials or published crops. No equipment/chest consumption. */
     public function inspectOrderDelivery(int $user, int $inventory, int $item, int $quantity): array
     {
         $row = (new Query())->from('craft_inventory')->where(['id' => $inventory, 'user_id' => $user, 'item_id' => $item])->one($this->db);
         $definition = (new Query())->from('craft_item')->where(['id' => $item, 'active' => 1])->one($this->db);
         if (!$row || !$definition || $quantity < 1 || $quantity > 10000 || (int)$row['item_quantity'] < $quantity) throw new ConflictHttpException('В выбранной ячейке недостаточно предметов.');
-        if (($definition['storage_kind'] ?? 'none') !== 'none' || $definition['kind'] !== 'material' || (int)$definition['gather_quantity'] < 1 || $this->equipment->tracked($definition) || $this->equipment->units($inventory)) throw new ConflictHttpException('Для начального заказа требуется обычное сырьё.');
+        $crop = (int)$definition['gather_quantity'] < 1 && $this->db->schema->getTableSchema('world_crop_revision')
+            && (new Query())->from('world_crop_revision')->where(['yield_item_id' => $item, 'status' => ['published', 'superseded', 'withdrawn']])->exists($this->db);
+        if (($definition['storage_kind'] ?? 'none') !== 'none' || $definition['kind'] !== 'material' || ((int)$definition['gather_quantity'] < 1 && !$crop) || $this->equipment->tracked($definition) || $this->equipment->units($inventory)) throw new ConflictHttpException('Для заказа требуется обычное сырьё или урожай.');
         $storage = (new StorageAccessPolicy($this->db))->storage($user, (int)$row['storage_id']);
         if ($storage['kind'] !== 'backpack' || (int)$row['slot'] < 1 || (int)$row['slot'] > (int)$storage['capacity']) throw new ConflictHttpException('Перенесите сырьё в доступную ячейку рюкзака.');
         return ['row' => $row, 'storage' => $storage];

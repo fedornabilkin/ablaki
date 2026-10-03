@@ -14,15 +14,15 @@ class WorldStorage
     private $db;
     private $flags;
     public function __construct(Connection $db, WorldFlags $flags) { $this->db = $db; $this->flags = $flags; }
-    private function available(): void { $this->flags->requireFlag('world_read'); $this->flags->requireFlag('storage_v2'); }
+    private function available(): array { return $this->flags->requireFlags(['world_read', 'storage_v2']); }
     public function list(int $user, ?int $node): array
     {
         $this->available();
         if ($node !== null) {
-            $visible = (new WorldQuery($this->db, new WorldAccessPolicy($user)))->node($node);
-            if (!$visible['permissions']['manage']) throw new GameError('STORAGE_FORBIDDEN', 'Нет доступа к вещам этого объекта.', 403);
+            $visible = (new WorldQuery($this->db, new WorldAccessPolicy($user)))->record($node);
+            if ((int)$visible['owner_user_id'] !== $user) throw new GameError('STORAGE_FORBIDDEN', 'Нет доступа к вещам этого объекта.', 403);
         }
-        $base = (new Query())->from('craft_storage')->where(['owner_user_id' => $user, 'status' => 'active'])->andWhere(['or', ['kind' => ['backpack', 'recovery']], ['and', ['node_id' => $node], ['kind' => ['placement', 'stockpile']]]])->orderBy(['id' => SORT_ASC])->limit(100)->all($this->db);
+        $base = (new Query())->from('craft_storage')->where(['owner_user_id' => $user, 'status' => 'active'])->andWhere(['or', ['kind' => ['backpack', 'recovery']], ['and', ['node_id' => $node === null ? null : WorkspaceScope::nodes($this->db, $node)], ['kind' => ['placement', 'stockpile']]]])->orderBy(['id' => SORT_ASC])->limit(100)->all($this->db);
         // Chest identity follows its outer inventory row; contents never move with the chest.
         $ids = array_column($base, 'id');
         $chests = $ids ? (new Query())->select('s.*')->from(['s' => 'craft_storage'])->innerJoin(['i' => 'craft_inventory'], '[[i.id]]=[[s.container_inventory_id]]')
@@ -39,7 +39,7 @@ class WorldStorage
     }
     public function view(int $user, int $id, int $page = 1): array
     {
-        $this->available(); if ($page < 1 || $page > 1000000) throw new GameError('INVALID_PAGINATION', 'Некорректная страница.', 422);
+        $capabilities = $this->available(); if ($page < 1 || $page > 1000000) throw new GameError('INVALID_PAGINATION', 'Некорректная страница.', 422);
         $storage = (new StorageAccessPolicy($this->db))->storage($user, $id); $query = (new Query())->from('craft_inventory')->where(['storage_id' => $id])->andWhere(['>', 'item_quantity', 0]);
         $total = (int)(clone $query)->count('*', $this->db); $items = [];
         $rows = $query->orderBy(['slot' => SORT_ASC, 'id' => SORT_ASC])->offset(($page - 1) * 100)->limit(100)->all($this->db);
@@ -67,10 +67,10 @@ class WorldStorage
             $nodeId = $outer['node_id'];
         }
         if ($nodeId !== null) {
-            $node = (new WorldQuery($this->db, new WorldAccessPolicy($user)))->node((int)$nodeId);
-            $location = ['node_id' => $node['id'], 'name' => $node['name']];
+            $node = (new WorldQuery($this->db, new WorldAccessPolicy($user)))->record((int)$nodeId);
+            $location = ['node_id' => (int)$node['id'], 'name' => $node['name']];
         }
-        return ['storage' => $this->header($storage), 'items' => $items, 'slots' => $slots, 'container' => $container, 'location' => $location, '_meta' => ['totalCount' => $total, 'pageCount' => (int)ceil($total / 100), 'currentPage' => $page, 'perPage' => 100], 'server_time' => time(), 'writable' => $this->flags->capabilities()['world_write']];
+        return ['storage' => $this->header($storage), 'items' => $items, 'slots' => $slots, 'container' => $container, 'location' => $location, '_meta' => ['totalCount' => $total, 'pageCount' => (int)ceil($total / 100), 'currentPage' => $page, 'perPage' => 100], 'server_time' => time(), 'writable' => $capabilities['world_write']];
     }
     private function prepare(int $user, array $payload, CraftStorage $store): array
     {

@@ -36,7 +36,7 @@ class WorldPremisesForm extends Model
             [['name', 'price', 'reason', 'expansion_base_price'], 'string', 'max' => 500],
             ['reason', 'string', 'max' => 255],
             ['name', 'string', 'max' => 120],
-            ['kind', 'in', 'range' => ['canopy', 'workroom', 'house']],
+            ['kind', 'in', 'range' => ['canopy', 'workroom', 'house', 'forge', 'workshop', 'warehouse']],
             [['area', 'slots', 'expansion_limit'], 'integer', 'min' => 1, 'max' => 4],
             [['name', 'reason'], 'trim', 'skipOnArray' => true],
         ];
