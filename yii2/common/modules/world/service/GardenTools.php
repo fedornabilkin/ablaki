@@ -16,6 +16,7 @@ class GardenTools
     {
         $item = (new Query())->from('craft_item')->where(['code' => 'world-shovel'])->one($db);
         if ($item) return;
+        CultivationCatalog::seed($db);
         $category = (new Query())->select('id')->from('craft_category')->where(['code' => 'world-cultivation'])->scalar($db);
         $db->createCommand()->insert('craft_item', ['code' => 'world-shovel', 'name' => 'Огородная лопата', 'label' => 'Лопата', 'description' => 'Для вскапывания грядок. Одно вскапывание расходует 1 прочности.', 'category_id' => $category, 'kind' => 'tool', 'rarity' => 'common', 'icon' => 'hammer', 'stack_size' => 10, 'active' => 1, 'destroyable' => 1, 'use_xp' => 0, 'gather_quantity' => 0, 'storage_kind' => 'none'])->execute();
         $itemId = (int)$db->getLastInsertID();
