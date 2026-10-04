@@ -102,20 +102,7 @@ use mdm\admin\components\Helper;
             ],
 
 
-            ['label' => 'Мир', 'icon' => 'globe', 'url' => '#', 'items' => [
-                ['label' => 'Обзор и готовность', 'icon' => 'dashboard', 'url' => ['/world-admin/index']],
-                ['label' => 'Миры', 'icon' => 'globe', 'url' => ['/world-root/index']],
-                ['label' => 'Регионы', 'icon' => 'map', 'url' => ['/world-region/index']],
-                ['label' => 'Поселения', 'icon' => 'map-marker', 'url' => ['/world-settlement/index']],
-                ['label' => 'Постройки', 'icon' => 'building', 'url' => ['/world-building/index']],
-                ['label' => 'Комнаты', 'icon' => 'home', 'url' => ['/world-room/index']],
-                ['label' => 'Участки', 'icon' => 'map-o', 'url' => ['/world-plot/index']],
-                ['label' => 'Грядки', 'icon' => 'leaf', 'url' => ['/world-bed/index']],
-                ['label' => 'Культуры и выращивание', 'icon' => 'pagelines', 'url' => ['/world-crop/index']],
-                ['label' => 'Склады', 'icon' => 'archive', 'url' => ['/world-warehouse/index']],
-                ['label' => 'Места оборудования', 'icon' => 'th', 'url' => ['/world-slot/index']],
-                ['label' => 'Журнал изменений', 'icon' => 'history', 'url' => ['/world-admin/audit']],
-            ]],
+            ['label' => 'Мир', 'icon' => 'globe', 'url' => '#', 'items' => \backend\components\WorldEntityCatalog::menu()],
             ['label' => 'Other', 'options' => ['class' => 'header']],
 
             ['label' => 'Login', 'url' => ['site/login'], 'visible' => Yii::$app->user->isGuest],

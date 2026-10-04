@@ -98,6 +98,7 @@ class WorldPremises
         $revisions = ['node:' . $place['id'] => $place['revision']]; $terms = $input; $result = $c;
         if ($action === 'publish') {
             if ($c['site'] || !$c['manager']) throw new GameError('PREMISES_MANAGEMENT_FORBIDDEN', 'Предложения публикует владелец поселения или администратор системного поселения.', 403);
+            if (isset($input['replaces_offer_id'])) $result['replaced_offer'] = $this->offer($place['id'], $input['replaces_offer_id']);
             $config = $this->publication($input) + ['exposure_class' => $input['kind'] === 'canopy' ? 'covered' : 'indoor', 'delivery' => 'ready'];
             $config['materials'] = (new ConstructionSpec($this->db))->resolvedMaterials($config['materials']);
             if ($config['repair'] !== null) $config['repair'] = (new BuildingRepairSpec($this->db))->resolve($config['repair']);
@@ -155,12 +156,16 @@ class WorldPremises
             if (CanonicalJson::encode($p['terms']) !== CanonicalJson::encode($terms)) throw new GameError('PREMISES_CHANGED', 'Условия покупки изменились. Повторите расчёт.');
             $changed = [$payload['node_id'], $p['settlement']['id']]; $storages = []; $created = [];
             if ($action === 'publish') {
+                if (isset($p['replaced_offer'])) {
+                    if ($this->db->createCommand()->update('world_premises_offer', ['status' => 'withdrawn'], ['id' => $p['replaced_offer']['id'], 'status' => 'published'])->execute() !== 1) throw new GameError('PREMISES_CHANGED', 'Предложение уже изменено.');
+                }
                 $this->db->createCommand()->insert('world_template', ['code' => 'premises-' . $operation, 'kind' => 'BUILDING'])->execute(); $template = (int)$this->db->getLastInsertID();
                 $this->db->createCommand()->insert('world_template_revision', ['template_id' => $template, 'version' => 1, 'status' => 'published', 'config_json' => CanonicalJson::encode($terms['config']), 'author_user_id' => $user, 'published_at' => time()])->execute();
                 $this->db->createCommand()->insert('world_premises_offer', ['settlement_id' => $payload['node_id'], 'template_revision_id' => (int)$this->db->getLastInsertID(), 'name' => $payload['name'], 'operation_id' => $operation, 'created_at' => time()])->execute();
                 $published = $this->offer($payload['node_id'], (int)$this->db->getLastInsertID());
+                $created['offer_id'] = (int)$published['id'];
                 if (!empty($terms['config']['repair_for_existing'])) $this->db->createCommand()->insert('world_repair_offer', ['offer_id' => (int)$published['id'], 'kind' => $terms['config']['kind'], 'area' => $terms['config']['area']])->execute();
-                (new WorldTree($this->db))->audit($user, 'world.premises.publish', $payload['admin_reason'] ?? 'Публикация предложения готовой постройки', [],
+                (new WorldTree($this->db))->audit($user, 'world.premises.publish', $payload['admin_reason'] ?? 'Публикация предложения готовой постройки', isset($p['replaced_offer']) ? ['offer' => $p['replaced_offer']] : [],
                     ['id' => $p['settlement']['id'], 'offer' => $published], $operation);
             } elseif ($action === 'withdraw') {
                 if ($this->db->createCommand()->update('world_premises_offer', ['status' => 'withdrawn'], ['id' => $payload['offer_id'], 'status' => 'published'])->execute() !== 1) throw new \RuntimeException('Offer withdrawal failed.');

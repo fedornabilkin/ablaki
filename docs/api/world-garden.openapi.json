@@ -227,7 +227,7 @@
     "/world/nodes/{id}/garden-publish": {
       "post": {
         "operationId": "worldGardenPublish",
-        "description": "One current settlement offer; publication replaces only future purchases. Buy at owned campsite, expand at owned garden. One permanent starter garden per membership. top_up=true explicitly permits the quoted personal contribution and budget payment in one transaction. Bought expansion price is pinned; beds cost B..9B. No crops or automatic income.",
+        "description": "One current settlement offer; publication replaces only future purchases. Buy at owned campsite, expand at owned garden. One permanent starter garden per membership. top_up=true explicitly permits the quoted personal contribution and budget payment in one transaction. Bought expansion price is pinned; beds cost B..9B. No crops or automatic income. Successful publication additionally returns offer_id; replay returns the same offer_id.",
         "requestBody": {
           "required": true,
           "content": {

@@ -91,7 +91,7 @@ jobs:
         working-directory: yii2
         shell: bash
         run: |
-          for suite in auth-response frontend-lists frontend-api-routing game-overview five-game forum-gift forum-install daily-reward exchange-refund topic68-economy worker-barrier-test world-forum80 classic-craft-install user-activity user-cleanup; do
+          for suite in auth-response frontend-lists frontend-api-routing game-overview five-game forum-gift forum-install daily-reward exchange-refund topic68-economy worker-barrier-test world-admin-entities classic-craft-install user-activity user-cleanup; do
             if ! php "tests/release/$suite.php" 2>&1 | tee "$RUNNER_TEMP/backend-$suite.log"; then
               details=$(tail -n 15 "$RUNNER_TEMP/backend-$suite.log")
               details=${details//%/%25}
@@ -112,7 +112,7 @@ jobs:
           docker exec "$MYSQL_CONTAINER" mysql -uroot -pci-only-root -e "ALTER USER 'ablakin_ci'@'%' IDENTIFIED WITH mysql_native_password BY 'ci-only-password';"
           check_database() {
             export ABL_TEST_DSN="$1"
-            php tests/release/target-database.php && php tests/release/world-forum80.php && php tests/release/user-activity.php
+            php tests/release/target-database.php && php tests/release/world-admin-entities.php && php tests/release/user-activity.php
           }
           # Independent disposable databases; keep suites sequential within each database.
           check_database 'mysql:host=127.0.0.1;port=3306;dbname=ablakin_ci' > "$RUNNER_TEMP/mysql-checks.log" 2>&1 &

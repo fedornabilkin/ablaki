@@ -10,7 +10,10 @@ $this->params['breadcrumbs'][] = ['label' => WorldNodeForm::TYPES[$model->type()
 $this->params['breadcrumbs'][] = $this->title;
 $attributes = [['label' => 'ID', 'value' => $id], ['label' => 'Состояние', 'value' => $node['status'] === 'archived' ? 'В архиве' : 'Действует'], ['label' => 'Версия', 'value' => $node['revision']]];
 foreach (array_merge(['name', 'code', 'slug', 'parent_id', 'owner_user_id', 'visibility', 'portable', 'position_x', 'position_y', 'position'], $model->detailFields()) as $field) {
-    $value = $model->$field; $attributes[] = ['label' => $model->getAttributeLabel($field), 'value' => WorldNodeForm::choices()[$field][$value] ?? $value];
+    $value = $model->$field;
+    $attributes[] = ['label' => $model->getAttributeLabel($field), 'format' => 'raw', 'value' => $field === 'parent_id'
+        ? \backend\components\WorldRelations::value('world_node', $field, $value)
+        : Html::encode((string)(WorldNodeForm::choices()[$field][$value] ?? $value))];
 }
 $attributes[] = ['label' => 'Полигон на карте', 'value' => $model->footprint ?: 'Одна ячейка'];
 ?>
@@ -33,7 +36,7 @@ $attributes[] = ['label' => 'Полигон на карте', 'value' => $model-
     <?php if ($usage): ?><p class="alert alert-info">Есть игровые связи. Имущество, оплаченные права и финансовая история сохраняются; прямое изменение связанных игровых параметров и удаление заблокированы.</p><?php endif ?>
     <h2>Дочерние объекты</h2>
     <p>
-        <?php foreach (['WORLD' => ['REGION'], 'REGION' => ['SETTLEMENT'], 'SETTLEMENT' => ['BUILDING', 'PLOT'], 'BUILDING' => ['ROOM', 'PLOT'], 'PLOT' => ['BUILDING', 'BED'], 'ROOM' => [], 'BED' => []][$model->type()] as $child): ?>
+        <?php foreach (['WORLD' => ['REGION'], 'REGION' => ['SETTLEMENT'], 'SETTLEMENT' => ['BUILDING', 'PLOT'], 'BUILDING' => ['ROOM', 'PLOT'], 'PLOT' => $model->plot_kind === 'garden' ? ['BED'] : ($model->plot_kind === 'campsite' ? ['BUILDING', 'PLOT'] : ['BUILDING']), 'ROOM' => [], 'BED' => []][$model->type()] as $child): ?>
             <?php if ($node['status'] === 'active' && Helper::checkRoute('/' . WorldNodeForm::ROUTES[$child] . '/create')): ?>
                 <?= Html::a('Создать · ' . WorldNodeForm::TYPES[$child], ['/' . WorldNodeForm::ROUTES[$child] . '/create', 'parent_id' => $id], ['class' => 'btn btn-default']) ?>
             <?php endif ?>
@@ -51,3 +54,4 @@ $attributes[] = ['label' => 'Полигон на карте', 'value' => $model-
         <?= Html::endForm() ?>
     <?php endif ?>
 </div></div>
+<?= $this->render('@app/views/world-record/_relations', ['table' => 'world_node', 'row' => $node]) ?>

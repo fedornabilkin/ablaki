@@ -16,7 +16,6 @@ echo GridView::widget(['dataProvider' => $provider, 'columns' => [
     ['attribute' => 'status', 'label' => 'Состояние', 'value' => static function (array $row): string { return $row['status'] === 'archived' ? 'В архиве' : 'Действует'; }],
     ['attribute' => 'revision', 'label' => 'Версия'],
     ['label' => 'Действия', 'format' => 'raw', 'value' => static function (array $row): string {
-        $route = '/' . WorldNodeForm::ROUTES[$row['node_type']] . '/update';
-        return $row['status'] === 'active' && Helper::checkRoute($route) ? Html::a('Изменить', [$route, 'id' => $row['id']]) : '—';
+        return \backend\components\WorldRelations::actions('world_node', $row);
     }],
 ]]);

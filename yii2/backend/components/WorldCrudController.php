@@ -68,7 +68,7 @@ abstract class WorldCrudController extends Controller
         return $this->domain(function () use ($id) {
             $snapshot = $this->read($id); $model = new WorldNodeForm($this->nodeType()); $model->populate($snapshot);
             $children = new ActiveDataProvider(['query' => (new Query())->from('world_node')->where(['parent_id' => $snapshot['node']['id']])->orderBy(['id' => SORT_DESC]),
-                'key' => 'id', 'pagination' => ['pageSize' => 20, 'pageSizeLimit' => [20, 20]], 'sort' => false]);
+                'key' => 'id', 'pagination' => ['pageSize' => 20, 'pageSizeLimit' => [20, 20], 'pageParam' => 'children-page'], 'sort' => false]);
             return $this->render('view', compact('snapshot', 'model', 'children') + ['usage' => $this->editor()->usage((int)$snapshot['node']['id'])]);
         });
     }

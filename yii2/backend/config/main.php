@@ -18,6 +18,7 @@ return [
 
     'basePath' => dirname(__DIR__),
     'controllerNamespace' => 'backend\controllers',
+    'controllerMap' => \backend\components\WorldEntityCatalog::controllers(),
     'bootstrap' => ['log', 'admin', 'exchange', 'games', 'forum', 'craft', \common\services\user\ActivityBootstrap::class],
     'modules' => [
         'user' => [
