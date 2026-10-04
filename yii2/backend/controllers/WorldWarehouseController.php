@@ -33,9 +33,7 @@ class WorldWarehouseController extends \yii\web\Controller
     public function actionView($id)
     {
         $row = $this->read($id);
-        $query = (new Query())->select(['i.slot', 'i.item_quantity', 'c.name'])->from(['i' => 'craft_inventory'])->innerJoin(['c' => 'craft_item'], '[[c.id]]=[[i.item_id]]')->where(['i.storage_id' => $row['id']])->andWhere(['>', 'i.item_quantity', 0])->orderBy(['i.slot' => SORT_ASC]);
-        $provider = new \yii\data\ActiveDataProvider(['query' => $query, 'key' => 'slot', 'pagination' => ['pageSize' => 50], 'sort' => false]);
-        return $this->render('view', compact('row', 'provider'));
+        return $this->render('view', compact('row'));
     }
     public function actionUpdate($id)
     {

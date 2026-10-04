@@ -16,10 +16,11 @@ $attributes[] = ['label' => 'Состояние', 'value' => $slot['status']];
     <?php if ($state['room']['node']['node_type'] === 'ROOM' && Helper::checkRoute('/world-slot/update')): ?><p><?= Html::a('Изменить', ['update', 'node_id' => $node, 'position' => $position], ['class' => 'btn btn-primary']) ?></p><?php endif ?>
     <?= DetailView::widget(['model' => $slot, 'attributes' => $attributes]) ?>
     <?php if ($state['room']['node']['node_type'] === 'ROOM' && Helper::checkRoute('/world-slot/delete')): ?>
-        <?php $form = ActiveForm::begin(['action' => ['delete', 'node_id' => $node, 'position' => $position], 'method' => 'post']); ?>
+        <?php $form = ActiveForm::begin(['id' => 'delete', 'action' => ['delete', 'node_id' => $node, 'position' => $position], 'method' => 'post']); ?>
             <?php foreach (['node_id', 'revision', 'storage_revision', 'code', 'slot_type', 'size', 'exposure_class', 'item_codes'] as $field) echo $form->field($model, $field)->hiddenInput()->label(false); ?>
             <?= $form->field($model, 'reason')->textarea(['rows' => 2, 'maxlength' => 255]) ?>
             <?= Html::submitButton('Удалить…', ['class' => 'btn btn-danger']) ?>
         <?php ActiveForm::end(); ?>
     <?php endif ?>
 </div></div>
+<?= $this->render('@app/views/world-record/_relations', ['table' => 'world_slot', 'row' => $slot + ['storage_id' => $state['storage']['id'], 'position' => $position]]) ?>

@@ -3878,7 +3878,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/nodes/{{ _.world_node_id }}/garden-publish",
       "name": "POST /world/nodes/{id}/garden-publish",
-      "description": "Источник: docs/api/world-garden.openapi.json. One current settlement offer; publication replaces only future purchases. Buy at owned campsite, expand at owned garden. One permanent starter garden per membership. top_up=true explicitly permits the quoted personal contribution and budget payment in one transaction. Bought expansion price is pinned; beds cost B..9B. No crops or automatic income. Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело.",
+      "description": "Источник: docs/api/world-garden.openapi.json. One current settlement offer; publication replaces only future purchases. Buy at owned campsite, expand at owned garden. One permanent starter garden per membership. top_up=true explicitly permits the quoted personal contribution and budget payment in one transaction. Bought expansion price is pinned; beds cost B..9B. No crops or automatic income. Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело. Successful publication also returns offer_id; replay returns the same offer_id.",
       "method": "POST",
       "body": {
         "mimeType": "application/json",
@@ -4935,7 +4935,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/nodes/{{ _.world_node_id }}/premises-publish",
       "name": "POST /world/nodes/{id}/premises-publish",
-      "description": "Источник: docs/api/world-premises.openapi.json. Settlement owner or world manager of an unowned public settlement. Creates immutable terms; no charge. Preview creates only a 300-second quote. Commit requires unchanged exact payload/revisions; same request key replays the saved result. Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело.",
+      "description": "Источник: docs/api/world-premises.openapi.json. Settlement owner or world manager of an unowned public settlement. Creates immutable terms; no charge. Preview creates only a 300-second quote. Commit requires unchanged exact payload/revisions; same request key replays the saved result. Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело. Successful publication also returns offer_id; replay returns the same offer_id.",
       "method": "POST",
       "body": {
         "mimeType": "application/json",

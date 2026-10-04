@@ -20,7 +20,7 @@ $this->title = 'Места оборудования'; $this->params['breadcrumbs
         ['attribute' => 'code', 'label' => 'Код'], ['attribute' => 'slot_type', 'label' => 'Назначение'],
         ['attribute' => 'exposure_class', 'label' => 'Защита'], ['attribute' => 'status', 'label' => 'Состояние'],
         ['label' => 'Действия', 'format' => 'raw', 'value' => static function (array $row): string {
-            return Helper::checkRoute('/world-slot/view') ? Html::a('Просмотр', ['view', 'node_id' => $row['node_id'], 'position' => $row['position']]) : '—';
+            return \backend\components\WorldRelations::actions('world_slot', $row);
         }],
     ]]) ?>
 </div></div>

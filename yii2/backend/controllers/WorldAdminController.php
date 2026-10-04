@@ -86,9 +86,7 @@ class WorldAdminController extends Controller
     {
         return $this->domain(function () use ($id) {
             $this->flags()->requireFlag('world_read'); $node = $this->reader()->node($this->id($id));
-            $navigation = $this->reader()->navigation($node['id']);
-            $children = $this->provider((new Query())->from('world_node')->where(['parent_id' => $node['id']]));
-            return $this->render('view', compact('node', 'navigation', 'children'));
+            return $this->redirect(['/' . \common\modules\world\model\WorldNodeForm::ROUTES[$node['type']] . '/view', 'id' => $node['id']]);
         });
     }
 

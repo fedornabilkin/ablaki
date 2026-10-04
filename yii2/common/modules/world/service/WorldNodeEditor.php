@@ -157,7 +157,7 @@ class WorldNodeEditor
                         if ($before['node']['node_type'] === 'BUILDING' && $values['owner_user_id'] !== null) BuildingFacilities::stockpile($this->db, $id, (int)$values['owner_user_id'], $input['details']['building_kind']);
                     }
                     $this->db->createCommand()->update('world_node', $values, ['id' => $id])->execute();
-                    if ($input['values']['parent_id'] !== null && $input['values']['footprint_json'] === null
+                    if ($action !== 'delete' && $input['values']['parent_id'] !== null && $input['values']['footprint_json'] === null
                         && !($before['node']['node_type'] === 'BED' && empty($input['details']['unlocked']))) {
                         $cell = ['parent_id' => (int)$input['values']['parent_id'], 'x' => (int)$input['values']['position_x'], 'y' => (int)$input['values']['position_y']];
                         $existing = (new Query())->from('world_map_cell')->where($cell)->one($this->db);

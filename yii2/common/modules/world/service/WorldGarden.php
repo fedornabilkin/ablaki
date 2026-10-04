@@ -130,6 +130,8 @@ class WorldGarden
         $offer = $this->one('world_garden_offer', ['active_settlement_id' => $place['id']]);
         if ($action === 'publish' || $action === 'withdraw') {
             if ($node['type'] !== 'SETTLEMENT' || !$c['manager']) throw new GameError('GARDEN_MANAGEMENT_FORBIDDEN', 'Цены публикует владелец поселения или администратор системного поселения.', 403);
+            if (isset($input['expected_offer_id']) && (int)($offer['id'] ?? 0) !== $input['expected_offer_id']) throw new GameError('GARDEN_OFFER_CHANGED', 'Предложение изменилось. Откройте актуальную запись.');
+            if (isset($input['admin_reason']) && (!is_string($input['admin_reason']) || trim($input['admin_reason']) === '' || mb_strlen($input['admin_reason'], 'UTF-8') > 255)) throw new GameError('INVALID_REASON', 'Укажите причину изменения.', 422);
             if ($action === 'withdraw' && !$offer) throw new GameError('GARDEN_OFFER_UNAVAILABLE', 'Предложение уже снято.');
             $terms['previous_offer_id'] = $offer ? (int)$offer['id'] : null;
             return $c + compact('terms', 'revisions');
@@ -179,10 +181,11 @@ class WorldGarden
         return $bus->execute($user, $key, 'world.garden.' . $action, $input, $quote, $revisions, function (array $payload, array $terms, string $operation) use ($user, $action, $bus) {
             $p = $this->prepared($user, $payload, $action);
             if (CanonicalJson::encode($p['terms']) !== CanonicalJson::encode($terms)) throw new GameError('GARDEN_CHANGED', 'Условия изменились. Повторите расчёт.');
-            $tree = new WorldTree($this->db); $changed = [$payload['node_id'], $p['place']['id']]; $now = time();
+            $tree = new WorldTree($this->db); $changed = [$payload['node_id'], $p['place']['id']]; $now = time(); $publishedId = null;
             if ($action === 'publish' || $action === 'withdraw') {
                 if ($terms['previous_offer_id'] !== null && $this->db->createCommand()->update('world_garden_offer', ['active_settlement_id' => null], ['id' => $terms['previous_offer_id'], 'active_settlement_id' => $p['place']['id']])->execute() !== 1) throw new \RuntimeException('Garden offer changed.');
                 if ($action === 'publish') $this->db->createCommand()->insert('world_garden_offer', ['settlement_id' => $p['place']['id'], 'active_settlement_id' => $p['place']['id'], 'name' => $payload['name'], 'price' => $payload['price'], 'base_price' => $payload['base_price'], 'operation_id' => $operation, 'created_at' => $now])->execute();
+                if ($action === 'publish') $publishedId = (int)$this->db->getLastInsertID();
             } else {
                 $funding = null; $gap = Money::parse($terms['personal_charge']);
                 if (!$gap->isZero()) $funding = (new BudgetFunding($this->db))->contribute($user, $payload['node_id'], $gap, 'Пополнение для покупки огорода или грядок', $operation);
@@ -222,7 +225,8 @@ class WorldGarden
             $ancestorIds = (new Query())->select('ancestor_id')->from('world_node_closure')->where(['descendant_id' => $changed])->distinct()->column($this->db);
             $this->db->createCommand()->update('world_node', ['revision' => new Expression('[[revision]]+1'), 'updated_at' => $now], ['id' => $ancestorIds])->execute();
             $result = ['changed_node_ids' => $changed];
-            $tree->audit($user, 'world.garden.' . $action, 'Огород и постоянные права грядок', $terms, $result + ['id' => $payload['node_id']], $operation);
+            if ($publishedId !== null) $result['offer_id'] = $publishedId;
+            $tree->audit($user, 'world.garden.' . $action, $payload['admin_reason'] ?? 'Огород и постоянные права грядок', $terms, $result + ['id' => $payload['node_id']], $operation);
             $bus->emit($operation, $user, 'world.garden.' . $action, $result);
             return $result;
         });

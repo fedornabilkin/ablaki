@@ -260,7 +260,7 @@
       ],
       "post": {
         "summary": "premises-publish",
-        "description": "Settlement owner or world manager of an unowned public settlement. Creates immutable terms; no charge. Preview creates only a 300-second quote. Commit requires unchanged exact payload/revisions; same request key replays the saved result.",
+        "description": "Settlement owner or world manager of an unowned public settlement. Creates immutable terms; no charge. Preview creates only a 300-second quote. Commit requires unchanged exact payload/revisions; same request key replays the saved result. Successful publication additionally returns offer_id; replay returns the same offer_id.",
         "requestBody": {
           "required": true,
           "content": {
