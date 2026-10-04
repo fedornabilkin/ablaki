@@ -37,6 +37,30 @@ class WorldStorage
         return ['id' => (int)$row['id'], 'kind' => $row['kind'], 'name' => $labels[$row['kind']] ?? 'Хранилище', 'node_id' => $row['node_id'] === null ? null : (int)$row['node_id'],
             'container_inventory_id' => $row['container_inventory_id'] === null ? null : (int)$row['container_inventory_id'], 'capacity' => (int)$row['capacity'], 'revision' => (int)$row['revision']];
     }
+    public function placementOptions(int $user, int $node): array
+    {
+        $headers = $this->list($user, $node)['items']; $items = [];
+        $target = (new Query())->from('craft_storage')->where(['owner_user_id' => $user, 'node_id' => $node, 'kind' => 'placement', 'status' => 'active'])->one($this->db);
+        if (!$target) return ['node_id' => $node, 'items' => []];
+        $slots = (new Query())->from('world_slot')->where(['storage_id' => $target['id'], 'status' => 'active'])->orderBy(['position' => SORT_ASC])->all($this->db);
+        $occupied = (new Query())->select('slot')->from('craft_inventory')->where(['storage_id' => $target['id']])->andWhere(['>', 'item_quantity', 0])->column($this->db);
+        $sourceIds = array_column(array_filter($headers, static function ($h) { return in_array($h['kind'], ['backpack', 'chest', 'stockpile'], true); }), 'id');
+        $rows = (new Query())->select(['i.*', 'd.code', 'd.kind', 'd.storage_kind', 'd.name', 'd.icon', 'd.active'])->from(['i' => 'craft_inventory'])->innerJoin(['d' => 'craft_item'], '[[d.id]]=[[i.item_id]]')
+            ->where(['i.storage_id' => $sourceIds, 'd.active' => 1])->andWhere(['>', 'i.item_quantity', 0])->orderBy(['i.id' => SORT_ASC])->all($this->db);
+        foreach ($rows as $row) {
+            $definition = $row; $definition['id'] = $row['item_id']; $compatible = false; $destination = null;
+            foreach ($slots as $slot) {
+                try { (new EquipmentPlacementPolicy($this->db))->assertAllowed($definition, $target, $slot); $compatible = true; }
+                catch (\yii\web\ConflictHttpException $e) { continue; }
+                if (in_array($slot['position'], $occupied)) continue;
+                $input = ['inventory_id' => (int)$row['id'], 'source_storage_id' => (int)$row['storage_id'], 'destination_storage_id' => (int)$target['id'], 'position' => (int)$slot['position'], 'quantity' => 1, 'instance_id' => null];
+                try { (new CanonicalInventory(new CraftStorage($this->db)))->inspectTransfer($user, (int)$row['id'], (int)$target['id'], (int)$slot['position'], 1); $destination = $input; break; }
+                catch (\yii\web\HttpException $e) { continue; }
+            }
+            if ($compatible) $items[] = ['id' => (int)$row['id'], 'name' => trim($row['name']), 'icon' => trim($row['icon']), 'quantity' => (int)$row['item_quantity'], 'available' => $destination !== null, 'input' => $destination];
+        }
+        return ['node_id' => $node, 'items' => $items];
+    }
     public function view(int $user, int $id, int $page = 1): array
     {
         $capabilities = $this->available(); if ($page < 1 || $page > 1000000) throw new GameError('INVALID_PAGINATION', 'Некорректная страница.', 422);

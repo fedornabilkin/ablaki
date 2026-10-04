@@ -293,7 +293,8 @@ class CanonicalInventory
         foreach ($remainingRows as $row) {
             if ((int)$row['item_quantity'] < 1) continue;
             $occupied[(int)$row['slot']] = true;
-            if (!$canStore || (int)$row['slot'] > (int)$target['capacity'] || (int)$row['item_id'] !== (int)$output['id']) continue;
+            // Harvests have independent ageing/price lots; never merge different harvest dates.
+            if (!$canStore || $target['kind'] === 'harvest' || (int)$row['slot'] > (int)$target['capacity'] || (int)$row['item_id'] !== (int)$output['id']) continue;
             $add = min($left, max(0, $stack - (int)$row['item_quantity'])); if (!$add) continue;
             $grants[] = ['inventory_id' => (int)$row['id'], 'position' => (int)$row['slot'], 'quantity' => $add]; $left -= $add;
         }
@@ -303,6 +304,19 @@ class CanonicalInventory
         }
         if (count($consumed) + count($grants) > 2000) throw new ConflictHttpException('Слишком много ячеек для одной операции. Уменьшите количество изготовлений.');
         return ['materials' => $materials, 'consume' => $consumed, 'grant' => $grants, 'output_fits' => $left === 0, 'output_missing_quantity' => $left];
+    }
+    /** The garden service authorises a sale/withdrawal or settles the lot's one-time spoilage. */
+    public function consumeHarvest(int $owner, int $inventory, int $quantity, string $reason): void
+    {
+        $this->transaction();
+        if ($quantity < 1 || !in_array($reason, ['harvest.spoiled', 'harvest.sold', 'harvest.withdrawn'], true)) throw new \LogicException('Invalid harvest consumption.');
+        $row = (new Query())->from('craft_inventory')->where(['id' => $inventory, 'user_id' => $owner])->one($this->db);
+        $storage = $row ? (new Query())->from('craft_storage')->where(['id' => $row['storage_id'], 'owner_user_id' => $owner, 'kind' => 'harvest', 'status' => 'active'])->one($this->db) : null;
+        if (!$storage || (int)$row['item_quantity'] < $quantity || $this->equipment->units($inventory)) throw new ConflictHttpException('Урожай на складе изменился.');
+        $left = (int)$row['item_quantity'] - $quantity;
+        $this->write($inventory, ['item_quantity' => $left, 'item_id' => $left ? $row['item_id'] : null, 'slot' => $left ? $row['slot'] : null]);
+        $this->record($owner, $row, $quantity, (int)$storage['id'], null, $reason);
+        $this->touch([(int)$storage['id']]);
     }
     /** Apply a freshly recomputed plan under the command bus locks, never a client-supplied plan. */
     public function applyCraft(int $user, array $plan, array $target, array $items, array $output, string $reason = 'craft'): void

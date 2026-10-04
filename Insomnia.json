@@ -2610,7 +2610,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/crops",
       "name": "GET /world/crops",
-      "description": "Источник: docs/api/world-cultivation.openapi.json. Crop id in this response identifies a crop revision. Select it as crop_revision_id for sowing. No crop content is automatically published.",
+      "description": "Contract: docs/api/world-cultivation.openapi.json. Growth never pauses. Missed watering halves yield; expired crops cannot be harvested. Dig requires a shovel and wears it once. Harvest enters five-slot garden storage.",
       "method": "GET",
       "body": {},
       "parameters": [
@@ -2648,7 +2648,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/beds/{{ _.world_bed_id }}/cultivation",
       "name": "GET /world/beds/{id}/cultivation",
-      "description": "Источник: docs/api/world-cultivation.openapi.json. No writes or timer jobs. Growth pauses at water_due_at if it is earlier than ready_at. ready_at is the stored baseline until overdue watering extends it. A ripe crop does not spoil while inventory is full.",
+      "description": "Contract: docs/api/world-cultivation.openapi.json. Growth never pauses. Missed watering halves yield; expired crops cannot be harvested. Dig requires a shovel and wears it once. Harvest enters five-slot garden storage.",
       "method": "GET",
       "body": {},
       "parameters": [],
@@ -2675,7 +2675,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/beds/{{ _.world_bed_id }}/sow-preview",
       "name": "POST /world/beds/{id}/sow-preview",
-      "description": "Источник: docs/api/world-cultivation.openapi.json. Owned, unlocked, paid bed and membership required. Dig before each sow. Seeds and initial water come from the backpack. Water is due at water_due_at and on time strictly before water_deadline_at. Missing any watering window halves yield once (integer floor, minimum one item), with existing health efficiency applied. Growth does not pause or shift. Harvest is permitted from ready_at until strictly before expires_at. Expired crops grant nothing and must be cleared using cancel. Cancel refunds no resources. Preview may report missing materials or output fits=false; execution rejects atomically. GET projects elapsed time without writes. Commands require preview, revisions and an idempotency key. Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело.",
+      "description": "Contract: docs/api/world-cultivation.openapi.json. Growth never pauses. Missed watering halves yield; expired crops cannot be harvested. Dig requires a shovel and wears it once. Harvest enters five-slot garden storage.",
       "method": "POST",
       "body": {
         "mimeType": "application/json",
@@ -2710,7 +2710,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/beds/{{ _.world_bed_id }}/sow",
       "name": "POST /world/beds/{id}/sow",
-      "description": "Источник: docs/api/world-cultivation.openapi.json. Owned, unlocked, paid bed and membership required. Dig before each sow. Seeds and initial water come from the backpack. Water is due at water_due_at and on time strictly before water_deadline_at. Missing any watering window halves yield once (integer floor, minimum one item), with existing health efficiency applied. Growth does not pause or shift. Harvest is permitted from ready_at until strictly before expires_at. Expired crops grant nothing and must be cleared using cancel. Cancel refunds no resources. Preview may report missing materials or output fits=false; execution rejects atomically. GET projects elapsed time without writes. Commands require preview, revisions and an idempotency key. Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело.",
+      "description": "Contract: docs/api/world-cultivation.openapi.json. Growth never pauses. Missed watering halves yield; expired crops cannot be harvested. Dig requires a shovel and wears it once. Harvest enters five-slot garden storage.",
       "method": "POST",
       "body": {
         "mimeType": "application/json",
@@ -2745,7 +2745,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/beds/{{ _.world_bed_id }}/water-preview",
       "name": "POST /world/beds/{id}/water-preview",
-      "description": "Источник: docs/api/world-cultivation.openapi.json. Owned, unlocked, paid bed and membership required. Dig before each sow. Seeds and initial water come from the backpack. Water is due at water_due_at and on time strictly before water_deadline_at. Missing any watering window halves yield once (integer floor, minimum one item), with existing health efficiency applied. Growth does not pause or shift. Harvest is permitted from ready_at until strictly before expires_at. Expired crops grant nothing and must be cleared using cancel. Cancel refunds no resources. Preview may report missing materials or output fits=false; execution rejects atomically. GET projects elapsed time without writes. Commands require preview, revisions and an idempotency key. Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело.",
+      "description": "Contract: docs/api/world-cultivation.openapi.json. Growth never pauses. Missed watering halves yield; expired crops cannot be harvested. Dig requires a shovel and wears it once. Harvest enters five-slot garden storage.",
       "method": "POST",
       "body": {
         "mimeType": "application/json",
@@ -2780,7 +2780,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/beds/{{ _.world_bed_id }}/water",
       "name": "POST /world/beds/{id}/water",
-      "description": "Источник: docs/api/world-cultivation.openapi.json. Owned, unlocked, paid bed and membership required. Dig before each sow. Seeds and initial water come from the backpack. Water is due at water_due_at and on time strictly before water_deadline_at. Missing any watering window halves yield once (integer floor, minimum one item), with existing health efficiency applied. Growth does not pause or shift. Harvest is permitted from ready_at until strictly before expires_at. Expired crops grant nothing and must be cleared using cancel. Cancel refunds no resources. Preview may report missing materials or output fits=false; execution rejects atomically. GET projects elapsed time without writes. Commands require preview, revisions and an idempotency key. Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело.",
+      "description": "Contract: docs/api/world-cultivation.openapi.json. Growth never pauses. Missed watering halves yield; expired crops cannot be harvested. Dig requires a shovel and wears it once. Harvest enters five-slot garden storage.",
       "method": "POST",
       "body": {
         "mimeType": "application/json",
@@ -2815,7 +2815,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/beds/{{ _.world_bed_id }}/harvest-preview",
       "name": "POST /world/beds/{id}/harvest-preview",
-      "description": "Источник: docs/api/world-cultivation.openapi.json. Owned, unlocked, paid bed and membership required. Dig before each sow. Seeds and initial water come from the backpack. Water is due at water_due_at and on time strictly before water_deadline_at. Missing any watering window halves yield once (integer floor, minimum one item), with existing health efficiency applied. Growth does not pause or shift. Harvest is permitted from ready_at until strictly before expires_at. Expired crops grant nothing and must be cleared using cancel. Cancel refunds no resources. Preview may report missing materials or output fits=false; execution rejects atomically. GET projects elapsed time without writes. Commands require preview, revisions and an idempotency key. Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело.",
+      "description": "Contract: docs/api/world-cultivation.openapi.json. Growth never pauses. Missed watering halves yield; expired crops cannot be harvested. Dig requires a shovel and wears it once. Harvest enters five-slot garden storage.",
       "method": "POST",
       "body": {
         "mimeType": "application/json",
@@ -2850,7 +2850,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/beds/{{ _.world_bed_id }}/harvest",
       "name": "POST /world/beds/{id}/harvest",
-      "description": "Источник: docs/api/world-cultivation.openapi.json. Owned, unlocked, paid bed and membership required. Dig before each sow. Seeds and initial water come from the backpack. Water is due at water_due_at and on time strictly before water_deadline_at. Missing any watering window halves yield once (integer floor, minimum one item), with existing health efficiency applied. Growth does not pause or shift. Harvest is permitted from ready_at until strictly before expires_at. Expired crops grant nothing and must be cleared using cancel. Cancel refunds no resources. Preview may report missing materials or output fits=false; execution rejects atomically. GET projects elapsed time without writes. Commands require preview, revisions and an idempotency key. Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело.",
+      "description": "Contract: docs/api/world-cultivation.openapi.json. Growth never pauses. Missed watering halves yield; expired crops cannot be harvested. Dig requires a shovel and wears it once. Harvest enters five-slot garden storage.",
       "method": "POST",
       "body": {
         "mimeType": "application/json",
@@ -2885,7 +2885,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/beds/{{ _.world_bed_id }}/cancel-preview",
       "name": "POST /world/beds/{id}/cancel-preview",
-      "description": "Источник: docs/api/world-cultivation.openapi.json. Owned, unlocked, paid bed and membership required. Dig before each sow. Seeds and initial water come from the backpack. Water is due at water_due_at and on time strictly before water_deadline_at. Missing any watering window halves yield once (integer floor, minimum one item), with existing health efficiency applied. Growth does not pause or shift. Harvest is permitted from ready_at until strictly before expires_at. Expired crops grant nothing and must be cleared using cancel. Cancel refunds no resources. Preview may report missing materials or output fits=false; execution rejects atomically. GET projects elapsed time without writes. Commands require preview, revisions and an idempotency key. Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело.",
+      "description": "Contract: docs/api/world-cultivation.openapi.json. Growth never pauses. Missed watering halves yield; expired crops cannot be harvested. Dig requires a shovel and wears it once. Harvest enters five-slot garden storage.",
       "method": "POST",
       "body": {
         "mimeType": "application/json",
@@ -2920,7 +2920,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/beds/{{ _.world_bed_id }}/cancel",
       "name": "POST /world/beds/{id}/cancel",
-      "description": "Источник: docs/api/world-cultivation.openapi.json. Owned, unlocked, paid bed and membership required. Dig before each sow. Seeds and initial water come from the backpack. Water is due at water_due_at and on time strictly before water_deadline_at. Missing any watering window halves yield once (integer floor, minimum one item), with existing health efficiency applied. Growth does not pause or shift. Harvest is permitted from ready_at until strictly before expires_at. Expired crops grant nothing and must be cleared using cancel. Cancel refunds no resources. Preview may report missing materials or output fits=false; execution rejects atomically. GET projects elapsed time without writes. Commands require preview, revisions and an idempotency key. Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело.",
+      "description": "Contract: docs/api/world-cultivation.openapi.json. Growth never pauses. Missed watering halves yield; expired crops cannot be harvested. Dig requires a shovel and wears it once. Harvest enters five-slot garden storage.",
       "method": "POST",
       "body": {
         "mimeType": "application/json",
@@ -2955,7 +2955,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/crops/publish-preview",
       "name": "POST /world/crops/publish-preview",
-      "description": "Источник: docs/api/world-cultivation.openapi.json. Requires world-manage. Resources must exist in current craft catalog, active and non-equipment/non-chest. water_item_id=null requires zero water quantity and interval; otherwise both are positive. Existing cycles retain rules. Credits are not minted on harvest; sales are a separate transaction. Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело.",
+      "description": "Contract: docs/api/world-cultivation.openapi.json. Growth never pauses. Missed watering halves yield; expired crops cannot be harvested. Dig requires a shovel and wears it once. Harvest enters five-slot garden storage.",
       "method": "POST",
       "body": {
         "mimeType": "application/json",
@@ -2990,7 +2990,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/crops/publish",
       "name": "POST /world/crops/publish",
-      "description": "Источник: docs/api/world-cultivation.openapi.json. Requires world-manage. Resources must exist in current craft catalog, active and non-equipment/non-chest. water_item_id=null requires zero water quantity and interval; otherwise both are positive. Existing cycles retain rules. Credits are not minted on harvest; sales are a separate transaction. Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело.",
+      "description": "Contract: docs/api/world-cultivation.openapi.json. Growth never pauses. Missed watering halves yield; expired crops cannot be harvested. Dig requires a shovel and wears it once. Harvest enters five-slot garden storage.",
       "method": "POST",
       "body": {
         "mimeType": "application/json",
@@ -6347,7 +6347,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/workspace",
       "name": "GET /world/workspace",
-      "description": "Источник: docs/api/world-workspace.openapi.json. ",
+      "description": "Источник: docs/api/world-workspace.openapi.json. recipes[].icon содержит иконку выходного предмета для плиток мастерской.",
       "method": "GET",
       "body": {},
       "parameters": [
@@ -10215,7 +10215,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/beds/{{ _.world_bed_id }}/dig-preview",
       "name": "POST /world/beds/{id}/dig-preview",
-      "description": "Источник: docs/api/world-cultivation.openapi.json. Owned, unlocked, paid bed and membership required. Dig before each sow. Seeds and initial water come from the backpack. Water is due at water_due_at and on time strictly before water_deadline_at. Missing any watering window halves yield once (integer floor, minimum one item), with existing health efficiency applied. Growth does not pause or shift. Harvest is permitted from ready_at until strictly before expires_at. Expired crops grant nothing and must be cleared using cancel. Cancel refunds no resources. Preview may report missing materials or output fits=false; execution rejects atomically. GET projects elapsed time without writes. Commands require preview, revisions and an idempotency key. Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело.",
+      "description": "Contract: docs/api/world-cultivation.openapi.json. Growth never pauses. Missed watering halves yield; expired crops cannot be harvested. Dig requires a shovel and wears it once. Harvest enters five-slot garden storage.",
       "method": "POST",
       "body": {
         "mimeType": "application/json",
@@ -10250,7 +10250,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/beds/{{ _.world_bed_id }}/dig",
       "name": "POST /world/beds/{id}/dig",
-      "description": "Источник: docs/api/world-cultivation.openapi.json. Owned, unlocked, paid bed and membership required. Dig before each sow. Seeds and initial water come from the backpack. Water is due at water_due_at and on time strictly before water_deadline_at. Missing any watering window halves yield once (integer floor, minimum one item), with existing health efficiency applied. Growth does not pause or shift. Harvest is permitted from ready_at until strictly before expires_at. Expired crops grant nothing and must be cleared using cancel. Cancel refunds no resources. Preview may report missing materials or output fits=false; execution rejects atomically. GET projects elapsed time without writes. Commands require preview, revisions and an idempotency key. Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело.",
+      "description": "Contract: docs/api/world-cultivation.openapi.json. Growth never pauses. Missed watering halves yield; expired crops cannot be harvested. Dig requires a shovel and wears it once. Harvest enters five-slot garden storage.",
       "method": "POST",
       "body": {
         "mimeType": "application/json",
@@ -10432,6 +10432,270 @@
         "disabled": false
       },
       "metaSortKey": 215.1,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_6423d05da77ad14405230d2f7e04b0a5",
+      "parentId": "fld_d5d30075b45a3e7c360b131d63adcfba",
+      "modified": 1791009594237,
+      "created": 1791009594237,
+      "url": "{{ _.baseUrl }}/v1/world/nodes/{{ _.world_node_id }}/harvest",
+      "name": "GET /world/nodes/{id}/harvest",
+      "description": "Contract: docs/api/world-harvest.openapi.json; placement-options: docs/api/world-storage.openapi.json.",
+      "method": "GET",
+      "body": {},
+      "parameters": [],
+      "headers": [],
+      "authentication": {
+        "type": "bearer",
+        "token": "{{ _.bearer }}",
+        "disabled": false
+      },
+      "metaSortKey": 83,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_95b6251c235663bd15bc62a1370ea74d",
+      "parentId": "fld_d5d30075b45a3e7c360b131d63adcfba",
+      "modified": 1791009594237,
+      "created": 1791009594237,
+      "url": "{{ _.baseUrl }}/v1/world/nodes/{{ _.world_node_id }}/harvest-price-preview",
+      "name": "POST /world/nodes/{id}/harvest-price-preview",
+      "description": "Contract: docs/api/world-harvest.openapi.json; placement-options: docs/api/world-storage.openapi.json.",
+      "method": "POST",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"inventory_id\": 1,\n  \"price\": \"1.0000\"\n}"
+      },
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "authentication": {
+        "type": "bearer",
+        "token": "{{ _.bearer }}",
+        "disabled": false
+      },
+      "metaSortKey": 83,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_0a35a437b8df1b5ab7054c3ab4a56548",
+      "parentId": "fld_d5d30075b45a3e7c360b131d63adcfba",
+      "modified": 1791009594237,
+      "created": 1791009594237,
+      "url": "{{ _.baseUrl }}/v1/world/nodes/{{ _.world_node_id }}/harvest-price",
+      "name": "POST /world/nodes/{id}/harvest-price",
+      "description": "Contract: docs/api/world-harvest.openapi.json; placement-options: docs/api/world-storage.openapi.json.",
+      "method": "POST",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"inventory_id\": 1,\n  \"price\": \"1.0000\",\n  \"request_key\": \"{{ _.world_request_key }}\",\n  \"quote_id\": \"{{ _.world_quote_id }}\",\n  \"expected_revisions\": {}\n}"
+      },
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "authentication": {
+        "type": "bearer",
+        "token": "{{ _.bearer }}",
+        "disabled": false
+      },
+      "metaSortKey": 83,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_bca1c25455567ed175389fde060fb2b3",
+      "parentId": "fld_d5d30075b45a3e7c360b131d63adcfba",
+      "modified": 1791009594237,
+      "created": 1791009594237,
+      "url": "{{ _.baseUrl }}/v1/world/nodes/{{ _.world_node_id }}/harvest-buy-preview",
+      "name": "POST /world/nodes/{id}/harvest-buy-preview",
+      "description": "Contract: docs/api/world-harvest.openapi.json; placement-options: docs/api/world-storage.openapi.json.",
+      "method": "POST",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"inventory_id\": 1,\n  \"quantity\": 1\n}"
+      },
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "authentication": {
+        "type": "bearer",
+        "token": "{{ _.bearer }}",
+        "disabled": false
+      },
+      "metaSortKey": 83,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_f40a69060f9eafecbe9416b073794b67",
+      "parentId": "fld_d5d30075b45a3e7c360b131d63adcfba",
+      "modified": 1791009594237,
+      "created": 1791009594237,
+      "url": "{{ _.baseUrl }}/v1/world/nodes/{{ _.world_node_id }}/harvest-buy",
+      "name": "POST /world/nodes/{id}/harvest-buy",
+      "description": "Contract: docs/api/world-harvest.openapi.json; placement-options: docs/api/world-storage.openapi.json.",
+      "method": "POST",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"inventory_id\": 1,\n  \"quantity\": 1,\n  \"request_key\": \"{{ _.world_request_key }}\",\n  \"quote_id\": \"{{ _.world_quote_id }}\",\n  \"expected_revisions\": {}\n}"
+      },
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "authentication": {
+        "type": "bearer",
+        "token": "{{ _.bearer }}",
+        "disabled": false
+      },
+      "metaSortKey": 83,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_985163e8c4c14931c65051681d22a037",
+      "parentId": "fld_d5d30075b45a3e7c360b131d63adcfba",
+      "modified": 1791009594237,
+      "created": 1791009594237,
+      "url": "{{ _.baseUrl }}/v1/world/nodes/{{ _.world_node_id }}/harvest-withdraw-preview",
+      "name": "POST /world/nodes/{id}/harvest-withdraw-preview",
+      "description": "Contract: docs/api/world-harvest.openapi.json; placement-options: docs/api/world-storage.openapi.json.",
+      "method": "POST",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"inventory_id\": 1,\n  \"quantity\": 1\n}"
+      },
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "authentication": {
+        "type": "bearer",
+        "token": "{{ _.bearer }}",
+        "disabled": false
+      },
+      "metaSortKey": 83,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_6d7c770934eea8773f198580915e2844",
+      "parentId": "fld_d5d30075b45a3e7c360b131d63adcfba",
+      "modified": 1791009594237,
+      "created": 1791009594237,
+      "url": "{{ _.baseUrl }}/v1/world/nodes/{{ _.world_node_id }}/harvest-withdraw",
+      "name": "POST /world/nodes/{id}/harvest-withdraw",
+      "description": "Contract: docs/api/world-harvest.openapi.json; placement-options: docs/api/world-storage.openapi.json.",
+      "method": "POST",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"inventory_id\": 1,\n  \"quantity\": 1,\n  \"request_key\": \"{{ _.world_request_key }}\",\n  \"quote_id\": \"{{ _.world_quote_id }}\",\n  \"expected_revisions\": {}\n}"
+      },
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "authentication": {
+        "type": "bearer",
+        "token": "{{ _.bearer }}",
+        "disabled": false
+      },
+      "metaSortKey": 83,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_60f913b2368c3b057d1f408f881f8b4c",
+      "parentId": "fld_d5d30075b45a3e7c360b131d63adcfba",
+      "modified": 1791009594237,
+      "created": 1791009594237,
+      "url": "{{ _.baseUrl }}/v1/world/nodes/{{ _.world_node_id }}/placement-options",
+      "name": "GET /world/nodes/{id}/placement-options",
+      "description": "Contract: docs/api/world-harvest.openapi.json; placement-options: docs/api/world-storage.openapi.json.",
+      "method": "GET",
+      "body": {},
+      "parameters": [],
+      "headers": [],
+      "authentication": {
+        "type": "bearer",
+        "token": "{{ _.bearer }}",
+        "disabled": false
+      },
+      "metaSortKey": 83,
       "isPrivate": false,
       "settingStoreCookies": true,
       "settingSendCookies": true,

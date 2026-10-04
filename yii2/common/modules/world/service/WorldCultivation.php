@@ -110,7 +110,8 @@ class WorldCultivation
         if ($action === 'dig') {
             if ($cycle) throw new GameError('BED_OCCUPIED', 'Сначала соберите или уберите урожай.');
             if ($c['bed']['dug_at'] !== null) throw new GameError('BED_ALREADY_DUG', 'Грядка уже вскопана.');
-            return $c + ['terms' => ['bed_id' => $input['bed_id'], 'action' => 'dig'], 'revisions' => $revisions];
+            $shovel = GardenTools::shovel($this->db, $user);
+            return $c + ['terms' => ['bed_id' => $input['bed_id'], 'action' => 'dig', 'tool' => $shovel['result']], 'revisions' => $revisions + $shovel['revisions']];
         }
         if ($action === 'sow') {
             if ($c['bed']['dug_at'] === null) throw new GameError('BED_NOT_DUG', 'Сначала вскопайте грядку.');
@@ -137,8 +138,10 @@ class WorldCultivation
         $quantity = $action === 'harvest' ? max(1, intdiv((int)$rules['yield_quantity'] * $efficiency * ($clock['yield_factor_bps'] ?? 10000), 100000000)) : 0;
         $store = new CraftStorage($this->db); $inventory = new CanonicalInventory($store); $backpack = $inventory->backpack($user);
         if (!$backpack) throw new GameError('BACKPACK_UNAVAILABLE', 'Рюкзак ещё не подготовлен.');
-        $target = (new StorageAccessPolicy($this->db))->storage($user, (int)$backpack['id'], true);
-        $plan = $inventory->planCraft([$target], $target, $required, $items, $output, $quantity);
+        $source = (new StorageAccessPolicy($this->db))->storage($user, (int)$backpack['id'], true);
+        $target = $action === 'harvest' ? GardenHarvest::provision($this->db, (int)$c['bed']['garden_node_id'], $user) : $source;
+        $plan = $inventory->planCraft([$source], $target, $required, $items, $output, $quantity);
+        $revisions['storage:' . $source['id']] = (int)$source['revision'];
         $revisions['storage:' . $target['id']] = (int)$target['revision']; $revisions['catalog'] = (int)$this->one('craft_meta', ['id' => 1])['revision'];
         $terms += ['work_efficiency_bps' => $efficiency, 'materials' => $plan['materials'], 'consume' => $plan['consume'], 'grant' => $plan['grant'], 'output' => ['item_id' => (int)$output['id'], 'quantity' => $quantity, 'storage_id' => (int)$target['id'], 'fits' => $plan['output_fits']]];
         return $c + compact('rules', 'terms', 'revisions', 'store', 'items', 'output', 'target', 'plan');
@@ -157,6 +160,8 @@ class WorldCultivation
             if (CanonicalJson::encode($p['terms']) !== CanonicalJson::encode($terms)) throw new GameError('CROP_CHANGED', 'Условия выращивания изменились. Повторите расчёт.');
             $now = time();
             if ($action === 'dig') {
+                if (!$terms['tool']['available']) throw new GameError('SHOVEL_REQUIRED', 'Для вскапывания нужна исправная лопата в рюкзаке.');
+                (new \common\modules\craft\service\EquipmentExposure($this->db))->use($terms['tool']['instance_id'], 1, 1, false);
                 $this->db->createCommand()->update('world_bed', ['dug_at' => $now], ['node_id' => $payload['bed_id']])->execute();
                 $this->db->createCommand()->update('world_node', ['revision' => new Expression('[[revision]]+1')], ['id' => $payload['bed_id']])->execute();
                 $result = ['changed_node_ids' => [$payload['bed_id']], 'changed_storage_ids' => []];
@@ -179,6 +184,7 @@ class WorldCultivation
                 $this->db->createCommand()->update('world_registry', ['content_revision' => new Expression('[[content_revision]]+1')], ['id' => 1])->execute();
             } else {
                 if ($action !== 'cancel') { $p['store']->operationId = $operation; (new CanonicalInventory($p['store']))->applyCraft($user, $p['plan'], $p['target'], $p['items'], $p['output'], 'cultivation.' . $action); }
+                if ($action === 'harvest') (new GardenHarvest($this->db, $this->flags))->recordHarvest($p['target'], $p['plan'], $operation);
                 if ($action === 'sow') {
                     $this->db->createCommand()->insert('world_crop_cycle', ['bed_id' => $payload['bed_id'], 'owner_user_id' => $user, 'crop_revision_id' => $p['rules']['id'], 'operation_id' => $operation, 'status' => 'growing', 'planted_at' => $now, 'ready_at' => $now + (int)$p['rules']['grow_seconds'], 'water_due_at' => $p['rules']['water_item_id'] === null ? null : $now + (int)$p['rules']['water_interval_seconds'], 'terms_json' => CanonicalJson::encode($terms)])->execute();
                     $cycleId = (int)$this->db->getLastInsertID();
@@ -196,7 +202,7 @@ class WorldCultivation
                 }
                 $this->db->createCommand()->insert('world_crop_action', ['cycle_id' => $cycleId, 'operation_id' => $operation, 'kind' => $action, 'quantity' => $action === 'harvest' ? $terms['output']['quantity'] : 0, 'created_at' => $now])->execute();
                 if ($this->db->createCommand()->update('world_node', ['revision' => new Expression('[[revision]]+1')], ['id' => $payload['bed_id']])->execute() !== 1) throw new \RuntimeException('Bed revision update failed.');
-                $result = ['cycle_id' => $cycleId, 'changed_node_ids' => [$payload['bed_id']], 'changed_storage_ids' => $action === 'cancel' ? [] : [(int)$p['target']['id']]];
+                $result = ['cycle_id' => $cycleId, 'changed_node_ids' => [$payload['bed_id'], (int)$p['bed']['garden_node_id']], 'changed_storage_ids' => $action === 'cancel' ? [] : [(int)$p['target']['id']]];
             }
             $bus->emit($operation, $user, $action === 'harvest' ? 'world.crop.harvested' : 'world.crop.' . $action, $result); return $result;
         });

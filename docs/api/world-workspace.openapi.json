@@ -121,6 +121,11 @@
                   "minimum": 1,
                   "maximum": 1000
                 },
+                "icon": {
+                  "type": "string",
+                  "maxLength": 64,
+                  "description": "Font Awesome icon of the output item; older clients may ignore it."
+                },
                 "locked_reasons": {
                   "type": "array",
                   "items": {

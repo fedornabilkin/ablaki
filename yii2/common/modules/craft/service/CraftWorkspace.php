@@ -60,7 +60,7 @@ class CraftWorkspace
         foreach ($catalog as $recipe) {
             $output = $outputs[$recipe['item_id']] ?? null; if (!$output) continue;
             if (($recipeId === null && $selected === null) || (int)$recipe['id'] === $recipeId) $selected = $recipe;
-            $recipes[] = ['id' => (int)$recipe['id'], 'name' => trim($output['name']), 'quantity' => (int)$recipe['output_quantity'], 'locked_reasons' => $requirements[(int)$recipe['id']]];
+            $recipes[] = ['id' => (int)$recipe['id'], 'name' => trim($output['name']), 'icon' => trim((string)$output['icon']), 'quantity' => (int)$recipe['output_quantity'], 'locked_reasons' => $requirements[(int)$recipe['id']]];
         }
         if ($recipeId !== null && (!$selected || (int)$selected['id'] !== $recipeId)) throw new GameError('RECIPE_UNAVAILABLE', 'Рецепт недоступен.');
         $equipment = [];

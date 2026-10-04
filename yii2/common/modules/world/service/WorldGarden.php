@@ -193,10 +193,11 @@ class WorldGarden
                     $code = 'garden-' . $operation;
                     $garden = $tree->create(['code' => $code, 'slug' => $code, 'node_type' => 'PLOT', 'name' => $terms['name'], 'parent_id' => $p['node']['id'], 'owner_user_id' => $user, 'visibility' => 'private'], ['plot_kind' => 'garden', 'area' => 10, 'allow_building' => 0]);
                     $gardenId = (int)$garden['id'];
+                    GardenHarvest::provision($this->db, $gardenId, $user);
                     $this->db->createCommand()->insert('world_garden_purchase', ['node_id' => $gardenId, 'membership_id' => $p['membership']['id'], 'offer_id' => $terms['offer_id'], 'transfer_id' => $transfer, 'operation_id' => $operation, 'terms_json' => CanonicalJson::encode($terms), 'created_at' => $now])->execute();
                     $this->db->createCommand()->insert('world_expansion_policy', ['node_id' => $gardenId, 'kind' => 'garden_bed', 'initial_open' => 1, 'place_limit' => 10, 'base_price' => $terms['base_price'], 'curve' => 'progressive', 'operation_id' => $operation])->execute(); $policyId = (int)$this->db->getLastInsertID();
                     for ($ordinal = 1; $ordinal <= 10; $ordinal++) {
-                        $bed = $tree->create(['code' => $code . '-bed-' . $ordinal, 'slug' => 'bed-' . $ordinal, 'node_type' => 'BED', 'name' => 'Грядка ' . $ordinal, 'parent_id' => $gardenId, 'owner_user_id' => $user, 'visibility' => 'private', 'position' => $ordinal], ['garden_node_id' => $gardenId, 'ordinal' => $ordinal, 'unlocked' => $ordinal === 1 ? 1 : 0]);
+                        $bed = $tree->create(['code' => $code . '-bed-' . $ordinal, 'slug' => 'bed-' . $ordinal, 'node_type' => 'BED', 'name' => 'Грядка ' . $ordinal, 'parent_id' => $gardenId, 'owner_user_id' => $user, 'visibility' => 'private', 'position' => $ordinal, 'position_x' => ($ordinal - 1) % 5 - 2, 'position_y' => $ordinal <= 5 ? 0 : -1], ['garden_node_id' => $gardenId, 'ordinal' => $ordinal, 'unlocked' => $ordinal === 1 ? 1 : 0]);
                         (new EconomyHierarchy($this->db))->provision((int)$bed['id'], $operation);
                         if ($ordinal === 1) $this->entitle($policyId, (int)$bed['id'], 1, '0.0000', 1, null, $operation, $now);
                         $changed[] = (int)$bed['id'];

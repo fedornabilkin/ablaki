@@ -119,6 +119,12 @@ class WorldQuery
             $details += (new Query())->from('world_' . strtolower($type))->where(['node_id' => $typeIds])->indexBy('node_id')->all($this->db);
         }
         $shelters = [];
+        if ($this->db->schema->getTableSchema('world_harvest_result')) {
+            $harvests = (new Query())->select(['ancestor_id' => 'p.ancestor_id', 'quantity' => new \yii\db\Expression('SUM([[h.quantity]])')])->from(['h' => 'world_harvest_result'])
+                ->innerJoin(['c' => 'world_crop_cycle'], '[[c.id]]=[[h.cycle_id]]')->innerJoin(['p' => 'world_node_closure'], '[[p.descendant_id]]=[[c.bed_id]]')
+                ->where(['p.ancestor_id' => $ids])->groupBy('p.ancestor_id')->indexBy('ancestor_id')->all($this->db);
+            foreach ($rows as $row) if ($row['node_type'] === 'BED' || ($details[$row['id']]['plot_kind'] ?? '') === 'garden') $details[$row['id']]['harvested_quantity'] = (int)($harvests[$row['id']]['quantity'] ?? 0);
+        }
         if (!empty($byType['BUILDING']) && $this->db->schema->getTableSchema('world_shelter_deployment')) {
             $shelters = (new Query())->from('world_shelter_deployment')->where(['node_id' => $byType['BUILDING']])->indexBy('node_id')->all($this->db);
             $units = $shelters ? (new Query())->from('craft_equipment_instance')->where(['id' => array_column($shelters, 'instance_id')])->all($this->db) : [];

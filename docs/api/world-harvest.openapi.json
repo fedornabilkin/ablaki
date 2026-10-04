@@ -1,0 +1,673 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Garden harvest storage and market",
+    "version": "1.0.0",
+    "description": "Schema 37. Authenticated players may view active garden offers. Only owner sets price or withdraws; only other players buy. Each batch loses floor(remaining_quantity * 30 / 100) once at harvested_at + 1209600 seconds. GET projects loss without writes; commands settle it atomically. Expired quantity never resets on sale or price changes. Buying debits personal Cr, credits garden treasury with its ordinary tax/loss receipt and grants backpack items in the same command transaction. Full backpack, stale revisions/prices or insufficient credit reject all changes. Idempotency follows the shared CommandBus contract. Harvest storage is separate from generic storage transfer to preserve batch metadata."
+  },
+  "servers": [
+    {
+      "url": "/v1"
+    }
+  ],
+  "security": [
+    {
+      "bearerAuth": []
+    }
+  ],
+  "paths": {
+    "/world/nodes/{id}/harvest": {
+      "get": {
+        "summary": "Garden warehouse and public sale offers",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Harvest"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/world/nodes/{id}/harvest-price-preview": {
+      "post": {
+        "summary": "Preview price",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "inventory_id": {
+                    "type": "integer",
+                    "minimum": 1
+                  },
+                  "price": {
+                    "type": "string",
+                    "nullable": true,
+                    "pattern": "^(0|[1-9][0-9]{0,14})\\.[0-9]{4}$",
+                    "description": "Positive exact Cr per unit, or null to remove from sale."
+                  }
+                },
+                "required": [
+                  "inventory_id",
+                  "price"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Quote"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/world/nodes/{id}/harvest-price": {
+      "post": {
+        "summary": "Execute price",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "allOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "inventory_id": {
+                        "type": "integer",
+                        "minimum": 1
+                      },
+                      "price": {
+                        "type": "string",
+                        "nullable": true,
+                        "pattern": "^(0|[1-9][0-9]{0,14})\\.[0-9]{4}$",
+                        "description": "Positive exact Cr per unit, or null to remove from sale."
+                      }
+                    },
+                    "required": [
+                      "inventory_id",
+                      "price"
+                    ]
+                  },
+                  {
+                    "$ref": "#/components/schemas/Command"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Result"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/world/nodes/{id}/harvest-buy-preview": {
+      "post": {
+        "summary": "Preview buy",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "inventory_id": {
+                    "type": "integer",
+                    "minimum": 1
+                  },
+                  "quantity": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 10000
+                  }
+                },
+                "required": [
+                  "inventory_id",
+                  "quantity"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Quote"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/world/nodes/{id}/harvest-buy": {
+      "post": {
+        "summary": "Execute buy",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "allOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "inventory_id": {
+                        "type": "integer",
+                        "minimum": 1
+                      },
+                      "quantity": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 10000
+                      }
+                    },
+                    "required": [
+                      "inventory_id",
+                      "quantity"
+                    ]
+                  },
+                  {
+                    "$ref": "#/components/schemas/Command"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Result"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/world/nodes/{id}/harvest-withdraw-preview": {
+      "post": {
+        "summary": "Preview withdraw",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "inventory_id": {
+                    "type": "integer",
+                    "minimum": 1
+                  },
+                  "quantity": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 10000
+                  }
+                },
+                "required": [
+                  "inventory_id",
+                  "quantity"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Quote"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/world/nodes/{id}/harvest-withdraw": {
+      "post": {
+        "summary": "Execute withdraw",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "allOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "inventory_id": {
+                        "type": "integer",
+                        "minimum": 1
+                      },
+                      "quantity": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 10000
+                      }
+                    },
+                    "required": [
+                      "inventory_id",
+                      "quantity"
+                    ]
+                  },
+                  {
+                    "$ref": "#/components/schemas/Command"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Result"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer"
+      }
+    },
+    "schemas": {
+      "Error": {
+        "type": "object",
+        "required": [
+          "code",
+          "message",
+          "details"
+        ],
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          },
+          "details": {
+            "type": "object"
+          }
+        }
+      },
+      "Command": {
+        "type": "object",
+        "required": [
+          "request_key",
+          "quote_id",
+          "expected_revisions"
+        ],
+        "properties": {
+          "request_key": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_-]{16,80}$"
+          },
+          "quote_id": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{32}$"
+          },
+          "expected_revisions": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 2147483647
+            }
+          }
+        }
+      },
+      "Quote": {
+        "type": "object",
+        "required": [
+          "quote_id",
+          "expires_at",
+          "expected_revisions",
+          "terms",
+          "server_time"
+        ],
+        "properties": {
+          "quote_id": {
+            "type": "string"
+          },
+          "expires_at": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          },
+          "expected_revisions": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 2147483647
+            }
+          },
+          "terms": {
+            "type": "object"
+          },
+          "server_time": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          }
+        }
+      },
+      "Result": {
+        "type": "object",
+        "required": [
+          "operation_id",
+          "request_key",
+          "server_time",
+          "contract_version",
+          "changed_node_ids"
+        ],
+        "properties": {
+          "operation_id": {
+            "type": "string"
+          },
+          "request_key": {
+            "type": "string"
+          },
+          "server_time": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          },
+          "contract_version": {
+            "type": "integer",
+            "enum": [
+              1
+            ]
+          },
+          "changed_node_ids": {
+            "type": "array",
+            "items": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 2147483647
+            }
+          }
+        }
+      },
+      "HarvestItem": {
+        "type": "object",
+        "properties": {
+          "inventory_id": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "position": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 5
+          },
+          "name": {
+            "type": "string"
+          },
+          "icon": {
+            "type": "string"
+          },
+          "quantity": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "price": {
+            "type": "string",
+            "nullable": true,
+            "pattern": "^(0|[1-9][0-9]{0,14})\\.[0-9]{4}$",
+            "description": "Positive exact Cr per unit, or null to remove from sale."
+          },
+          "harvested_at": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "fresh_until": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "spoiled": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "inventory_id",
+          "position",
+          "name",
+          "icon",
+          "quantity",
+          "price",
+          "harvested_at",
+          "fresh_until",
+          "spoiled"
+        ]
+      },
+      "Harvest": {
+        "type": "object",
+        "properties": {
+          "node_id": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "name": {
+            "type": "string"
+          },
+          "capacity": {
+            "type": "integer",
+            "enum": [
+              5
+            ]
+          },
+          "owned_by_me": {
+            "type": "boolean"
+          },
+          "writable": {
+            "type": "boolean"
+          },
+          "server_time": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "items": {
+            "type": "array",
+            "maxItems": 5,
+            "items": {
+              "$ref": "#/components/schemas/HarvestItem"
+            }
+          }
+        },
+        "required": [
+          "node_id",
+          "name",
+          "capacity",
+          "owned_by_me",
+          "writable",
+          "server_time",
+          "items"
+        ]
+      }
+    }
+  }
+}

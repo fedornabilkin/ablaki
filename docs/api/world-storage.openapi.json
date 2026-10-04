@@ -2,7 +2,7 @@
   "openapi": "3.0.3",
   "info": {
     "title": "Ablaki World Storage API",
-    "version": "1.0.0",
+    "version": "1.1.0",
     "description": "Owner-private storage and transfers. Requires storage_v2/world_read; writes also require world_write. Building and its same-owner active rooms share the workspace, deployed stations and stockpile; another building remains remote. Inventory storage capacity is enforced by canonical inventory, including atomic rejection of production into a full stockpile. Warehouses expand through world-warehouse.openapi.json. Existing chest repair and transfer quote contracts are retained."
   },
   "servers": [
@@ -822,6 +822,117 @@
           },
           "503": {
             "description": "World/storage feature disabled; no fallback to legacy locations"
+          }
+        }
+      }
+    },
+    "/world/nodes/{id}/placement-options": {
+      "get": {
+        "summary": "Owner inventory compatible with this node and first suitable free placement slot",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "node_id": {
+                      "type": "integer",
+                      "minimum": 1
+                    },
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "integer",
+                            "minimum": 1
+                          },
+                          "name": {
+                            "type": "string"
+                          },
+                          "icon": {
+                            "type": "string"
+                          },
+                          "quantity": {
+                            "type": "integer",
+                            "minimum": 1
+                          },
+                          "available": {
+                            "type": "boolean"
+                          },
+                          "input": {
+                            "nullable": true,
+                            "type": "object",
+                            "properties": {
+                              "inventory_id": {
+                                "type": "integer",
+                                "minimum": 1
+                              },
+                              "source_storage_id": {
+                                "type": "integer",
+                                "minimum": 1
+                              },
+                              "destination_storage_id": {
+                                "type": "integer",
+                                "minimum": 1
+                              },
+                              "position": {
+                                "type": "integer",
+                                "minimum": 1
+                              },
+                              "quantity": {
+                                "type": "integer",
+                                "enum": [
+                                  1
+                                ]
+                              },
+                              "instance_id": {
+                                "type": "integer",
+                                "nullable": true
+                              }
+                            },
+                            "required": [
+                              "inventory_id",
+                              "source_storage_id",
+                              "destination_storage_id",
+                              "position",
+                              "quantity",
+                              "instance_id"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "name",
+                          "icon",
+                          "quantity",
+                          "available",
+                          "input"
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "node_id",
+                    "items"
+                  ]
+                }
+              }
+            }
           }
         }
       }

@@ -145,6 +145,24 @@ class WorldTree
     {
         if (!$this->db->getTransaction()) throw new \LogicException('World writes require a transaction.');
         $prepared = $this->previewMove($id, $parentId);
+        return $this->movePrepared($id, $parentId, $prepared);
+    }
+    /** One-time legacy repair, only to the original estate recorded by the purchase. */
+    public function attachPurchasedGarden(int $id, int $parentId): array
+    {
+        if (!$this->db->getTransaction()) throw new \LogicException('Garden repair requires a transaction.');
+        $node = $this->get($id); $parent = $this->get($parentId);
+        if ((int)$node['parent_id'] === $parentId) return $node;
+        $purchase = (new Query())->from(['p' => 'world_garden_purchase'])->innerJoin(['m' => 'world_membership'], '[[m.id]]=[[p.membership_id]]')
+            ->where(['p.node_id' => $id, 'm.starter_site_id' => $parentId, 'm.user_id' => $node['owner_user_id']])->exists($this->db);
+        if (!$purchase || $node['node_type'] !== 'PLOT' || $node['status'] !== 'active' || (int)$node['owner_user_id'] !== (int)$parent['owner_user_id'] || (int)$node['parent_id'] !== (int)$parent['parent_id'] || (int)$node['root_id'] !== (int)$parent['root_id']) throw new GameError('INVALID_GARDEN_ESTATE', 'Стоянка не соответствует покупке огорода.');
+        $this->assertParent('PLOT', $parent);
+        $descendants = (new Query())->from('world_node_closure')->where(['ancestor_id' => $id])->all($this->db);
+        $ids = array_map('intval', array_column($descendants, 'descendant_id'));
+        return $this->movePrepared($id, $parentId, compact('node', 'parent', 'descendants', 'ids'));
+    }
+    private function movePrepared(int $id, int $parentId, array $prepared): array
+    {
         $node = $prepared['node']; $parent = $prepared['parent']; $descendants = $prepared['descendants']; $ids = $prepared['ids'];
         $position = $this->nextPosition($parentId);
         $ancestors = (new Query())->from('world_node_closure')->where(['descendant_id' => $parentId])->all($this->db);

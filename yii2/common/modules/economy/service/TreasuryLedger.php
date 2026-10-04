@@ -213,6 +213,22 @@ class TreasuryLedger
         $receipt = (int)$this->db->getLastInsertID();
         if ($policy['loss_policy']['loss_rate_bps'] > 0) $this->scheduleLoss($receipt, 1, $protection + $policy['loss_policy']['loss_period_seconds']);
     }
+    /** Authorised market purchase, committed with the inventory movement by CommandBus. */
+    public function receivePersonalPayment(int $user, int $recipientNode, Money $amount, string $operation, string $purpose): int
+    {
+        $this->writable();
+        if ($amount->isNegative() || $amount->isZero()) throw new \LogicException('Positive payment required.');
+        $policy = $this->published($recipientNode); $accounts = (new EconomyHierarchy($this->db))->accounts($recipientNode);
+        $account = (new Locks($this->db))->row('economy_account', ['id' => $accounts['treasury']['id']]);
+        $next = $this->money($account['amount'])->add($amount);
+        $wallet = (new \common\services\user\CreditLedger($this->db))->changeExact($user, Money::parse('0')->subtract($amount)->decimal(), 'crop_purchase', $purpose);
+        $this->balance((int)$account['id'], $next, $this->money($account['reserved']));
+        $this->db->createCommand()->insert('economy_transfer', ['operation_id' => $operation, 'line_code' => 'harvest-purchase', 'kind' => 'crop_purchase', 'source_user_id' => $user, 'source_account_id' => null,
+            'destination_account_id' => $account['id'], 'amount' => $amount->decimal(), 'source_after' => $wallet, 'destination_after' => $next->decimal(), 'purpose' => $purpose, 'created_at' => time()])->execute();
+        $transfer = (int)$this->db->getLastInsertID();
+        $this->receipt((int)$account['id'], $transfer, $amount, $policy, time());
+        return $transfer;
+    }
     /** Funded domain payment; caller checks the purpose, permission and budget commitment. */
     public function receiveBudgetPayment(int $budget, int $recipientNode, Money $amount, string $operation, string $purpose, string $kind = 'order_payment'): int
     {

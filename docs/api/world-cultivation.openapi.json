@@ -2,8 +2,8 @@
   "openapi": "3.0.3",
   "info": {
     "title": "World crop cultivation",
-    "version": "1.1.0",
-    "description": "Owned, unlocked, paid bed and membership required. Dig before each sow. Seeds and initial water come from the backpack. Water is due at water_due_at and on time strictly before water_deadline_at. Missing any watering window halves yield once (integer floor, minimum one item), with existing health efficiency applied. Growth does not pause or shift. Harvest is permitted from ready_at until strictly before expires_at. Expired crops grant nothing and must be cleared using cancel. Cancel refunds no resources. Preview may report missing materials or output fits=false; execution rejects atomically. GET projects elapsed time without writes. Commands require preview, revisions and an idempotency key."
+    "version": "1.2.0",
+    "description": "Owned, unlocked, paid bed and membership required. Dig before each sow. Seeds and initial water come from the backpack. Water is due at water_due_at and on time strictly before water_deadline_at. Missing any watering window halves yield once (integer floor, minimum one item), with existing health efficiency applied. Growth does not pause or shift. Harvest is permitted from ready_at until strictly before expires_at. Expired crops grant nothing and must be cleared using cancel. Cancel refunds no resources. Preview may report missing materials or output fits=false; execution rejects atomically. GET projects elapsed time without writes. Commands require preview, revisions and an idempotency key. Dig requires a free, non-reserved shovel in the backpack and consumes exactly one durability per successful command. Dig quote terms.tool exposes instance_id, name, durability, wear and available. Harvest goes to the garden harvest storage (five slots); batches never merge. Owner node details.harvested_quantity aggregates recorded harvest results for beds and gardens."
   },
   "servers": [
     {
