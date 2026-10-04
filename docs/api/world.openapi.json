@@ -446,7 +446,8 @@
               }
             }
           }
-        }
+        },
+        "description": "Use cells for new clients. Deprecated x/y remains compatible with old clients. Explore requires exactly one closed unoccupied cell and the explorer level min(3,max(1,abs(x),abs(y))) or use_elixir=true (one accessible unreserved backpack elixir). Only an owned campsite or its owned building/room is eligible. City and higher levels are closed. Buy accepts 1–100 distinct discovered cells; sorts y,x and atomically buys all. Prices are 1 Cr × (already paid cells + ordinal), with 5% discount from 3 cells. No partial charge on rejection; quotes and request keys remain required internally."
       }
     },
     "/world/nodes/{id}/map-explore": {
@@ -484,7 +485,8 @@
               }
             }
           }
-        }
+        },
+        "description": "Use cells for new clients. Deprecated x/y remains compatible with old clients. Explore requires exactly one closed unoccupied cell and the explorer level min(3,max(1,abs(x),abs(y))) or use_elixir=true (one accessible unreserved backpack elixir). Only an owned campsite or its owned building/room is eligible. City and higher levels are closed. Buy accepts 1–100 distinct discovered cells; sorts y,x and atomically buys all. Prices are 1 Cr × (already paid cells + ordinal), with 5% discount from 3 cells. No partial charge on rejection; quotes and request keys remain required internally."
       }
     },
     "/world/nodes/{id}/map-buy-preview": {
@@ -522,7 +524,8 @@
               }
             }
           }
-        }
+        },
+        "description": "Use cells for new clients. Deprecated x/y remains compatible with old clients. Explore requires exactly one closed unoccupied cell and the explorer level min(3,max(1,abs(x),abs(y))) or use_elixir=true (one accessible unreserved backpack elixir). Only an owned campsite or its owned building/room is eligible. City and higher levels are closed. Buy accepts 1–100 distinct discovered cells; sorts y,x and atomically buys all. Prices are 1 Cr × (already paid cells + ordinal), with 5% discount from 3 cells. No partial charge on rejection; quotes and request keys remain required internally."
       }
     },
     "/world/nodes/{id}/map-buy": {
@@ -560,7 +563,8 @@
               }
             }
           }
-        }
+        },
+        "description": "Use cells for new clients. Deprecated x/y remains compatible with old clients. Explore requires exactly one closed unoccupied cell and the explorer level min(3,max(1,abs(x),abs(y))) or use_elixir=true (one accessible unreserved backpack elixir). Only an owned campsite or its owned building/room is eligible. City and higher levels are closed. Buy accepts 1–100 distinct discovered cells; sorts y,x and atomically buys all. Prices are 1 Cr × (already paid cells + ordinal), with 5% discount from 3 cells. No partial charge on rejection; quotes and request keys remain required internally."
       }
     },
     "/world/nodes/{id}/navigation": {
@@ -1896,25 +1900,52 @@
       "MapCellInput": {
         "type": "object",
         "required": [
-          "x",
-          "y",
           "top_up"
         ],
+        "anyOf": [
+          {
+            "required": [
+              "cells"
+            ]
+          },
+          {
+            "required": [
+              "x",
+              "y"
+            ]
+          }
+        ],
         "properties": {
+          "cells": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 100,
+            "uniqueItems": true,
+            "items": {
+              "$ref": "#/components/schemas/MapPoint"
+            }
+          },
           "x": {
             "type": "integer",
             "minimum": -1000000,
-            "maximum": 1000000
+            "maximum": 1000000,
+            "deprecated": true
           },
           "y": {
             "type": "integer",
             "minimum": -1000000,
-            "maximum": 1000000
+            "maximum": 1000000,
+            "deprecated": true
           },
           "top_up": {
             "type": "boolean"
+          },
+          "use_elixir": {
+            "type": "boolean",
+            "default": false
           }
-        }
+        },
+        "description": "Use cells for new clients. Deprecated x/y remains compatible with old clients. Explore requires exactly one closed unoccupied cell and the explorer level min(3,max(1,abs(x),abs(y))) or use_elixir=true (one accessible unreserved backpack elixir). Only an owned campsite or its owned building/room is eligible. City and higher levels are closed. Buy accepts 1–100 distinct discovered cells; sorts y,x and atomically buys all. Prices are 1 Cr × (already paid cells + ordinal), with 5% discount from 3 cells. No partial charge on rejection; quotes and request keys remain required internally."
       },
       "MapCellCommand": {
         "allOf": [
@@ -2391,7 +2422,7 @@
             "minimum": 1
           }
         },
-        "description": "Fixed map bounds, edited in admin. Defaults: room 2x3, building 3x3, campsite 5x5, garden 5x2, settlement 12x12, region 20x20, world 32x32. Existing occupied coordinates are preserved by migration."
+        "description": "Fixed map bounds, editable in admin. Centred defaults: room 2x3, building 3x3, campsite 5x5, garden 5x2, settlement 12x12, region 20x20, world 32x32. The first region/city starts at (0,0); X grows right and Y grows up. A forward data migration translates existing children, absolute polygons and map rights together, preserving cell IDs, prices and operations. Existing extents can enlarge a map to avoid losing occupied cells."
       },
       "Map": {
         "type": "object",
@@ -2400,7 +2431,9 @@
           "items",
           "cells",
           "can_expand",
-          "bounds"
+          "bounds",
+          "pricing",
+          "exploration"
         ],
         "properties": {
           "node_id": {
@@ -2438,6 +2471,12 @@
           },
           "bounds": {
             "$ref": "#/components/schemas/MapBounds"
+          },
+          "pricing": {
+            "$ref": "#/components/schemas/MapPricing"
+          },
+          "exploration": {
+            "$ref": "#/components/schemas/MapExploration"
           }
         }
       },
@@ -2485,6 +2524,109 @@
           }
         },
         "description": "One coherent read of the selected node, breadcrumbs, siblings and its complete map. navigation and map are both null when the world is unavailable or empty. No cross-request cache."
+      },
+      "MapPoint": {
+        "type": "object",
+        "required": [
+          "x",
+          "y"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "x": {
+            "type": "integer",
+            "minimum": -1000000,
+            "maximum": 1000000
+          },
+          "y": {
+            "type": "integer",
+            "minimum": -1000000,
+            "maximum": 1000000
+          }
+        }
+      },
+      "MapPricing": {
+        "type": "object",
+        "required": [
+          "paid_cells",
+          "base_price",
+          "next_price",
+          "bulk_minimum",
+          "discount_bps",
+          "max_quantity",
+          "currency"
+        ],
+        "properties": {
+          "paid_cells": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "base_price": {
+            "type": "string",
+            "example": "1.0000"
+          },
+          "next_price": {
+            "type": "string",
+            "example": "4.0000"
+          },
+          "bulk_minimum": {
+            "type": "integer",
+            "enum": [
+              3
+            ]
+          },
+          "discount_bps": {
+            "type": "integer",
+            "enum": [
+              500
+            ]
+          },
+          "max_quantity": {
+            "type": "integer",
+            "enum": [
+              100
+            ]
+          },
+          "currency": {
+            "type": "string",
+            "enum": [
+              "Cr"
+            ]
+          }
+        }
+      },
+      "MapExploration": {
+        "type": "object",
+        "required": [
+          "allowed",
+          "level",
+          "max_level_per_node",
+          "elixir_quantity",
+          "reason"
+        ],
+        "properties": {
+          "allowed": {
+            "type": "boolean"
+          },
+          "level": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 100
+          },
+          "max_level_per_node": {
+            "type": "integer",
+            "enum": [
+              3
+            ]
+          },
+          "elixir_quantity": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "reason": {
+            "type": "string"
+          }
+        }
       }
     }
   }

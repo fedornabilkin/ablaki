@@ -8,7 +8,7 @@ use yii\db\Query;
 
 class WorldFlags
 {
-    public const SCHEMA_VERSION = 36;
+    public const SCHEMA_VERSION = 37;
     private $db;
     private $module;
     public function __construct(Connection $db, Module $module) { $this->db = $db; $this->module = $module; }

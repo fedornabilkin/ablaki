@@ -41,6 +41,12 @@ class TestWorldDefaults
         $this->db->transaction(function () {
             $locks = new Locks($this->db); $locks->row('craft_meta', ['id' => 1]); $locks->row('world_registry', ['id' => 1]);
             $operation = $this->operation();
+            // Explicit test-forum request 80/280; never apply numeric-ID repairs in production.
+            $legacyGarden = $this->one('world_garden_purchase', ['node_id' => 10]);
+            if ($legacyGarden && $this->one('world_membership', ['id' => $legacyGarden['membership_id'], 'starter_site_id' => 8])) {
+                $tree = new WorldTree($this->db); $before = $tree->get(10);
+                if ((int)$before['parent_id'] !== 8) { $after = $tree->attachPurchasedGarden(10, 8); $tree->audit((int)$before['owner_user_id'], 'world.garden.estate', 'Тестовый форум 80, сообщение 280', $before, $after, $operation); }
+            }
             foreach ((new Query())->select(['s.id', 's.node_id'])->from(['s' => 'economy_subject'])->innerJoin(['n' => 'world_node'], '[[n.id]]=[[s.node_id]]')->where(['n.status' => 'active'])->all($this->db) as $subject) {
                 self::initialPolicy($this->db, (int)$subject['id'], $operation);
             }

@@ -9,6 +9,7 @@ class WorldAccessPolicy
     private $userId;
     private $admin;
     public function __construct(int $userId, bool $admin = false) { $this->userId = $userId; $this->admin = $admin; }
+    public function userId(): int { return $this->userId; }
     public function owns(array $node): bool { return $this->admin || (int)$node['owner_user_id'] === $this->userId; }
     public function ownsItems(array $node): bool { return (int)$node['owner_user_id'] === $this->userId; }
     public function isAdmin(): bool { return $this->admin; }

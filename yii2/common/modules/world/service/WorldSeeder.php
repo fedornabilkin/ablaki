@@ -19,15 +19,16 @@ class WorldSeeder
             ShelterCatalog::seed($this->db);
             StarterGrantCatalog::seed($this->db);
             CultivationCatalog::seed($this->db);
+            ExplorationCatalog::seed($this->db);
             $tree = new WorldTree($this->db); $ids = [];
             $nodes = [
                 ['ablaki', null, 'WORLD', 'Мир Аблаки', 0, 0, []],
-                ['north', 'ablaki', 'REGION', 'Северный край', 1, 1, ['climate' => 'cold']],
-                ['south', 'ablaki', 'REGION', 'Южный край', 5, 4, ['climate' => 'temperate']],
-                ['north-city', 'north', 'SETTLEMENT', 'Североград', 2, 2, ['settlement_kind' => 'city']],
-                ['north-village', 'north', 'SETTLEMENT', 'Сосновка', 5, 5, ['settlement_kind' => 'village']],
-                ['south-city', 'south', 'SETTLEMENT', 'Солнечный', 2, 2, ['settlement_kind' => 'city']],
-                ['south-village', 'south', 'SETTLEMENT', 'Луговое', 5, 5, ['settlement_kind' => 'village']],
+                ['north', 'ablaki', 'REGION', 'Северный край', 0, 0, ['climate' => 'cold']],
+                ['south', 'ablaki', 'REGION', 'Южный край', 4, 3, ['climate' => 'temperate']],
+                ['north-city', 'north', 'SETTLEMENT', 'Североград', 0, 0, ['settlement_kind' => 'city']],
+                ['north-village', 'north', 'SETTLEMENT', 'Сосновка', 3, 3, ['settlement_kind' => 'village']],
+                ['south-city', 'south', 'SETTLEMENT', 'Солнечный', 0, 0, ['settlement_kind' => 'city']],
+                ['south-village', 'south', 'SETTLEMENT', 'Луговое', 3, 3, ['settlement_kind' => 'village']],
             ];
             foreach ($nodes as $position => $spec) {
                 $existing = (new Query())->from('world_node')->where(['code' => $spec[0]])->one($this->db);

@@ -60,7 +60,7 @@ class CraftWorkspace
         foreach ($catalog as $recipe) {
             $output = $outputs[$recipe['item_id']] ?? null; if (!$output) continue;
             if (($recipeId === null && $selected === null) || (int)$recipe['id'] === $recipeId) $selected = $recipe;
-            $recipes[] = ['id' => (int)$recipe['id'], 'name' => trim($output['name']), 'quantity' => (int)$recipe['output_quantity'], 'locked_reasons' => $requirements[(int)$recipe['id']]];
+            $recipes[] = ['id' => (int)$recipe['id'], 'name' => trim($output['name']), 'icon' => trim((string)$output['icon']), 'quantity' => (int)$recipe['output_quantity'], 'locked_reasons' => $requirements[(int)$recipe['id']]];
         }
         if ($recipeId !== null && (!$selected || (int)$selected['id'] !== $recipeId)) throw new GameError('RECIPE_UNAVAILABLE', 'Рецепт недоступен.');
         $equipment = [];
@@ -76,6 +76,7 @@ class CraftWorkspace
                 $storages[] = $header + ['output_allowed' => $incoming];
             } catch (\yii\web\HttpException $e) { continue; } catch (GameError $e) { continue; }
         }
+        $recipes = (new WorkspaceAvailability($this->db))->recipes($user, $store, $catalog, $recipes, $storages);
         return ['node_id' => $node, 'name' => $place['name'], 'recipe_id' => $selected ? (int)$selected['id'] : null, 'recipes' => $recipes, 'equipment' => $equipment, 'storages' => $storages, 'writable' => $this->flags->capabilities()['world_write'], 'server_time' => time()];
     }
     private function prepare(int $user, array $payload): array

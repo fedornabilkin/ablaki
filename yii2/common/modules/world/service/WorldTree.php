@@ -97,12 +97,19 @@ class WorldTree
         foreach ((new Query())->select(['position_x', 'position_y', 'footprint_json'])->from('world_node')->where(['parent_id' => $parent])->andWhere(['<>', 'status', 'archived'])->all($this->db) as $row)
             foreach (WorldMapGeometry::cells($row['footprint_json'], (int)$row['position_x'], (int)$row['position_y']) as $cell)
                 $occupied[$cell['x'] . ':' . $cell['y']] = true;
-        foreach ((new Query())->select(['x', 'y'])->from('world_map_cell')->where(['parent_id' => $parent, 'state' => 'open'])->orderBy(['y' => SORT_ASC, 'x' => SORT_ASC])->all($this->db) as $cell)
-            if (WorldLayout::contains($bounds, (int)$cell['x'], (int)$cell['y']) && !isset($occupied[$cell['x'] . ':' . $cell['y']])) return ['x' => (int)$cell['x'], 'y' => (int)$cell['y']];
-        for ($i = 0; $i < (int)$bounds['map_width'] * (int)$bounds['map_height']; $i++) {
-            $x = (int)$bounds['map_origin_x'] + $i % (int)$bounds['map_width']; $y = (int)$bounds['map_origin_y'] + intdiv($i, (int)$bounds['map_width']);
-            if (!isset($occupied[$x . ':' . $y]) && !(new Query())->from('world_map_cell')->where(['parent_id' => $parent, 'x' => $x, 'y' => $y])->exists($this->db)) return compact('x', 'y');
-        }
+        $known = [];
+        foreach ((new Query())->select(['x', 'y', 'state'])->from('world_map_cell')->where(['parent_id' => $parent])->all($this->db) as $cell)
+            $known[$cell['x'] . ':' . $cell['y']] = $cell['state'];
+        $best = null; $score = null;
+        for ($y = (int)$bounds['map_origin_y']; $y < (int)$bounds['map_origin_y'] + (int)$bounds['map_height']; $y++)
+            for ($x = (int)$bounds['map_origin_x']; $x < (int)$bounds['map_origin_x'] + (int)$bounds['map_width']; $x++) {
+                if (isset($occupied[$x . ':' . $y])) continue;
+                $state = $known[$x . ':' . $y] ?? null;
+                if ($state !== null && $state !== 'open') continue;
+                $candidate = [$state === 'open' ? 0 : 1, max(abs($x), abs($y)), abs($x) + abs($y), $y, $x];
+                if ($score === null || $candidate < $score) { $score = $candidate; $best = compact('x', 'y'); }
+            }
+        if ($best !== null) return $best;
         throw new GameError('MAP_FULL', 'На карте не осталось свободных координат.', 422);
     }
     /** Also used by preview: an invalid action must not produce a confirmable quote. */
@@ -138,6 +145,24 @@ class WorldTree
     {
         if (!$this->db->getTransaction()) throw new \LogicException('World writes require a transaction.');
         $prepared = $this->previewMove($id, $parentId);
+        return $this->movePrepared($id, $parentId, $prepared);
+    }
+    /** One-time legacy repair, only to the original estate recorded by the purchase. */
+    public function attachPurchasedGarden(int $id, int $parentId): array
+    {
+        if (!$this->db->getTransaction()) throw new \LogicException('Garden repair requires a transaction.');
+        $node = $this->get($id); $parent = $this->get($parentId);
+        if ((int)$node['parent_id'] === $parentId) return $node;
+        $purchase = (new Query())->from(['p' => 'world_garden_purchase'])->innerJoin(['m' => 'world_membership'], '[[m.id]]=[[p.membership_id]]')
+            ->where(['p.node_id' => $id, 'm.starter_site_id' => $parentId, 'm.user_id' => $node['owner_user_id']])->exists($this->db);
+        if (!$purchase || $node['node_type'] !== 'PLOT' || $node['status'] !== 'active' || (int)$node['owner_user_id'] !== (int)$parent['owner_user_id'] || (int)$node['parent_id'] !== (int)$parent['parent_id'] || (int)$node['root_id'] !== (int)$parent['root_id']) throw new GameError('INVALID_GARDEN_ESTATE', 'Стоянка не соответствует покупке огорода.');
+        $this->assertParent('PLOT', $parent);
+        $descendants = (new Query())->from('world_node_closure')->where(['ancestor_id' => $id])->all($this->db);
+        $ids = array_map('intval', array_column($descendants, 'descendant_id'));
+        return $this->movePrepared($id, $parentId, compact('node', 'parent', 'descendants', 'ids'));
+    }
+    private function movePrepared(int $id, int $parentId, array $prepared): array
+    {
         $node = $prepared['node']; $parent = $prepared['parent']; $descendants = $prepared['descendants']; $ids = $prepared['ids'];
         $position = $this->nextPosition($parentId);
         $ancestors = (new Query())->from('world_node_closure')->where(['descendant_id' => $parentId])->all($this->db);

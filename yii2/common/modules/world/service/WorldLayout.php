@@ -12,7 +12,7 @@ class WorldLayout
     {
         $sizes = ['WORLD' => [32, 32], 'REGION' => [20, 20], 'SETTLEMENT' => [12, 12], 'BUILDING' => [3, 3], 'ROOM' => [2, 3], 'PLOT' => [5, 5], 'BED' => [1, 1]];
         $size = ($details['plot_kind'] ?? '') === 'garden' ? [5, 2] : $sizes[$type];
-        return ['map_width' => $size[0], 'map_height' => $size[1], 'map_origin_x' => 0, 'map_origin_y' => 0];
+        return ['map_width' => $size[0], 'map_height' => $size[1], 'map_origin_x' => -intdiv($size[0], 2), 'map_origin_y' => -intdiv($size[1], 2)];
     }
     public static function contains(array $node, int $x, int $y): bool
     {

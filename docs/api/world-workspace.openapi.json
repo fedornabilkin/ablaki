@@ -3,7 +3,7 @@
   "info": {
     "title": "Ablaki World Workspace and Recovery API",
     "version": "1.0.0",
-    "description": "Own local storage and installed stations are selected by node. Recipe prices, equipment wear and health-adjusted experience are quoted under locks. A station must still satisfy its slot compatibility and room rules when selected. Recovery preserves the inventory row and chest contents."
+    "description": "Own local storage and installed stations are selected by node. Recipe prices, equipment wear and health-adjusted experience are quoted under locks. A station must still satisfy its slot compatibility and room rules when selected. Recovery preserves the inventory row and chest contents. A campsite workspace includes its own active buildings and rooms; another owner or an inactive ancestor cuts off that branch. Recipe availability is computed from one inventory snapshot and cached lookups per equipment role."
   },
   "servers": [
     {
@@ -121,11 +121,27 @@
                   "minimum": 1,
                   "maximum": 1000
                 },
+                "icon": {
+                  "type": "string",
+                  "maxLength": 64,
+                  "description": "Font Awesome icon of the output item; older clients may ignore it."
+                },
                 "locked_reasons": {
                   "type": "array",
                   "items": {
                     "type": "string",
                     "maxLength": 1000
+                  },
+                  "maxItems": 100
+                },
+                "available": {
+                  "type": "boolean",
+                  "description": "One batch has ingredients, required skill/dependencies, credits and usable tools/stations in accessible workspace storages. The final preview checks the selected sources, quantity and output capacity."
+                },
+                "availability_reasons": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
                   },
                   "maxItems": 100
                 }
@@ -134,7 +150,9 @@
                 "id",
                 "name",
                 "quantity",
-                "locked_reasons"
+                "locked_reasons",
+                "available",
+                "availability_reasons"
               ],
               "additionalProperties": false
             },
@@ -632,7 +650,11 @@
             "minimum": 0,
             "maximum": 100000
           },
-          "work_efficiency_bps": {"type": "integer", "minimum": 1, "maximum": 10000},
+          "work_efficiency_bps": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 10000
+          },
           "reasons": {
             "type": "array",
             "items": {

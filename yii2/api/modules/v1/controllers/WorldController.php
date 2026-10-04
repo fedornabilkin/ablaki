@@ -53,6 +53,29 @@ class WorldController extends \yii\rest\Controller
     public function actionAchievementPublishPreview(): array { return $this->achievementPublish(true); }
     public function actionAchievementPublish(): array { return $this->achievementPublish(false); }
     private function cultivationService(): \common\modules\world\service\WorldCultivation { return new \common\modules\world\service\WorldCultivation(Yii::$app->db, $this->flags(), $this->policy()); }
+    private function harvestService(): \common\modules\world\service\GardenHarvest { return new \common\modules\world\service\GardenHarvest(Yii::$app->db, $this->flags()); }
+    public function actionPlacementOptions($id): array
+    {
+        if (!Yii::$app->request->isGet) throw new \yii\web\MethodNotAllowedHttpException('Используйте GET.');
+        return (new \common\modules\craft\service\WorldStorage(Yii::$app->db, $this->flags()))->placementOptions((int)Yii::$app->user->id, $this->id($id));
+    }
+    public function actionHarvest($id): array
+    {
+        if (!Yii::$app->request->isGet) throw new \yii\web\MethodNotAllowedHttpException('Используйте GET.');
+        return $this->harvestService()->state((int)Yii::$app->user->id, $this->id($id));
+    }
+    private function harvestCommand($id, string $operation, bool $preview): array
+    {
+        if (!Yii::$app->request->isPost) throw new \yii\web\MethodNotAllowedHttpException('Используйте POST.');
+        $body = Yii::$app->request->bodyParams;
+        if (!is_array($body)) throw new GameError('INVALID_COMMAND', 'Некорректное действие.', 422);
+        $service = $this->harvestService(); $input = $service->input($body, $operation); $user = (int)Yii::$app->user->id; $node = $this->id($id);
+        if ($preview) return $service->preview($user, $node, $operation, $input);
+        if (!is_string($body['request_key'] ?? null) || !is_string($body['quote_id'] ?? null) || !is_array($body['expected_revisions'] ?? null)) throw new GameError('INVALID_COMMAND', 'Требуется подтверждённый расчёт.', 422);
+        return $service->execute($user, $node, $operation, $input, $body['request_key'], $body['quote_id'], $body['expected_revisions']);
+    }
+    public function actionHarvestPreview($id, string $operation): array { return $this->harvestCommand($id, $operation, true); }
+    public function actionHarvestExecute($id, string $operation): array { return $this->harvestCommand($id, $operation, false); }
     private function warehouseService(): \common\modules\world\service\WorldWarehouse { return new \common\modules\world\service\WorldWarehouse(Yii::$app->db, $this->flags()); }
     public function actionWarehouse($id): array { return $this->warehouseService()->state((int)Yii::$app->user->id, $this->id($id)); }
     private function warehouseCommand($id, bool $preview): array

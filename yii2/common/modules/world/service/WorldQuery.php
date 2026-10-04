@@ -48,10 +48,10 @@ class WorldQuery
         $node = $this->node($id);
         $rows = $this->visible()->andWhere(['n.parent_id' => $id])->orderBy(['n.id' => SORT_ASC])->all($this->db);
         $cells = (new Query())->select(['x', 'y', 'state'])->from('world_map_cell')->where(['parent_id' => $id])->orderBy(['x' => SORT_ASC, 'y' => SORT_ASC])->all($this->db);
-        $garden = $node['type'] === 'PLOT' && (((array)$node['details'])['plot_kind'] ?? null) === 'garden';
+        $exploration = (new MapExploration($this->db))->state(['id' => $node['id'], 'node_type' => $node['type'], 'owner_user_id' => $node['owned_by_me'] ? $this->policy->userId() : null, 'status' => $node['status']], $this->policy->userId());
         return ['node_id' => $id, 'bounds' => $node['map'], 'items' => $this->present($rows), 'cells' => array_map(static function (array $cell): array {
             return ['x' => (int)$cell['x'], 'y' => (int)$cell['y'], 'state' => $cell['state']];
-        }, $cells), 'can_expand' => $node['permissions']['manage'] && !$garden && !in_array($node['type'], ['ROOM', 'BED'], true)];
+        }, $cells), 'can_expand' => $exploration['allowed'], 'exploration' => $exploration, 'pricing' => WorldMapCells::pricing($this->db, $id)];
     }
     public function navigation(int $id): array
     {
@@ -86,12 +86,12 @@ class WorldQuery
         $select = static function (array $rows) use ($presented): array { return array_map(static function (array $row) use ($presented): array { return $presented[$row['id']]; }, $rows); };
         $node = $presented[$id];
         $cells = (new Query())->select(['x', 'y', 'state'])->from('world_map_cell')->where(['parent_id' => $id])->orderBy(['x' => SORT_ASC, 'y' => SORT_ASC])->all($this->db);
-        $garden = $node['type'] === 'PLOT' && (((array)$node['details'])['plot_kind'] ?? null) === 'garden';
+        $exploration = (new MapExploration($this->db))->state(['id' => $node['id'], 'node_type' => $node['type'], 'owner_user_id' => $node['owned_by_me'] ? $this->policy->userId() : null, 'status' => $node['status']], $this->policy->userId());
         return ['navigation' => ['node' => $node, 'breadcrumbs' => $select($breadcrumbs), 'parent_id' => $node['parent_id'],
             'siblings' => ['items' => $select($siblings), '_meta' => ['totalCount' => $total, 'pageCount' => (int)ceil($total / 20), 'currentPage' => 1, 'perPage' => 20]]],
             'map' => ['node_id' => $id, 'bounds' => $node['map'], 'items' => $select($children), 'cells' => array_map(static function (array $cell): array {
                 return ['x' => (int)$cell['x'], 'y' => (int)$cell['y'], 'state' => $cell['state']];
-            }, $cells), 'can_expand' => $node['permissions']['manage'] && !$garden && !in_array($node['type'], ['ROOM', 'BED'], true)]];
+            }, $cells), 'can_expand' => $exploration['allowed'], 'exploration' => $exploration, 'pricing' => WorldMapCells::pricing($this->db, $id)]];
     }
     private function present(array $rows): array
     {
@@ -119,6 +119,12 @@ class WorldQuery
             $details += (new Query())->from('world_' . strtolower($type))->where(['node_id' => $typeIds])->indexBy('node_id')->all($this->db);
         }
         $shelters = [];
+        if ($this->db->schema->getTableSchema('world_harvest_result')) {
+            $harvests = (new Query())->select(['ancestor_id' => 'p.ancestor_id', 'quantity' => new \yii\db\Expression('SUM([[h.quantity]])')])->from(['h' => 'world_harvest_result'])
+                ->innerJoin(['c' => 'world_crop_cycle'], '[[c.id]]=[[h.cycle_id]]')->innerJoin(['p' => 'world_node_closure'], '[[p.descendant_id]]=[[c.bed_id]]')
+                ->where(['p.ancestor_id' => $ids])->groupBy('p.ancestor_id')->indexBy('ancestor_id')->all($this->db);
+            foreach ($rows as $row) if ($row['node_type'] === 'BED' || ($details[$row['id']]['plot_kind'] ?? '') === 'garden') $details[$row['id']]['harvested_quantity'] = (int)($harvests[$row['id']]['quantity'] ?? 0);
+        }
         if (!empty($byType['BUILDING']) && $this->db->schema->getTableSchema('world_shelter_deployment')) {
             $shelters = (new Query())->from('world_shelter_deployment')->where(['node_id' => $byType['BUILDING']])->indexBy('node_id')->all($this->db);
             $units = $shelters ? (new Query())->from('craft_equipment_instance')->where(['id' => array_column($shelters, 'instance_id')])->all($this->db) : [];

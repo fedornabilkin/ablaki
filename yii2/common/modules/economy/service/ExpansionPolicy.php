@@ -8,7 +8,7 @@ class ExpansionPolicy
 {
     public function quote(int $initial, int $unlocked, int $limit, string $basePrice, int $quantity, string $curve = 'linear'): array
     {
-        if ($initial < 0 || $unlocked < $initial || $limit < $unlocked || $limit > 10000 || $quantity < 1 || $quantity > 100 || $quantity > $limit - $unlocked || !in_array($curve, ['linear', 'progressive'], true)) throw new GameError('EXPANSION_LIMIT', 'Недопустимое количество новых мест.', 422);
+        if ($initial < 0 || $unlocked < $initial || $limit < $unlocked || $limit > 1000000 || $quantity < 1 || $quantity > 100 || $quantity > $limit - $unlocked || !in_array($curve, ['linear', 'progressive'], true)) throw new GameError('EXPANSION_LIMIT', 'Недопустимое количество новых мест.', 422);
         $base = Money::parse($basePrice);
         if ($base->isNegative() || $base->isZero()) throw new GameError('INVALID_PRICE', 'Цена расширения должна быть положительной.', 422);
         $grossTotal = Money::parse('0'); $prices = [];
