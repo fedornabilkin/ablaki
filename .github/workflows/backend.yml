@@ -71,7 +71,7 @@ jobs:
           php -l yii2/console/migrations/AbstractMigration.php
           php -l yii2/api/modules/v1/controllers/StatController.php
           php -l yii2/tests/release/frontend-api-routing.php
-          for file in yii2/common/modules/world/service/TestWorld*.php yii2/console/controllers/WorldSetupController.php yii2/console/world-migrations/m260928_003400_system_profession_author.php; do php -l "$file"; done
+          for file in yii2/common/modules/world/models/domain/TestWorld*.php yii2/console/controllers/WorldSetupController.php yii2/console/world-migrations/m260928_003400_system_profession_author.php deploy/world-verify-test.php; do php -l "$file"; done
           php yii2/tests/release/world-test-credits.php
           bash deploy/tests/pipeline.sh
 
