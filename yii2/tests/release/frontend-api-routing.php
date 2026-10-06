@@ -60,7 +60,9 @@ try {
         'id' => 'routing-test', 'basePath' => dirname(__DIR__, 2), 'vendorPath' => dirname(__DIR__, 2) . '/vendor',
         'runtimePath' => sys_get_temp_dir() . '/ablakin-routing-presence-' . uniqid(),
         'container' => $api['container'],
-        'modules' => ['v1' => ['class' => \api\modules\v1\Module::class], 'user' => ['class' => \dektrium\user\Module::class]],
+        'bootstrap' => ['world'],
+        'modules' => ['v1' => ['class' => \api\modules\v1\Module::class], 'user' => ['class' => \dektrium\user\Module::class],
+            'world' => ['class' => \common\modules\world\Module::class]],
         'components' => [
             'db' => ['class' => \yii\db\Connection::class, 'dsn' => 'sqlite:' . $file],
             'request' => ['cookieValidationKey' => 'local-test', 'scriptFile' => __FILE__, 'scriptUrl' => '/index.php', 'hostInfo' => 'http://test.invalid'],
