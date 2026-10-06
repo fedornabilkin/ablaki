@@ -7,7 +7,7 @@ if (!preg_match('/^ablaki_world_verify_[0-9]+_[0-9]+$/D', $database ?: '')
     || getenv('WORLD_INSTALL') !== 'confirmed-world-install') {
     throw new RuntimeException('Dedicated test-copy context required.');
 }
-$root = dirname(__DIR__) . '/yii2';
+$root = dirname(__DIR__);
 defined('YII_DEBUG') or define('YII_DEBUG', false);
 defined('YII_ENV') or define('YII_ENV', 'test');
 require $root . '/vendor/autoload.php';
