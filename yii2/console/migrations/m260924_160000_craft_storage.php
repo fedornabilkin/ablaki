@@ -46,8 +46,8 @@ class m260924_160000_craft_storage extends Migration
         ]);
         // Functional chests are individual items. New installations are handled by the seed too.
         $this->db->schema->refresh();
-        $store=new \common\modules\craft\service\CraftStorage($this->db);
-        $inventory=new \common\modules\craft\service\CraftInventory($store);
+        $store=new \common\modules\world\modules\craft\models\domain\CraftStorage($this->db);
+        $inventory=new \common\modules\world\modules\craft\models\domain\CraftInventory($store);
         $this->db->transaction(function()use($store,$inventory){
             $store->lock('craft_meta',['id'=>1]);
             $this->update('craft_item',['storage_kind'=>'chest','stack_size'=>1],['code'=>'classic-chest','storage_kind'=>'none']);

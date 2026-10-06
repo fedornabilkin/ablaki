@@ -51,13 +51,13 @@ abstract class AbstractCreate extends Action
     {
         Yii::$app->db->transaction(function (): void {
             $db = Yii::$app->db;
-            \common\modules\economy\service\WalletMaintenance::writable($db);
+            \common\modules\world\modules\economy\models\domain\WalletMaintenance::writable($db);
             $person = App::user()->identity->person;
             $row = (new \common\services\user\CreditLedger($db))->lock('persone', ['user_id' => (int)$person->user_id]);
             if (!$row) throw new \RuntimeException('Player unavailable.');
             $person::populateRecord($person, $row);
-            if ($this->model::tableName() !== 'game_saper' && \common\modules\economy\service\WalletSchema::ready($db)) {
-                \common\modules\economy\service\LegacyCreditPolicy::game($this->model->kon);
+            if ($this->model::tableName() !== 'game_saper' && \common\modules\world\modules\economy\models\domain\WalletSchema::ready($db)) {
+                \common\modules\world\modules\economy\models\domain\LegacyCreditPolicy::game($this->model->kon);
             }
             $middleware = $this->getMiddleware();
             if (!$middleware->check()) throw new BadRequestHttpException(Yii::t('games', $middleware->getErrors()[0] ?? 'Error create game'));

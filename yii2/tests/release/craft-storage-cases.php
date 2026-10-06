@@ -11,7 +11,7 @@ checkCraft(count($converted['containers'])===3&&array_sum(array_column($converte
 ob_start();(new \m260924_160000_craft_storage(['db'=>$db]))->up();ob_end_clean();
 checkCraft($engine->state(9002)['inventory_slots']===$converted['inventory_slots'],'repeated migration does not duplicate old chests');
 $migrationTx->rollBack();
-$inv=new \common\modules\craft\service\CraftInventory($s);
+$inv=new \common\modules\world\modules\craft\models\domain\CraftInventory($s);
 $inventoryTotal=static function()use($db){return (int)(new Query())->from('craft_inventory')->where(['user_id'=>9001])->sum('item_quantity',$db);};
 $inv->synchronize(9001);
 $state=$engine->state(9001);
@@ -20,8 +20,8 @@ $bought=$engine->command(9001,'buy-inventory-slot','buy_slots',['quantity'=>2,'u
 checkCraft($bought['state']['credit']===70.0&&$bought['state']['permanent_slots']===22&&$bought['state']['slot_pricing']==='linear','batch slots cost the sum of increasing individual prices');
 $again=$engine->command(9001,'buy-inventory-slot','buy_slots',['quantity'=>2,'unit_price'=>10,'total_price'=>30]);
 checkCraft($again['replayed']&&$again['state']['credit']===70.0&&$again['state']['permanent_slots']===22,'slot purchase retry cannot charge twice');
-class FailedSlotStorage extends \common\modules\craft\service\CraftStorage { public function insert(string $table,array $values): int {if($table==='craft_command')throw new \RuntimeException('slot failure');return parent::insert($table,$values);} }
-try{(new \common\modules\craft\service\Crafting(new FailedSlotStorage($db)))->command(9001,'failed-slot-purchase','buy_slots',['quantity'=>1,'unit_price'=>30,'total_price'=>30]);throw new \LogicException('failure expected');}catch(\RuntimeException $error){if($error->getMessage()!=='slot failure')throw $error;}
+class FailedSlotStorage extends \common\modules\world\modules\craft\models\domain\CraftStorage { public function insert(string $table,array $values): int {if($table==='craft_command')throw new \RuntimeException('slot failure');return parent::insert($table,$values);} }
+try{(new \common\modules\world\modules\craft\models\domain\Crafting(new FailedSlotStorage($db)))->command(9001,'failed-slot-purchase','buy_slots',['quantity'=>1,'unit_price'=>30,'total_price'=>30]);throw new \LogicException('failure expected');}catch(\RuntimeException $error){if($error->getMessage()!=='slot failure')throw $error;}
 checkCraft($engine->state(9001)['credit']===70.0&&$engine->state(9001)['permanent_slots']===22&&(int)(new Query())->from('history_balance')->where(['user_id'=>9001,'type'=>'craft_slots'])->count('*',$db)===1,'late purchase failure rolls back credit, slots and balance history');
 foreach ([['quantity'=>2,'unit_price'=>30],['quantity'=>2,'unit_price'=>30,'total_price'=>60],['quantity'=>2,'unit_price'=>10,'total_price'=>70],['quantity'=>2,'unit_price'=>30,'total_price'=>null]] as $badQuote) rejectsCraft(function()use($engine,$badQuote){$engine->command(9001,'reject-old-slot-quote','buy_slots',$badQuote);},'old or inconsistent batch quote cannot debit an unexpected total');
 $priceTx=$db->beginTransaction();

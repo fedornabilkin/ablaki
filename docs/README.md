@@ -15,6 +15,8 @@
 
 ## Основные документы
 
+- [Простая модель мира](architecture/simple-world.md), [новый API](api/simple-world.md), [порядок установки](operations/simple-world-install.md).
+
 - [Архитектура мира](architecture/world-architecture.md) и [игровая экономика](architecture/world-gameplay-economy.md).
 - Планы [backend](plan/2026-09-26-world-backend.md) и [БД](plan/2026-09-26-world-database.md).
 - [API мира](api/world-api.md), [контракт списков SPA](api/frontend-list-api.md), [Insomnia.json](../Insomnia.json).

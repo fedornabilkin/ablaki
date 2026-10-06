@@ -34,7 +34,7 @@ try {
     $db->createCommand()->update('craft_item',['description'=>'Administrator edit'],['id'=>$item])->execute();
     $db->createCommand()->insert('craft_inventory',['user_id'=>321,'item_id'=>$item,'item_quantity'=>7,'slot'=>1])->execute();
     $db->createCommand()->update('craft_meta',['charge_credits'=>1],['id'=>1])->execute();
-    $catalog=new \common\modules\craft\service\CraftCatalog(new \common\modules\craft\service\CraftStorage($db));
+    $catalog=new \common\modules\world\modules\craft\models\domain\CraftCatalog(new \common\modules\world\modules\craft\models\domain\CraftStorage($db));
     $before=$catalog->export();
     checkInstall($setup->runAction('install-production')===0&&$setup->runAction('install-test')===0,'both environment entry points support repeated installation');
     checkInstall($before===$catalog->export(),'repeated deployment preserves administrator catalog edits');

@@ -24,9 +24,9 @@ use common\modules\exchange\middleware\exchange\PlayMiddleware;
 use common\modules\exchange\middleware\exchange\SwitchCreatorMiddleware;
 use common\modules\exchange\middleware\ExchangeDataMiddleware;
 use common\models\user\Person;
-use common\modules\economy\service\WalletMaintenance;
-use common\modules\economy\service\WalletSchema;
-use common\modules\economy\value\Money;
+use common\modules\world\modules\economy\models\domain\WalletMaintenance;
+use common\modules\world\modules\economy\models\domain\WalletSchema;
+use common\modules\world\modules\economy\value\Money;
 use common\services\user\CreditLedger;
 use Exception;
 use Yii;
@@ -50,7 +50,7 @@ class ExchangeService
         if (!$model->validate()) throw new \yii\web\UnprocessableEntityHttpException(implode(' ', $model->getFirstErrors()));
         Yii::$app->db->transaction(function () use ($model): void {
             WalletMaintenance::writable(Yii::$app->db);
-            if (WalletSchema::ready(Yii::$app->db)) \common\modules\economy\service\LegacyCreditPolicy::exchange($model->credit);
+            if (WalletSchema::ready(Yii::$app->db)) \common\modules\world\modules\economy\models\domain\LegacyCreditPolicy::exchange($model->credit);
             $container = App::container();
             $identity = App::user()->identity;
 

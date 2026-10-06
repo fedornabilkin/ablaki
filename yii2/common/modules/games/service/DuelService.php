@@ -35,11 +35,11 @@ class DuelService
         if ($count < 1 || $count > 100) throw new UserException('Invalid game count.');
         Yii::$app->db->transaction(function () use ($game, $person, $count): void {
             $db = Yii::$app->db;
-            \common\modules\economy\service\WalletMaintenance::writable($db);
+            \common\modules\world\modules\economy\models\domain\WalletMaintenance::writable($db);
             $row = (new \common\services\user\CreditLedger($db))->lock('persone', ['user_id' => (int)$person->user_id]);
             if (!$row) throw new UserException('Account not found.');
             Person::populateRecord($person, $row);
-            if (\common\modules\economy\service\WalletSchema::ready($db)) \common\modules\economy\service\LegacyCreditPolicy::game($game->kon);
+            if (\common\modules\world\modules\economy\models\domain\WalletSchema::ready($db)) \common\modules\world\modules\economy\models\domain\LegacyCreditPolicy::game($game->kon);
             if ($person->credit < $game->kon * $count) {
                 throw new UserException(Yii::t('games', 'Insufficient funds'));
             }

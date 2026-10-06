@@ -1,5 +1,5 @@
 <?php
-use common\services\game\WorldDomainMigration;
+use common\modules\world\support\WorldDomainMigration;
 
 /** System-published profession defaults have no human author; retain all existing attribution. */
 class m260928_003400_system_profession_author extends WorldDomainMigration

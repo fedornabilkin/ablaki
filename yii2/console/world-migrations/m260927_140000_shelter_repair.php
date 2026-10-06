@@ -1,6 +1,6 @@
 <?php
-use common\services\game\WorldMigration;
-use common\services\game\Locks;
+use common\modules\world\support\WorldMigration;
+use common\modules\world\support\Locks;
 use yii\db\Query;
 
 class m260927_140000_shelter_repair extends WorldMigration

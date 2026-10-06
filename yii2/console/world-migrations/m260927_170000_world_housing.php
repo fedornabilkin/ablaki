@@ -1,5 +1,5 @@
 <?php
-use common\services\game\WorldMigration;
+use common\modules\world\support\WorldMigration;
 
 /** New housing only; existing shelters, purchases and night results remain unchanged. */
 class m260927_170000_world_housing extends WorldMigration

@@ -1,7 +1,7 @@
 <?php
-use common\services\game\WorldMigration;
-use common\modules\world\service\WorldLayout;
-use common\modules\world\service\WorldMapGeometry;
+use common\modules\world\support\WorldMigration;
+use common\modules\world\models\domain\WorldLayout;
+use common\modules\world\models\domain\WorldMapGeometry;
 use yii\db\Query;
 
 /** Additive and restartable after MySQL's implicit DDL commits. */
@@ -40,8 +40,8 @@ class m261003_120000_world_living_spaces extends WorldMigration
             if (isset($terms['config']['kind'])) $this->update('world_building', ['building_kind' => $terms['config']['kind']], ['node_id' => $purchase['building_id']]);
         }
         foreach ((new Query())->select(['b.node_id', 'b.building_kind', 'n.owner_user_id'])->from(['b' => 'world_building'])->innerJoin(['n' => 'world_node'], '[[n.id]]=[[b.node_id]]')->where(['n.status' => 'active'])->andWhere(['not', ['n.owner_user_id' => null]])->all($this->db) as $building) {
-            \common\modules\world\service\BuildingFacilities::stockpile($this->db, (int)$building['node_id'], (int)$building['owner_user_id'], $building['building_kind']);
+            \common\modules\world\models\domain\BuildingFacilities::stockpile($this->db, (int)$building['node_id'], (int)$building['owner_user_id'], $building['building_kind']);
         }
-        (new \common\modules\economy\service\LeafFinanceMigration($this->db))->run();
+        (new \common\modules\world\modules\economy\models\domain\LeafFinanceMigration($this->db))->run();
     }
 }

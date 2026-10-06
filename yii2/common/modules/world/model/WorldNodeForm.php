@@ -49,7 +49,7 @@ class WorldNodeForm extends Model
     {
         if (!isset(self::TYPES[$type])) throw new \InvalidArgumentException('Unknown world node type.');
         $this->nodeType = $type;
-        foreach (\common\modules\world\service\WorldLayout::defaults($type) as $key => $value) $this->$key = $value;
+        foreach (\common\modules\world\models\domain\WorldLayout::defaults($type) as $key => $value) $this->$key = $value;
         parent::__construct($config);
     }
     public function type(): string { return $this->nodeType; }
@@ -109,8 +109,8 @@ class WorldNodeForm extends Model
     }
     public function validateFootprint($attribute): void
     {
-        try { \common\modules\world\service\WorldMapGeometry::normalize((string)$this->footprint, (int)$this->position_x, (int)$this->position_y); }
-        catch (\common\services\game\GameError $error) { $this->addError($attribute, $error->getMessage()); }
+        try { \common\modules\world\models\domain\WorldMapGeometry::normalize((string)$this->footprint, (int)$this->position_x, (int)$this->position_y); }
+        catch (\common\modules\world\support\GameError $error) { $this->addError($attribute, $error->getMessage()); }
     }
     public function payload(int $id = 0): array
     {
@@ -118,7 +118,7 @@ class WorldNodeForm extends Model
             'parent_id' => $this->parent_id === null ? null : (int)$this->parent_id,
             'owner_user_id' => $this->owner_user_id === null ? null : (int)$this->owner_user_id, 'portable' => (int)$this->portable,
             'position_x' => (int)$this->position_x, 'position_y' => (int)$this->position_y, 'position' => (int)$this->position,
-            'footprint_json' => \common\modules\world\service\WorldMapGeometry::normalize((string)$this->footprint, (int)$this->position_x, (int)$this->position_y)];
+            'footprint_json' => \common\modules\world\models\domain\WorldMapGeometry::normalize((string)$this->footprint, (int)$this->position_x, (int)$this->position_y)];
         foreach (['map_width', 'map_height', 'map_origin_x', 'map_origin_y'] as $key) $values[$key] = (int)$this->$key;
         $details = [];
         foreach ($this->detailFields() as $field) $details[$field] = in_array($field, ['building_kind', 'climate', 'settlement_kind', 'operational_status', 'exposure_class', 'plot_kind'], true) ? $this->$field : (int)$this->$field;

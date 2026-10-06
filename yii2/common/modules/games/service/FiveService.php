@@ -30,7 +30,7 @@ class FiveService
         if ($count < 1 || $count > 100) throw new ConflictHttpException('Invalid game count.');
         Yii::$app->db->transaction(function () use ($game, $person, $count) {
             $this->lock($person);
-            if (\common\modules\economy\service\WalletSchema::ready(Yii::$app->db)) \common\modules\economy\service\LegacyCreditPolicy::game($game->kon);
+            if (\common\modules\world\modules\economy\models\domain\WalletSchema::ready(Yii::$app->db)) \common\modules\world\modules\economy\models\domain\LegacyCreditPolicy::game($game->kon);
             $this->requireFunds($person, (float)$game->kon * $count);
             for ($i = 0; $i < $count; $i++) {
                 $entry = $i === 0 ? $game : new GameFive();
@@ -150,10 +150,10 @@ class FiveService
 
     private function changePerson(Person $person, GameFive $game, float $credit, float $rating, string $comment): void
     {
-        \common\modules\economy\service\WalletMaintenance::writable(Yii::$app->db);
-        $exact = \common\modules\economy\service\WalletSchema::ready(Yii::$app->db);
+        \common\modules\world\modules\economy\models\domain\WalletMaintenance::writable(Yii::$app->db);
+        $exact = \common\modules\world\modules\economy\models\domain\WalletSchema::ready(Yii::$app->db);
         if ($exact) {
-            (new \common\services\user\CreditLedger(Yii::$app->db))->changeExact((int)$person->user_id, \common\modules\economy\value\Money::fromLegacy($credit)->decimal(), $game->getHistoryType(), $comment);
+            (new \common\services\user\CreditLedger(Yii::$app->db))->changeExact((int)$person->user_id, \common\modules\world\modules\economy\value\Money::fromLegacy($credit)->decimal(), $game->getHistoryType(), $comment);
             $person->refresh();
         }
         if ((!$exact || $rating != 0) && !$person->updateCounters($exact ? ['rating' => $rating] : ['credit' => $credit, 'rating' => $rating])) {

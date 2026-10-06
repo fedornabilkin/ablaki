@@ -5,7 +5,7 @@ function storageRace(string $action,array $payloads,bool $same=false): int {
     foreach($payloads as $i=>$body) {
         $key='storage-race-'.$action.'-'.($same?'same':$i);
         $cmd=escapeshellarg(PHP_BINARY).' '.escapeshellarg(__DIR__.'/classic-craft.php').' worker '.escapeshellarg($key).' storage '.escapeshellarg($action).' '.escapeshellarg(base64_encode(json_encode($body)));
-        $pipes=[];$process=proc_open($cmd,[0=>['pipe','r'],1=>['pipe','w'],2=>['pipe','w']],$pipes);
+        $pipes=[];$process=proc_open($cmd,[0=>['pipe','r'],1=>['pipe','w'],2=>['pipe','w']],$pipes,null,null,['bypass_shell'=>true]);
         if(!is_resource($process))throw new \RuntimeException('Cannot start storage worker.');$children[]=[$process,$pipes];
     }
     releaseWorkers($children);$ok=0;

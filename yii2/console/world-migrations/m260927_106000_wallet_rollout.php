@@ -1,5 +1,5 @@
 <?php
-use common\services\game\WorldMigration;
+use common\modules\world\support\WorldMigration;
 
 /** Snapshot storage only: the credit columns are changed by an explicit offline command. */
 class m260927_106000_wallet_rollout extends WorldMigration

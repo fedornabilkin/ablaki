@@ -370,7 +370,7 @@
       ],
       "post": {
         "summary": "premises-buy-preview",
-        "description": "Schema marker 19. Ready purchases remain immediate. Construction reserves plot budget and backpack raw materials; no room or usable equipment slots exist until the fenced worker completes. Purchase result has building_id, project_id and finish_at for construction, or building_id and room_id for ready delivery. Quotes last 300 seconds; material_plan pins inventory_id/storage_id/item_id/quantity and revisions. Cancellation before actual completion releases the full credit reserve and returns all materials to available backpack slots; a full backpack blocks cancellation without partial changes. No local/runtime acceptance performed. Requires owned active campsite, free area, storage_v2, exact wallet and published settlement finance policy. House requires starter membership.",
+        "description": "Схема 38: используйте /v1/world/start и /v1/world/builds; см. simple-world.md. Schema marker 19. Ready purchases remain immediate. Construction reserves plot budget and backpack raw materials; no room or usable equipment slots exist until the fenced worker completes. Purchase result has building_id, project_id and finish_at for construction, or building_id and room_id for ready delivery. Quotes last 300 seconds; material_plan pins inventory_id/storage_id/item_id/quantity and revisions. Cancellation before actual completion releases the full credit reserve and returns all materials to available backpack slots; a full backpack blocks cancellation without partial changes. No local/runtime acceptance performed. Requires owned active campsite, free area, storage_v2, exact wallet and published settlement finance policy. House requires starter membership.",
         "requestBody": {
           "required": true,
           "content": {
@@ -462,7 +462,8 @@
               }
             }
           }
-        }
+        },
+        "deprecated": true
       }
     },
     "/world/nodes/{id}/premises-buy": {
@@ -480,7 +481,7 @@
       ],
       "post": {
         "summary": "premises-buy",
-        "description": "Schema marker 19. Ready purchases remain immediate. Construction reserves plot budget and backpack raw materials; no room or usable equipment slots exist until the fenced worker completes. Purchase result has building_id, project_id and finish_at for construction, or building_id and room_id for ready delivery. Quotes last 300 seconds; material_plan pins inventory_id/storage_id/item_id/quantity and revisions. Cancellation before actual completion releases the full credit reserve and returns all materials to available backpack slots; a full backpack blocks cancellation without partial changes. No local/runtime acceptance performed. Requires owned active campsite, free area, storage_v2, exact wallet and published settlement finance policy. House requires starter membership.",
+        "description": "Схема 38: используйте /v1/world/start и /v1/world/builds; см. simple-world.md. Schema marker 19. Ready purchases remain immediate. Construction reserves plot budget and backpack raw materials; no room or usable equipment slots exist until the fenced worker completes. Purchase result has building_id, project_id and finish_at for construction, or building_id and room_id for ready delivery. Quotes last 300 seconds; material_plan pins inventory_id/storage_id/item_id/quantity and revisions. Cancellation before actual completion releases the full credit reserve and returns all materials to available backpack slots; a full backpack blocks cancellation without partial changes. No local/runtime acceptance performed. Requires owned active campsite, free area, storage_v2, exact wallet and published settlement finance policy. House requires starter membership.",
         "requestBody": {
           "required": true,
           "content": {
@@ -572,7 +573,8 @@
               }
             }
           }
-        }
+        },
+        "deprecated": true
       }
     },
     "/world/nodes/{id}/premises-withdraw-preview": {

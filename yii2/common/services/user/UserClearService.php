@@ -36,7 +36,7 @@ class UserClearService
     }
     public function removeDead(int $id): bool
     {
-        \common\modules\economy\service\WalletMaintenance::writable($this->db);
+        \common\modules\world\modules\economy\models\domain\WalletMaintenance::writable($this->db);
         return $this->db->transaction(function()use($id){
             // Activity, rating and cleanup serialize on the user, then its account.
             $ledger=new CreditLedger($this->db);$user=$ledger->lock('user',['id'=>$id]);

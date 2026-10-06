@@ -13,7 +13,7 @@ class GameParticipation
     public static function run(string $table, int $id, Person $person, callable $play)
     {
         return Yii::$app->db->transaction(function () use ($table, $id, $person, $play) {
-            \common\modules\economy\service\WalletMaintenance::writable(Yii::$app->db);
+            \common\modules\world\modules\economy\models\domain\WalletMaintenance::writable(Yii::$app->db);
             $ledger = new CreditLedger(Yii::$app->db);
             $game = $ledger->lock($table, ['id' => $id]);
             if (!$game) throw new ConflictHttpException('Игра уже удалена. Обновите список.');

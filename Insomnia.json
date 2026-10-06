@@ -3982,8 +3982,8 @@
       "modified": 1791009594237,
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/nodes/{{ _.world_node_id }}/garden-buy-preview",
-      "name": "POST /world/nodes/{id}/garden-buy-preview",
-      "description": "Источник: docs/api/world-garden.openapi.json. One current settlement offer; publication replaces only future purchases. Buy at owned campsite, expand at owned garden. One permanent starter garden per membership. top_up=true explicitly permits the quoted personal contribution and budget payment in one transaction. Bought expansion price is pinned; beds cost B..9B. No crops or automatic income. Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело.",
+      "name": "[DEPRECATED] POST /world/nodes/{id}/garden-buy-preview",
+      "description": "Deprecated для схемы 38: создание объектов через /v1/world/start и /v1/world/builds, см. docs/api/simple-world.md. Источник: docs/api/world-garden.openapi.json. One current settlement offer; publication replaces only future purchases. Buy at owned campsite, expand at owned garden. One permanent starter garden per membership. top_up=true explicitly permits the quoted personal contribution and budget payment in one transaction. Bought expansion price is pinned; beds cost B..9B. No crops or automatic income. Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело.",
       "method": "POST",
       "body": {
         "mimeType": "application/json",
@@ -4017,8 +4017,8 @@
       "modified": 1791009594237,
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/nodes/{{ _.world_node_id }}/garden-buy",
-      "name": "POST /world/nodes/{id}/garden-buy",
-      "description": "Источник: docs/api/world-garden.openapi.json. One current settlement offer; publication replaces only future purchases. Buy at owned campsite, expand at owned garden. One permanent starter garden per membership. top_up=true explicitly permits the quoted personal contribution and budget payment in one transaction. Bought expansion price is pinned; beds cost B..9B. No crops or automatic income. Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело.",
+      "name": "[DEPRECATED] POST /world/nodes/{id}/garden-buy",
+      "description": "Deprecated для схемы 38: создание объектов через /v1/world/start и /v1/world/builds, см. docs/api/simple-world.md. Источник: docs/api/world-garden.openapi.json. One current settlement offer; publication replaces only future purchases. Buy at owned campsite, expand at owned garden. One permanent starter garden per membership. top_up=true explicitly permits the quoted personal contribution and budget payment in one transaction. Bought expansion price is pinned; beds cost B..9B. No crops or automatic income. Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело.",
       "method": "POST",
       "body": {
         "mimeType": "application/json",
@@ -4052,8 +4052,8 @@
       "modified": 1791009594237,
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/nodes/{{ _.world_node_id }}/garden-expand-preview",
-      "name": "POST /world/nodes/{id}/garden-expand-preview",
-      "description": "Источник: docs/api/world-garden.openapi.json. One current settlement offer; publication replaces only future purchases. Buy at owned campsite, expand at owned garden. One permanent starter garden per membership. top_up=true explicitly permits the quoted personal contribution and budget payment in one transaction. Bought expansion price is pinned; beds cost B..9B. No crops or automatic income. Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело.",
+      "name": "[DEPRECATED] POST /world/nodes/{id}/garden-expand-preview",
+      "description": "Deprecated для схемы 38: создание объектов через /v1/world/start и /v1/world/builds, см. docs/api/simple-world.md. Источник: docs/api/world-garden.openapi.json. One current settlement offer; publication replaces only future purchases. Buy at owned campsite, expand at owned garden. One permanent starter garden per membership. top_up=true explicitly permits the quoted personal contribution and budget payment in one transaction. Bought expansion price is pinned; beds cost B..9B. No crops or automatic income. Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело.",
       "method": "POST",
       "body": {
         "mimeType": "application/json",
@@ -4087,8 +4087,8 @@
       "modified": 1791009594237,
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/nodes/{{ _.world_node_id }}/garden-expand",
-      "name": "POST /world/nodes/{id}/garden-expand",
-      "description": "Источник: docs/api/world-garden.openapi.json. One current settlement offer; publication replaces only future purchases. Buy at owned campsite, expand at owned garden. One permanent starter garden per membership. top_up=true explicitly permits the quoted personal contribution and budget payment in one transaction. Bought expansion price is pinned; beds cost B..9B. No crops or automatic income. Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело.",
+      "name": "[DEPRECATED] POST /world/nodes/{id}/garden-expand",
+      "description": "Deprecated для схемы 38: создание объектов через /v1/world/start и /v1/world/builds, см. docs/api/simple-world.md. Источник: docs/api/world-garden.openapi.json. One current settlement offer; publication replaces only future purchases. Buy at owned campsite, expand at owned garden. One permanent starter garden per membership. top_up=true explicitly permits the quoted personal contribution and budget payment in one transaction. Bought expansion price is pinned; beds cost B..9B. No crops or automatic income. Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело.",
       "method": "POST",
       "body": {
         "mimeType": "application/json",
@@ -4969,8 +4969,8 @@
       "modified": 1791009594237,
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/nodes/{{ _.world_node_id }}/premises-buy-preview",
-      "name": "POST /world/nodes/{id}/premises-buy-preview",
-      "description": "Источник: docs/api/world-premises.openapi.json. Schema marker 19. Ready purchases remain immediate. Construction reserves plot budget and backpack raw materials; no room or usable equipment slots exist until the fenced worker completes. Purchase result has building_id, project_id and finish_at for construction, or building_id and room_id for ready delivery. Quotes last 300 seconds; material_plan pins inventory_id/storage_id/item_id/quantity and revisions. Cancellation before actual completion releases the full credit reserve and returns all materials to available backpack slots; a full backpack blocks cancellation without partial changes. No local/runtime acceptance performed. Requires owned active campsite, free area, storage_v2, exact wallet and published settlement finance policy. House requires starter membership. Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело.",
+      "name": "[DEPRECATED] POST /world/nodes/{id}/premises-buy-preview",
+      "description": "Deprecated для схемы 38: создание объектов через /v1/world/start и /v1/world/builds, см. docs/api/simple-world.md. Источник: docs/api/world-premises.openapi.json. Schema marker 19. Ready purchases remain immediate. Construction reserves plot budget and backpack raw materials; no room or usable equipment slots exist until the fenced worker completes. Purchase result has building_id, project_id and finish_at for construction, or building_id and room_id for ready delivery. Quotes last 300 seconds; material_plan pins inventory_id/storage_id/item_id/quantity and revisions. Cancellation before actual completion releases the full credit reserve and returns all materials to available backpack slots; a full backpack blocks cancellation without partial changes. No local/runtime acceptance performed. Requires owned active campsite, free area, storage_v2, exact wallet and published settlement finance policy. House requires starter membership. Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело.",
       "method": "POST",
       "body": {
         "mimeType": "application/json",
@@ -5004,8 +5004,8 @@
       "modified": 1791009594237,
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/nodes/{{ _.world_node_id }}/premises-buy",
-      "name": "POST /world/nodes/{id}/premises-buy",
-      "description": "Источник: docs/api/world-premises.openapi.json. Schema marker 19. Ready purchases remain immediate. Construction reserves plot budget and backpack raw materials; no room or usable equipment slots exist until the fenced worker completes. Purchase result has building_id, project_id and finish_at for construction, or building_id and room_id for ready delivery. Quotes last 300 seconds; material_plan pins inventory_id/storage_id/item_id/quantity and revisions. Cancellation before actual completion releases the full credit reserve and returns all materials to available backpack slots; a full backpack blocks cancellation without partial changes. No local/runtime acceptance performed. Requires owned active campsite, free area, storage_v2, exact wallet and published settlement finance policy. House requires starter membership. Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело.",
+      "name": "[DEPRECATED] POST /world/nodes/{id}/premises-buy",
+      "description": "Deprecated для схемы 38: создание объектов через /v1/world/start и /v1/world/builds, см. docs/api/simple-world.md. Источник: docs/api/world-premises.openapi.json. Schema marker 19. Ready purchases remain immediate. Construction reserves plot budget and backpack raw materials; no room or usable equipment slots exist until the fenced worker completes. Purchase result has building_id, project_id and finish_at for construction, or building_id and room_id for ready delivery. Quotes last 300 seconds; material_plan pins inventory_id/storage_id/item_id/quantity and revisions. Cancellation before actual completion releases the full credit reserve and returns all materials to available backpack slots; a full backpack blocks cancellation without partial changes. No local/runtime acceptance performed. Requires owned active campsite, free area, storage_v2, exact wallet and published settlement finance policy. House requires starter membership. Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело.",
       "method": "POST",
       "body": {
         "mimeType": "application/json",
@@ -5711,8 +5711,8 @@
       "modified": 1791009594237,
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/nodes/{{ _.world_node_id }}/shelter-deploy-preview",
-      "name": "POST /world/nodes/{id}/shelter-deploy-preview",
-      "description": "Источник: docs/api/world-shelter.openapi.json. Account-wide shelter lifecycle. direct_deploy=true only for claim; end_lodging=true only for fold. Repair consumes the quoted raw materials from active backpack slots at zero credits, preserving the instance, deployment and lodging. Protection resumes at repair time without changing past nights. Night illness requires a separately published calendar. Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело.",
+      "name": "[DEPRECATED] POST /world/nodes/{id}/shelter-deploy-preview",
+      "description": "Deprecated для схемы 38: создание объектов через /v1/world/start и /v1/world/builds, см. docs/api/simple-world.md. Источник: docs/api/world-shelter.openapi.json. Account-wide shelter lifecycle. direct_deploy=true only for claim; end_lodging=true only for fold. Repair consumes the quoted raw materials from active backpack slots at zero credits, preserving the instance, deployment and lodging. Protection resumes at repair time without changing past nights. Night illness requires a separately published calendar. Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело.",
       "method": "POST",
       "body": {
         "mimeType": "application/json",
@@ -5746,8 +5746,8 @@
       "modified": 1791009594237,
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/nodes/{{ _.world_node_id }}/shelter-deploy",
-      "name": "POST /world/nodes/{id}/shelter-deploy",
-      "description": "Источник: docs/api/world-shelter.openapi.json. Account-wide shelter lifecycle. direct_deploy=true only for claim; end_lodging=true only for fold. Repair consumes the quoted raw materials from active backpack slots at zero credits, preserving the instance, deployment and lodging. Protection resumes at repair time without changing past nights. Night illness requires a separately published calendar. Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело.",
+      "name": "[DEPRECATED] POST /world/nodes/{id}/shelter-deploy",
+      "description": "Deprecated для схемы 38: создание объектов через /v1/world/start и /v1/world/builds, см. docs/api/simple-world.md. Источник: docs/api/world-shelter.openapi.json. Account-wide shelter lifecycle. direct_deploy=true only for claim; end_lodging=true only for fold. Repair consumes the quoted raw materials from active backpack slots at zero credits, preserving the instance, deployment and lodging. Protection resumes at repair time without changing past nights. Night illness requires a separately published calendar. Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело.",
       "method": "POST",
       "body": {
         "mimeType": "application/json",
@@ -7012,8 +7012,8 @@
       "modified": 1791009594237,
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/onboarding/join",
-      "name": "POST /world/onboarding/join",
-      "description": "Источник: docs/api/world.openapi.json.  Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело.",
+      "name": "[DEPRECATED] POST /world/onboarding/join",
+      "description": "Deprecated для схемы 38: создание объектов через /v1/world/start и /v1/world/builds, см. docs/api/simple-world.md. Источник: docs/api/world.openapi.json.  Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело.",
       "method": "POST",
       "body": {
         "mimeType": "application/json",
@@ -7047,8 +7047,8 @@
       "modified": 1791009594237,
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/nodes/{{ _.world_node_id }}/move-preview",
-      "name": "POST /world/nodes/{id}/move-preview",
-      "description": "Источник: docs/api/world.openapi.json.  Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело.",
+      "name": "[DEPRECATED] POST /world/nodes/{id}/move-preview",
+      "description": "Deprecated для схемы 38: создание объектов через /v1/world/start и /v1/world/builds, см. docs/api/simple-world.md. Источник: docs/api/world.openapi.json.  Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело.",
       "method": "POST",
       "body": {
         "mimeType": "application/json",
@@ -7082,8 +7082,8 @@
       "modified": 1791009594237,
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/nodes/{{ _.world_node_id }}/move",
-      "name": "POST /world/nodes/{id}/move",
-      "description": "Источник: docs/api/world.openapi.json.  Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело.",
+      "name": "[DEPRECATED] POST /world/nodes/{id}/move",
+      "description": "Deprecated для схемы 38: создание объектов через /v1/world/start и /v1/world/builds, см. docs/api/simple-world.md. Источник: docs/api/world.openapi.json.  Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело.",
       "method": "POST",
       "body": {
         "mimeType": "application/json",
@@ -10696,6 +10696,671 @@
         "disabled": false
       },
       "metaSortKey": 83,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "fld_6d6e271b7544c709bed8d6c70f1b90e0",
+      "parentId": "fld_c49c74cffee363cb9236af7b3e084008",
+      "modified": 1791244800000,
+      "created": 1791244800000,
+      "name": "World · simple core",
+      "description": "Схема 38. docs/api/simple-world.md. Для нового POST — новый ключ simple_request_key, для повтора — прежние ключ и тело.",
+      "environment": {
+        "simple_node_id": "8",
+        "simple_parent_id": "8",
+        "simple_city_id": "3",
+        "simple_template_id": "7",
+        "simple_build_id": "1",
+        "simple_request_key": "insomnia-simple-command-0001"
+      },
+      "environmentPropertyOrder": null,
+      "metaSortKey": -100,
+      "_type": "request_group"
+    },
+    {
+      "_id": "req_0476308a1e598935d851552010fded8c",
+      "parentId": "fld_6d6e271b7544c709bed8d6c70f1b90e0",
+      "modified": 1791244800000,
+      "created": 1791244800000,
+      "name": "GET · Мир",
+      "url": "{{ _.baseUrl }}/v1/world/objects?hierarchy_level=1&envelope=1",
+      "method": "GET",
+      "description": "Контракт: docs/api/simple-world.md. ID в окружении — примеры: сначала получите действительные ID из GET.",
+      "body": {},
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Accept",
+          "value": "application/json"
+        }
+      ],
+      "authentication": {
+        "type": "bearer",
+        "token": "{{ _.bearer }}"
+      },
+      "metaSortKey": 0,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_b1cf2f8a070cfa48121f0d4b6699245c",
+      "parentId": "fld_6d6e271b7544c709bed8d6c70f1b90e0",
+      "modified": 1791244800000,
+      "created": 1791244800000,
+      "name": "GET · Дочерние объекты",
+      "url": "{{ _.baseUrl }}/v1/world/objects?parent_id={{ _.simple_parent_id }}&envelope=1",
+      "method": "GET",
+      "description": "Контракт: docs/api/simple-world.md. ID в окружении — примеры: сначала получите действительные ID из GET.",
+      "body": {},
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Accept",
+          "value": "application/json"
+        }
+      ],
+      "authentication": {
+        "type": "bearer",
+        "token": "{{ _.bearer }}"
+      },
+      "metaSortKey": 1,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_cff1bd9f8f693b6cb11c130f35a98ffb",
+      "parentId": "fld_6d6e271b7544c709bed8d6c70f1b90e0",
+      "modified": 1791244800000,
+      "created": 1791244800000,
+      "name": "GET · Города для старта",
+      "url": "{{ _.baseUrl }}/v1/world/objects?hierarchy_level=3&envelope=1",
+      "method": "GET",
+      "description": "Контракт: docs/api/simple-world.md. ID в окружении — примеры: сначала получите действительные ID из GET.",
+      "body": {},
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Accept",
+          "value": "application/json"
+        }
+      ],
+      "authentication": {
+        "type": "bearer",
+        "token": "{{ _.bearer }}"
+      },
+      "metaSortKey": 2,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_d4c8a4aeff204dff02e06b819c16b8fa",
+      "parentId": "fld_6d6e271b7544c709bed8d6c70f1b90e0",
+      "modified": 1791244800000,
+      "created": 1791244800000,
+      "name": "GET · Объект",
+      "url": "{{ _.baseUrl }}/v1/world/objects/{{ _.simple_node_id }}",
+      "method": "GET",
+      "description": "Контракт: docs/api/simple-world.md. ID в окружении — примеры: сначала получите действительные ID из GET.",
+      "body": {},
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Accept",
+          "value": "application/json"
+        }
+      ],
+      "authentication": {
+        "type": "bearer",
+        "token": "{{ _.bearer }}"
+      },
+      "metaSortKey": 3,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_1545445c2851f8836fc156a6754d089f",
+      "parentId": "fld_6d6e271b7544c709bed8d6c70f1b90e0",
+      "modified": 1791244800000,
+      "created": 1791244800000,
+      "name": "GET · Шаблоны для родителя",
+      "url": "{{ _.baseUrl }}/v1/world/templates?parent_id={{ _.simple_parent_id }}&envelope=1",
+      "method": "GET",
+      "description": "Контракт: docs/api/simple-world.md. ID в окружении — примеры: сначала получите действительные ID из GET.",
+      "body": {},
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Accept",
+          "value": "application/json"
+        }
+      ],
+      "authentication": {
+        "type": "bearer",
+        "token": "{{ _.bearer }}"
+      },
+      "metaSortKey": 4,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_ca51bba1137cafaeaa27b6ac34c618ba",
+      "parentId": "fld_6d6e271b7544c709bed8d6c70f1b90e0",
+      "modified": 1791244800000,
+      "created": 1791244800000,
+      "name": "GET · Действующие события",
+      "url": "{{ _.baseUrl }}/v1/world/events?node_id={{ _.simple_node_id }}&envelope=1",
+      "method": "GET",
+      "description": "Контракт: docs/api/simple-world.md. ID в окружении — примеры: сначала получите действительные ID из GET.",
+      "body": {},
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Accept",
+          "value": "application/json"
+        }
+      ],
+      "authentication": {
+        "type": "bearer",
+        "token": "{{ _.bearer }}"
+      },
+      "metaSortKey": 5,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_0bc077941b1c91cf0ca6309273d06017",
+      "parentId": "fld_6d6e271b7544c709bed8d6c70f1b90e0",
+      "modified": 1791244800000,
+      "created": 1791244800000,
+      "name": "GET · Доступные стройки",
+      "url": "{{ _.baseUrl }}/v1/world/builds?envelope=1",
+      "method": "GET",
+      "description": "Контракт: docs/api/simple-world.md. ID в окружении — примеры: сначала получите действительные ID из GET.",
+      "body": {},
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Accept",
+          "value": "application/json"
+        }
+      ],
+      "authentication": {
+        "type": "bearer",
+        "token": "{{ _.bearer }}"
+      },
+      "metaSortKey": 6,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_5c4f6fb2b3c06383f1ac84e20bd0d72a",
+      "parentId": "fld_6d6e271b7544c709bed8d6c70f1b90e0",
+      "modified": 1791244800000,
+      "created": 1791244800000,
+      "name": "GET · Стройка и труд",
+      "url": "{{ _.baseUrl }}/v1/world/builds/{{ _.simple_build_id }}",
+      "method": "GET",
+      "description": "Контракт: docs/api/simple-world.md. ID в окружении — примеры: сначала получите действительные ID из GET.",
+      "body": {},
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Accept",
+          "value": "application/json"
+        }
+      ],
+      "authentication": {
+        "type": "bearer",
+        "token": "{{ _.bearer }}"
+      },
+      "metaSortKey": 7,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_a505a0b875f7feca1f1f5598f280b0dd",
+      "parentId": "fld_6d6e271b7544c709bed8d6c70f1b90e0",
+      "modified": 1791244800000,
+      "created": 1791244800000,
+      "name": "GET · Своя стоянка",
+      "url": "{{ _.baseUrl }}/v1/world/start",
+      "method": "GET",
+      "description": "Контракт: docs/api/simple-world.md. ID в окружении — примеры: сначала получите действительные ID из GET.",
+      "body": {},
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Accept",
+          "value": "application/json"
+        }
+      ],
+      "authentication": {
+        "type": "bearer",
+        "token": "{{ _.bearer }}"
+      },
+      "metaSortKey": 8,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_c43901af1e9b8185929e41987bed5792",
+      "parentId": "fld_6d6e271b7544c709bed8d6c70f1b90e0",
+      "modified": 1791244800000,
+      "created": 1791244800000,
+      "name": "POST · Начать стоянку",
+      "url": "{{ _.baseUrl }}/v1/world/start",
+      "method": "POST",
+      "description": "Контракт: docs/api/simple-world.md. ID в окружении — примеры: сначала получите действительные ID из GET. Новый ключ для нового действия; тот же ключ и тело при повторе.",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\"city_id\": {{ _.simple_city_id }}}"
+      },
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Accept",
+          "value": "application/json"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "name": "Idempotency-Key",
+          "value": "{{ _.simple_request_key }}"
+        }
+      ],
+      "authentication": {
+        "type": "bearer",
+        "token": "{{ _.bearer }}"
+      },
+      "metaSortKey": 9,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_57c57818437ba5339cb7b8199d94ddb2",
+      "parentId": "fld_6d6e271b7544c709bed8d6c70f1b90e0",
+      "modified": 1791244800000,
+      "created": 1791244800000,
+      "name": "POST · Начать стройку",
+      "url": "{{ _.baseUrl }}/v1/world/builds",
+      "method": "POST",
+      "description": "Контракт: docs/api/simple-world.md. ID в окружении — примеры: сначала получите действительные ID из GET. Новый ключ для нового действия; тот же ключ и тело при повторе.",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\"parent_id\": {{ _.simple_parent_id }}, \"template_id\": {{ _.simple_template_id }}, \"name\": \"Мой дом\", \"labor_budget\": \"0\"}"
+      },
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Accept",
+          "value": "application/json"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "name": "Idempotency-Key",
+          "value": "{{ _.simple_request_key }}"
+        }
+      ],
+      "authentication": {
+        "type": "bearer",
+        "token": "{{ _.bearer }}"
+      },
+      "metaSortKey": 10,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_37afafb8efddecd56e2bc90afb4c9d3d",
+      "parentId": "fld_6d6e271b7544c709bed8d6c70f1b90e0",
+      "modified": 1791244800000,
+      "created": 1791244800000,
+      "name": "POST · Начать работу",
+      "url": "{{ _.baseUrl }}/v1/world/builds/{{ _.simple_build_id }}/start",
+      "method": "POST",
+      "description": "Контракт: docs/api/simple-world.md. ID в окружении — примеры: сначала получите действительные ID из GET. Новый ключ для нового действия; тот же ключ и тело при повторе.",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{}"
+      },
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Accept",
+          "value": "application/json"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "name": "Idempotency-Key",
+          "value": "{{ _.simple_request_key }}"
+        }
+      ],
+      "authentication": {
+        "type": "bearer",
+        "token": "{{ _.bearer }}"
+      },
+      "metaSortKey": 11,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_abf77729e3482e66a6a77425e11cd309",
+      "parentId": "fld_6d6e271b7544c709bed8d6c70f1b90e0",
+      "modified": 1791244800000,
+      "created": 1791244800000,
+      "name": "POST · Учесть труд",
+      "url": "{{ _.baseUrl }}/v1/world/builds/{{ _.simple_build_id }}/heartbeat",
+      "method": "POST",
+      "description": "Контракт: docs/api/simple-world.md. ID в окружении — примеры: сначала получите действительные ID из GET. Новый ключ для нового действия; тот же ключ и тело при повторе.",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{}"
+      },
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Accept",
+          "value": "application/json"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "name": "Idempotency-Key",
+          "value": "{{ _.simple_request_key }}"
+        }
+      ],
+      "authentication": {
+        "type": "bearer",
+        "token": "{{ _.bearer }}"
+      },
+      "metaSortKey": 12,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_4eba1514415a841cd6328225cc001e60",
+      "parentId": "fld_6d6e271b7544c709bed8d6c70f1b90e0",
+      "modified": 1791244800000,
+      "created": 1791244800000,
+      "name": "POST · Остановить работу",
+      "url": "{{ _.baseUrl }}/v1/world/builds/{{ _.simple_build_id }}/stop",
+      "method": "POST",
+      "description": "Контракт: docs/api/simple-world.md. ID в окружении — примеры: сначала получите действительные ID из GET. Новый ключ для нового действия; тот же ключ и тело при повторе.",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{}"
+      },
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Accept",
+          "value": "application/json"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "name": "Idempotency-Key",
+          "value": "{{ _.simple_request_key }}"
+        }
+      ],
+      "authentication": {
+        "type": "bearer",
+        "token": "{{ _.bearer }}"
+      },
+      "metaSortKey": 13,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_d44924fd746de8b85bf5add2b336d102",
+      "parentId": "fld_6d6e271b7544c709bed8d6c70f1b90e0",
+      "modified": 1791244800000,
+      "created": 1791244800000,
+      "name": "POST · Отменить стройку",
+      "url": "{{ _.baseUrl }}/v1/world/builds/{{ _.simple_build_id }}/cancel",
+      "method": "POST",
+      "description": "Контракт: docs/api/simple-world.md. ID в окружении — примеры: сначала получите действительные ID из GET. Новый ключ для нового действия; тот же ключ и тело при повторе.",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{}"
+      },
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Accept",
+          "value": "application/json"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "name": "Idempotency-Key",
+          "value": "{{ _.simple_request_key }}"
+        }
+      ],
+      "authentication": {
+        "type": "bearer",
+        "token": "{{ _.bearer }}"
+      },
+      "metaSortKey": 14,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_47b26f21a08380d2a3147945e376c7ad",
+      "parentId": "fld_6d6e271b7544c709bed8d6c70f1b90e0",
+      "modified": 1791244800000,
+      "created": 1791244800000,
+      "name": "GET · Бюджет родителя",
+      "url": "{{ _.baseUrl }}/v1/world/objects/{{ _.simple_node_id }}/budget",
+      "method": "GET",
+      "description": "Контракт: docs/api/simple-world.md. ID в окружении — примеры: сначала получите действительные ID из GET.",
+      "body": {},
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Accept",
+          "value": "application/json"
+        }
+      ],
+      "authentication": {
+        "type": "bearer",
+        "token": "{{ _.bearer }}"
+      },
+      "metaSortKey": 15,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_7493ef735798b4006f3a2ac248e63752",
+      "parentId": "fld_6d6e271b7544c709bed8d6c70f1b90e0",
+      "modified": 1791244800000,
+      "created": 1791244800000,
+      "name": "POST · Пополнить свой бюджет",
+      "url": "{{ _.baseUrl }}/v1/world/objects/{{ _.simple_node_id }}/budget",
+      "method": "POST",
+      "description": "Контракт: docs/api/simple-world.md. ID в окружении — примеры: сначала получите действительные ID из GET. Новый ключ для нового действия; тот же ключ и тело при повторе.",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\"amount\":\"10.0000\"}"
+      },
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Accept",
+          "value": "application/json"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "name": "Idempotency-Key",
+          "value": "{{ _.simple_request_key }}"
+        }
+      ],
+      "authentication": {
+        "type": "bearer",
+        "token": "{{ _.bearer }}"
+      },
+      "metaSortKey": 16,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_4e195c97ccc55a02a8ddc9ac78dccc3b",
+      "parentId": "fld_6d6e271b7544c709bed8d6c70f1b90e0",
+      "modified": 1791244800000,
+      "created": 1791244800000,
+      "name": "POST · Дневной сбор / шахта",
+      "url": "{{ _.baseUrl }}/v1/world/objects/{{ _.simple_node_id }}/gather",
+      "method": "POST",
+      "description": "Контракт: docs/api/simple-world.md. ID в окружении — примеры: сначала получите действительные ID из GET. Новый ключ для нового действия; тот же ключ и тело при повторе.",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{}"
+      },
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Accept",
+          "value": "application/json"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "name": "Idempotency-Key",
+          "value": "{{ _.simple_request_key }}"
+        }
+      ],
+      "authentication": {
+        "type": "bearer",
+        "token": "{{ _.bearer }}"
+      },
+      "metaSortKey": 17,
       "isPrivate": false,
       "settingStoreCookies": true,
       "settingSendCookies": true,
