@@ -42,7 +42,7 @@ docker-compose exec -T postgres sh -c 'exec pg_restore --exit-on-error -U "$POST
 docker-compose run --rm --no-deps -T --entrypoint php \
   -e WORLD_INSTALL=confirmed-world-install -e WORLD_TEST_SETUP=confirmed-test-checkout \
   -e WORLD_TEST_MODE=1 -e WORLD_VERIFY_DATABASE="$validation_db" \
-  php /web/deploy/world-verify-test.php
+  php /web/yii2/console/world-verify-test.php
 cleanup_validation
 trap - EXIT
 
