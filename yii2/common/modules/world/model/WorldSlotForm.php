@@ -1,7 +1,7 @@
 <?php
 namespace common\modules\world\model;
 
-use common\services\game\CanonicalJson;
+use common\modules\world\support\CanonicalJson;
 use yii\base\Model;
 
 class WorldSlotForm extends Model

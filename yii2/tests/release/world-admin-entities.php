@@ -1,10 +1,10 @@
 <?php
 // Reuses the guarded disposable world fixture, including all prior gameplay assertions.
 require __DIR__ . '/world-forum80.php';
-use backend\components\WorldEntityCatalog;
-use backend\components\WorldRelations;
+use common\modules\world\admin\WorldEntityCatalog;
+use common\modules\world\models\admin\WorldRelations;
 use common\modules\world\model\WorldNodeForm;
-use common\modules\world\service\WorldNodeEditor;
+use common\modules\world\models\domain\WorldNodeEditor;
 use yii\db\Query;
 
 Yii::setAlias('@backend', $yiiRoot . '/backend');
@@ -12,8 +12,13 @@ Yii::setAlias('@app', $yiiRoot . '/backend');
 Yii::setAlias('@webroot', $yiiRoot . '/backend/web');
 Yii::setAlias('@web', '');
 $app->controllerNamespace = 'backend\\controllers';
+$app->id = 'app-backend';
 $app->setViewPath($yiiRoot . '/backend/views');
 $app->controllerMap = WorldEntityCatalog::controllers();
+// First exercise the retained legacy administration before conversion.
+foreach (['Root', 'Region', 'Settlement', 'Plot', 'Building', 'Room', 'Bed'] as $name)
+    $app->controllerMap['world-' . strtolower($name)] = ['class' => 'common\\modules\\world\\controllers\\legacy\\World' . $name . 'Controller'];
+foreach (['template', 'event'] as $name) $app->controllerMap['world-' . $name] = ['class' => \common\modules\world\admin\WorldRecordController::class, 'table' => 'world_' . $name];
 $app->layout = false;
 $app->language = 'ru-RU';
 $app->set('view', ['class' => yii\web\View::class, 'theme' => ['pathMap' => ['@app/views' => '@app/views/admin']]]);
@@ -69,7 +74,9 @@ function adminReject(int $status, callable $call, string $label): void {
     catch (yii\base\InvalidRouteException $e) { checkCraft($status === 404, $label . ' route absent'); return; }
     throw new RuntimeException('Expected rejection: ' . $label);
 }
-foreach (WorldEntityCatalog::controllers() as $route => $config) {
+foreach ($app->controllerMap as $route => $config) {
+    if (!isset($config['table'])) continue;
+    if (!$db->schema->getTableSchema($config['table'])) continue;
     $table = $config['table'];
     $html = adminPage($route . '/index');
     checkCraft(strpos($html, 'records-' . $route) !== false, $route . ' list renders');
@@ -93,7 +100,7 @@ $crop = (new Query())->from('world_crop')->one($db);
 checkCraft(strpos(adminPage('world-crop/view', ['id' => $crop['id']]), 'world_crop_revision') !== false, 'crop card links revision history');
 $storagePolicy = (new Query())->from('world_warehouse_policy')->one($db);
 checkCraft(is_string(adminPage('world-warehouse/view', ['id' => $storagePolicy['storage_id']])), 'warehouse card');
-$slotEditor = new common\modules\world\service\WorldSlotEditor($db, $flags);
+$slotEditor = new common\modules\world\models\domain\WorldSlotEditor($db, $flags);
 $slotForm = new common\modules\world\model\WorldSlotForm();
 $slotForm->populate($slotEditor->state((int)$room['id']), 0); $slotForm->code = 'fixture-slot'; $slotForm->reason = 'Admin slot fixture';
 $slotInput = $slotForm->payload(0); $slotQuote = $slotEditor->preview(9001, $slotInput, 'create');
@@ -139,7 +146,7 @@ $newOffer = (new Query())->from('world_premises_offer')->where(['name' => 'Repla
 $post = adminConfirm('world-premises-offer/delete', ['id' => $newOffer['id']], ['reason' => 'Remove relation']);
 adminPage('world-premises-offer/delete', ['id' => $newOffer['id']], [], $post);
 checkCraft((new Query())->select('status')->from('world_premises_offer')->where(['id' => $newOffer['id']])->scalar($db) === 'withdrawn', 'delete uses withdrawal');
-$gardenService = new common\modules\world\service\WorldGarden($db, $flags, new common\modules\world\service\WorldAccessPolicy(9001, true));
+$gardenService = new common\modules\world\models\domain\WorldGarden($db, $flags, new common\modules\world\models\domain\WorldAccessPolicy(9001, true));
 $active = (new Query())->from('world_garden_offer')->where(['active_settlement_id' => $city['id']])->one($db);
 if ($active) {
     $input = ['node_id' => (int)$city['id'], 'expected_offer_id' => (int)$active['id']]; $q = $gardenService->preview(9001, $input, 'withdraw');
@@ -165,3 +172,34 @@ $input = ['id' => (int)$node['id'], 'revision' => (int)$node['revision'], 'reaso
 $editor->execute(9001, ['action' => 'delete', 'input' => $input, 'quote' => $quote, 'key' => bin2hex(random_bytes(16))]);
 checkCraft($editor->snapshot($created['node_id'])['node']['status'] === 'archived', 'unused node archives with audit');
 echo "PASS world admin entities\n";
+
+// Convert the populated legacy fixture, then exercise the canonical Yii CRUD.
+// Local fault-injection harness may defer this block to interrupt the first DDL pass.
+if (!defined('WORLD_TEST_DEFER_CORE')) {
+    $inventoryBefore = (new Query())->from('craft_inventory')->orderBy('id')->all($db);
+    $accountsBefore = (new Query())->from('economy_account')->orderBy('id')->all($db);
+    $ownersBefore = (new Query())->select(['id', 'name', 'owner_user_id'])->from('world_node')->indexBy('id')->all($db);
+    ob_start(); try { (new m261005_100000_simple_world(['db' => $db]))->safeUp(); } finally { ob_end_clean(); }
+    checkCraft($inventoryBefore === (new Query())->from('craft_inventory')->orderBy('id')->all($db), 'canonical migration retains inventory');
+    checkCraft($accountsBefore === (new Query())->from('economy_account')->orderBy('id')->all($db), 'canonical migration retains finance');
+    foreach ($ownersBefore as $id => $before) {
+        $after = \common\modules\world\models\Node::requireOne($id);
+        checkCraft($after->name === $before['name'] && $after->owner_user_id == $before['owner_user_id'], 'canonical ownership retained ' . $id);
+        if ($after->parent_id) checkCraft((int)$after->parent->hierarchy_level + 1 === (int)$after->hierarchy_level, 'canonical level ' . $id);
+    }
+    $app->controllerMap = WorldEntityCatalog::controllers();
+    foreach (['world-admin', 'world-template', 'world-event'] as $route) {
+        checkCraft(is_string(adminPage($route . '/index')), $route . ' canonical list');
+        checkCraft(is_string(adminPage($route . '/create')), $route . ' canonical form');
+    }
+    $node = \common\modules\world\models\Node::find()->where(['hierarchy_level' => 3])->one(); $version = $node->version();
+    adminPage('world-admin/update', ['id' => $node->id], [], ['Node' => ['name' => '<b>City</b>'], 'formVersion' => $version]);
+    checkCraft(strpos(adminPage('world-admin/view', ['id' => $node->id]), '&lt;b&gt;City&lt;/b&gt;') !== false, 'canonical escaped card');
+    adminPage('world-admin/update', ['id' => $node->id], [], ['Node' => ['name' => 'Stale'], 'formVersion' => $version]);
+    $node->refresh(); checkCraft($node->name === '<b>City</b>', 'canonical stale form rejected');
+    adminReject(405, static function () use ($node) { adminPage('world-admin/delete', ['id' => $node->id]); }, 'canonical POST archive');
+    $app->authManager->denied = ['p-admin']; $app->user->switchIdentity(new CraftIdentity());
+    adminReject(403, static function () { adminPage('world-admin/index'); }, 'canonical p-admin gate');
+    $app->authManager->denied = []; $app->user->switchIdentity(new CraftIdentity());
+    echo "PASS canonical world upgrade and CRUD\n";
+}

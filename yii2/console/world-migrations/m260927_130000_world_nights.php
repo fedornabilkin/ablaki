@@ -1,5 +1,5 @@
 <?php
-use common\services\game\WorldMigration;
+use common\modules\world\support\WorldMigration;
 
 /** No policy publication, enrollment or illness during installation. */
 class m260927_130000_world_nights extends WorldMigration

@@ -1,5 +1,5 @@
 <?php
-use common\services\game\WorldMigration;
+use common\modules\world\support\WorldMigration;
 
 /** Paid ready premises, not the future timed construction queue. */
 class m260927_110000_world_premises extends WorldMigration

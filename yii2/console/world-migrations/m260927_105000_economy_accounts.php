@@ -1,5 +1,5 @@
 <?php
-use common\services\game\WorldMigration;
+use common\modules\world\support\WorldMigration;
 
 /** Additive only. Never silently round/ALTER existing personal balances on a deploy. */
 class m260927_105000_economy_accounts extends WorldMigration

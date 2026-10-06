@@ -1,5 +1,5 @@
 <?php
-use common\services\game\WorldDomainMigration;
+use common\modules\world\support\WorldDomainMigration;
 
 /** Journals only. Creating zero accounts is an explicit, resumable console operation. */
 class m260928_003300_economy_account_backfill extends WorldDomainMigration

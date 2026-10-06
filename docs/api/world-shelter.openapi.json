@@ -340,7 +340,7 @@
     "/world/nodes/{id}/shelter-deploy-preview": {
       "post": {
         "operationId": "worldShelterDeployPreview",
-        "description": "Account-wide shelter lifecycle. direct_deploy=true only for claim; end_lodging=true only for fold. Repair consumes the quoted raw materials from active backpack slots at zero credits, preserving the instance, deployment and lodging. Protection resumes at repair time without changing past nights. Night illness requires a separately published calendar.",
+        "description": "Схема 38: используйте /v1/world/start и /v1/world/builds; см. simple-world.md. Account-wide shelter lifecycle. direct_deploy=true only for claim; end_lodging=true only for fold. Repair consumes the quoted raw materials from active backpack slots at zero credits, preserving the instance, deployment and lodging. Protection resumes at repair time without changing past nights. Night illness requires a separately published calendar.",
         "requestBody": {
           "required": true,
           "content": {
@@ -432,7 +432,8 @@
               }
             }
           }
-        }
+        },
+        "deprecated": true
       },
       "parameters": [
         {
@@ -451,7 +452,7 @@
     "/world/nodes/{id}/shelter-deploy": {
       "post": {
         "operationId": "worldShelterDeploy",
-        "description": "Account-wide shelter lifecycle. direct_deploy=true only for claim; end_lodging=true only for fold. Repair consumes the quoted raw materials from active backpack slots at zero credits, preserving the instance, deployment and lodging. Protection resumes at repair time without changing past nights. Night illness requires a separately published calendar.",
+        "description": "Схема 38: используйте /v1/world/start и /v1/world/builds; см. simple-world.md. Account-wide shelter lifecycle. direct_deploy=true only for claim; end_lodging=true only for fold. Repair consumes the quoted raw materials from active backpack slots at zero credits, preserving the instance, deployment and lodging. Protection resumes at repair time without changing past nights. Night illness requires a separately published calendar.",
         "requestBody": {
           "required": true,
           "content": {
@@ -543,7 +544,8 @@
               }
             }
           }
-        }
+        },
+        "deprecated": true
       },
       "parameters": [
         {

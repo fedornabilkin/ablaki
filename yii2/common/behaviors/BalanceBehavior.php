@@ -43,8 +43,8 @@ class BalanceBehavior extends AbstractBehavior
     public function requireTransaction($event): void
     {
         $db = $event->sender::getDb();
-        \common\modules\economy\service\WalletMaintenance::writable($db);
-        if (\common\modules\economy\service\WalletSchema::ready($db) && !$db->getTransaction()) throw new \LogicException('Financial behavior requires an outer model transaction.');
+        \common\modules\world\modules\economy\models\domain\WalletMaintenance::writable($db);
+        if (\common\modules\world\modules\economy\models\domain\WalletSchema::ready($db) && !$db->getTransaction()) throw new \LogicException('Financial behavior requires an outer model transaction.');
     }
 
     public function afterInsert($event){$this->changeBalance($event);}
@@ -68,11 +68,11 @@ class BalanceBehavior extends AbstractBehavior
             $transaction = $this->person::getDb()->beginTransaction();
             try {
                 $db = $this->person::getDb();
-                \common\modules\economy\service\WalletMaintenance::writable($db);
-                if (\common\modules\economy\service\WalletSchema::ready($db)) {
+                \common\modules\world\modules\economy\models\domain\WalletMaintenance::writable($db);
+                if (\common\modules\world\modules\economy\models\domain\WalletSchema::ready($db)) {
                     $history = $this->getHistoryValues();
                     (new \common\services\user\CreditLedger($db))->changeExactWithBalance(
-                        (int)$this->person->user_id, \common\modules\economy\value\Money::fromLegacy($this->changingCredit)->decimal(),
+                        (int)$this->person->user_id, \common\modules\world\modules\economy\value\Money::fromLegacy($this->changingCredit)->decimal(),
                         $this->changingBalance, (string)$history['type'], (string)($history['comment'] ?? '')
                     );
                     if (!$this->person->refresh()) throw new \RuntimeException('Account unavailable.');

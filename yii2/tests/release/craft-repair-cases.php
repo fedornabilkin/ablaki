@@ -2,13 +2,13 @@
 // Included by classic-craft on disposable SQLite, MySQL and PostgreSQL.
 $repairTx = $db->beginTransaction();
 try {
-    $inventory = new \common\modules\craft\service\CraftInventory($s);
+    $inventory = new \common\modules\world\modules\craft\models\domain\CraftInventory($s);
     $inventory->synchronize(9001);
     foreach (['classic-chest'=>1, 'classic-plank'=>12, 'classic-nails'=>12, 'classic-saw'=>1, 'classic-bench'=>1] as $code=>$quantity) $s->move(9001,$items[$code],$quantity);
     $slot = (new \yii\db\Query())->from('craft_inventory')->where(['user_id'=>9001,'item_id'=>$items['classic-chest']['id']])->one($db);
     $slotId = (int)$slot['id']; $itemId = (int)$slot['item_id'];
     $container = $inventory->container(9001,$slotId); $container['durability'] = 0; $s->insert('craft_container',$container);
-    $repair = new \common\modules\craft\service\ChestRepair($s);
+    $repair = new \common\modules\world\modules\craft\models\domain\ChestRepair($s);
     $quote = $repair->quote(9001,$slotId);
     checkCraft(array_column($quote['materials'],'quantity')===[4,4] && count($quote['tools'])===1 && $quote['station']['name']!=='' && !$quote['reasons'],'full repair uses half the chest recipe plus its tool and station');
     $payload = ['id'=>$itemId,'slot_id'=>$slotId,'quantity'=>1];
@@ -24,11 +24,11 @@ try {
     rejectsCraft(function()use($engine,$payload){$engine->command(9001,'intact-chest-repair','repair',$payload);},'intact chest cannot consume repair materials');
     $db->createCommand()->update('craft_container',['durability'=>50],['id'=>$slotId])->execute();
     checkCraft(array_column($repair->quote(9001,$slotId)['materials'],'quantity')===[2,2],'half damage costs fewer materials');
-    class FailedRepairStorage extends \common\modules\craft\service\CraftStorage {
+    class FailedRepairStorage extends \common\modules\world\modules\craft\models\domain\CraftStorage {
         public function insert(string $table,array $values): int { if($table==='craft_event')throw new \RuntimeException('repair history failure');return parent::insert($table,$values); }
     }
     $before = $engine->state(9001);
-    try { (new \common\modules\craft\service\Crafting(new FailedRepairStorage($db)))->command(9001,'failed-chest-repair','repair',$payload);throw new \LogicException('Expected failure'); }
+    try { (new \common\modules\world\modules\craft\models\domain\Crafting(new FailedRepairStorage($db)))->command(9001,'failed-chest-repair','repair',$payload);throw new \LogicException('Expected failure'); }
     catch (\RuntimeException $error) { if($error->getMessage()!=='repair history failure')throw $error; }
     checkCraft(sameCraftState($before,$engine->state(9001)),'late repair failure rolls back materials, tool wear and chest durability');
     $db->createCommand()->update('craft_tool_wear',['wear'=>99],['user_id'=>9001,'item_id'=>$items['classic-saw']['id']])->execute();

@@ -1,5 +1,5 @@
 <?php
-use common\services\game\WorldMigration;
+use common\modules\world\support\WorldMigration;
 
 /** Additive, restartable DDL. Rates deliberately have no seeded balancing values. */
 class m260927_108000_treasury_obligations extends WorldMigration

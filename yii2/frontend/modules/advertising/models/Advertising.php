@@ -121,9 +121,9 @@ class Advertising extends AbstractModel
 
     public function beforeSave($insert)
     {
-        \common\modules\economy\service\WalletMaintenance::writable(static::getDb());
-        if ($this->scenario === self::SCENARIO_PAYMENT && \common\modules\economy\service\WalletSchema::ready(static::getDb())) {
-            \common\modules\economy\service\LegacyCreditPolicy::amount($this->credit);
+        \common\modules\world\modules\economy\models\domain\WalletMaintenance::writable(static::getDb());
+        if ($this->scenario === self::SCENARIO_PAYMENT && \common\modules\world\modules\economy\models\domain\WalletSchema::ready(static::getDb())) {
+            \common\modules\world\modules\economy\models\domain\LegacyCreditPolicy::amount($this->credit);
         }
         if (!parent::beforeSave($insert)) {
             return false;
@@ -141,7 +141,7 @@ class Advertising extends AbstractModel
      */
     public function beforeDelete()
     {
-        \common\modules\economy\service\WalletMaintenance::writable(static::getDb());
+        \common\modules\world\modules\economy\models\domain\WalletMaintenance::writable(static::getDb());
         $row = (new \common\services\user\CreditLedger(static::getDb()))->lock(static::tableName(), ['id' => (int)$this->id]);
         if (!$row) return false;
         // Refund the locked remaining balance, not a stale AR copy preceding an ad view.

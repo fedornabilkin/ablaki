@@ -1,5 +1,5 @@
 <?php
-use common\services\game\WorldDomainMigration;
+use common\modules\world\support\WorldDomainMigration;
 use yii\db\Expression;
 
 /** Adds an explicit display label while retaining stable codes and legacy name fields. */

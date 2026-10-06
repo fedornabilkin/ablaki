@@ -996,7 +996,9 @@
               }
             }
           }
-        }
+        },
+        "deprecated": true,
+        "description": "Схема 38: используйте /v1/world/start и /v1/world/builds; см. simple-world.md. "
       }
     },
     "/world/nodes/{id}/move-preview": {
@@ -1077,7 +1079,9 @@
               }
             }
           }
-        }
+        },
+        "deprecated": true,
+        "description": "Схема 38: используйте /v1/world/start и /v1/world/builds; см. simple-world.md. "
       }
     },
     "/world/nodes/{id}/move": {
@@ -1158,7 +1162,9 @@
               }
             }
           }
-        }
+        },
+        "deprecated": true,
+        "description": "Схема 38: используйте /v1/world/start и /v1/world/builds; см. simple-world.md. "
       }
     },
     "/world/nodes/{id}/archive-preview": {

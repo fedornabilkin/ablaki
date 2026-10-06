@@ -1,7 +1,7 @@
 <?php
-use common\services\game\WorldMigration;
-use common\modules\world\service\ExplorationCatalog;
-use common\modules\world\service\WorldMapGeometry;
+use common\modules\world\support\WorldMigration;
+use common\modules\world\models\domain\ExplorationCatalog;
+use common\modules\world\models\domain\WorldMapGeometry;
 use yii\db\Query;
 use yii\db\Expression;
 

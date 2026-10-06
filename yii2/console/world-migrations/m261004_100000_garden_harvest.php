@@ -1,7 +1,7 @@
 <?php
-use common\services\game\WorldDomainMigration;
-use common\modules\world\service\GardenHarvest;
-use common\modules\world\service\GardenTools;
+use common\modules\world\support\WorldDomainMigration;
+use common\modules\world\models\domain\GardenHarvest;
+use common\modules\world\models\domain\GardenTools;
 use yii\db\Query;
 use yii\db\Expression;
 

@@ -19,6 +19,9 @@ $db->schema->refresh();
 $app->setModule('world', ['class' => \common\modules\world\Module::class, 'flags' => ['world_read' => true, 'world_write' => true, 'storage_v2' => true, 'economy_tick' => true]]);
 foreach (glob($yiiRoot . '/console/world-migrations/*.php') as $file) {
     require_once $file; $class = basename($file, '.php');
+    // Exercise the legacy rules on their schema first; world-admin-entities applies
+    // the new migration afterwards and checks conversion of these populated rows.
+    if ($class === 'm261005_100000_simple_world') continue;
     if ($db->driverName === 'sqlite' && $class === 'm260928_003400_system_profession_author') {
         $sql = $db->createCommand("SELECT sql FROM sqlite_master WHERE type='table' AND name='profession_revision'")->queryScalar();
         $sql = preg_replace('/([`"\[]?author_user_id[`"\]]?\s+[^,]*?)\s+NOT NULL/i', '$1', $sql);
@@ -32,31 +35,31 @@ foreach (glob($yiiRoot . '/console/world-migrations/*.php') as $file) {
     echo 'MIGRATED ' . $class . PHP_EOL;
 }
 $db->schema->refresh();
-$ids = (new \common\modules\world\service\WorldSeeder($db))->seed();
-$db->createCommand()->update('world_registry', ['schema_version' => \common\modules\world\service\WorldFlags::SCHEMA_VERSION, 'world_read' => 1, 'world_write' => 1, 'storage_v2' => 1, 'economy_tick' => 1], ['id' => 1])->execute();
-$flags = new \common\modules\world\service\WorldFlags($db, $app->getModule('world'));
+$ids = (new \common\modules\world\models\domain\WorldSeeder($db))->seed();
+$db->createCommand()->update('world_registry', ['schema_version' => \common\modules\world\models\domain\WorldFlags::SCHEMA_VERSION, 'world_read' => 1, 'world_write' => 1, 'storage_v2' => 1, 'economy_tick' => 1], ['id' => 1])->execute();
+$flags = new \common\modules\world\models\domain\WorldFlags($db, $app->getModule('world'));
 echo 'PASS world migrations and seed' . PHP_EOL;
-$tree = new \common\modules\world\service\WorldTree($db);
+$tree = new \common\modules\world\models\domain\WorldTree($db);
 $site = $db->transaction(function () use ($tree, $ids) { return $tree->create(['code' => 'fixture-site', 'slug' => 'fixture-site', 'name' => 'Усадьба', 'node_type' => 'PLOT', 'parent_id' => $ids['north-city'], 'owner_user_id' => 9001, 'visibility' => 'private'], ['plot_kind' => 'campsite', 'area' => 4, 'allow_building' => 1]); });
 $house = $db->transaction(function () use ($tree, $site) { return $tree->create(['code' => 'fixture-house', 'slug' => 'fixture-house', 'name' => 'Дом', 'node_type' => 'BUILDING', 'parent_id' => (int)$site['id'], 'owner_user_id' => 9001, 'visibility' => 'private'], ['building_kind' => 'house', 'operational_status' => 'active']); });
 $room = $db->transaction(function () use ($tree, $house) { return $tree->create(['code' => 'fixture-room', 'slug' => 'fixture-room', 'name' => 'Комната', 'node_type' => 'ROOM', 'parent_id' => (int)$house['id'], 'owner_user_id' => 9001, 'visibility' => 'private'], ['area' => 2, 'exposure_class' => 'indoor']); });
 checkCraft((int)$site['map_width'] === 5 && (int)$house['map_width'] === 3 && (int)$room['map_width'] === 2 && (int)$room['map_height'] === 3, 'map defaults');
-checkCraft(\common\modules\world\service\WorldHome::node($db, 9001, $ids['ablaki']) === (int)$house['id'], 'home chooses owned house');
-checkCraft((new \common\modules\economy\service\EconomyHierarchy($db))->financialNode((int)$room['id']) === (int)$house['id'], 'rooms spend parent budget');
-try { $tree->assertFreePosition((int)$site['id'], 5, 0); throw new RuntimeException('Outside cell accepted'); } catch (\common\services\game\GameError $e) { checkCraft($e->getMessage() !== '', 'bounds reject outside cell'); }
+checkCraft(\common\modules\world\models\domain\WorldHome::node($db, 9001, $ids['ablaki']) === (int)$house['id'], 'home chooses owned house');
+checkCraft((new \common\modules\world\modules\economy\models\domain\EconomyHierarchy($db))->financialNode((int)$room['id']) === (int)$house['id'], 'rooms spend parent budget');
+try { $tree->assertFreePosition((int)$site['id'], 5, 0); throw new RuntimeException('Outside cell accepted'); } catch (\common\modules\world\support\GameError $e) { checkCraft($e->getMessage() !== '', 'bounds reject outside cell'); }
 $garden = $db->transaction(function () use ($tree, $ids) { return $tree->create(['code' => 'fixture-garden', 'slug' => 'fixture-garden', 'name' => 'Огород', 'node_type' => 'PLOT', 'parent_id' => $ids['north-city'], 'owner_user_id' => 9001, 'visibility' => 'private'], ['plot_kind' => 'garden', 'area' => 10]); });
 $beds = [];
 for ($i = 1; $i <= 10; $i++) $beds[] = $db->transaction(function () use ($tree, $garden, $i) { return $tree->create(['code' => 'fixture-bed-' . $i, 'slug' => 'fixture-bed-' . $i, 'name' => 'Грядка ' . $i, 'node_type' => 'BED', 'parent_id' => (int)$garden['id'], 'owner_user_id' => 9001, 'visibility' => 'private'], ['garden_node_id' => (int)$garden['id'], 'ordinal' => $i, 'unlocked' => 1]); });
 checkCraft(count(array_unique(array_map(static function ($b) { return $b['position_x'] . ':' . $b['position_y']; }, $beds))) === 10 && (int)min(array_column($beds, 'position_x')) === -2 && (int)max(array_column($beds, 'position_x')) === 2, 'ten beds occupy fixed 5 by 2 map');
 $cycle = ['ready_at' => 300, 'water_due_at' => 120, 'water_missed' => 0]; $rules = ['water_window_seconds' => 60, 'harvest_window_seconds' => 600];
-$clock = '\common\modules\world\service\CultivationClock';
+$clock = '\common\modules\world\models\domain\CultivationClock';
 checkCraft(!$clock::project($cycle, $rules, 179)['water_missed'] && $clock::project($cycle, $rules, 180)['yield_factor_bps'] === 5000, 'watering exact deadline halves yield');
 checkCraft($clock::project($cycle, $rules, 300)['state'] === 'ripe' && $clock::project($cycle, $rules, 300)['ready_at'] === 300, 'missed watering never pauses growth');
 checkCraft($clock::project($cycle, $rules, 899)['state'] === 'ripe' && $clock::project($cycle, $rules, 900)['state'] === 'expired', 'harvest exact expiry boundary');
 $warehouse = $db->transaction(function () use ($tree, $site) { return $tree->create(['code' => 'fixture-warehouse', 'slug' => 'fixture-warehouse', 'name' => 'Склад', 'node_type' => 'BUILDING', 'parent_id' => (int)$site['id'], 'owner_user_id' => 9001, 'visibility' => 'private'], ['building_kind' => 'warehouse', 'operational_status' => 'active']); });
-$warehouseState = (new \common\modules\world\service\WorldWarehouse($db, $flags))->state(9001, (int)$warehouse['id']);
+$warehouseState = (new \common\modules\world\models\domain\WorldWarehouse($db, $flags))->state(9001, (int)$warehouse['id']);
 checkCraft($warehouseState['capacity'] === 20 && $warehouseState['finance_node_id'] === (int)$site['id'], 'warehouse capacity and parent budget');
-$reader = new \common\modules\world\service\WorldQuery($db, new \common\modules\world\service\WorldAccessPolicy(9001));
+$reader = new \common\modules\world\models\domain\WorldQuery($db, new \common\modules\world\models\domain\WorldAccessPolicy(9001));
 checkCraft(!$reader->node((int)$warehouse['id'])['has_finances'] && !$reader->node((int)$room['id'])['has_finances'] && $reader->node((int)$garden['id'])['has_finances'], 'only financial entities expose finances');
 checkCraft($reader->map((int)$house['id'])['items'][0]['id'] === (int)$room['id'], 'house map contains room');
 ob_start(); (new \m261003_120000_world_living_spaces(['db' => $db]))->up(); ob_end_clean();
@@ -72,7 +75,7 @@ $db->createCommand()->insert('world_expansion_entitlement', ['policy_id' => $pol
 $db->createCommand()->insert('craft_storage', ['identity_key' => 'backpack:user:9001', 'kind' => 'backpack', 'owner_user_id' => 9001, 'capacity' => 20])->execute(); $backpack = (int)$db->getLastInsertID();
 $db->createCommand()->update('craft_inventory', ['storage_id' => $backpack], ['user_id' => 9001])->execute();
 $draft = (new \yii\db\Query())->from('world_crop_revision')->one($db);
-$cultivation = new \common\modules\world\service\WorldCultivation($db, $flags, new \common\modules\world\service\WorldAccessPolicy(9001, true));
+$cultivation = new \common\modules\world\models\domain\WorldCultivation($db, $flags, new \common\modules\world\models\domain\WorldAccessPolicy(9001, true));
 $publication = $cultivation->publication(['code' => 'fixture_carrot', 'name' => 'Морковь', 'reason' => 'Fixture', 'seed_item_id' => (int)$draft['seed_item_id'], 'yield_item_id' => (int)$draft['yield_item_id'], 'water_item_id' => (int)$draft['water_item_id'], 'seed_quantity' => 1, 'yield_quantity' => 4, 'water_quantity' => 1, 'grow_seconds' => 300, 'water_interval_seconds' => 120]);
 function cropCommand($service, $action, $input) {
     $quote = $service->preview(9001, $action, $input); $key = bin2hex(random_bytes(16));
@@ -81,16 +84,16 @@ function cropCommand($service, $action, $input) {
     checkCraft($result === $retry, $action . ' retries are idempotent'); return $result;
 }
 $published = cropCommand($cultivation, 'publish', $publication);
-try { $cultivation->preview(9001, 'sow', ['bed_id' => $bedId, 'crop_revision_id' => $published['crop_revision_id']]); throw new RuntimeException('Undug sow accepted'); } catch (\common\services\game\GameError $e) {}
+try { $cultivation->preview(9001, 'sow', ['bed_id' => $bedId, 'crop_revision_id' => $published['crop_revision_id']]); throw new RuntimeException('Undug sow accepted'); } catch (\common\modules\world\support\GameError $e) {}
 
 $dig = $cultivation->preview(9001, 'dig', ['bed_id' => $bedId]);
 checkCraft(!$dig['terms']['tool']['available'], 'dig preview explains missing shovel');
-try { cropCommand($cultivation, 'dig', ['bed_id' => $bedId]); throw new RuntimeException('Missing shovel accepted'); } catch (\common\services\game\GameError $e) {}
+try { cropCommand($cultivation, 'dig', ['bed_id' => $bedId]); throw new RuntimeException('Missing shovel accepted'); } catch (\common\modules\world\support\GameError $e) {}
 $db->transaction(function () use ($db, $backpack) {
     $shovel = (new \yii\db\Query())->from('craft_item')->where(['code' => 'world-shovel'])->one($db);
     $pack = (new \yii\db\Query())->from('craft_storage')->where(['id' => $backpack])->one($db);
-    $s = new \common\modules\craft\service\CraftStorage($db); $s->operationId = str_repeat('a', 32);
-    $inv = new \common\modules\craft\service\CanonicalInventory($s);
+    $s = new \common\modules\world\modules\craft\models\domain\CraftStorage($db); $s->operationId = str_repeat('a', 32);
+    $inv = new \common\modules\world\modules\craft\models\domain\CanonicalInventory($s);
     $inv->applyCraft(9001, ['output_fits' => true, 'materials' => [], 'consume' => [], 'grant' => [['inventory_id' => null, 'position' => 10, 'quantity' => 1]]], $pack, [], $shovel);
 });
 
@@ -112,7 +115,7 @@ cropCommand($cultivation, 'dig', ['bed_id' => $bedId]);
 $sown = cropCommand($cultivation, 'sow', ['bed_id' => $bedId, 'crop_revision_id' => $published['crop_revision_id']]);
 $db->createCommand()->update('world_crop_cycle', ['ready_at' => time() - 86400], ['id' => $sown['cycle_id']])->execute();
 checkCraft($cultivation->state(9001, $bedId)['cycle']['state'] === 'expired', 'expired cycle is visible');
-try { $cultivation->preview(9001, 'harvest', ['bed_id' => $bedId]); throw new RuntimeException('Expired harvest accepted'); } catch (\common\services\game\GameError $e) {}
+try { $cultivation->preview(9001, 'harvest', ['bed_id' => $bedId]); throw new RuntimeException('Expired harvest accepted'); } catch (\common\modules\world\support\GameError $e) {}
 cropCommand($cultivation, 'cancel', ['bed_id' => $bedId]);
 cropCommand($cultivation, 'withdraw', ['crop_id' => $published['crop_id']]);
 echo "PASS cultivation lifecycle and retries\n";
@@ -135,8 +138,8 @@ $db->schema->refresh();
 $db->createCommand()->update('economy_registry', ['wallet_ready' => 1], ['id' => 1])->execute();
 $db->createCommand()->insert('economy_wallet_rollout', ['id' => 1, 'run_id' => str_repeat('b', 32), 'phase' => 'active', 'started_at' => time(), 'updated_at' => time()])->execute();
 putenv('WORLD_TEST_MODE=1');
-$accounts = $db->transaction(function () use ($db, $garden, $operation) { return (new \common\modules\economy\service\EconomyHierarchy($db))->provision((int)$garden['id'], $operation); });
-$market = new \common\modules\world\service\GardenHarvest($db, $flags);
+$accounts = $db->transaction(function () use ($db, $garden, $operation) { return (new \common\modules\world\modules\economy\models\domain\EconomyHierarchy($db))->provision((int)$garden['id'], $operation); });
+$market = new \common\modules\world\models\domain\GardenHarvest($db, $flags);
 $gardenId = (int)$garden['id'];
 $marketState = $market->state(9001, $gardenId);
 checkCraft($marketState['capacity'] === 5 && count($marketState['items']) === 1 && $marketState['items'][0]['quantity'] === 2, 'harvest goes to five-slot garden warehouse');
@@ -148,7 +151,7 @@ function marketCommand($service, $user, $garden, $action, $input) {
     checkCraft($result === $service->execute($user, $garden, $action, $input, $key, $q['quote_id'], (array)$q['expected_revisions']), 'market ' . $action . ' retry returns same receipt');
     return $result;
 }
-function rejectsMarket(callable $fn, $message) { try { $fn(); } catch (\common\services\game\GameError $e) { checkCraft(true, $message); return; } throw new RuntimeException('Expected rejection: ' . $message); }
+function rejectsMarket(callable $fn, $message) { try { $fn(); } catch (\common\modules\world\support\GameError $e) { checkCraft(true, $message); return; } throw new RuntimeException('Expected rejection: ' . $message); }
 rejectsMarket(function () use ($market, $gardenId, $lotId) { $market->preview(9002, $gardenId, 'price', ['inventory_id' => $lotId, 'price' => '1']); }, 'foreign player cannot set price');
 rejectsMarket(function () use ($market, $gardenId, $lotId) { $market->preview(9001, $gardenId, 'buy', ['inventory_id' => $lotId, 'quantity' => 1]); }, 'owner cannot buy own harvest');
 $db->createCommand()->insert('craft_storage', ['identity_key' => 'backpack:user:9002', 'kind' => 'backpack', 'owner_user_id' => 9002, 'capacity' => 20])->execute(); $buyerPack = (int)$db->getLastInsertID();
@@ -174,16 +177,16 @@ checkCraft(!$market->state(9001, $gardenId)['items'], 'empty lot frees its slot'
 $harvestStore = (new \yii\db\Query())->from('craft_storage')->where(['identity_key' => 'harvest:garden:' . $gardenId])->one($db);
 $cropItem = (new \yii\db\Query())->from('craft_item')->where(['id' => $draft['yield_item_id']])->one($db);
 for ($batch = 0; $batch < 5; $batch++) $db->transaction(function () use ($db, $market, $harvestStore, $cropItem, $operation) {
-    $s = new \common\modules\craft\service\CraftStorage($db); $s->operationId = $operation; $inv = new \common\modules\craft\service\CanonicalInventory($s);
+    $s = new \common\modules\world\modules\craft\models\domain\CraftStorage($db); $s->operationId = $operation; $inv = new \common\modules\world\modules\craft\models\domain\CanonicalInventory($s);
     $plan = $inv->planCraft([], $harvestStore, [], [], $cropItem, 10);
     checkCraft($plan['output_fits'], 'batch fits a distinct slot');
     $inv->applyCraft(9001, $plan, $harvestStore, [], $cropItem); $market->recordHarvest($harvestStore, $plan, $operation);
 });
-$inv = new \common\modules\craft\service\CanonicalInventory(new \common\modules\craft\service\CraftStorage($db));
+$inv = new \common\modules\world\modules\craft\models\domain\CanonicalInventory(new \common\modules\world\modules\craft\models\domain\CraftStorage($db));
 checkCraft(!$inv->planCraft([], $harvestStore, [], [], $cropItem, 1)['output_fits'], 'sixth batch cannot bypass five-slot limit');
 $lotId = $market->state(9001, $gardenId)['items'][0]['inventory_id'];
-$at = time() - \common\modules\world\service\GardenHarvest::FRESH_SECONDS;
-checkCraft(\common\modules\world\service\GardenHarvest::spoiled(['harvested_at' => $at, 'spoiled_at' => null], 10, $at + 1209599) === 0, 'fresh until exact fourteen-day boundary');
+$at = time() - \common\modules\world\models\domain\GardenHarvest::FRESH_SECONDS;
+checkCraft(\common\modules\world\models\domain\GardenHarvest::spoiled(['harvested_at' => $at, 'spoiled_at' => null], 10, $at + 1209599) === 0, 'fresh until exact fourteen-day boundary');
 $db->createCommand()->update('world_harvest_lot', ['harvested_at' => $at], ['inventory_id' => $lotId])->execute();
 checkCraft($market->state(9001, $gardenId)['items'][0]['quantity'] === 7, 'after fourteen days thirty percent is lost');
 marketCommand($market, 9001, $gardenId, 'price', ['inventory_id' => $lotId, 'price' => '1.0000']);
@@ -213,9 +216,9 @@ $memberId = (new \yii\db\Query())->select('id')->from('world_membership')->where
 $transfer = (new \yii\db\Query())->select('id')->from('economy_transfer')->where(['kind' => 'crop_purchase'])->scalar($db);
 $db->createCommand()->insert('world_garden_offer', ['settlement_id' => $ids['north-city'], 'active_settlement_id' => null, 'name' => 'Fixture garden', 'price' => '1.0000', 'base_price' => '1.0000', 'operation_id' => $operation, 'created_at' => time()])->execute(); $offerId = (int)$db->getLastInsertID();
 $db->createCommand()->insert('world_garden_purchase', ['node_id' => $gardenId, 'membership_id' => $memberId, 'offer_id' => $offerId, 'transfer_id' => $transfer, 'operation_id' => $operation, 'terms_json' => '{}', 'created_at' => time()])->execute();
-$financialParent = (new \common\modules\economy\service\EconomyHierarchy($db))->current($gardenId)['parent_node_id'];
+$financialParent = (new \common\modules\world\modules\economy\models\domain\EconomyHierarchy($db))->current($gardenId)['parent_node_id'];
 foreach ([1, 2] as $pass) $db->transaction(function () use ($tree, $gardenId, $site) { $tree->attachPurchasedGarden($gardenId, (int)$site['id']); });
 checkCraft((int)$tree->get($gardenId)['parent_id'] === (int)$site['id'], 'purchased garden moves below its own campsite');
 checkCraft((new \yii\db\Query())->from('world_node_closure')->where(['ancestor_id' => $site['id'], 'descendant_id' => $bedId, 'distance' => 2])->exists($db), 'garden move preserves descendant closure');
-checkCraft((new \common\modules\economy\service\EconomyHierarchy($db))->current($gardenId)['parent_node_id'] === $financialParent, 'physical move preserves published financial parent');
+checkCraft((new \common\modules\world\modules\economy\models\domain\EconomyHierarchy($db))->current($gardenId)['parent_node_id'] === $financialParent, 'physical move preserves published financial parent');
 echo "PASS forum 80 repeatable garden migration and estate repair\n";

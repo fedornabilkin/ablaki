@@ -1,5 +1,5 @@
 <?php
-use common\services\game\WorldDomainMigration;
+use common\modules\world\support\WorldDomainMigration;
 
 /** Existing one-time claims remain authoritative; never reconstruct unknown historical terms. */
 class m260928_003200_world_starter_versions extends WorldDomainMigration

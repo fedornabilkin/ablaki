@@ -1,5 +1,5 @@
 <?php
-use common\services\game\WorldMigration;
+use common\modules\world\support\WorldMigration;
 
 /** New offers and accepted supplements; original purchase terms are never rewritten. */
 class m260927_200000_world_repair_contract extends WorldMigration

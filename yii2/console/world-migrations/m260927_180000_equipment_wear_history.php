@@ -1,5 +1,5 @@
 <?php
-use common\services\game\WorldMigration;
+use common\modules\world\support\WorldMigration;
 use yii\db\Query;
 
 class m260927_180000_equipment_wear_history extends WorldMigration

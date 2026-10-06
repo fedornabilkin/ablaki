@@ -41,8 +41,8 @@ class CommentGiftService
             $already = (new Query())->from('forum_comment_gift')
                 ->where(['comment_id' => $commentId, 'user_id' => $donorId])->exists($this->db);
             if (!$already) {
-                \common\modules\economy\service\WalletMaintenance::writable($this->db);
-                $exact = \common\modules\economy\service\WalletSchema::ready($this->db);
+                \common\modules\world\modules\economy\models\domain\WalletMaintenance::writable($this->db);
+                $exact = \common\modules\world\modules\economy\models\domain\WalletSchema::ready($this->db);
                 if ($exact) {
                     $ledger = new \common\services\user\CreditLedger($this->db);
                     $ledger->changeExact($donorId, (string)-$amount, 'forum_gift', 'Благодарность за сообщение №' . $commentId);

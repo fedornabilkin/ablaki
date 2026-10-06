@@ -1,5 +1,5 @@
 <?php
-use common\services\game\WorldDomainMigration;
+use common\modules\world\support\WorldDomainMigration;
 use yii\db\Query;
 
 /** Permanent map rights and optional absolute-coordinate footprints. */

@@ -557,7 +557,7 @@
     "/world/nodes/{id}/garden-buy-preview": {
       "post": {
         "operationId": "worldGardenBuyPreview",
-        "description": "One current settlement offer; publication replaces only future purchases. Buy at owned campsite, expand at owned garden. One permanent starter garden per membership. top_up=true explicitly permits the quoted personal contribution and budget payment in one transaction. Bought expansion price is pinned; beds cost B..9B. No crops or automatic income.",
+        "description": "Схема 38: используйте /v1/world/start и /v1/world/builds; см. simple-world.md. One current settlement offer; publication replaces only future purchases. Buy at owned campsite, expand at owned garden. One permanent starter garden per membership. top_up=true explicitly permits the quoted personal contribution and budget payment in one transaction. Bought expansion price is pinned; beds cost B..9B. No crops or automatic income.",
         "requestBody": {
           "required": true,
           "content": {
@@ -649,7 +649,8 @@
               }
             }
           }
-        }
+        },
+        "deprecated": true
       },
       "parameters": [
         {
@@ -667,7 +668,7 @@
     "/world/nodes/{id}/garden-buy": {
       "post": {
         "operationId": "worldGardenBuy",
-        "description": "One current settlement offer; publication replaces only future purchases. Buy at owned campsite, expand at owned garden. One permanent starter garden per membership. top_up=true explicitly permits the quoted personal contribution and budget payment in one transaction. Bought expansion price is pinned; beds cost B..9B. No crops or automatic income.",
+        "description": "Схема 38: используйте /v1/world/start и /v1/world/builds; см. simple-world.md. One current settlement offer; publication replaces only future purchases. Buy at owned campsite, expand at owned garden. One permanent starter garden per membership. top_up=true explicitly permits the quoted personal contribution and budget payment in one transaction. Bought expansion price is pinned; beds cost B..9B. No crops or automatic income.",
         "requestBody": {
           "required": true,
           "content": {
@@ -759,7 +760,8 @@
               }
             }
           }
-        }
+        },
+        "deprecated": true
       },
       "parameters": [
         {
@@ -777,7 +779,7 @@
     "/world/nodes/{id}/garden-expand-preview": {
       "post": {
         "operationId": "worldGardenExpandPreview",
-        "description": "One current settlement offer; publication replaces only future purchases. Buy at owned campsite, expand at owned garden. One permanent starter garden per membership. top_up=true explicitly permits the quoted personal contribution and budget payment in one transaction. Bought expansion price is pinned; beds cost B..9B. No crops or automatic income.",
+        "description": "Схема 38: используйте /v1/world/start и /v1/world/builds; см. simple-world.md. One current settlement offer; publication replaces only future purchases. Buy at owned campsite, expand at owned garden. One permanent starter garden per membership. top_up=true explicitly permits the quoted personal contribution and budget payment in one transaction. Bought expansion price is pinned; beds cost B..9B. No crops or automatic income.",
         "requestBody": {
           "required": true,
           "content": {
@@ -869,7 +871,8 @@
               }
             }
           }
-        }
+        },
+        "deprecated": true
       },
       "parameters": [
         {
@@ -887,7 +890,7 @@
     "/world/nodes/{id}/garden-expand": {
       "post": {
         "operationId": "worldGardenExpand",
-        "description": "One current settlement offer; publication replaces only future purchases. Buy at owned campsite, expand at owned garden. One permanent starter garden per membership. top_up=true explicitly permits the quoted personal contribution and budget payment in one transaction. Bought expansion price is pinned; beds cost B..9B. No crops or automatic income.",
+        "description": "Схема 38: используйте /v1/world/start и /v1/world/builds; см. simple-world.md. One current settlement offer; publication replaces only future purchases. Buy at owned campsite, expand at owned garden. One permanent starter garden per membership. top_up=true explicitly permits the quoted personal contribution and budget payment in one transaction. Bought expansion price is pinned; beds cost B..9B. No crops or automatic income.",
         "requestBody": {
           "required": true,
           "content": {
@@ -979,7 +982,8 @@
               }
             }
           }
-        }
+        },
+        "deprecated": true
       },
       "parameters": [
         {
@@ -1444,7 +1448,10 @@
           },
           "discount_bps": {
             "type": "integer",
-            "enum": [0, 500]
+            "enum": [
+              0,
+              500
+            ]
           },
           "discount_amount": {
             "type": "string",
@@ -1700,7 +1707,10 @@
           },
           "curve": {
             "type": "string",
-            "enum": ["linear", "progressive"]
+            "enum": [
+              "linear",
+              "progressive"
+            ]
           }
         },
         "required": [

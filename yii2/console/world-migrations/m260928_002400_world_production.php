@@ -1,5 +1,5 @@
 <?php
-use common\services\game\WorldDomainMigration;
+use common\modules\world\support\WorldDomainMigration;
 
 class m260928_002400_world_production extends WorldDomainMigration
 {

@@ -1,5 +1,5 @@
 <?php
-use common\services\game\WorldDomainMigration;
+use common\modules\world\support\WorldDomainMigration;
 
 class m260928_002700_world_finance_extensions extends WorldDomainMigration
 {

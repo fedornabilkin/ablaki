@@ -32,8 +32,8 @@ class CreditLedger
 
     public function change(int $userId, float $amount, string $type, string $comment): void
     {
-        if (\common\modules\economy\service\WalletSchema::ready($this->db)) {
-            $this->changeExact($userId, \common\modules\economy\value\Money::fromLegacy($amount)->decimal(), $type, $comment);
+        if (\common\modules\world\modules\economy\models\domain\WalletSchema::ready($this->db)) {
+            $this->changeExact($userId, \common\modules\world\modules\economy\value\Money::fromLegacy($amount)->decimal(), $type, $comment);
             return;
         }
         $this->changeCurrency($userId, $amount, $type, $comment, 'credit');
@@ -48,13 +48,13 @@ class CreditLedger
     /** Legacy exchanges can change both currencies; keep their single history entry. */
     public function changeExactWithBalance(int $userId, string $amount, float $balanceDelta, string $type, string $comment): array
     {
-        \common\modules\economy\service\WalletMaintenance::writable($this->db);
-        \common\modules\economy\service\WalletSchema::requireReady($this->db);
+        \common\modules\world\modules\economy\models\domain\WalletMaintenance::writable($this->db);
+        \common\modules\world\modules\economy\models\domain\WalletSchema::requireReady($this->db);
         if (!is_finite($balanceDelta)) throw new \InvalidArgumentException('Invalid balance delta.');
-        $delta = \common\modules\economy\value\Money::parse($amount);
+        $delta = \common\modules\world\modules\economy\value\Money::parse($amount);
         $person = $this->lock('persone', ['user_id' => $userId]);
         if (!$person) throw new RuntimeException('Account unavailable.');
-        $current = \common\modules\economy\value\Money::parse((string)$person['credit']);
+        $current = \common\modules\world\modules\economy\value\Money::parse((string)$person['credit']);
         $next = $current->add($delta);
         if ($next->isNegative()) throw new UnprocessableEntityHttpException('Недостаточно кредитов.');
         if ($delta->isZero() && $balanceDelta == 0) return ['credit' => $current->decimal(), 'balance' => $person['balance']];
@@ -76,7 +76,7 @@ class CreditLedger
 
     public function changeBalance(int $userId, float $amount, string $type, string $comment): void
     {
-        if (\common\modules\economy\service\WalletSchema::ready($this->db)) {
+        if (\common\modules\world\modules\economy\models\domain\WalletSchema::ready($this->db)) {
             $this->changeExactWithBalance($userId, '0', $amount, $type, $comment);
             return;
         }
@@ -85,7 +85,7 @@ class CreditLedger
 
     private function changeCurrency(int $userId, float $amount, string $type, string $comment, string $currency): void
     {
-        \common\modules\economy\service\WalletMaintenance::writable($this->db);
+        \common\modules\world\modules\economy\models\domain\WalletMaintenance::writable($this->db);
         $person = $this->lock('persone', ['user_id' => $userId]);
         if (!$person || !is_finite($amount) || !is_numeric($person[$currency])) throw new RuntimeException('Account unavailable.');
         $condition = ['user_id' => $userId];

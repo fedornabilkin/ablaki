@@ -28,8 +28,8 @@ class UpdatePersonMiddleware extends AbstractMiddleware
     public function updatePerson(): bool
     {
         $db = self::$data->user::getDb();
-        \common\modules\economy\service\WalletMaintenance::writable($db);
-        $exact = \common\modules\economy\service\WalletSchema::ready($db);
+        \common\modules\world\modules\economy\models\domain\WalletMaintenance::writable($db);
+        $exact = \common\modules\world\modules\economy\models\domain\WalletSchema::ready($db);
         if (self::$data->needUpdatePersonCounters()) {
             $person = self::$data->user;
             $current = (new \common\services\user\CreditLedger($db))->lock('persone', ['user_id' => (int)$person->user_id]);
@@ -44,7 +44,7 @@ class UpdatePersonMiddleware extends AbstractMiddleware
                 // Requires the domain transaction: a local transaction here would leave the
                 // exchange/game state committed when a later recipient or commission fails.
                 (new \common\services\user\CreditLedger($db))->changeExactWithBalance(
-                    (int)$person->user_id, \common\modules\economy\value\Money::fromLegacy($counters['credit'])->decimal(),
+                    (int)$person->user_id, \common\modules\world\modules\economy\value\Money::fromLegacy($counters['credit'])->decimal(),
                     $counters['balance'], self::$data->historyType, self::$data->historyComment
                 );
                 unset($counters['credit'], $counters['balance']);

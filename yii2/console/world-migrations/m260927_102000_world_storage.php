@@ -1,5 +1,5 @@
 <?php
-use common\services\game\WorldMigration;
+use common\modules\world\support\WorldMigration;
 
 /** Nullable expansion only. Canonical reading is enabled separately after backfill. */
 class m260927_102000_world_storage extends WorldMigration
