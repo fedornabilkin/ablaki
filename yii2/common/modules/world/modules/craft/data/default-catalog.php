@@ -16,6 +16,12 @@ $recipe=function($code,$name,$category,$kind,$ingredients,$requires=[],$station=
 $recipe('plank','Доска','wood','material',['log'=>1],[],null,[],0,1,2);
 $recipe('stick','Палка','wood','material',['plank'=>1],['plank'],null,[],0,1,3);
 $recipe('rope','Верёвка','textile','material',['fibre'=>3]);
+$recipe('bed','Кровать','wood','product',['plank'=>6,'rope'=>2,'fibre'=>4]);
+$recipe('campfire','Костёр','wood','product',['log'=>3,'stone'=>4]);
+foreach ($data['items'] as &$furniture) {
+    if ($furniture['code'] === 'classic-bed') { $furniture['icon'] = 'bed'; $furniture['description'] = 'Разместите в помещении или шалаше и назначьте ночлег.'; }
+    if ($furniture['code'] === 'classic-campfire') { $furniture['icon'] = 'fire'; $furniture['description'] = 'Можно разместить на свободной открытой ячейке возле шалаша.'; }
+} unset($furniture);
 $recipe('hammer','Каменный молоток','stone','tool',['stone'=>2,'stick'=>1],['stick']);
 $recipe('bench','Верстак','wood','station',['plank'=>6,'stone'=>4,'rope'=>2],['plank','rope','hammer'],null,['hammer']);
 $recipe('brick','Кирпич','stone','material',['clay'=>2,'sand'=>1],['hammer'],null,['hammer'],0,1,2);

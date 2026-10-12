@@ -62,13 +62,13 @@ class CatalogController extends AdminController
     {
         $fields=[
             'categories'=>['code'=>'','name'=>'','description'=>''],
-            'items'=>['code'=>'','name'=>'','description'=>'','category'=>'','kind'=>'material','rarity'=>'common','icon'=>'cube','stack_size'=>100,'destroyable'=>1,'use_xp'=>0,'gather_quantity'=>0,'active'=>1,'storage_kind'=>'none'],
+            'items'=>['code'=>'','name'=>'','label'=>'','description'=>'','category'=>'','kind'=>'material','rarity'=>'common','icon'=>'cube','stack_size'=>100,'destroyable'=>1,'use_xp'=>0,'gather_quantity'=>0,'active'=>1,'storage_kind'=>'none'],
             'stations'=>['code'=>'','name'=>'','item'=>null,'active'=>1],
             'recipes'=>['code'=>'','name'=>'','description'=>'','category'=>'','output'=>'','output_quantity'=>1,'cost_credits'=>0,'experience'=>10,'min_level'=>1,'station'=>null,'active'=>1,'ingredients'=>[],'tools'=>[],'requires'=>[]],
         ];
         if(!isset($fields[$group]))throw new \yii\web\NotFoundHttpException();
         $all=$this->catalog()->export();$record=$fields[$group];$found=false;
-        foreach($all[$group] as $r)if($r['code']===$code){$record=$r;$found=true;}
+        foreach($all[$group] as $r)if($r['code']===$code){$record=array_replace($record,$r);$found=true;}
         if($code&&!$found)throw new \yii\web\NotFoundHttpException();
         if(Yii::$app->request->isPost) {
             $post=Yii::$app->request->post('record',[]); if(!is_array($post))throw new UnprocessableEntityHttpException();
@@ -82,6 +82,7 @@ class CatalogController extends AdminController
                 } elseif($default===null&&$value==='')$value=null;
                 $record[$key]=$value;
             }
+            if($group==='items'&&trim($record['label'])==='')$record['label']=$record['name'];
             if($found)$record['code']=$code;
             $patch=['version'=>1,'categories'=>[],'items'=>[],'stations'=>[],'recipes'=>[]]; $patch[$group]=[$record];
             $preview=$this->catalog()->preview($patch);

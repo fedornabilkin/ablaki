@@ -39,12 +39,12 @@ class NodeController extends LegacyController
     public function actionNavigation($id): array
     {
         $node = $this->id($id);
-        return Yii::$app->request->get('include') === 'map' ? $this->page($node) : $this->reader()->navigation($node);
+        return in_array(Yii::$app->request->get('include'), ['map', 'tree'], true) ? $this->page($node) : $this->reader()->navigation($node);
     }
     /** An opt-in page envelope keeps older navigation/root clients compatible. */
     private function page(?int $id): array
     {
-        return (new \common\modules\world\modules\economy\models\domain\FinanceReadSnapshot(Yii::$app->db))->run(function () use ($id): array {
+        $page = (new \common\modules\world\modules\economy\models\domain\FinanceReadSnapshot(Yii::$app->db))->run(function () use ($id): array {
             $capabilities = $this->flags()->capabilities();
             $result = ['contract_version' => 1, 'server_time' => time(), 'capabilities' => $capabilities, 'navigation' => null, 'map' => null];
             if (!$capabilities['world_read']) return $result;
@@ -55,6 +55,7 @@ class NodeController extends LegacyController
             }
             return array_replace($result, (new WorldQuery(Yii::$app->db, $this->policy()))->page($id));
         });
+        return Yii::$app->request->get('include') === 'tree' ? \common\modules\world\models\domain\WorldSnapshot::fromPage($page) : $page;
     }
     public function actionMap($id): array { return $this->reader()->map($this->id($id)); }
     private function mapCellCommand($id, string $action, bool $preview): array

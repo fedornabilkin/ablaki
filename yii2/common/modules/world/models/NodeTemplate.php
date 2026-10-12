@@ -6,7 +6,28 @@ use yii\helpers\Json;
 class NodeTemplate extends LockedRecord
 {
     public $parentIds;
+    public $worldBuildSeconds;
     public static function tableName() { return 'world_template'; }
+    public function beforeValidate()
+    {
+        if (!parent::beforeValidate()) return false;
+        if ((is_int($this->worldBuildSeconds) || is_string($this->worldBuildSeconds)) && ctype_digit((string)$this->worldBuildSeconds)
+            && (float)$this->worldBuildSeconds >= 1 && (float)$this->worldBuildSeconds <= 52254720000)
+            $this->build_seconds = WorldTime::realSeconds((int)$this->worldBuildSeconds, WorldTime::rate());
+        if ($this->parentIds === '') $this->parentIds = [];
+        if ($this->parentIds !== null) {
+            if (!is_array($this->parentIds)) { $this->addError('parentIds', 'Выберите родителей из списка.'); return true; }
+            foreach ($this->parentIds as $id) if ((!is_int($id) && !is_string($id)) || !ctype_digit((string)$id) || (int)$id < 1 || (float)$id > 2147483647) {
+                $this->addError('parentIds', 'Некорректный родитель.'); return true;
+            }
+        }
+        $ids = $this->parentIds === null ? $this->getAllowedParents()->select('id')->column() : (array)$this->parentIds;
+        if ($this->kind === 'WORLD') { $this->hierarchy_level = 1; return true; }
+        $levels = self::find()->select('hierarchy_level')->where(['id' => $ids])->distinct()->column();
+        if (count($levels) === 1) $this->hierarchy_level = (int)$levels[0] + 1;
+        elseif ($ids) $this->addError('parentIds', 'Все разрешённые родители должны быть одного уровня.');
+        return true;
+    }
     public function rules(): array
     {
         return [
@@ -16,6 +37,7 @@ class NodeTemplate extends LockedRecord
             ['kind', 'in', 'range' => ['WORLD', 'REGION', 'SETTLEMENT', 'PLOT', 'BUILDING', 'ROOM', 'BED', 'CHEST', 'PLACE']],
             ['hierarchy_level', 'integer', 'min' => 1, 'max' => 7],
             ['build_seconds', 'integer', 'min' => 1, 'max' => 604800],
+            ['worldBuildSeconds', 'integer', 'min' => 1, 'max' => 52254720000],
             [['enabled', 'player_buildable'], 'boolean'],
             [['materials_json', 'defaults_json'], 'default', 'value' => '{}'],
             [['materials_json', 'defaults_json'], 'validateJson'],
@@ -26,7 +48,7 @@ class NodeTemplate extends LockedRecord
     public function attributeLabels(): array
     {
         return ['code' => 'Код', 'name' => 'Название', 'kind' => 'Тип', 'hierarchy_level' => 'Уровень (1–7)',
-            'build_seconds' => 'Трудоёмкость, секунд', 'materials_json' => 'Материалы (код: количество)',
+            'build_seconds' => 'Трудоёмкость, реальных секунд', 'worldBuildSeconds' => 'Трудоёмкость, секунд мира', 'materials_json' => 'Материалы (код: количество)',
             'defaults_json' => 'Настройки', 'enabled' => 'Доступен', 'player_buildable' => 'Строится игроками', 'parentIds' => 'Разрешённые родители'];
     }
     public function validateJson($attribute): void
@@ -36,22 +58,29 @@ class NodeTemplate extends LockedRecord
             if (!is_array($data)) throw new \InvalidArgumentException();
             if ($attribute === 'materials_json') foreach ($data as $code => $quantity) {
                 if (!is_string($code) || !is_int($quantity) || $quantity < 1 || $quantity > 10000
-                    || !modules\ItemLookup::exists($code)) throw new \InvalidArgumentException();
+                    || !modules\ItemLookup::exists($code, 'material')) throw new \InvalidArgumentException();
             }
             if ($attribute === 'defaults_json') {
                 foreach (['population', 'plot_limit', 'level', 'condition', 'max_condition', 'area', 'fertility', 'allow_building', 'unlocked'] as $field)
                     if (isset($data[$field]) && (!is_int($data[$field]) || $data[$field] < 0 || $data[$field] > 1000000)) throw new \InvalidArgumentException();
                 foreach (['climate', 'settlement_kind', 'building_kind', 'exposure_class', 'plot_kind'] as $field)
                     if (isset($data[$field]) && (!is_string($data[$field]) || strlen($data[$field]) > 32)) throw new \InvalidArgumentException();
+                foreach (['build_tools' => 'tool', 'build_stations' => 'station'] as $field => $kind) if (isset($data[$field])) {
+                    if (!is_array($data[$field])) throw new \InvalidArgumentException();
+                    foreach ($data[$field] as $code => $quantity) if (!is_string($code) || !is_int($quantity) || $quantity < 1 || $quantity > 100
+                        || !modules\ItemLookup::exists($code, $kind)) throw new \InvalidArgumentException();
+                }
+                foreach (['map_width', 'map_height'] as $field) if (isset($data[$field]) && (!is_int($data[$field]) || $data[$field] < 1 || $data[$field] > 1000)) throw new \InvalidArgumentException();
+                if (isset($data['storage_capacity']) && (!is_int($data['storage_capacity']) || $data['storage_capacity'] < 1 || $data['storage_capacity'] > 100)) throw new \InvalidArgumentException();
+                if (isset($data['allow_sales']) && !is_bool($data['allow_sales'])) throw new \InvalidArgumentException();
             }
         } catch (\Throwable $e) { $this->addError($attribute, 'Укажите корректный JSON; материалы должны существовать в каталоге.'); }
     }
     public function validateHierarchy(): void
     {
-        $levels = ['WORLD' => [1], 'REGION' => [2], 'SETTLEMENT' => [3], 'PLOT' => [4, 5], 'BUILDING' => [5], 'ROOM' => [6], 'BED' => [6], 'CHEST' => [6], 'PLACE' => [7]];
+        if ($this->hasErrors('parentIds') || !is_string($this->kind)) return;
         if (!$this->isNewRecord && $this->isAttributeChanged('code')) $this->addError('code', 'Постоянный код шаблона нельзя менять.');
-        if (!in_array((int)$this->hierarchy_level, $levels[$this->kind] ?? [], true)) $this->addError('hierarchy_level', 'Уровень не соответствует типу объекта.');
-        if ((int)$this->hierarchy_level <= 3 && $this->player_buildable) $this->addError('player_buildable', 'Географию создаёт администратор.');
+        if (($this->kind === 'WORLD') !== ((int)$this->hierarchy_level === 1)) $this->addError('hierarchy_level', 'Корень дерева должен быть миром; остальные объекты размещаются внутри родителя.');
         if (!$this->isNewRecord && ($this->isAttributeChanged('hierarchy_level') || $this->isAttributeChanged('kind'))
             && Node::find()->where(['template_id' => $this->id])->exists()) $this->addError('hierarchy_level', 'Шаблон уже используется. Создайте новый шаблон.');
         $ids = $this->parentIds === null ? $this->getAllowedParents()->select('id')->column() : (array)$this->parentIds;
@@ -74,6 +103,7 @@ class NodeTemplate extends LockedRecord
     public function permits(?Node $parent): bool
     {
         if (!$parent) return (int)$this->hierarchy_level === 1;
+        if ($this->player_buildable) return (new domain\CommonNodePolicy())->permitsChild($parent->getAttributes());
         return $parent->status === 'active' && (int)$parent->hierarchy_level + 1 === (int)$this->hierarchy_level
             && $this->getAllowedParents()->andWhere(['id' => $parent->template_id])->exists();
     }
@@ -90,9 +120,12 @@ class NodeTemplate extends LockedRecord
     public function defaults(): array { return Json::decode($this->defaults_json); }
     public function fields(): array
     {
-        return array_merge(parent::fields(), ['material_summary' => function () {
-            $items = \common\modules\world\modules\craft\models\CraftItem::find()->where(['code' => array_keys($this->materials())])->indexBy('code')->all();
-            $parts = []; foreach ($this->materials() as $code => $quantity) $parts[] = ($items[$code]->name ?? $code) . ': ' . $quantity;
+        return array_merge(parent::fields(), ['world_time_rate' => function () { return WorldTime::rate(); },
+            'world_build_seconds' => function () { return (int)$this->build_seconds * WorldTime::rate(); }, 'material_summary' => function () {
+            $defaults = $this->defaults();
+            $requirements = $this->materials() + ($defaults['build_tools'] ?? []) + ($defaults['build_stations'] ?? []);
+            $items = \common\modules\world\modules\craft\models\CraftItem::find()->where(['code' => array_keys($requirements)])->indexBy('code')->all();
+            $parts = []; foreach ($requirements as $code => $quantity) $parts[] = ($items[$code]->name ?? $code) . ': ' . $quantity;
             return implode(', ', $parts);
         }]);
     }

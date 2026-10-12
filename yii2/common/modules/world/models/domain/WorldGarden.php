@@ -43,7 +43,7 @@ class WorldGarden
             // financial/policy scope while allowing the garden itself to sit
             // under the campsite on the world tree. Older gardens directly
             // under a settlement remain readable.
-            $place = $parent['type'] === 'PLOT' && ($parent['details']['plot_kind'] ?? '') === 'campsite'
+            $place = $parent['type'] === 'PLOT' && (((array)$parent['details'])['plot_kind'] ?? '') === 'campsite'
                 ? $reader->node($parent['parent_id'])
                 : $parent;
         } else throw new GameError('GARDEN_SITE_REQUIRED', 'Огород доступен в поселении и на собственной стоянке.', 403);
@@ -72,27 +72,51 @@ class WorldGarden
         if (!in_array($action, ['buy', 'expand'], true) || !is_bool($body['top_up'] ?? null)) throw new GameError('INVALID_GARDEN', 'Укажите согласие на пополнение бюджета.', 422);
         if ($action === 'buy') return ['top_up' => $body['top_up']];
         if (!is_int($body['quantity'] ?? null) || $body['quantity'] < 1 || $body['quantity'] > 9) throw new GameError('INVALID_GARDEN', 'Выберите от одной до девяти грядок.', 422);
-        return ['top_up' => $body['top_up'], 'quantity' => $body['quantity']];
+        $result = ['top_up' => $body['top_up'], 'quantity' => $body['quantity']];
+        if (array_key_exists('bed_ids', $body)) {
+            if (!is_array($body['bed_ids']) || count($body['bed_ids']) !== $body['quantity']) throw new GameError('INVALID_GARDEN', 'Выберите нужные грядки на карте.', 422);
+            foreach ($body['bed_ids'] as $id) if (!is_int($id) || $id < 1 || $id > 2147483647) throw new GameError('INVALID_GARDEN', 'Некорректная грядка.', 422);
+            if (count(array_unique($body['bed_ids'])) !== count($body['bed_ids'])) throw new GameError('INVALID_GARDEN', 'Грядки не должны повторяться.', 422);
+            $result['bed_ids'] = array_values($body['bed_ids']); sort($result['bed_ids'], SORT_NUMERIC);
+        }
+        return $result;
     }
     private function beds(int $garden): array
     {
         $policy = $this->one('world_expansion_policy', ['node_id' => $garden, 'kind' => 'garden_bed']);
         if (!$policy || (int)$policy['initial_open'] !== 1 || (int)$policy['place_limit'] !== 10 || !in_array($policy['curve'], ['linear', 'progressive'], true)) throw new GameError('GARDEN_STATE_INVALID', 'Права огорода требуют сверки.');
-        $rows = (new Query())->select(['b.*', 'parent_id' => 'n.parent_id', 'n.status', 'entitlement_id' => 'e.id', 'policy_id' => 'e.policy_id', 'entitlement_ordinal' => 'e.ordinal'])
+        $rings = $this->db->schema->getTableSchema('world_node')->getColumn('hierarchy_level') !== null;
+        $policy['pricing_curve'] = $rings ? 'rings' : $policy['curve'];
+        $rows = (new Query())->select(['b.*', 'parent_id' => 'n.parent_id', 'n.status', 'position_x' => 'n.position_x', 'position_y' => 'n.position_y', 'entitlement_id' => 'e.id', 'policy_id' => 'e.policy_id', 'entitlement_ordinal' => 'e.ordinal'])
             ->from(['b' => 'world_bed'])->innerJoin(['n' => 'world_node'], '[[n.id]]=[[b.node_id]]')->leftJoin(['e' => 'world_expansion_entitlement'], '[[e.node_id]]=[[b.node_id]]')
             ->where(['b.garden_node_id' => $garden])->orderBy(['b.ordinal' => SORT_ASC])->limit(11)->all($this->db);
         if (count($rows) !== 10) throw new GameError('GARDEN_STATE_INVALID', 'Набор грядок требует сверки.');
-        $unlocked = 0; $items = []; $locked = false;
+        $unlocked = 0; $items = [];
         foreach ($rows as $i => $row) {
             $open = (int)$row['unlocked'] === 1;
-            if ((int)$row['ordinal'] !== $i + 1 || (int)$row['parent_id'] !== $garden || $row['status'] !== 'active' || ($open && $locked) || $open !== ($row['entitlement_id'] !== null)
+            if ((int)$row['ordinal'] !== $i + 1 || (int)$row['parent_id'] !== $garden || $row['status'] !== 'active' || ($i === 0 && !$open) || $open !== ($row['entitlement_id'] !== null)
                 || ($open && ((int)$row['policy_id'] !== (int)$policy['id'] || (int)$row['entitlement_ordinal'] !== $i + 1))) throw new GameError('GARDEN_STATE_INVALID', 'Последовательность прав грядок требует сверки.');
-            if ($open) $unlocked++; else $locked = true;
-            $quote = $i === 0 ? null : (new ExpansionPolicy())->quote(1, $i, 10, (string)$policy['base_price'], 1, $policy['curve']);
+            if ($open) $unlocked++;
+            $quote = $i === 0 ? null : ($rings
+                ? WorldMapCells::purchasePricing(['base_price' => (string)$policy['base_price'], 'bulk_minimum' => 3, 'discount_bps' => 500], [['x' => (int)$row['position_x'], 'y' => (int)$row['position_y']]])
+                : (new ExpansionPolicy())->quote(1, $i, 10, (string)$policy['base_price'], 1, $policy['curve']));
             $items[] = ['node_id' => (int)$row['node_id'], 'ordinal' => $i + 1, 'unlocked' => $open, 'price' => $quote ? $quote['unit_prices'][0]['price'] : '0.0000'];
         }
         if (!$unlocked) throw new GameError('GARDEN_STATE_INVALID', 'Первая грядка должна быть доступна.');
         return compact('policy', 'unlocked', 'items');
+    }
+    private function selectedPricing(array $beds, array $input): array
+    {
+        $closed = array_values(array_filter($beds['items'], static function ($bed) { return !$bed['unlocked']; }));
+        $selected = isset($input['bed_ids']) ? array_values(array_filter($closed, static function ($bed) use ($input) { return in_array($bed['node_id'], $input['bed_ids'], true); })) : array_slice($closed, 0, $input['quantity']);
+        if (count($selected) !== $input['quantity']) throw new GameError('GARDEN_BED_UNAVAILABLE', 'Выберите закрытые грядки этого огорода.', 422);
+        $gross = Money::parse('0'); $discount = Money::parse('0'); $carry = 0; $units = []; $bps = count($selected) >= 3 ? 500 : 0;
+        foreach ($selected as $bed) {
+            $price = Money::parse($bed['price']); $gross = $gross->add($price); $part = $price->portion($bps, $carry); $carry = $part['carry']; $discount = $discount->add($part['amount']);
+            $units[] = ['ordinal' => $bed['ordinal'], 'price' => $price->subtract($part['amount'])->decimal(), 'gross_price' => $price->decimal()];
+        }
+        return ['initial_open' => 1, 'unlocked' => $beds['unlocked'], 'limit' => 10, 'quantity' => count($selected), 'unit_prices' => $units,
+            'gross_total' => $gross->decimal(), 'discount_bps' => $bps, 'discount_amount' => $discount->decimal(), 'total' => $gross->subtract($discount)->decimal(), 'currency' => 'Cr', 'curve' => $beds['policy']['pricing_curve']];
     }
     public function state(int $user, int $id): array
     {
@@ -145,7 +169,7 @@ class WorldGarden
         } else {
             if (!$c['purchase'] || (int)$c['purchase']['node_id'] !== $node['id']) throw new GameError('GARDEN_SITE_REQUIRED', 'Откройте приобретённый огород.');
             $beds = $this->beds($node['id']); $policy = $beds['policy'];
-            $terms += (new ExpansionPolicy())->quote(1, $beds['unlocked'], 10, (string)$policy['base_price'], $input['quantity'], (string)$policy['curve']);
+            $terms += $this->selectedPricing($beds, $validated);
             $terms += ['policy_id' => (int)$policy['id'], 'policy_revision' => (int)$policy['revision'], 'base_price' => Money::parse((string)$policy['base_price'])->decimal()];
         }
         $accounts = (new EconomyHierarchy($this->db))->accounts($node['id']); $budget = $accounts['budget'] ?? null;

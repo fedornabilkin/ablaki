@@ -17,11 +17,15 @@ class Outbox
             $events = (new Query())->from('game_outbox')->where(['dispatched_at' => null, 'event_type' => array_keys($subscriptions)])
                 ->orderBy(['created_at' => SORT_ASC, 'id' => SORT_ASC])->limit(max(1, min(500, $limit)))->all($this->db);
             $queue = new JobQueue($this->db);
-            foreach ($events as $event) {
-                foreach ($subscriptions[$event['event_type']] as $consumer) {
-                    if (!preg_match('/^[a-z][a-z0-9._-]{0,63}$/D', $consumer)) throw new \LogicException('Invalid outbox consumer.');
+            $subject = new EventSubject();
+            foreach ($subscriptions as $type => $names) foreach ($names as $consumer) {
+                if (!preg_match('/^[a-z][a-z0-9._-]{0,63}$/D', $consumer)) throw new \LogicException('Invalid outbox consumer.');
+                $subject->attach($type, $consumer, function (array $event) use ($queue, $consumer) {
                     $queue->enqueue('outbox.delivery', $event['id'] . ':' . $consumer, ['event_id' => $event['id'], 'consumer' => $consumer], $event['user_id'] === null ? null : (int)$event['user_id']);
-                }
+                });
+            }
+            foreach ($events as $event) {
+                $subject->notify($event['event_type'], $event);
                 $this->db->createCommand()->update('game_outbox', ['dispatched_at' => time()], ['id' => $event['id']])->execute();
             }
             return count($events);

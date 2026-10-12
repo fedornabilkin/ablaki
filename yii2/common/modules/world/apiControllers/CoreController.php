@@ -16,7 +16,7 @@ abstract class CoreController extends LegacyController
     protected function verbs()
     {
         return ['index' => ['GET'], 'view' => ['GET'], 'create' => ['POST'], 'start' => ['POST'],
-            'heartbeat' => ['POST'], 'stop' => ['POST'], 'cancel' => ['POST'], 'options' => ['OPTIONS']];
+            'heartbeat' => ['POST'], 'stop' => ['POST'], 'cancel' => ['POST'], 'settings' => ['POST'], 'active' => ['GET'], 'options' => ['OPTIONS']];
     }
     protected function command(string $type, array $payload, callable $handler): array
     {

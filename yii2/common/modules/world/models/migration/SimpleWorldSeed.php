@@ -31,6 +31,16 @@ final class SimpleWorldSeed
         }
         // Existing non-start templates remain available for historical rows only until configured.
         $this->db->createCommand()->update('world_template', ['enabled' => 0], ['hierarchy_level' => null])->execute();
+        // Historical chest nodes keep their references; new chests come from crafting.
+        $chest = (new Query())->from('world_template')->where(['code' => 'chest'])->one($this->db);
+        if (!$chest && (new Query())->from('world_node')->where(['node_type' => 'CHEST', 'template_id' => null])->exists($this->db)) {
+            $this->db->createCommand()->insert('world_template', ['code' => 'chest', 'name' => 'Сундук', 'kind' => 'CHEST', 'hierarchy_level' => 6, 'build_seconds' => 60, 'materials_json' => '{}', 'defaults_json' => '{}', 'enabled' => 0, 'player_buildable' => 0])->execute();
+            $chest = ['id' => $this->db->getLastInsertID()];
+        }
+        if ($chest) {
+            $ids['chest'] = (int)$chest['id'];
+            $this->db->createCommand()->update('world_template', ['enabled' => 0, 'player_buildable' => 0], ['id' => $chest['id']])->execute();
+        }
         $this->normalize($ids);
         SimpleContent::seed($this->db);
     }

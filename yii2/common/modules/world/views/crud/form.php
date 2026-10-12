@@ -12,6 +12,9 @@ if ($model instanceof NodeTemplate && $model->parentIds === null) $model->parent
 <?php if ($model instanceof \common\modules\world\models\LockedRecord): ?>
 <?= Html::hiddenInput('formVersion', $model->formVersion ?? $model->version()) ?>
 <?php endif; ?>
+<?php if ($model instanceof NodeTemplate): ?>
+<?= $this->render('_template-editor', ['model' => $model, 'form' => $form]) ?>
+<?php else: ?>
 <?php foreach ($this->context->fields as $attribute): ?>
 <?php $field = $form->field($model, $attribute); ?>
 <?php if ($attribute === 'template_id' || $attribute === 'parentIds'): ?>
@@ -25,8 +28,16 @@ if ($model instanceof NodeTemplate && $model->parentIds === null) $model->parent
 <?php elseif (substr($attribute, -5) === '_json' || $attribute === 'description'): ?>
 <?= $field->textarea(['rows' => 5]) ?>
 <?php else: ?>
-<?= $field->textInput() ?>
+<?= $field->textInput(\backend\support\EntityDisplay::creditField($attribute) ? ['value' => \backend\support\EntityDisplay::credits($model->$attribute), 'data-credit-original' => $model->$attribute, 'data-credit-display' => \backend\support\EntityDisplay::credits($model->$attribute), 'placeholder' => \backend\support\EntityDisplay::credits('0.0000'), 'inputmode' => 'decimal'] : []) ?>
 <?php endif; endforeach; ?>
+<?php if ($model instanceof \common\modules\world\models\Node): ?>
+<?php $worldRoot = (int)$model->hierarchy_level === 1;
+if ($model->worldTimeRate === null) $model->worldTimeRate = \common\modules\world\models\WorldTime::rate($worldRoot ? (int)$model->id : (int)$model->root_id); ?>
+<?= $form->field($model, 'worldTimeRate')->input('number', ['min' => 1, 'max' => 86400, 'disabled' => !$worldRoot])->hint('Общий коэффициент мира редактируется у корневого объекта. 1:60 — одна реальная секунда равна минуте мира. Принятые длительности строек сохраняются.') ?>
+<?= $this->render('_node-cells', ['model' => $model, 'form' => $form]) ?>
+<?php endif; ?>
+<?php endif; ?>
+<?= $this->render('_record-fields', ['model' => $model, 'form' => $form]) ?>
 <?= Html::submitButton('Сохранить', ['class' => 'btn btn-primary']) ?>
 <?= Html::a('Отмена', ['index'], ['class' => 'btn btn-default']) ?>
 <?php ActiveForm::end(); ?>

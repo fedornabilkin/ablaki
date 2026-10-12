@@ -92,7 +92,7 @@ ob_start();(new \m260926_100000_craft_repair(['db'=>$db]))->up();ob_end_clean();
 checkCraft(!$settings->chargeCredits()&&$s->quantities(9002)[$old]===7,'credit migration defaults off and preserves inventory');
 $seed=require dirname(__DIR__,2).'/common/modules/world/modules/craft/data/default-catalog.php';
 $preview=$catalog->preview($seed);$catalog->apply($seed,$preview['digest']);
-checkCraft(count($seed['items'])===45&&count($seed['recipes'])===35,'initial catalog: 45 items, 35 recipes, four stations');
+checkCraft(count($seed['items'])===47&&count($seed['recipes'])===37,'initial catalog: 47 items, 37 recipes, four stations');
 $roundtrip=$catalog->export();$preview=$catalog->preview($roundtrip);$catalog->apply($roundtrip,$preview['digest']);
 checkCraft($catalog->export()===$roundtrip,'export/import roundtrip keeps IDs, links and content');
 $bad=$seed;$bad['recipes'][0]['requires']=['classic-plank'];rejectsCraft(function()use($catalog,$bad){$catalog->preview($bad);},'self dependency rejected');
@@ -247,7 +247,7 @@ foreach($seed['recipes'] as $row){
     $command('craft',$ids[$row['code']]);
     $db->createCommand()->delete('craft_command',['user_id'=>9001])->execute();
 }
-checkCraft((int)(new Query())->from('craft_known')->where(['user_id'=>9001])->count('*',$db)===35,'all 35 recipes form a traversable dependency tree');
+checkCraft((int)(new Query())->from('craft_known')->where(['user_id'=>9001])->count('*',$db)===37,'all 37 recipes form a traversable dependency tree');
 $potion=(int)$items['classic-potion']['id'];$before=$s->quantities(9001)[$potion];$command('use',$potion);
 checkCraft(($s->quantities(9001)[$potion]??0)===$before-1,'consumable is removed on use');
 $furnace=(int)$items['classic-furnace']['id'];$db->createCommand()->delete('craft_inventory',['user_id'=>9001,'item_id'=>$furnace])->execute();
@@ -307,8 +307,8 @@ ob_start();(new \m260926_100000_craft_repair(['db'=>$db]))->up();ob_end_clean();
 checkCraft(!$settings->chargeCredits(),'fresh installation starts with charges disabled');
 $preview=$catalog->preview($seed);$catalog->apply($seed,$preview['digest']);
 $result=$engine->command(9002,'fresh-install-starter','starter',[]);
-checkCraft(count($result['state']['items'])===45&&count($result['state']['recipes'])===35&&count($result['state']['inventory'])===10,'fresh schema imports full catalog and accepts first command');
+checkCraft(count($result['state']['items'])===47&&count($result['state']['recipes'])===37&&count($result['state']['inventory'])===10,'fresh schema imports full catalog and accepts first command');
 $app->params['remote_db']=$db;
 foreach(glob(dirname(__DIR__,2).'/console/migrations/m230317_*_create_craft_*_table.php') as $file){require_once $file;$class=basename($file,'.php');ob_start();$legacyResult=(new $class(['db'=>$db]))->up();ob_end_clean();checkCraft($legacyResult!==false,'older migration recognizes installed craft schema: '.$class);}
-checkCraft(count($catalog->export()['items'])===45,'later normal migrations preserve initialized craft data');
+checkCraft(count($catalog->export()['items'])===47,'later normal migrations preserve initialized craft data');
 echo 'Classic craft checks passed: '.$db->driverName.PHP_EOL;

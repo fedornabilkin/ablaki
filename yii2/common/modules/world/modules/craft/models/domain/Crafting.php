@@ -123,6 +123,10 @@ class Crafting
     }
     private function supplies(int $user,string $action): string
     {
+        if ($action === 'gather' && $this->s->isCanonical()) {
+            if (!$this->s->workspaceNodeId) throw new ConflictHttpException('Собирайте сырьё на карте своей стоянки. Откройте «Мой дом» в верхнем меню.');
+            return \common\modules\world\models\Supplies::gather((int)$this->s->workspaceNodeId, $user, $this->s->operationId ?? '')['message'];
+        }
         try { return (new \common\modules\world\models\domain\SupplyGrant($this->s->db))->grant($this->s, $user, $action); }
         catch (\common\modules\world\support\GameError $error) { throw new ConflictHttpException($error->getMessage()); }
     }
@@ -149,6 +153,10 @@ class Crafting
     }
     private function craft(int $user,array $person,int $id,int $qty,bool $chargeCredits): string
     {
+        if ($this->s->isCanonical()) {
+            $place = $this->s->workspaceNodeId ? $this->one('world_node', ['id' => $this->s->workspaceNodeId, 'owner_user_id' => $user, 'status' => 'active']) : null;
+            if (!$place) throw new ConflictHttpException('Для изготовления выберите свой действующий объект.');
+        }
         $input = $this->recipeInputs($user, $id, $qty);
         $recipe = $input['recipe']; $output = $input['output']; $ingredients = $input['ingredients'];
         $required = $input['required']; $items = $input['items']; $reserve = $input['reserve']; $station = $input['station'];

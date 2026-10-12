@@ -20,9 +20,12 @@ class CraftWorkspace
     {
         $this->flags->requireFlags(['world_read', 'storage_v2']);
         $place = (new WorldQuery($this->db, new WorldAccessPolicy($user)))->record($node);
-        if ((int)$place['owner_user_id'] !== $user || $place['status'] !== 'active' || !in_array($place['node_type'], ['PLOT', 'BUILDING', 'ROOM'], true)) throw new GameError('WORKSPACE_UNAVAILABLE', 'Выберите собственную действующую площадку или помещение.');
+        if ((int)$place['owner_user_id'] !== $user || $place['status'] !== 'active')
+            throw new GameError('WORKSPACE_UNAVAILABLE', 'Изготовление доступно в собственном действующем объекте.', 409);
         if (!(new Query())->from('world_membership')->where(['user_id' => $user, 'world_id' => $place['root_id']])->exists($this->db)) throw new GameError('WORLD_MEMBERSHIP_REQUIRED', 'Сначала вступите в этот мир.');
-        if ((new Query())->from(['b' => 'world_building'])->innerJoin(['p' => 'world_node_closure'], '[[p.ancestor_id]]=[[b.node_id]]')->where(['p.descendant_id' => $node])->andWhere(['or', ['<>', 'b.operational_status', 'active'], ['<', 'b.condition', 1]])->exists($this->db)) throw new GameError('WORKSPACE_UNAVAILABLE', 'Постройка недоступна для работы.');
+        if (isset($place['hierarchy_level'])) {
+            if (!\common\modules\world\models\domain\NodeAvailability::activePath($this->db, $node)) throw new GameError('WORKSPACE_UNAVAILABLE', 'Объект или его родитель недоступен для работы.');
+        } elseif ((new Query())->from(['b' => 'world_building'])->innerJoin(['p' => 'world_node_closure'], '[[p.ancestor_id]]=[[b.node_id]]')->where(['p.descendant_id' => $node])->andWhere(['or', ['<>', 'b.operational_status', 'active'], ['<', 'b.condition', 1]])->exists($this->db)) throw new GameError('WORKSPACE_UNAVAILABLE', 'Постройка недоступна для работы.');
         $place['id'] = (int)$place['id']; $place['revision'] = (int)$place['revision'];
         return $place;
     }

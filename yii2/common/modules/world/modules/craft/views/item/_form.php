@@ -17,10 +17,16 @@ use yii\widgets\ActiveForm;
             <?= $form->field($model, 'name')->textInput(['maxlength' => true]) ?>
         </div>
         <div class="col-sm-3">
-            <?= $form->field($model, 'crafting_time')->textInput() ?>
+            <?= $form->field($model, 'kind')->dropDownList(array_combine(
+                ['material', 'tool', 'equipment', 'consumable', 'station', 'product'],
+                ['material', 'tool', 'equipment', 'consumable', 'station', 'product']
+            )) ?>
         </div>
         <div class="col-sm-3">
-            <?= $form->field($model, 'rare')->textInput() ?>
+            <?= $form->field($model, 'rarity')->dropDownList(array_combine(
+                ['common', 'uncommon', 'rare', 'epic', 'legendary'],
+                ['common', 'uncommon', 'rare', 'epic', 'legendary']
+            )) ?>
         </div>
 
         <div class="col-sm-12">

@@ -24,8 +24,9 @@ class StorageAccessPolicy
             $node = (new WorldQuery($this->db, new WorldAccessPolicy($user)))->record((int)$row['node_id']);
             if ((int)$node['owner_user_id'] !== $user) throw new NotFoundHttpException('Хранилище недоступно.');
             if ($incoming && $node['status'] !== 'active') throw new ConflictHttpException('Помещение недоступно.');
-            if ($incoming && (new Query())->from(['b' => 'world_building'])->innerJoin(['p' => 'world_node_closure'], '[[p.ancestor_id]]=[[b.node_id]]')->where(['p.descendant_id' => $node['id']])->andWhere(['or', ['<>', 'b.operational_status', 'active'], ['<', 'b.condition', 1]])->exists($this->db)) throw new ConflictHttpException('Постройка недоступна для работы.');
-            if ($incoming && in_array($node['node_type'], ['BUILDING', 'ROOM'], true)) {
+            if ($incoming && isset($node['hierarchy_level']) && !\common\modules\world\models\domain\NodeAvailability::activePath($this->db, (int)$node['id'])) throw new ConflictHttpException('Объект или его родитель недоступен для размещения.');
+            if ($incoming && !isset($node['hierarchy_level']) && (new Query())->from(['b' => 'world_building'])->innerJoin(['p' => 'world_node_closure'], '[[p.ancestor_id]]=[[b.node_id]]')->where(['p.descendant_id' => $node['id']])->andWhere(['or', ['<>', 'b.operational_status', 'active'], ['<', 'b.condition', 1]])->exists($this->db)) throw new ConflictHttpException('Постройка недоступна для работы.');
+            if ($incoming && !isset($node['hierarchy_level']) && in_array($node['node_type'], ['BUILDING', 'ROOM'], true)) {
                 $building = (new Query())->from('world_building')->where(['node_id' => $node['node_type'] === 'BUILDING' ? $node['id'] : $node['parent_id']])->one($this->db);
                 if (!$building || $building['operational_status'] !== 'active' || (int)$building['condition'] < 1) throw new ConflictHttpException('Постройка недоступна для размещения.');
             }

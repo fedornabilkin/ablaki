@@ -91,6 +91,8 @@ return [
     'as access' => [
         'class' => AccessControl::class,
         'allowActions' => [
+            'entity-lookup/index',
+            'entity-lookup/cells',
             'user/security/logout',
             'user/security/login',
             'user/logout',

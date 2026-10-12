@@ -15,7 +15,7 @@ use yii\db\Connection;
 use yii\db\Expression;
 use yii\db\Query;
 
-/** Five canonical inventory slots; each harvest stack keeps its own clock and selling price. */
+/** Explicit mini-storage with batch freshness; retains the pre-conversion harvest API. */
 class GardenHarvest
 {
     public const FRESH_SECONDS = 1209600;
@@ -25,24 +25,37 @@ class GardenHarvest
     private function one(string $table, array $where): ?array { return (new Query())->from($table)->where($where)->one($this->db) ?: null; }
     public static function provision(Connection $db, int $garden, int $owner): array
     {
-        $where = ['identity_key' => 'harvest:garden:' . $garden];
-        $storage = (new Query())->from('craft_storage')->where($where)->one($db);
-        if (!$storage) {
-            if (!$db->getTransaction()) throw new \LogicException('Harvest provisioning requires a transaction.');
-            $db->createCommand()->insert('craft_storage', $where + ['kind' => 'harvest', 'node_id' => $garden, 'owner_user_id' => $owner, 'capacity' => 5])->execute();
-            $storage = (new Query())->from('craft_storage')->where($where)->one($db);
+        // Only the pre-conversion schema retains its implicit five-slot warehouses.
+        if (!$db->schema->getTableSchema('world_template')->getColumn('name')) {
+            $where = ['identity_key' => 'harvest:garden:' . $garden];
+            $legacy = (new Query())->from('craft_storage')->where($where)->one($db);
+            if (!$legacy) {
+                if (!$db->getTransaction()) throw new \LogicException('Harvest provisioning requires a transaction.');
+                $db->createCommand()->insert('craft_storage', $where + ['kind' => 'harvest', 'node_id' => $garden, 'owner_user_id' => $owner, 'capacity' => 5])->execute();
+                $legacy = (new Query())->from('craft_storage')->where($where)->one($db);
+            }
+            if ((int)$legacy['owner_user_id'] !== $owner || $legacy['kind'] !== 'harvest' || $legacy['status'] !== 'active') throw new GameError('HARVEST_STORAGE_UNAVAILABLE', 'Склад недоступен.');
+            return $legacy;
         }
-        if ((int)$storage['owner_user_id'] !== $owner || $storage['kind'] !== 'harvest' || $storage['status'] !== 'active') throw new GameError('HARVEST_STORAGE_UNAVAILABLE', 'Склад огорода недоступен.');
+        $storage = (new Query())->select('s.*')->from(['s' => 'craft_storage'])->innerJoin(['n' => 'world_node'], 'n.id=s.node_id')
+            ->where(['n.parent_id' => $garden, 'n.node_type' => 'CHEST', 'n.status' => 'active', 's.kind' => 'stockpile', 's.owner_user_id' => $owner, 's.status' => 'active'])->orderBy(['s.id' => SORT_ASC])->one($db);
+        if ($storage) $storage['preserve_batches'] = true;
+        else $storage = (new CanonicalInventory(new CraftStorage($db)))->backpack($owner);
+        if (!$storage) throw new GameError('BACKPACK_UNAVAILABLE', 'Оборудуйте мини-склад или освободите рюкзак.');
+        $storage = (new StorageAccessPolicy($db))->storage($owner, (int)$storage['id'], true) + $storage;
         return $storage;
     }
-    private function context(int $garden): array
+    private function context(int $garden, int $user): array
     {
         $this->flags->requireFlags(['world_read', 'storage_v2']);
-        $node = $this->one('world_node', ['id' => $garden, 'node_type' => 'PLOT', 'status' => 'active']);
-        $plot = $this->one('world_plot', ['node_id' => $garden, 'plot_kind' => 'garden']);
-        if (!$node || !$plot || !$node['owner_user_id'] || (new Query())->from(['n' => 'world_node'])->innerJoin(['c' => 'world_node_closure'], '[[c.ancestor_id]]=[[n.id]]')->where(['c.descendant_id' => $garden])->andWhere(['<>', 'n.status', 'active'])->exists($this->db)) throw new GameError('GARDEN_UNAVAILABLE', 'Огород недоступен.', 404);
-        $storage = $this->one('craft_storage', ['identity_key' => 'harvest:garden:' . $garden, 'owner_user_id' => $node['owner_user_id'], 'status' => 'active']);
-        if (!$storage) throw new GameError('HARVEST_STORAGE_UNAVAILABLE', 'Склад огорода ещё не подготовлен.', 503);
+        (new WorldQuery($this->db, new WorldAccessPolicy($user)))->record($garden);
+        $legacy = !$this->db->schema->getTableSchema('world_template')->getColumn('name');
+        $node = $this->one('world_node', ['id' => $garden, 'status' => 'active'] + ($legacy ? ['node_type' => 'PLOT'] : []));
+        if ($legacy && !$this->one('world_plot', ['node_id' => $garden, 'plot_kind' => 'garden'])) $node = null;
+        if (!$node || !$node['owner_user_id'] || (new Query())->from(['n' => 'world_node'])->innerJoin(['c' => 'world_node_closure'], '[[c.ancestor_id]]=[[n.id]]')->where(['c.descendant_id' => $garden])->andWhere(['<>', 'n.status', 'active'])->exists($this->db)) throw new GameError('STORAGE_UNAVAILABLE', 'Мини-склад недоступен.', 404);
+        $storage = $this->one('craft_storage', ['node_id' => $garden, 'kind' => $legacy ? 'harvest' : 'stockpile', 'owner_user_id' => $node['owner_user_id'], 'status' => 'active']);
+        if (!$storage) throw new GameError('HARVEST_STORAGE_UNAVAILABLE', 'Мини-склад ещё не построен.', 503);
+        if ($legacy) $node['settings_json'] = '{"allow_sales":true}';
         return compact('node', 'storage');
     }
     public static function spoiled(array $lot, int $quantity, int $now): int
@@ -52,18 +65,35 @@ class GardenHarvest
     public function state(int $user, int $garden): array
     {
         return (new FinanceReadSnapshot($this->db))->run(function () use ($user, $garden) {
-            $c = $this->context($garden); $owner = (int)$c['node']['owner_user_id'] === $user; $now = time(); $items = [];
+            $c = $this->context($garden, $user); $owner = (int)$c['node']['owner_user_id'] === $user; $now = time(); $items = [];
             $rows = (new Query())->select(['i.*', 'l.harvested_at', 'l.spoiled_at', 'l.price', 'name' => 'd.name', 'icon' => 'd.icon'])->from(['i' => 'craft_inventory'])
-                ->innerJoin(['l' => 'world_harvest_lot'], '[[l.inventory_id]]=[[i.id]]')->innerJoin(['d' => 'craft_item'], '[[d.id]]=[[i.item_id]]')
+                ->leftJoin(['l' => 'world_harvest_lot'], '[[l.inventory_id]]=[[i.id]]')->innerJoin(['d' => 'craft_item'], '[[d.id]]=[[i.item_id]]')
                 ->where(['i.storage_id' => $c['storage']['id']])->andWhere(['>', 'i.item_quantity', 0])->orderBy(['i.slot' => SORT_ASC])->all($this->db);
             foreach ($rows as $row) {
+                if ($row['harvested_at'] === null) { $row['harvested_at'] = 2147483647 - self::FRESH_SECONDS; $row['spoiled_at'] = $now; }
                 $lost = self::spoiled($row, (int)$row['item_quantity'], $now);
                 $items[] = ['inventory_id' => (int)$row['id'], 'position' => (int)$row['slot'], 'name' => $row['name'], 'icon' => $row['icon'], 'quantity' => (int)$row['item_quantity'] - $lost,
                     'harvested_at' => (int)$row['harvested_at'], 'fresh_until' => (int)$row['harvested_at'] + self::FRESH_SECONDS, 'spoiled' => $row['spoiled_at'] !== null || $now >= (int)$row['harvested_at'] + self::FRESH_SECONDS,
                     'price' => $row['price'] === null ? null : Money::parse((string)$row['price'])->decimal()];
             }
-            return ['node_id' => $garden, 'name' => $c['node']['name'], 'capacity' => 5, 'owned_by_me' => $owner, 'items' => $items, 'writable' => $this->flags->capabilities()['world_write'], 'server_time' => $now];
+            $settings = json_decode($c['node']['settings_json'] ?? '{}', true);
+            return ['node_id' => $garden, 'name' => $c['node']['name'], 'capacity' => (int)$c['storage']['capacity'], 'allow_sales' => ($settings['allow_sales'] ?? false) === true, 'owned_by_me' => $owner, 'items' => $items, 'destinations' => $owner ? $this->destinations($user, $garden) : [], 'writable' => $this->flags->capabilities()['world_write'], 'server_time' => $now];
         });
+    }
+    private function destinations(int $user, int $garden): array
+    {
+        $site = (new Query())->select('n.id')->from(['n' => 'world_node'])->innerJoin(['c' => 'world_node_closure'], '[[c.ancestor_id]]=[[n.id]]')
+            ->where(['c.descendant_id' => $garden, 'n.owner_user_id' => $user, 'n.node_type' => 'PLOT', 'n.status' => 'active'])
+            ->andWhere(['>', 'c.distance', 0])->orderBy(['c.distance' => SORT_ASC])->scalar($this->db);
+        $headers = (new \common\modules\world\modules\craft\models\domain\WorldStorage($this->db, $this->flags))->list($user, $site ? (int)$site : $garden)['items'];
+        $items = [];
+        foreach ($headers as $header) {
+            if (!in_array($header['kind'], ['backpack', 'chest', 'stockpile'], true)) continue;
+            try { (new StorageAccessPolicy($this->db))->storage($user, $header['id'], true); }
+            catch (\yii\web\HttpException $error) { continue; } catch (GameError $error) { continue; }
+            $items[] = ['id' => $header['id'], 'name' => $header['name'], 'kind' => $header['kind']];
+        }
+        return $items;
     }
     public function input(array $body, string $action): array
     {
@@ -80,16 +110,25 @@ class GardenHarvest
         } else {
             if (!is_int($body['quantity'] ?? null) || $body['quantity'] < 1 || $body['quantity'] > 10000) throw new GameError('INVALID_QUANTITY', 'Выберите количество урожая.', 422);
             $input['quantity'] = $body['quantity'];
+            if ($action === 'withdraw' && isset($body['destination_storage_id'])) {
+                if (!is_int($body['destination_storage_id']) || $body['destination_storage_id'] < 1) throw new GameError('INVALID_HARVEST', 'Выберите хранилище назначения.', 422);
+                $input['destination_storage_id'] = $body['destination_storage_id'];
+            }
         }
         return $input;
     }
     private function prepare(int $user, int $garden, string $action, array $input): array
     {
-        $c = $this->context($garden); $owner = (int)$c['node']['owner_user_id'];
+        $c = $this->context($garden, $user); $owner = (int)$c['node']['owner_user_id'];
         if (($action === 'buy') === ($owner === $user)) throw new GameError('HARVEST_FORBIDDEN', 'Покупка доступна другому игроку; ценой и выдачей управляет владелец.', 403);
         $row = $this->one('craft_inventory', ['id' => $input['inventory_id'], 'storage_id' => $c['storage']['id'], 'user_id' => $owner]);
         $lot = $this->one('world_harvest_lot', ['inventory_id' => $input['inventory_id']]);
-        if (!$row || !$lot || (int)$row['item_quantity'] < 1) throw new GameError('HARVEST_UNAVAILABLE', 'Урожай уже забрали.', 409);
+        if (!$row || (int)$row['item_quantity'] < 1) throw new GameError('HARVEST_UNAVAILABLE', 'Продукцию уже забрали.', 409);
+        $definition = $this->one('craft_item', ['id' => $row['item_id'], 'active' => 1]);
+        if (!$definition || !in_array($definition['kind'], ['material', 'product'], true) || ($definition['storage_kind'] ?? 'none') !== 'none') throw new GameError('PRODUCT_NOT_FOR_SALE', 'Здесь продаются обычные материалы и продукция.', 422);
+        $settings = json_decode($c['node']['settings_json'] ?? '{}', true);
+        if ($action !== 'withdraw' && ($settings['allow_sales'] ?? false) !== true) throw new GameError('SALES_DISABLED', 'Продажа запрещена настройками объекта.', 403);
+        $lot = $lot ?: ['inventory_id' => $row['id'], 'harvested_at' => 2147483647 - self::FRESH_SECONDS, 'spoiled_at' => time(), 'price' => null];
         $loss = self::spoiled($lot, (int)$row['item_quantity'], time()); $available = (int)$row['item_quantity'] - $loss;
         $terms = ['node_id' => $garden, 'inventory_id' => $input['inventory_id'], 'available' => $available, 'loss' => $loss, 'price' => $action === 'price' ? $input['price'] : ($lot['price'] === null ? null : Money::parse((string)$lot['price'])->decimal())];
         $revisions = ['node:' . $garden => (int)$c['node']['revision'], 'storage:' . $c['storage']['id'] => (int)$c['storage']['revision'], 'inventory:' . $row['id'] => (int)$row['revision']];
@@ -99,10 +138,15 @@ class GardenHarvest
         $store = new CraftStorage($this->db); $inventory = new CanonicalInventory($store); $backpack = $inventory->backpack($user);
         if (!$backpack) throw new GameError('BACKPACK_UNAVAILABLE', 'Рюкзак ещё не подготовлен.');
         $target = (new StorageAccessPolicy($this->db))->storage($user, (int)$backpack['id'], true);
+        if ($action === 'withdraw' && isset($input['destination_storage_id'])) {
+            if (!in_array($input['destination_storage_id'], array_column($this->destinations($user, $garden), 'id'), true))
+                throw new GameError('HARVEST_DESTINATION_UNAVAILABLE', 'Выберите свой рюкзак, сундук или склад на территории огорода.', 403);
+            $target = (new StorageAccessPolicy($this->db))->storage($user, $input['destination_storage_id'], true);
+        }
         $item = $this->one('craft_item', ['id' => $row['item_id'], 'active' => 1]);
         if (!$item) throw new GameError('CROP_UNAVAILABLE', 'Этот урожай недоступен.');
         $plan = $inventory->planCraft([], $target, [], [], $item, $input['quantity']);
-        $p['terms'] += ['quantity' => $input['quantity'], 'name' => $item['name'], 'fits' => $plan['output_fits'], 'total' => '0.0000'];
+        $p['terms'] += ['quantity' => $input['quantity'], 'name' => $item['name'], 'fits' => $plan['output_fits'], 'destination_storage_id' => (int)$target['id'], 'total' => '0.0000'];
         $p['revisions']['storage:' . $target['id']] = (int)$target['revision'];
         $p['revisions']['catalog'] = (int)$this->one('craft_meta', ['id' => 1])['revision'];
         if ($action === 'buy') {
@@ -133,9 +177,12 @@ class GardenHarvest
             if ($p['lot']['spoiled_at'] === null && time() >= (int)$p['lot']['harvested_at'] + self::FRESH_SECONDS)
                 $this->db->createCommand()->update('world_harvest_lot', ['spoiled_at' => time()], ['inventory_id' => $payload['inventory_id'], 'spoiled_at' => null])->execute();
             $changed = [(int)$p['storage']['id']];
-            if ($action === 'price') $this->db->createCommand()->update('world_harvest_lot', ['price' => $payload['price']], ['inventory_id' => $payload['inventory_id']])->execute();
+            if ($action === 'price') {
+                if (!$this->one('world_harvest_lot', ['inventory_id' => $payload['inventory_id']])) $this->db->createCommand()->insert('world_harvest_lot', ['inventory_id' => $payload['inventory_id'], 'harvested_at' => $p['lot']['harvested_at'], 'spoiled_at' => $p['lot']['spoiled_at'], 'operation_id' => $operation, 'price' => $payload['price']])->execute();
+                else $this->db->createCommand()->update('world_harvest_lot', ['price' => $payload['price']], ['inventory_id' => $payload['inventory_id']])->execute();
+            }
             else {
-                if (!$p['plan']['output_fits']) throw new GameError('BACKPACK_FULL', 'Освободите место в рюкзаке.');
+                if (!$p['plan']['output_fits']) throw new GameError('BACKPACK_FULL', 'Освободите место в выбранном хранилище.');
                 if ($action === 'buy') (new TreasuryLedger($this->db))->receivePersonalPayment($user, $garden, Money::parse($terms['total']), $operation, 'Покупка урожая: ' . $terms['name']);
                 $inventory->consumeHarvest($p['owner'], $payload['inventory_id'], $payload['quantity'], $action === 'buy' ? 'harvest.sold' : 'harvest.withdrawn');
                 $inventory->applyCraft($user, $p['plan'], $p['target'], [], $p['item'], 'harvest.' . $action);
@@ -148,6 +195,7 @@ class GardenHarvest
     }
     public function recordHarvest(array $storage, array $plan, string $operation): void
     {
+        if ($storage['kind'] === 'backpack') return;
         foreach ($plan['grant'] as $grant) {
             $row = $this->one('craft_inventory', ['storage_id' => $storage['id'], 'slot' => $grant['position']]);
             if (!$row || $grant['inventory_id'] !== null) throw new \LogicException('Harvest batches must not merge.');

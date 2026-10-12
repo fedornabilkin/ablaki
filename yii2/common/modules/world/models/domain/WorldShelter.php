@@ -95,12 +95,14 @@ class WorldShelter
         }
         if (in_array($action, ['deploy', 'lodge'], true) && (int)(new EquipmentExposure($this->db))->projected($a['unit'])['durability'] < 1) throw new GameError('SHELTER_BROKEN', 'Изношенный шалаш не защищает от непогоды.');
         if ($action === 'lodge') {
+            if ($this->db->schema->getTableSchema('world_furnishing_rule') && !FurnishingPlacement::hasBed($this->db, (int)$building['id'])) throw new GameError('BED_REQUIRED', 'Сначала установите кровать для ночлега.', 422);
             $actor = $this->one('game_actor', ['user_id' => $user, 'kind' => 'player']);
             if (!$actor || (new LodgingAssignments($this->db))->current((int)$actor['id']) || $a['lodging']) throw new GameError('LODGING_ALREADY_ASSIGNED', 'Сначала отмените текущее назначение ночлега в доме или шалаше.');
             $terms['actor_id'] = (int)$actor['id'];
         }
         if ($action === 'leave' && !$a['lodging']) throw new GameError('LODGING_NOT_ASSIGNED', 'Ночлег уже отменён.');
         if ($action === 'fold' && $a['lodging'] && !$input['end_lodging']) throw new GameError('LODGING_CONFIRM_REQUIRED', 'Подтвердите прекращение ночлега перед складыванием.');
+        if ($action === 'fold' && \common\modules\world\models\Build::find()->where(['node_id'=>$building['id'], 'status'=>'building'])->exists()) throw new GameError('REPAIR_ACTIVE', 'Сначала завершите или отмените ремонт шалаша.', 409);
         if ($action === 'fold' || ($action === 'claim' && !$input['direct_deploy'])) {
             list($bag, $position) = $this->backpackSlot($user, $inventory, $store); $terms['backpack_position'] = $position;
             if ($bag) $revisions['storage:' . $bag['id']] = (int)$bag['revision'];

@@ -34,14 +34,27 @@ class WorldStorage
     private function header(array $row): array
     {
         $labels = ['backpack' => 'Рюкзак', 'chest' => 'Сундук', 'placement' => 'Места размещения', 'recovery' => 'Восстановление', 'stockpile' => 'Склад'];
-        return ['id' => (int)$row['id'], 'kind' => $row['kind'], 'name' => $labels[$row['kind']] ?? 'Хранилище', 'node_id' => $row['node_id'] === null ? null : (int)$row['node_id'],
+        $node = $row['node_id'] === null ? null : (new Query())->select('name')->from('world_node')->where(['id' => $row['node_id']])->scalar($this->db);
+        $name = $node && in_array($row['kind'], ['stockpile', 'placement'], true) ? $node . ($row['kind'] === 'placement' ? ' · Размещение' : ' · Склад') : ($labels[$row['kind']] ?? 'Хранилище');
+        return ['id' => (int)$row['id'], 'kind' => $row['kind'], 'name' => mb_substr($name, 0, 120), 'node_id' => $row['node_id'] === null ? null : (int)$row['node_id'],
             'container_inventory_id' => $row['container_inventory_id'] === null ? null : (int)$row['container_inventory_id'], 'capacity' => (int)$row['capacity'], 'revision' => (int)$row['revision']];
     }
-    public function placementOptions(int $user, int $node): array
+    public function placementOptions(int $user, int $node, ?array $cell = null): array
     {
+        $this->available();
+        $location = (new WorldQuery($this->db, new WorldAccessPolicy($user)))->record($node);
+        if (isset($location['hierarchy_level'])) return $this->commonPlacementOptions($user, $location, $cell);
         $headers = $this->list($user, $node)['items']; $items = [];
         $target = (new Query())->from('craft_storage')->where(['owner_user_id' => $user, 'node_id' => $node, 'kind' => 'placement', 'status' => 'active'])->one($this->db);
         if (!$target) return ['node_id' => $node, 'items' => []];
+        $position = null;
+        if ($cell !== null) {
+            $location = (new WorldQuery($this->db, new WorldAccessPolicy($user)))->record($node);
+            \common\modules\world\models\domain\WorldLayout::assertCell($location, $cell['x'], $cell['y']);
+            try { (new \common\modules\world\models\domain\WorldTree($this->db))->assertFreePosition($node, $cell['x'], $cell['y']); }
+            catch (GameError $error) { if ($error->reason !== 'MAP_CELL_OCCUPIED') throw $error; return ['node_id' => $node, 'items' => []]; }
+            $position = ($cell['y'] - (int)$location['map_origin_y']) * (int)$location['map_width'] + $cell['x'] - (int)$location['map_origin_x'] + 1;
+        }
         $slots = (new Query())->from('world_slot')->where(['storage_id' => $target['id'], 'status' => 'active'])->orderBy(['position' => SORT_ASC])->all($this->db);
         $occupied = (new Query())->select('slot')->from('craft_inventory')->where(['storage_id' => $target['id']])->andWhere(['>', 'item_quantity', 0])->column($this->db);
         $sourceIds = array_column(array_filter($headers, static function ($h) { return in_array($h['kind'], ['backpack', 'chest', 'stockpile'], true); }), 'id');
@@ -52,12 +65,64 @@ class WorldStorage
             foreach ($slots as $slot) {
                 try { (new EquipmentPlacementPolicy($this->db))->assertAllowed($definition, $target, $slot); $compatible = true; }
                 catch (\yii\web\ConflictHttpException $e) { continue; }
+                if ($position !== null && (int)$slot['position'] !== $position) continue;
                 if (in_array($slot['position'], $occupied)) continue;
                 $input = ['inventory_id' => (int)$row['id'], 'source_storage_id' => (int)$row['storage_id'], 'destination_storage_id' => (int)$target['id'], 'position' => (int)$slot['position'], 'quantity' => 1, 'instance_id' => null];
                 try { (new CanonicalInventory(new CraftStorage($this->db)))->inspectTransfer($user, (int)$row['id'], (int)$target['id'], (int)$slot['position'], 1); $destination = $input; break; }
                 catch (\yii\web\HttpException $e) { continue; }
             }
             if ($compatible) $items[] = ['id' => (int)$row['id'], 'name' => trim($row['name']), 'icon' => trim($row['icon']), 'quantity' => (int)$row['item_quantity'], 'available' => $destination !== null, 'input' => $destination];
+        }
+        // Furnishings are visible before crafting; only an owned inventory row can be placed.
+        if ($this->db->schema->getTableSchema('world_furnishing_rule')) {
+            $catalog = (new Query())->select('d.*')->from(['d'=>'craft_item'])->innerJoin(['r'=>'world_furnishing_rule'], 'r.item_id=d.id')->where(['d.active'=>1])->all($this->db);
+            foreach ($catalog as $definition) {
+                if (in_array((int)$definition['id'], array_map('intval', array_column($rows, 'item_id')), true)) continue;
+                foreach ($slots as $slot) {
+                    try { (new EquipmentPlacementPolicy($this->db))->assertAllowed($definition, $target, $slot); }
+                    catch (\yii\web\ConflictHttpException $e) { continue; }
+                    $items[] = ['id'=>(int)$definition['id'], 'name'=>trim($definition['name']), 'icon'=>trim($definition['icon']), 'quantity'=>0, 'available'=>false, 'input'=>null, 'requires_crafting'=>true];
+                    break;
+                }
+            }
+        }
+        return ['node_id' => $node, 'items' => $items];
+    }
+    private function commonPlacementOptions(int $user, array $location, ?array $cell): array
+    {
+        $node = (int)$location['id']; $owned = (int)$location['owner_user_id'] === $user;
+        $stationIds = (new Query())->select('item_id')->from('craft_station')->where(['active' => 1])->andWhere(['not', ['item_id' => null]]);
+        $furnitureIds = (new Query())->select('item_id')->from('world_furnishing_rule');
+        $catalog = (new Query())->from('craft_item')->where(['active' => 1])->andWhere(['or', ['id' => $stationIds], ['id' => $furnitureIds], ['storage_kind' => 'chest']])->orderBy(['id' => SORT_ASC])->all($this->db);
+        $headers = $owned ? $this->list($user, $node)['items'] : [];
+        $sourceIds = array_column(array_filter($headers, static function ($h) { return in_array($h['kind'], ['backpack', 'chest', 'stockpile'], true); }), 'id');
+        $rows = $sourceIds ? (new Query())->from('craft_inventory')->where(['storage_id' => $sourceIds])->andWhere(['>', 'item_quantity', 0])->orderBy(['id' => SORT_ASC])->all($this->db) : [];
+        $target = $owned ? (new Query())->from('craft_storage')->where(['node_id' => $node, 'owner_user_id' => $user, 'kind' => 'placement', 'status' => 'active'])->one($this->db) : null;
+        $slots = $target ? (new Query())->from('world_slot')->where(['storage_id' => $target['id'], 'status' => 'active'])->orderBy(['position' => SORT_ASC])->all($this->db) : [];
+        if ($cell !== null) {
+            \common\modules\world\models\domain\WorldLayout::assertCell($location, $cell['x'], $cell['y']);
+            $position = ($cell['y'] - (int)$location['map_origin_y']) * (int)$location['map_width'] + $cell['x'] - (int)$location['map_origin_x'] + 1;
+            $slots = array_filter($slots, static function ($slot) use ($position) { return (int)$slot['position'] === $position; });
+        }
+        $items = [];
+        foreach ($catalog as $definition) {
+            $inventory = array_filter($rows, static function ($row) use ($definition) { return (int)$row['item_id'] === (int)$definition['id']; });
+            if (!$inventory) {
+                $items[] = ['id' => (int)$definition['id'], 'name' => trim($definition['name']), 'icon' => trim($definition['icon']), 'quantity' => 0, 'available' => false, 'input' => null, 'requires_crafting' => true];
+                continue;
+            }
+            foreach ($inventory as $row) {
+                $destination = null;
+                if ($location['status'] === 'active') foreach ($slots as $slot) {
+                    try {
+                        (new EquipmentPlacementPolicy($this->db))->assertAllowed($definition, $target, $slot);
+                        (new CanonicalInventory(new CraftStorage($this->db)))->inspectTransfer($user, (int)$row['id'], (int)$target['id'], (int)$slot['position'], 1);
+                        $destination = ['inventory_id' => (int)$row['id'], 'source_storage_id' => (int)$row['storage_id'], 'destination_storage_id' => (int)$target['id'], 'position' => (int)$slot['position'], 'quantity' => 1, 'instance_id' => null];
+                        break;
+                    } catch (\yii\web\HttpException $error) { continue; }
+                }
+                $items[] = ['id' => (int)$row['id'], 'name' => trim($definition['name']), 'icon' => trim($definition['icon']), 'quantity' => (int)$row['item_quantity'], 'available' => $destination !== null, 'input' => $destination];
+            }
         }
         return ['node_id' => $node, 'items' => $items];
     }
@@ -82,7 +147,11 @@ class WorldStorage
             $items[] = ['id' => (int)$row['id'], 'item_id' => (int)$row['item_id'], 'name' => trim($item['name']), 'icon' => trim($item['icon']), 'quantity' => (int)$row['item_quantity'], 'position' => (int)$row['slot'], 'revision' => (int)$row['revision'], 'instances' => $units, 'inner_storage_id' => $inner ? (int)$inner : null];
         }
         $slots = [];
-        if ($storage['kind'] === 'placement') foreach ((new Query())->from('world_slot')->where(['storage_id' => $id])->orderBy(['position' => SORT_ASC])->limit(100)->all($this->db) as $slot) $slots[] = ['position' => (int)$slot['position'], 'type' => $slot['slot_type'], 'exposure_class' => $slot['exposure_class'], 'available' => $slot['status'] === 'active'];
+        $locationRow = $storage['node_id'] === null ? null : (new Query())->from('world_node')->where(['id' => $storage['node_id']])->one($this->db);
+        $openCells = $locationRow && isset($locationRow['hierarchy_level']) ? (new Query())->from('world_map_cell')->where(['parent_id' => $storage['node_id'], 'state' => 'open'])->all($this->db) : null;
+        $openPositions = [];
+        foreach ($openCells ?? [] as $cell) $openPositions[] = ((int)$cell['y'] - (int)$locationRow['map_origin_y']) * (int)$locationRow['map_width'] + (int)$cell['x'] - (int)$locationRow['map_origin_x'] + 1;
+        if ($storage['kind'] === 'placement') foreach ((new Query())->from('world_slot')->where(['storage_id' => $id])->orderBy(['position' => SORT_ASC])->limit(100)->all($this->db) as $slot) $slots[] = ['position' => (int)$slot['position'], 'type' => $slot['slot_type'], 'exposure_class' => $slot['exposure_class'], 'available' => $slot['status'] === 'active' && ($openCells === null || in_array((int)$slot['position'], $openPositions, true))];
         $container = null; $location = null; $nodeId = $storage['node_id'];
         if ($storage['kind'] === 'chest') {
             $chest = (new Query())->from('craft_container')->where(['id' => $storage['container_inventory_id']])->one($this->db);

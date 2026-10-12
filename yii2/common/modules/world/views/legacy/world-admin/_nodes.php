@@ -11,8 +11,12 @@ echo GridView::widget(['dataProvider' => $provider, 'columns' => [
         return ['WORLD' => 'Мир', 'REGION' => 'Регион', 'SETTLEMENT' => 'Поселение', 'BUILDING' => 'Постройка',
             'ROOM' => 'Комната', 'PLOT' => 'Участок', 'BED' => 'Грядка'][$row['node_type']] ?? $row['node_type'];
     }],
-    ['attribute' => 'parent_id', 'label' => 'Родитель, ID'],
-    ['attribute' => 'owner_user_id', 'label' => 'Владелец, ID'],
+    ['attribute' => 'parent_id', 'label' => 'Родитель', 'format' => 'raw', 'value' => static function (array $row): string {
+        return \common\modules\world\models\admin\WorldRelations::value('world_node', 'parent_id', $row['parent_id'], $row);
+    }],
+    ['attribute' => 'owner_user_id', 'label' => 'Владелец', 'format' => 'raw', 'value' => static function (array $row): string {
+        return \common\modules\world\models\admin\WorldRelations::value('world_node', 'owner_user_id', $row['owner_user_id'], $row);
+    }],
     ['attribute' => 'status', 'label' => 'Состояние'],
     ['attribute' => 'revision', 'label' => 'Версия'],
 ]]);

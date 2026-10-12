@@ -9,6 +9,7 @@ class BuildWork extends Record
 {
     public const HEARTBEAT_SECONDS = 60;
     public static function tableName() { return 'world_build_work'; }
+    public function getBuild() { return $this->hasOne(Build::class, ['id' => 'build_id']); }
     public static function participants(int $build): array
     {
         $ids = self::find()->where(['build_id' => $build])->select('user_id')->distinct()->column();
@@ -22,6 +23,7 @@ class BuildWork extends Record
         $build->assertOpen();
         if ($user !== (int)$build->owner_user_id && $build->labor_budget == 0) throw new GameError('HELP_NOT_REQUESTED', 'Владелец строит самостоятельно.', 403);
         $db = self::getDb(); $active = (new Query())->from('world_builder')->where(['user_id' => $user])->one($db);
+        if ($db->schema->getTableSchema('world_mining_worker') && (new Query())->from('world_mining_worker')->where(['user_id' => $user])->exists($db)) throw new GameError('MINER_BUSY', 'Приостановите добычу перед строительством.', 409);
         if ($active) {
             $work = self::requireOne($active['work_id']);
             if ((int)$work->build_id === (int)$build->id && $work->ended_at === null) return $work->toArray();

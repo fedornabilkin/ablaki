@@ -28,7 +28,7 @@ class WorldQuery
         $this->record($id);
         $page = $this->positive($filter['page'] ?? 1, 1000000); $size = $this->positive($filter['per-page'] ?? 20, 100);
         $q = $filter['q'] ?? ''; $type = $filter['type'] ?? '';
-        if (!is_string($q) || mb_strlen($q, 'UTF-8') > 100 || !is_string($type) || ($type !== '' && !in_array($type, WorldTree::TYPES, true))) throw new GameError('INVALID_FILTER', 'Некорректный фильтр.', 422);
+        if (!is_string($q) || mb_strlen($q, 'UTF-8') > 100 || !is_string($type) || ($type !== '' && !in_array($type, array_merge(WorldTree::TYPES, ['CHEST', 'PLACE']), true))) throw new GameError('INVALID_FILTER', 'Некорректный фильтр.', 422);
         $query = $this->visible()->andWhere(['n.parent_id' => $id]);
         if ($q !== '') $query->andWhere(['like', 'n.name', trim($q)]);
         if ($type !== '') $query->andWhere(['n.node_type' => $type]);
@@ -49,7 +49,7 @@ class WorldQuery
         $rows = $this->visible()->andWhere(['n.parent_id' => $id])->orderBy(['n.id' => SORT_ASC])->all($this->db);
         $cells = (new Query())->select(['x', 'y', 'state'])->from('world_map_cell')->where(['parent_id' => $id])->orderBy(['x' => SORT_ASC, 'y' => SORT_ASC])->all($this->db);
         $exploration = (new MapExploration($this->db))->state(['id' => $node['id'], 'node_type' => $node['type'], 'owner_user_id' => $node['owned_by_me'] ? $this->policy->userId() : null, 'status' => $node['status']], $this->policy->userId());
-        return ['node_id' => $id, 'bounds' => $node['map'], 'items' => $this->present($rows), 'cells' => array_map(static function (array $cell): array {
+        return ['node_id' => $id, 'bounds' => $node['map'], 'equipment_cells' => (new PlacementProvisioner($this->db))->equipmentCells($id, $this->policy->userId()), 'items' => $this->present($rows), 'cells' => array_map(static function (array $cell): array {
             return ['x' => (int)$cell['x'], 'y' => (int)$cell['y'], 'state' => $cell['state']];
         }, $cells), 'can_expand' => $exploration['allowed'], 'exploration' => $exploration, 'pricing' => WorldMapCells::pricing($this->db, $id)];
     }
@@ -89,7 +89,7 @@ class WorldQuery
         $exploration = (new MapExploration($this->db))->state(['id' => $node['id'], 'node_type' => $node['type'], 'owner_user_id' => $node['owned_by_me'] ? $this->policy->userId() : null, 'status' => $node['status']], $this->policy->userId());
         return ['navigation' => ['node' => $node, 'breadcrumbs' => $select($breadcrumbs), 'parent_id' => $node['parent_id'],
             'siblings' => ['items' => $select($siblings), '_meta' => ['totalCount' => $total, 'pageCount' => (int)ceil($total / 20), 'currentPage' => 1, 'perPage' => 20]]],
-            'map' => ['node_id' => $id, 'bounds' => $node['map'], 'items' => $select($children), 'cells' => array_map(static function (array $cell): array {
+            'map' => ['node_id' => $id, 'bounds' => $node['map'], 'equipment_cells' => (new PlacementProvisioner($this->db))->equipmentCells($id, $this->policy->userId()), 'items' => $select($children), 'cells' => array_map(static function (array $cell): array {
                 return ['x' => (int)$cell['x'], 'y' => (int)$cell['y'], 'state' => $cell['state']];
             }, $cells), 'can_expand' => $exploration['allowed'], 'exploration' => $exploration, 'pricing' => WorldMapCells::pricing($this->db, $id)]];
     }
@@ -97,6 +97,7 @@ class WorldQuery
     {
         if (!$rows) return [];
         $ids = array_column($rows, 'id');
+        $commonModel = isset($this->db->schema->getTableSchema('world_node')->columns['hierarchy_level']);
         $purchasedRooms = [];
         $byType = []; foreach ($rows as $row) $byType[$row['node_type']][] = $row['id'];
         if (!empty($byType['ROOM']) && $this->db->schema->getTableSchema('world_premises_purchase')) {
@@ -114,7 +115,10 @@ class WorldQuery
             ->where(['path.ancestor_id' => $ids])->andWhere(['<>', 'n.status', 'archived'])
             ->groupBy('path.ancestor_id')->indexBy('ancestor_id')->all($this->db);
         $details = [];
-        foreach ($byType as $type => $typeIds) {
+        if ($commonModel) {
+            $fields = ['climate', 'settlement_kind', 'population', 'plot_limit', 'building_kind', 'level', 'condition', 'max_condition', 'area', 'exposure_class', 'plot_kind', 'fertility', 'allow_building', 'unlocked', 'ordinal', 'garden_node_id', 'operational_status'];
+            foreach ($rows as $row) $details[$row['id']] = array_intersect_key($row, array_flip($fields));
+        } else foreach ($byType as $type => $typeIds) {
             if (in_array($type, ['WORLD', 'CHEST', 'PLACE'], true)) continue;
             $details += (new Query())->from('world_' . strtolower($type))->where(['node_id' => $typeIds])->indexBy('node_id')->all($this->db);
         }
@@ -136,20 +140,39 @@ class WorldQuery
                 $details[$id]['condition'] = (int)$unit['durability']; $details[$id]['max_condition'] = (int)$unit['max_durability'];
             }
         }
+        $builds = $this->db->schema->getTableSchema('world_build') ? \common\modules\world\models\Build::find()->where(['node_id' => $ids, 'status' => 'building'])->indexBy('node_id')->all() : [];
+        $liveWork = [];
+        if ($builds) foreach ((new Query())->from('world_build_work')->where(['build_id' => array_map(static function ($build) { return $build->id; }, $builds), 'ended_at' => null])->all($this->db) as $work)
+            $liveWork[$work['build_id']] = ($liveWork[$work['build_id']] ?? 0) + max(0, min(time(), (int)$work['last_seen_at'] + 60) - (int)$work['accounted_at']);
         $result = [];
         foreach ($rows as $row) {
             $owned = $this->policy->owns($row); $detail = $details[$row['id']] ?? [];
+            if ($owned) {
+                $fields = ['climate', 'settlement_kind', 'population', 'plot_limit', 'building_kind', 'level', 'condition', 'max_condition', 'area', 'exposure_class', 'plot_kind', 'fertility', 'allow_building', 'unlocked', 'operational_status'];
+                $detail = array_merge(array_intersect_key($row, array_flip($fields)), $detail);
+                if (isset($row['settings_json'])) $detail['settings_json'] = $row['settings_json'];
+            }
             if (!$owned) $detail = array_intersect_key($detail, array_flip(['building_kind', 'settlement_kind', 'population', 'climate', 'plot_kind', 'ordinal', 'unlocked']));
+            $settings = json_decode($row['settings_json'] ?? '{}', true) ?: [];
+            $detail['production_enabled'] = ($settings['production_enabled'] ?? false) === true;
+            $detail['storage_capacity'] = (int)($settings['storage_capacity'] ?? 0);
+            if (isset($builds[$row['id']])) {
+                $build = $builds[$row['id']]; $worked = (int)$build->worked_seconds;
+                $worked += $liveWork[$build->id] ?? 0;
+                $detail['condition'] = \common\modules\world\models\BuildStrength::forProject($build, $worked);
+                $detail['max_condition'] = (int)$row['max_condition'];
+                $detail['repair_active'] = $build->isRepair();
+            }
             unset($detail['node_id']);
             foreach (['template_revision_id', 'level', 'condition', 'max_condition', 'area', 'fertility', 'ordinal', 'unlocked', 'population', 'plot_limit', 'allow_building', 'garden_node_id', 'active_project_id'] as $field) if (isset($detail[$field])) $detail[$field] = (int)$detail[$field];
             $label = ($row['label'] ?? '') ?: $row['name'];
             // Legacy purchases named their single room after the house, which
             // made the correctly nested room look like another house on maps.
             if ($row['node_type'] === 'ROOM' && isset($purchasedRooms[$row['id']]) && $label === $purchasedRooms[$row['id']]['building_name']) $label = 'Комната';
-            $result[] = ['id' => (int)$row['id'], 'type' => $row['node_type'], 'parent_id' => $row['parent_id'] === null ? null : (int)$row['parent_id'],
+            $dto = ['id' => (int)$row['id'], 'type' => $row['node_type'], 'parent_id' => $row['parent_id'] === null ? null : (int)$row['parent_id'],
                 'root_id' => (int)$row['root_id'], 'code' => $row['code'], 'name' => $row['name'], 'label' => $label, 'status' => $row['status'], 'visibility' => $row['visibility'], 'revision' => (int)$row['revision'], 'portable' => (bool)$row['portable'],
                 'map' => ['width' => (int)$row['map_width'], 'height' => (int)$row['map_height'], 'x' => (int)$row['map_origin_x'], 'y' => (int)$row['map_origin_y']],
-                'has_finances' => !in_array($row['node_type'], ['ROOM', 'BED'], true) && ($detail['building_kind'] ?? '') !== 'warehouse' && !isset($shelters[$row['id']]),
+                'has_finances' => !empty($row['template_id']) || (!in_array($row['node_type'], ['ROOM', 'BED'], true) && ($detail['building_kind'] ?? '') !== 'warehouse' && !isset($shelters[$row['id']])),
                 'coordinates' => ['x' => (int)$row['position_x'], 'y' => (int)$row['position_y']],
                 'footprint' => $row['footprint_json'] === null ? null : json_decode($row['footprint_json'], true, 512, JSON_THROW_ON_ERROR),
                 'child_count' => (int)($descendants[$row['id']]['children'] ?? 0),
@@ -158,6 +181,12 @@ class WorldQuery
                 'owned_by_me' => $this->policy->ownsItems($row),
                 'details' => (object)$detail, 'permissions' => ['manage' => $owned, 'administer' => $this->policy->isAdmin(), 'storage' => $this->policy->ownsItems($row)],
                 'actions' => [['code' => 'open', 'allowed' => true, 'reasons' => []]]];
+            if ($commonModel) {
+                $policy = new NodeFacilitiesDecorator(new CommonNodePolicy());
+                $dto = (new WorldComposite($row))->accept(new NodePresentationVisitor($policy, $this->policy->userId(), $dto));
+            }
+            $dto['owner'] = ['id' => $row['owner_user_id'] === null ? null : (int)$row['owner_user_id'], 'owned_by_me' => $dto['owned_by_me'], 'has_finances' => $dto['has_finances']];
+            $result[] = $dto;
         }
         return $result;
     }

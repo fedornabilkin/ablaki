@@ -8,6 +8,7 @@ class CultivationClock
     {
         $ready = (int)$cycle['ready_at'];
         $due = $cycle['water_due_at'] === null ? null : (int)$cycle['water_due_at'];
+        if ($due !== null && $due >= $ready) $due = null;
         $deadline = $due === null || $due >= $ready ? null : min($ready, $due + (int)$rules['water_window_seconds']);
         $missed = !empty($cycle['water_missed']) || ($deadline !== null && $now >= $deadline);
         $expires = $ready + (int)$rules['harvest_window_seconds'];

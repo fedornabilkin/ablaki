@@ -26,14 +26,14 @@ $kinds = ['canopy' => 'Навес', 'workroom' => 'Мастерская', 'house
         ['attribute' => 'template_revision_id', 'label' => 'Версия условий, ID'],
         ['label' => 'Условия', 'format' => 'raw', 'value' => static function (array $row) use ($kinds): string {
             $c = json_decode($row['config_json'], true, 512, JSON_THROW_ON_ERROR);
-            $parts = [$kinds[$c['kind']] ?? $c['kind'], 'Цена: ' . $c['price'] . ' Cr', 'Площадь: ' . $c['area'],
+            $parts = [$kinds[$c['kind']] ?? $c['kind'], 'Цена: ' . \backend\support\EntityDisplay::credits($c['price']) . ' Cr', 'Площадь: ' . $c['area'],
                 'Оборудование: ' . $c['slots'] . ' / ' . ($c['expansion_limit'] ?? $c['slots']),
                 'Мест ночлега: ' . ($c['lodging_places'] ?? 0)];
-            if (!empty($c['expansion_base_price'])) $parts[] = 'Расширение: ' . $c['expansion_base_price'] . ' Cr × номер покупки';
+            if (!empty($c['expansion_base_price'])) $parts[] = 'Расширение: ' . \backend\support\EntityDisplay::credits($c['expansion_base_price']) . ' Cr × номер покупки';
             $parts[] = ($c['delivery'] ?? 'ready') === 'construction' ? 'Строительство: ' . $c['duration_seconds'] . ' сек.' : 'Готовая постройка';
             foreach ($c['materials'] ?? [] as $material) $parts[] = $material['name'] . ': ' . $material['quantity'];
             if (!empty($c['repair'])) {
-                $parts[] = 'Полный ремонт: ' . $c['repair']['full_price'] . ' Cr';
+                $parts[] = 'Полный ремонт: ' . \backend\support\EntityDisplay::credits($c['repair']['full_price']) . ' Cr';
                 if (!empty($c['repair_for_existing'])) $parts[] = 'Договор доступен прежним зданиям того же типа и площади';
                 foreach ($c['repair']['materials'] as $material) $parts[] = 'Ремонт — ' . $material['name'] . ': ' . $material['quantity'];
             } else $parts[] = 'Без договора ремонта';

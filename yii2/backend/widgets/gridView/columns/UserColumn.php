@@ -21,6 +21,6 @@ class UserColumn extends AbstractColumn
 
     public function getValue(UserRelationInterface $model): string
     {
-        return Html::a($model->user->username, ['/person/view', 'id' => $model->user->person->id]);
+        return Html::a(Html::encode($model->user->username), ['/user/admin/info', 'id' => $model->user->id]);
     }
 }

@@ -21,6 +21,6 @@ class NameColumn extends AbstractColumn
 
     public function getValue(ModelNameInterface $model): string
     {
-        return Html::a($model->name(), ['update', 'id' => $model->id]);
+        return Html::a(Html::encode($model->name()), ['view', 'id' => $model->id]);
     }
 }

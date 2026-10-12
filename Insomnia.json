@@ -1755,7 +1755,7 @@
       "modified": 1791009594237,
       "created": 1791009594237,
       "name": "World",
-      "description": "Актуальные API мира. ID замените данными из ответов API. Для команды сначала выполните соответствующий preview с теми же параметрами, затем скопируйте quote_id и полный expected_revisions в переменные этой папки. expected_revisions — строка с JSON-объектом, подставляемая без кавычек. Для новой команды задайте новый world_request_key; при повторе после потери ответа сохраняйте ключ и тело. Суммы Cr передаются строками. Инструкция: docs/api/insomnia.md.",
+      "description": "Актуальные API мира. ID замените данными из ответов API. Для команды сначала выполните соответствующий preview с теми же параметрами, затем скопируйте quote_id и полный expected_revisions в переменные этой папки. expected_revisions — строка с JSON-объектом, подставляемая без кавычек. Для новой команды задайте новый world_request_key; при повторе после потери ответа сохраняйте ключ и тело. Суммы Cr передаются строками. Инструкция: docs/operations/insomnia.md.",
       "environment": {
         "world_node_id": 1,
         "world_bed_id": 1,
@@ -1808,7 +1808,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/nodes/{{ _.world_node_id }}/building-operation",
       "name": "GET /world/nodes/{id}/building-operation",
-      "description": "Источник: docs/api/world-building-operation.openapi.json. Read owner building operation state and blocking reasons",
+      "description": "Read owner building operation state and blocking reasons",
       "method": "GET",
       "body": {},
       "parameters": [],
@@ -1835,7 +1835,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/nodes/{{ _.world_node_id }}/building-pause-preview",
       "name": "POST /world/nodes/{id}/building-pause-preview",
-      "description": "Источник: docs/api/world-building-operation.openapi.json. Requires world_read, world_write and storage_v2. Only active <-> paused for a ready owned building with at most 100 own rooms. No shelter, nested plot/building, active construction or foreign lodger. Pause closes current housing intervals; resume does not reassign lodging. Station use and incoming storage operations follow existing building access policy; withdrawal remains available. Equipment exposure, budgets, treasury and debts are unchanged. No charge. Preview expires after 300 seconds; commit revalidates under existing locks, with audit and outbox. Same request key replays the original result. Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело.",
+      "description": "Requires world_read, world_write and storage_v2. Only active <-> paused for a ready owned building with at most 100 own rooms. No shelter, nested plot/building, active construction or foreign lodger. Pause closes current housing intervals; resume does not reassign lodging. Station use and incoming storage operations follow existing building access policy; withdrawal remains available. Equipment exposure, budgets, treasury and debts are unchanged. No charge. Preview expires after 300 seconds; commit revalidates under existing locks, with audit and outbox. Same request key replays the original result. Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело.",
       "method": "POST",
       "body": {
         "mimeType": "application/json",
@@ -1870,7 +1870,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/nodes/{{ _.world_node_id }}/building-pause",
       "name": "POST /world/nodes/{id}/building-pause",
-      "description": "Источник: docs/api/world-building-operation.openapi.json. Requires world_read, world_write and storage_v2. Only active <-> paused for a ready owned building with at most 100 own rooms. No shelter, nested plot/building, active construction or foreign lodger. Pause closes current housing intervals; resume does not reassign lodging. Station use and incoming storage operations follow existing building access policy; withdrawal remains available. Equipment exposure, budgets, treasury and debts are unchanged. No charge. Preview expires after 300 seconds; commit revalidates under existing locks, with audit and outbox. Same request key replays the original result. Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело.",
+      "description": "Requires world_read, world_write and storage_v2. Only active <-> paused for a ready owned building with at most 100 own rooms. No shelter, nested plot/building, active construction or foreign lodger. Pause closes current housing intervals; resume does not reassign lodging. Station use and incoming storage operations follow existing building access policy; withdrawal remains available. Equipment exposure, budgets, treasury and debts are unchanged. No charge. Preview expires after 300 seconds; commit revalidates under existing locks, with audit and outbox. Same request key replays the original result. Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело.",
       "method": "POST",
       "body": {
         "mimeType": "application/json",
@@ -1905,7 +1905,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/nodes/{{ _.world_node_id }}/building-resume-preview",
       "name": "POST /world/nodes/{id}/building-resume-preview",
-      "description": "Источник: docs/api/world-building-operation.openapi.json. Requires world_read, world_write and storage_v2. Only active <-> paused for a ready owned building with at most 100 own rooms. No shelter, nested plot/building, active construction or foreign lodger. Pause closes current housing intervals; resume does not reassign lodging. Station use and incoming storage operations follow existing building access policy; withdrawal remains available. Equipment exposure, budgets, treasury and debts are unchanged. No charge. Preview expires after 300 seconds; commit revalidates under existing locks, with audit and outbox. Same request key replays the original result. Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело.",
+      "description": "Requires world_read, world_write and storage_v2. Only active <-> paused for a ready owned building with at most 100 own rooms. No shelter, nested plot/building, active construction or foreign lodger. Pause closes current housing intervals; resume does not reassign lodging. Station use and incoming storage operations follow existing building access policy; withdrawal remains available. Equipment exposure, budgets, treasury and debts are unchanged. No charge. Preview expires after 300 seconds; commit revalidates under existing locks, with audit and outbox. Same request key replays the original result. Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело.",
       "method": "POST",
       "body": {
         "mimeType": "application/json",
@@ -1940,7 +1940,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/nodes/{{ _.world_node_id }}/building-resume",
       "name": "POST /world/nodes/{id}/building-resume",
-      "description": "Источник: docs/api/world-building-operation.openapi.json. Requires world_read, world_write and storage_v2. Only active <-> paused for a ready owned building with at most 100 own rooms. No shelter, nested plot/building, active construction or foreign lodger. Pause closes current housing intervals; resume does not reassign lodging. Station use and incoming storage operations follow existing building access policy; withdrawal remains available. Equipment exposure, budgets, treasury and debts are unchanged. No charge. Preview expires after 300 seconds; commit revalidates under existing locks, with audit and outbox. Same request key replays the original result. Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело.",
+      "description": "Requires world_read, world_write and storage_v2. Only active <-> paused for a ready owned building with at most 100 own rooms. No shelter, nested plot/building, active construction or foreign lodger. Pause closes current housing intervals; resume does not reassign lodging. Station use and incoming storage operations follow existing building access policy; withdrawal remains available. Equipment exposure, budgets, treasury and debts are unchanged. No charge. Preview expires after 300 seconds; commit revalidates under existing locks, with audit and outbox. Same request key replays the original result. Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело.",
       "method": "POST",
       "body": {
         "mimeType": "application/json",
@@ -1987,7 +1987,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/nodes/{{ _.world_node_id }}/building-repair",
       "name": "GET /world/nodes/{id}/building-repair",
-      "description": "Источник: docs/api/world-building-repair.openapi.json. No writes. Reads the original purchase contract or accepted supplement; absent contracts remain unsupported. Requires world_read and storage_v2.",
+      "description": "No writes. Reads the original purchase contract or accepted supplement; absent contracts remain unsupported. Requires world_read and storage_v2.",
       "method": "GET",
       "body": {},
       "parameters": [],
@@ -2014,7 +2014,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/nodes/{{ _.world_node_id }}/building-repair",
       "name": "POST /world/nodes/{id}/building-repair",
-      "description": "Источник: docs/api/world-building-repair.openapi.json. Requires world_write, storage_v2 and active exact wallet. Fixed effective contract from purchase or accepted supplement; ceil(full_price * damage / max_condition) at 0.0001 Cr, ceil each raw material to whole units. Building budget pays original settlement treasury. Personal balance unchanged. Materials only from accessible backpack slots. Only own ready/paused/damaged buildings with own rooms and no construction/shelter/nested estate. Destroyed/archived buildings cannot be repaired. Damaged or stopped buildings remain paused; no lodging restored. Healthy active lodging is preserved. All transfers, consumption, condition, revisions, audit and outbox share a transaction; same key replays original result. Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело.",
+      "description": "Requires world_write, storage_v2 and active exact wallet. Fixed effective contract from purchase or accepted supplement; ceil(full_price * damage / max_condition) at 0.0001 Cr, ceil each raw material to whole units. Building budget pays original settlement treasury. Personal balance unchanged. Materials only from accessible backpack slots. Only own ready/paused/damaged buildings with own rooms and no construction/shelter/nested estate. Destroyed/archived buildings cannot be repaired. Damaged or stopped buildings remain paused; no lodging restored. Healthy active lodging is preserved. All transfers, consumption, condition, revisions, audit and outbox share a transaction; same key replays original result. Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело.",
       "method": "POST",
       "body": {
         "mimeType": "application/json",
@@ -2049,7 +2049,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/nodes/{{ _.world_node_id }}/building-repair-preview",
       "name": "POST /world/nodes/{id}/building-repair-preview",
-      "description": "Источник: docs/api/world-building-repair.openapi.json. Requires world_write, storage_v2 and active exact wallet. Fixed effective contract from purchase or accepted supplement; ceil(full_price * damage / max_condition) at 0.0001 Cr, ceil each raw material to whole units. Building budget pays original settlement treasury. Personal balance unchanged. Materials only from accessible backpack slots. Only own ready/paused/damaged buildings with own rooms and no construction/shelter/nested estate. Destroyed/archived buildings cannot be repaired. Damaged or stopped buildings remain paused; no lodging restored. Healthy active lodging is preserved. All transfers, consumption, condition, revisions, audit and outbox share a transaction; same key replays original result. Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело.",
+      "description": "Requires world_write, storage_v2 and active exact wallet. Fixed effective contract from purchase or accepted supplement; ceil(full_price * damage / max_condition) at 0.0001 Cr, ceil each raw material to whole units. Building budget pays original settlement treasury. Personal balance unchanged. Materials only from accessible backpack slots. Only own ready/paused/damaged buildings with own rooms and no construction/shelter/nested estate. Destroyed/archived buildings cannot be repaired. Damaged or stopped buildings remain paused; no lodging restored. Healthy active lodging is preserved. All transfers, consumption, condition, revisions, audit and outbox share a transaction; same key replays original result. Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело.",
       "method": "POST",
       "body": {
         "mimeType": "application/json",
@@ -2096,7 +2096,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/nodes/{{ _.world_node_id }}/campsite",
       "name": "GET /world/nodes/{id}/campsite",
-      "description": "Источник: docs/api/world-campsite.openapi.json. Player's starter campsite and available actions",
+      "description": "Player's starter campsite and available actions",
       "method": "GET",
       "body": {},
       "parameters": [],
@@ -2123,7 +2123,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/nodes/{{ _.world_node_id }}/budget-grant-preview",
       "name": "POST /world/nodes/{id}/budget-grant-preview",
-      "description": "Источник: docs/api/world-campsite.openapi.json. Quote a targeted transfer from this node's available budget Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело.",
+      "description": "Quote a targeted transfer from this node's available budget Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело.",
       "method": "POST",
       "body": {
         "mimeType": "application/json",
@@ -2158,7 +2158,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/nodes/{{ _.world_node_id }}/budget-grant",
       "name": "POST /world/nodes/{id}/budget-grant",
-      "description": "Источник: docs/api/world-campsite.openapi.json. Move credits atomically between owned budgets Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело.",
+      "description": "Move credits atomically between owned budgets Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело.",
       "method": "POST",
       "body": {
         "mimeType": "application/json",
@@ -2193,7 +2193,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/nodes/{{ _.world_node_id }}/supplies-starter-preview",
       "name": "POST /world/nodes/{id}/supplies-starter-preview",
-      "description": "Источник: docs/api/world-campsite.openapi.json. Quote the one-time starter materials Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело.",
+      "description": "Quote the one-time starter materials Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело.",
       "method": "POST",
       "body": {
         "mimeType": "application/json",
@@ -2228,7 +2228,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/nodes/{{ _.world_node_id }}/supplies-starter",
       "name": "POST /world/nodes/{id}/supplies-starter",
-      "description": "Источник: docs/api/world-campsite.openapi.json. Claim the one-time starter materials Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело.",
+      "description": "Claim the one-time starter materials Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело.",
       "method": "POST",
       "body": {
         "mimeType": "application/json",
@@ -2263,7 +2263,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/nodes/{{ _.world_node_id }}/supplies-gather-preview",
       "name": "POST /world/nodes/{id}/supplies-gather-preview",
-      "description": "Источник: docs/api/world-campsite.openapi.json. Quote the daily gathering with current health modifier Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело.",
+      "description": "Quote the daily gathering with current health modifier Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело.",
       "method": "POST",
       "body": {
         "mimeType": "application/json",
@@ -2298,7 +2298,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/nodes/{{ _.world_node_id }}/supplies-gather",
       "name": "POST /world/nodes/{id}/supplies-gather",
-      "description": "Источник: docs/api/world-campsite.openapi.json. Collect today's materials Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело.",
+      "description": "Collect today's materials Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело.",
       "method": "POST",
       "body": {
         "mimeType": "application/json",
@@ -2345,7 +2345,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/nodes/{{ _.world_node_id }}/construction",
       "name": "GET /world/nodes/{id}/construction",
-      "description": "Источник: docs/api/world-construction.openapi.json. Read-only, latest IDs first, 20 per page; filters applied before count. Archived cancelled projects are listed from their plot, not via archived node access. Waiting for worker is not completion.",
+      "description": "Read-only, latest IDs first, 20 per page; filters applied before count. Archived cancelled projects are listed from their plot, not via archived node access. Waiting for worker is not completion.",
       "method": "GET",
       "body": {},
       "parameters": [
@@ -2388,7 +2388,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/nodes/{{ _.world_node_id }}/construction-pause-preview",
       "name": "POST /world/nodes/{id}/construction-pause-preview",
-      "description": "Источник: docs/api/world-construction.openapi.json. Building node ID, actual owner only. Pause allowed before due time; resume shifts finish_at by paused duration and schedules a new generation. Cancellation requires room for the entire backpack refund. Published terms are immutable; refund plan and backpack revision are pinned on cancel preview. Commands are atomic and idempotent. No per-action charge. Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело.",
+      "description": "Building node ID, actual owner only. Pause allowed before due time; resume shifts finish_at by paused duration and schedules a new generation. Cancellation requires room for the entire backpack refund. Published terms are immutable; refund plan and backpack revision are pinned on cancel preview. Commands are atomic and idempotent. No per-action charge. Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело.",
       "method": "POST",
       "body": {
         "mimeType": "application/json",
@@ -2423,7 +2423,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/nodes/{{ _.world_node_id }}/construction-pause",
       "name": "POST /world/nodes/{id}/construction-pause",
-      "description": "Источник: docs/api/world-construction.openapi.json. Building node ID, actual owner only. Pause allowed before due time; resume shifts finish_at by paused duration and schedules a new generation. Cancellation requires room for the entire backpack refund. Published terms are immutable; refund plan and backpack revision are pinned on cancel preview. Commands are atomic and idempotent. No per-action charge. Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело.",
+      "description": "Building node ID, actual owner only. Pause allowed before due time; resume shifts finish_at by paused duration and schedules a new generation. Cancellation requires room for the entire backpack refund. Published terms are immutable; refund plan and backpack revision are pinned on cancel preview. Commands are atomic and idempotent. No per-action charge. Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело.",
       "method": "POST",
       "body": {
         "mimeType": "application/json",
@@ -2458,7 +2458,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/nodes/{{ _.world_node_id }}/construction-resume-preview",
       "name": "POST /world/nodes/{id}/construction-resume-preview",
-      "description": "Источник: docs/api/world-construction.openapi.json. Building node ID, actual owner only. Pause allowed before due time; resume shifts finish_at by paused duration and schedules a new generation. Cancellation requires room for the entire backpack refund. Published terms are immutable; refund plan and backpack revision are pinned on cancel preview. Commands are atomic and idempotent. No per-action charge. Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело.",
+      "description": "Building node ID, actual owner only. Pause allowed before due time; resume shifts finish_at by paused duration and schedules a new generation. Cancellation requires room for the entire backpack refund. Published terms are immutable; refund plan and backpack revision are pinned on cancel preview. Commands are atomic and idempotent. No per-action charge. Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело.",
       "method": "POST",
       "body": {
         "mimeType": "application/json",
@@ -2493,7 +2493,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/nodes/{{ _.world_node_id }}/construction-resume",
       "name": "POST /world/nodes/{id}/construction-resume",
-      "description": "Источник: docs/api/world-construction.openapi.json. Building node ID, actual owner only. Pause allowed before due time; resume shifts finish_at by paused duration and schedules a new generation. Cancellation requires room for the entire backpack refund. Published terms are immutable; refund plan and backpack revision are pinned on cancel preview. Commands are atomic and idempotent. No per-action charge. Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело.",
+      "description": "Building node ID, actual owner only. Pause allowed before due time; resume shifts finish_at by paused duration and schedules a new generation. Cancellation requires room for the entire backpack refund. Published terms are immutable; refund plan and backpack revision are pinned on cancel preview. Commands are atomic and idempotent. No per-action charge. Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело.",
       "method": "POST",
       "body": {
         "mimeType": "application/json",
@@ -2528,7 +2528,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/nodes/{{ _.world_node_id }}/construction-cancel-preview",
       "name": "POST /world/nodes/{id}/construction-cancel-preview",
-      "description": "Источник: docs/api/world-construction.openapi.json. Building node ID, actual owner only. Pause allowed before due time; resume shifts finish_at by paused duration and schedules a new generation. Cancellation requires room for the entire backpack refund. Published terms are immutable; refund plan and backpack revision are pinned on cancel preview. Commands are atomic and idempotent. No per-action charge. Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело.",
+      "description": "Building node ID, actual owner only. Pause allowed before due time; resume shifts finish_at by paused duration and schedules a new generation. Cancellation requires room for the entire backpack refund. Published terms are immutable; refund plan and backpack revision are pinned on cancel preview. Commands are atomic and idempotent. No per-action charge. Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело.",
       "method": "POST",
       "body": {
         "mimeType": "application/json",
@@ -2563,7 +2563,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/nodes/{{ _.world_node_id }}/construction-cancel",
       "name": "POST /world/nodes/{id}/construction-cancel",
-      "description": "Источник: docs/api/world-construction.openapi.json. Building node ID, actual owner only. Pause allowed before due time; resume shifts finish_at by paused duration and schedules a new generation. Cancellation requires room for the entire backpack refund. Published terms are immutable; refund plan and backpack revision are pinned on cancel preview. Commands are atomic and idempotent. No per-action charge. Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело.",
+      "description": "Building node ID, actual owner only. Pause allowed before due time; resume shifts finish_at by paused duration and schedules a new generation. Cancellation requires room for the entire backpack refund. Published terms are immutable; refund plan and backpack revision are pinned on cancel preview. Commands are atomic and idempotent. No per-action charge. Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело.",
       "method": "POST",
       "body": {
         "mimeType": "application/json",
@@ -2610,7 +2610,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/crops",
       "name": "GET /world/crops",
-      "description": "Contract: docs/api/world-cultivation.openapi.json. Growth never pauses. Missed watering halves yield; expired crops cannot be harvested. Dig requires a shovel and wears it once. Harvest enters five-slot garden storage.",
+      "description": "Growth never pauses. Missed watering halves yield; expired crops cannot be harvested. Dig requires a shovel and wears it once. Harvest enters five-slot garden storage.",
       "method": "GET",
       "body": {},
       "parameters": [
@@ -2648,7 +2648,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/beds/{{ _.world_bed_id }}/cultivation",
       "name": "GET /world/beds/{id}/cultivation",
-      "description": "Contract: docs/api/world-cultivation.openapi.json. Growth never pauses. Missed watering halves yield; expired crops cannot be harvested. Dig requires a shovel and wears it once. Harvest enters five-slot garden storage.",
+      "description": "Growth never pauses. Missed watering halves yield; expired crops cannot be harvested. Dig requires a shovel and wears it once. Harvest enters five-slot garden storage.",
       "method": "GET",
       "body": {},
       "parameters": [],
@@ -2675,7 +2675,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/beds/{{ _.world_bed_id }}/sow-preview",
       "name": "POST /world/beds/{id}/sow-preview",
-      "description": "Contract: docs/api/world-cultivation.openapi.json. Growth never pauses. Missed watering halves yield; expired crops cannot be harvested. Dig requires a shovel and wears it once. Harvest enters five-slot garden storage.",
+      "description": "Growth never pauses. Missed watering halves yield; expired crops cannot be harvested. Dig requires a shovel and wears it once. Harvest enters five-slot garden storage.",
       "method": "POST",
       "body": {
         "mimeType": "application/json",
@@ -2710,7 +2710,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/beds/{{ _.world_bed_id }}/sow",
       "name": "POST /world/beds/{id}/sow",
-      "description": "Contract: docs/api/world-cultivation.openapi.json. Growth never pauses. Missed watering halves yield; expired crops cannot be harvested. Dig requires a shovel and wears it once. Harvest enters five-slot garden storage.",
+      "description": "Growth never pauses. Missed watering halves yield; expired crops cannot be harvested. Dig requires a shovel and wears it once. Harvest enters five-slot garden storage.",
       "method": "POST",
       "body": {
         "mimeType": "application/json",
@@ -2745,7 +2745,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/beds/{{ _.world_bed_id }}/water-preview",
       "name": "POST /world/beds/{id}/water-preview",
-      "description": "Contract: docs/api/world-cultivation.openapi.json. Growth never pauses. Missed watering halves yield; expired crops cannot be harvested. Dig requires a shovel and wears it once. Harvest enters five-slot garden storage.",
+      "description": "Growth never pauses. Missed watering halves yield; expired crops cannot be harvested. Dig requires a shovel and wears it once. Harvest enters five-slot garden storage.",
       "method": "POST",
       "body": {
         "mimeType": "application/json",
@@ -2780,7 +2780,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/beds/{{ _.world_bed_id }}/water",
       "name": "POST /world/beds/{id}/water",
-      "description": "Contract: docs/api/world-cultivation.openapi.json. Growth never pauses. Missed watering halves yield; expired crops cannot be harvested. Dig requires a shovel and wears it once. Harvest enters five-slot garden storage.",
+      "description": "Growth never pauses. Missed watering halves yield; expired crops cannot be harvested. Dig requires a shovel and wears it once. Harvest enters five-slot garden storage.",
       "method": "POST",
       "body": {
         "mimeType": "application/json",
@@ -2815,7 +2815,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/beds/{{ _.world_bed_id }}/harvest-preview",
       "name": "POST /world/beds/{id}/harvest-preview",
-      "description": "Contract: docs/api/world-cultivation.openapi.json. Growth never pauses. Missed watering halves yield; expired crops cannot be harvested. Dig requires a shovel and wears it once. Harvest enters five-slot garden storage.",
+      "description": "Growth never pauses. Missed watering halves yield; expired crops cannot be harvested. Dig requires a shovel and wears it once. Harvest enters five-slot garden storage.",
       "method": "POST",
       "body": {
         "mimeType": "application/json",
@@ -2850,7 +2850,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/beds/{{ _.world_bed_id }}/harvest",
       "name": "POST /world/beds/{id}/harvest",
-      "description": "Contract: docs/api/world-cultivation.openapi.json. Growth never pauses. Missed watering halves yield; expired crops cannot be harvested. Dig requires a shovel and wears it once. Harvest enters five-slot garden storage.",
+      "description": "Growth never pauses. Missed watering halves yield; expired crops cannot be harvested. Dig requires a shovel and wears it once. Harvest enters five-slot garden storage.",
       "method": "POST",
       "body": {
         "mimeType": "application/json",
@@ -2885,7 +2885,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/beds/{{ _.world_bed_id }}/cancel-preview",
       "name": "POST /world/beds/{id}/cancel-preview",
-      "description": "Contract: docs/api/world-cultivation.openapi.json. Growth never pauses. Missed watering halves yield; expired crops cannot be harvested. Dig requires a shovel and wears it once. Harvest enters five-slot garden storage.",
+      "description": "Growth never pauses. Missed watering halves yield; expired crops cannot be harvested. Dig requires a shovel and wears it once. Harvest enters five-slot garden storage.",
       "method": "POST",
       "body": {
         "mimeType": "application/json",
@@ -2920,7 +2920,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/beds/{{ _.world_bed_id }}/cancel",
       "name": "POST /world/beds/{id}/cancel",
-      "description": "Contract: docs/api/world-cultivation.openapi.json. Growth never pauses. Missed watering halves yield; expired crops cannot be harvested. Dig requires a shovel and wears it once. Harvest enters five-slot garden storage.",
+      "description": "Growth never pauses. Missed watering halves yield; expired crops cannot be harvested. Dig requires a shovel and wears it once. Harvest enters five-slot garden storage.",
       "method": "POST",
       "body": {
         "mimeType": "application/json",
@@ -2955,7 +2955,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/crops/publish-preview",
       "name": "POST /world/crops/publish-preview",
-      "description": "Contract: docs/api/world-cultivation.openapi.json. Growth never pauses. Missed watering halves yield; expired crops cannot be harvested. Dig requires a shovel and wears it once. Harvest enters five-slot garden storage.",
+      "description": "Growth never pauses. Missed watering halves yield; expired crops cannot be harvested. Dig requires a shovel and wears it once. Harvest enters five-slot garden storage.",
       "method": "POST",
       "body": {
         "mimeType": "application/json",
@@ -2990,7 +2990,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/crops/publish",
       "name": "POST /world/crops/publish",
-      "description": "Contract: docs/api/world-cultivation.openapi.json. Growth never pauses. Missed watering halves yield; expired crops cannot be harvested. Dig requires a shovel and wears it once. Harvest enters five-slot garden storage.",
+      "description": "Growth never pauses. Missed watering halves yield; expired crops cannot be harvested. Dig requires a shovel and wears it once. Harvest enters five-slot garden storage.",
       "method": "POST",
       "body": {
         "mimeType": "application/json",
@@ -3037,7 +3037,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/nodes/{{ _.world_node_id }}/demolition",
       "name": "GET /world/nodes/{id}/demolition",
-      "description": "Источник: docs/api/world-demolition.openapi.json. No writes. Ordinary demolition only: purchased building with original owned active room/plot; no items/active equipment/containers/lodging/construction/orders, nonzero account balances or reserves, open commitments/obligations/receipts/funding lots or external financial children. Shelter/complex/unpurchased buildings excluded.",
+      "description": "No writes. Ordinary demolition only: purchased building with original owned active room/plot; no items/active equipment/containers/lodging/construction/orders, nonzero account balances or reserves, open commitments/obligations/receipts/funding lots or external financial children. Shelter/complex/unpurchased buildings excluded.",
       "method": "GET",
       "body": {},
       "parameters": [],
@@ -3064,7 +3064,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/nodes/{{ _.world_node_id }}/demolitions",
       "name": "GET /world/nodes/{id}/demolitions",
-      "description": "Источник: docs/api/world-demolition.openapi.json. Latest receipt IDs first, filters before count, 20 per page; history survives archival. No writes.",
+      "description": "Latest receipt IDs first, filters before count, 20 per page; history survives archival. No writes.",
       "method": "GET",
       "body": {},
       "parameters": [
@@ -3102,7 +3102,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/nodes/{{ _.world_node_id }}/demolish-preview",
       "name": "POST /world/nodes/{id}/demolish-preview",
-      "description": "Источник: docs/api/world-demolition.openapi.json. Requires world_read/world_write/storage_v2. No fee, no credit refund or salvage. Explicit quote revalidated under CommandBus locks. Archives building and room, retires empty storages/slots, preserves purchase/entitlements/finance/housing history, records unique demolition receipt and releases purchase footprint exactly once. No forced recovery. Atomic audit/outbox/revisions; identical request key replays result including return_node_id=plot. Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело.",
+      "description": "Requires world_read/world_write/storage_v2. No fee, no credit refund or salvage. Explicit quote revalidated under CommandBus locks. Archives building and room, retires empty storages/slots, preserves purchase/entitlements/finance/housing history, records unique demolition receipt and releases purchase footprint exactly once. No forced recovery. Atomic audit/outbox/revisions; identical request key replays result including return_node_id=plot. Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело.",
       "method": "POST",
       "body": {
         "mimeType": "application/json",
@@ -3137,7 +3137,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/nodes/{{ _.world_node_id }}/demolish",
       "name": "POST /world/nodes/{id}/demolish",
-      "description": "Источник: docs/api/world-demolition.openapi.json. Requires world_read/world_write/storage_v2. No fee, no credit refund or salvage. Explicit quote revalidated under CommandBus locks. Archives building and room, retires empty storages/slots, preserves purchase/entitlements/finance/housing history, records unique demolition receipt and releases purchase footprint exactly once. No forced recovery. Atomic audit/outbox/revisions; identical request key replays result including return_node_id=plot. Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело.",
+      "description": "Requires world_read/world_write/storage_v2. No fee, no credit refund or salvage. Explicit quote revalidated under CommandBus locks. Archives building and room, retires empty storages/slots, preserves purchase/entitlements/finance/housing history, records unique demolition receipt and releases purchase footprint exactly once. No forced recovery. Atomic audit/outbox/revisions; identical request key replays result including return_node_id=plot. Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело.",
       "method": "POST",
       "body": {
         "mimeType": "application/json",
@@ -3184,7 +3184,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/nodes/{{ _.world_node_id }}/economy",
       "name": "GET /world/nodes/{id}/economy",
-      "description": "Источник: docs/api/world-economy.openapi.json. ",
+      "description": "",
       "method": "GET",
       "body": {},
       "parameters": [
@@ -3217,7 +3217,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/nodes/{{ _.world_node_id }}/invest-preview",
       "name": "POST /world/nodes/{id}/invest-preview",
-      "description": "Источник: docs/api/world-economy.openapi.json.  Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело.",
+      "description": "Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело.",
       "method": "POST",
       "body": {
         "mimeType": "application/json",
@@ -3252,7 +3252,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/nodes/{{ _.world_node_id }}/invest",
       "name": "POST /world/nodes/{id}/invest",
-      "description": "Источник: docs/api/world-economy.openapi.json.  Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело.",
+      "description": "Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело.",
       "method": "POST",
       "body": {
         "mimeType": "application/json",
@@ -3287,7 +3287,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/nodes/{{ _.world_node_id }}/collect-preview",
       "name": "POST /world/nodes/{id}/collect-preview",
-      "description": "Источник: docs/api/world-economy.openapi.json. Preview collect Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело.",
+      "description": "Preview collect Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело.",
       "method": "POST",
       "body": {
         "mimeType": "application/json",
@@ -3322,7 +3322,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/nodes/{{ _.world_node_id }}/collect",
       "name": "POST /world/nodes/{id}/collect",
-      "description": "Источник: docs/api/world-economy.openapi.json. Confirm collect Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело.",
+      "description": "Confirm collect Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело.",
       "method": "POST",
       "body": {
         "mimeType": "application/json",
@@ -3357,7 +3357,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/nodes/{{ _.world_node_id }}/pay-preview",
       "name": "POST /world/nodes/{id}/pay-preview",
-      "description": "Источник: docs/api/world-economy.openapi.json. Preview pay Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело.",
+      "description": "Preview pay Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело.",
       "method": "POST",
       "body": {
         "mimeType": "application/json",
@@ -3392,7 +3392,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/nodes/{{ _.world_node_id }}/pay",
       "name": "POST /world/nodes/{id}/pay",
-      "description": "Источник: docs/api/world-economy.openapi.json. Confirm pay Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело.",
+      "description": "Confirm pay Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело.",
       "method": "POST",
       "body": {
         "mimeType": "application/json",
@@ -3427,7 +3427,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/nodes/{{ _.world_node_id }}/finance-policy-preview",
       "name": "POST /world/nodes/{id}/finance-policy-preview",
-      "description": "Источник: docs/api/world-economy.openapi.json. Preview finance-policy Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело.",
+      "description": "Preview finance-policy Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело.",
       "method": "POST",
       "body": {
         "mimeType": "application/json",
@@ -3462,7 +3462,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/nodes/{{ _.world_node_id }}/finance-policy",
       "name": "POST /world/nodes/{id}/finance-policy",
-      "description": "Источник: docs/api/world-economy.openapi.json. Confirm finance-policy Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело.",
+      "description": "Confirm finance-policy Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело.",
       "method": "POST",
       "body": {
         "mimeType": "application/json",
@@ -3497,7 +3497,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/nodes/{{ _.world_node_id }}/obligations",
       "name": "GET /world/nodes/{id}/obligations",
-      "description": "Источник: docs/api/world-economy.openapi.json. Owner-only obligations, newest first, 50 per page",
+      "description": "Owner-only obligations, newest first, 50 per page",
       "method": "GET",
       "body": {},
       "parameters": [
@@ -3542,7 +3542,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/nodes/{{ _.world_node_id }}/equipment-expansion",
       "name": "GET /world/nodes/{id}/equipment-expansion",
-      "description": "Источник: docs/api/world-equipment-expansion.openapi.json. ",
+      "description": "",
       "method": "GET",
       "body": {},
       "parameters": [],
@@ -3569,7 +3569,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/nodes/{{ _.world_node_id }}/equipment-expand-preview",
       "name": "POST /world/nodes/{id}/equipment-expand-preview",
-      "description": "Источник: docs/api/world-equipment-expansion.openapi.json. Owned purchased room only. Immutable purchased policy; initial places included, additional places priced B,2B,... within published area/limit. Room budget pays the original settlement treasury. Optional explicit personal top-up commits together with payment, entitlements, slot activation and storage capacity. Existing equipment and its wear do not change. Old fixed purchases cannot acquire a free expansion policy. Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело.",
+      "description": "Owned purchased room only. Immutable purchased policy; initial places included, additional places priced B,2B,... within published area/limit. Room budget pays the original settlement treasury. Optional explicit personal top-up commits together with payment, entitlements, slot activation and storage capacity. Existing equipment and its wear do not change. Old fixed purchases cannot acquire a free expansion policy. Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело.",
       "method": "POST",
       "body": {
         "mimeType": "application/json",
@@ -3604,7 +3604,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/nodes/{{ _.world_node_id }}/equipment-expand",
       "name": "POST /world/nodes/{id}/equipment-expand",
-      "description": "Источник: docs/api/world-equipment-expansion.openapi.json. Owned purchased room only. Immutable purchased policy; initial places included, additional places priced B,2B,... within published area/limit. Room budget pays the original settlement treasury. Optional explicit personal top-up commits together with payment, entitlements, slot activation and storage capacity. Existing equipment and its wear do not change. Old fixed purchases cannot acquire a free expansion policy. Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело.",
+      "description": "Owned purchased room only. Immutable purchased policy; initial places included, additional places priced B,2B,... within published area/limit. Room budget pays the original settlement treasury. Optional explicit personal top-up commits together with payment, entitlements, slot activation and storage capacity. Existing equipment and its wear do not change. Old fixed purchases cannot acquire a free expansion policy. Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело.",
       "method": "POST",
       "body": {
         "mimeType": "application/json",
@@ -3651,7 +3651,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/equipment/{{ _.world_equipment_id }}/wear",
       "name": "GET /world/equipment/{id}/wear",
-      "description": "Источник: docs/api/world-equipment-wear.openapi.json. Read equipment durability and interval history",
+      "description": "Read equipment durability and interval history",
       "method": "GET",
       "body": {},
       "parameters": [
@@ -3706,7 +3706,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/nodes/{{ _.world_node_id }}/finance-hierarchy",
       "name": "GET /world/nodes/{id}/finance-hierarchy",
-      "description": "Источник: docs/api/world-finance-hierarchy.openapi.json. world_read and actual root ownership required. Follow economy_parent_rule/history current links (matching history/subject/revision, effective_to null), never world_node.parent_id. Apply ownership and WorldAccessPolicy before limits and traversal; stop at foreign/hidden/archived nodes and never jump over them. Only node subjects with Cr budget/treasury are included; loss sinks, assets/NPC accounts and personal wallets excluded. Internal transfers contribute zero net boundary flow. Lifetime historical transfers are classified using current membership; this is not an as-of historical consolidation. REPEATABLE READ snapshot for membership, balances, ledger, counts and members. No writes, provisioning, collection, catch-up jobs or hierarchy repair.",
+      "description": "world_read and actual root ownership required. Follow economy_parent_rule/history current links (matching history/subject/revision, effective_to null), never world_node.parent_id. Apply ownership and WorldAccessPolicy before limits and traversal; stop at foreign/hidden/archived nodes and never jump over them. Only node subjects with Cr budget/treasury are included; loss sinks, assets/NPC accounts and personal wallets excluded. Internal transfers contribute zero net boundary flow. Lifetime historical transfers are classified using current membership; this is not an as-of historical consolidation. REPEATABLE READ snapshot for membership, balances, ledger, counts and members. No writes, provisioning, collection, catch-up jobs or hierarchy repair.",
       "method": "GET",
       "body": {},
       "parameters": [
@@ -3756,7 +3756,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/nodes/{{ _.world_node_id }}/finance-report",
       "name": "GET /world/nodes/{id}/finance-report",
-      "description": "Источник: docs/api/world-finance-report.openapi.json. world_read and actual ownership required. Does not need wallet/storage activation. A REPEATABLE READ snapshot keeps balances/totals/count/items coherent. Query uses only this node budget and treasury; world loss sink and descendant accounts are excluded. Internal transfers appear once. Foreign account IDs, foreign balances, user IDs and operation IDs are not returned. All totals are over the whole lifetime, even when the journal is filtered; sort is fixed descending ID. GET does not collect, repair balances, settle losses, create accounts or enqueue jobs.",
+      "description": "world_read and actual ownership required. Does not need wallet/storage activation. A REPEATABLE READ snapshot keeps balances/totals/count/items coherent. Query uses only this node budget and treasury; world loss sink and descendant accounts are excluded. Internal transfers appear once. Foreign account IDs, foreign balances, user IDs and operation IDs are not returned. All totals are over the whole lifetime, even when the journal is filtered; sort is fixed descending ID. GET does not collect, repair balances, settle losses, create accounts or enqueue jobs.",
       "method": "GET",
       "body": {},
       "parameters": [
@@ -3816,7 +3816,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/nodes/{{ _.world_node_id }}/garden",
       "name": "GET /world/nodes/{id}/garden",
-      "description": "Источник: docs/api/world-garden.openapi.json. ",
+      "description": "Use the owned purchased garden ID to open more beds, including gardens under a campsite. garden.beds gives each retained opening price; garden.available_budget and can_expand describe current availability. Preview garden-expand with quantity and explicit top_up=true only when personal funds may cover the budget shortage.",
       "method": "GET",
       "body": {},
       "parameters": [],
@@ -3843,7 +3843,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/nodes/{{ _.world_node_id }}/garden-publish-preview",
       "name": "POST /world/nodes/{id}/garden-publish-preview",
-      "description": "Источник: docs/api/world-garden.openapi.json. One current settlement offer; publication replaces only future purchases. Buy at owned campsite, expand at owned garden. One permanent starter garden per membership. top_up=true explicitly permits the quoted personal contribution and budget payment in one transaction. Bought expansion price is pinned; beds cost B..9B. No crops or automatic income. Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело.",
+      "description": "One current settlement offer; publication replaces only future purchases. Buy at owned campsite, expand at owned garden. One permanent starter garden per membership. top_up=true explicitly permits the quoted personal contribution and budget payment in one transaction. Bought expansion price is pinned; beds cost B..9B. No crops or automatic income. Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело.",
       "method": "POST",
       "body": {
         "mimeType": "application/json",
@@ -3878,7 +3878,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/nodes/{{ _.world_node_id }}/garden-publish",
       "name": "POST /world/nodes/{id}/garden-publish",
-      "description": "Источник: docs/api/world-garden.openapi.json. One current settlement offer; publication replaces only future purchases. Buy at owned campsite, expand at owned garden. One permanent starter garden per membership. top_up=true explicitly permits the quoted personal contribution and budget payment in one transaction. Bought expansion price is pinned; beds cost B..9B. No crops or automatic income. Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело. Successful publication also returns offer_id; replay returns the same offer_id.",
+      "description": "One current settlement offer; publication replaces only future purchases. Buy at owned campsite, expand at owned garden. One permanent starter garden per membership. top_up=true explicitly permits the quoted personal contribution and budget payment in one transaction. Bought expansion price is pinned; beds cost B..9B. No crops or automatic income. Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело. Successful publication also returns offer_id; replay returns the same offer_id.",
       "method": "POST",
       "body": {
         "mimeType": "application/json",
@@ -3913,7 +3913,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/nodes/{{ _.world_node_id }}/garden-withdraw-preview",
       "name": "POST /world/nodes/{id}/garden-withdraw-preview",
-      "description": "Источник: docs/api/world-garden.openapi.json. One current settlement offer; publication replaces only future purchases. Buy at owned campsite, expand at owned garden. One permanent starter garden per membership. top_up=true explicitly permits the quoted personal contribution and budget payment in one transaction. Bought expansion price is pinned; beds cost B..9B. No crops or automatic income. Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело.",
+      "description": "One current settlement offer; publication replaces only future purchases. Buy at owned campsite, expand at owned garden. One permanent starter garden per membership. top_up=true explicitly permits the quoted personal contribution and budget payment in one transaction. Bought expansion price is pinned; beds cost B..9B. No crops or automatic income. Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело.",
       "method": "POST",
       "body": {
         "mimeType": "application/json",
@@ -3948,7 +3948,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/nodes/{{ _.world_node_id }}/garden-withdraw",
       "name": "POST /world/nodes/{id}/garden-withdraw",
-      "description": "Источник: docs/api/world-garden.openapi.json. One current settlement offer; publication replaces only future purchases. Buy at owned campsite, expand at owned garden. One permanent starter garden per membership. top_up=true explicitly permits the quoted personal contribution and budget payment in one transaction. Bought expansion price is pinned; beds cost B..9B. No crops or automatic income. Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело.",
+      "description": "One current settlement offer; publication replaces only future purchases. Buy at owned campsite, expand at owned garden. One permanent starter garden per membership. top_up=true explicitly permits the quoted personal contribution and budget payment in one transaction. Bought expansion price is pinned; beds cost B..9B. No crops or automatic income. Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело.",
       "method": "POST",
       "body": {
         "mimeType": "application/json",
@@ -3983,7 +3983,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/nodes/{{ _.world_node_id }}/garden-buy-preview",
       "name": "[DEPRECATED] POST /world/nodes/{id}/garden-buy-preview",
-      "description": "Deprecated для схемы 38: создание объектов через /v1/world/start и /v1/world/builds, см. docs/api/simple-world.md. Источник: docs/api/world-garden.openapi.json. One current settlement offer; publication replaces only future purchases. Buy at owned campsite, expand at owned garden. One permanent starter garden per membership. top_up=true explicitly permits the quoted personal contribution and budget payment in one transaction. Bought expansion price is pinned; beds cost B..9B. No crops or automatic income. Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело.",
+      "description": "Deprecated для схемы 38: создание объектов через /v1/world/start и /v1/world/builds, см. docs/architecture/simple-world-api.md. One current settlement offer; publication replaces only future purchases. Buy at owned campsite, expand at owned garden. One permanent starter garden per membership. top_up=true explicitly permits the quoted personal contribution and budget payment in one transaction. Bought expansion price is pinned; beds cost B..9B. No crops or automatic income. Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело.",
       "method": "POST",
       "body": {
         "mimeType": "application/json",
@@ -4018,7 +4018,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/nodes/{{ _.world_node_id }}/garden-buy",
       "name": "[DEPRECATED] POST /world/nodes/{id}/garden-buy",
-      "description": "Deprecated для схемы 38: создание объектов через /v1/world/start и /v1/world/builds, см. docs/api/simple-world.md. Источник: docs/api/world-garden.openapi.json. One current settlement offer; publication replaces only future purchases. Buy at owned campsite, expand at owned garden. One permanent starter garden per membership. top_up=true explicitly permits the quoted personal contribution and budget payment in one transaction. Bought expansion price is pinned; beds cost B..9B. No crops or automatic income. Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело.",
+      "description": "Deprecated для схемы 38: создание объектов через /v1/world/start и /v1/world/builds, см. docs/architecture/simple-world-api.md. One current settlement offer; publication replaces only future purchases. Buy at owned campsite, expand at owned garden. One permanent starter garden per membership. top_up=true explicitly permits the quoted personal contribution and budget payment in one transaction. Bought expansion price is pinned; beds cost B..9B. No crops or automatic income. Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело.",
       "method": "POST",
       "body": {
         "mimeType": "application/json",
@@ -4052,12 +4052,12 @@
       "modified": 1791009594237,
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/nodes/{{ _.world_node_id }}/garden-expand-preview",
-      "name": "[DEPRECATED] POST /world/nodes/{id}/garden-expand-preview",
-      "description": "Deprecated для схемы 38: создание объектов через /v1/world/start и /v1/world/builds, см. docs/api/simple-world.md. Источник: docs/api/world-garden.openapi.json. One current settlement offer; publication replaces only future purchases. Buy at owned campsite, expand at owned garden. One permanent starter garden per membership. top_up=true explicitly permits the quoted personal contribution and budget payment in one transaction. Bought expansion price is pinned; beds cost B..9B. No crops or automatic income. Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело.",
+      "name": "POST /world/nodes/{id}/garden-expand-preview",
+      "description": "Open only the selected locked beds of an existing owned garden. Optional bed_ids: unique integer IDs, count must equal quantity; individual prices remain pinned to each ordinal. Without bed_ids open the next remaining closed beds. From 3 beds discount is 5%. Nonconsecutive open rights are valid. top_up=true explicitly allows personal contribution. Preview first; execute with identical selection, quote_id, expected_revisions and a fresh request_key. Retry uses the same key and payload.",
       "method": "POST",
       "body": {
         "mimeType": "application/json",
-        "text": "{\n  \"top_up\": false,\n  \"quantity\": 1\n}"
+        "text": "{\n  \"top_up\": false,\n  \"quantity\": 1,\n  \"bed_ids\": [{{ _.world_bed_id }}]\n}"
       },
       "parameters": [],
       "headers": [
@@ -4087,12 +4087,12 @@
       "modified": 1791009594237,
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/nodes/{{ _.world_node_id }}/garden-expand",
-      "name": "[DEPRECATED] POST /world/nodes/{id}/garden-expand",
-      "description": "Deprecated для схемы 38: создание объектов через /v1/world/start и /v1/world/builds, см. docs/api/simple-world.md. Источник: docs/api/world-garden.openapi.json. One current settlement offer; publication replaces only future purchases. Buy at owned campsite, expand at owned garden. One permanent starter garden per membership. top_up=true explicitly permits the quoted personal contribution and budget payment in one transaction. Bought expansion price is pinned; beds cost B..9B. No crops or automatic income. Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело.",
+      "name": "POST /world/nodes/{id}/garden-expand",
+      "description": "Open only the selected locked beds of an existing owned garden. Optional bed_ids: unique integer IDs, count must equal quantity; individual prices remain pinned to each ordinal. Without bed_ids open the next remaining closed beds. From 3 beds discount is 5%. Nonconsecutive open rights are valid. top_up=true explicitly allows personal contribution. Preview first; execute with identical selection, quote_id, expected_revisions and a fresh request_key. Retry uses the same key and payload.",
       "method": "POST",
       "body": {
         "mimeType": "application/json",
-        "text": "{\n  \"top_up\": false,\n  \"quantity\": 1,\n  \"request_key\": \"{{ _.world_request_key }}\",\n  \"quote_id\": \"{{ _.world_quote_id }}\",\n  \"expected_revisions\": {{ _.world_expected_revisions }}\n}"
+        "text": "{\n  \"top_up\": false,\n  \"quantity\": 1,\n  \"bed_ids\": [{{ _.world_bed_id }}],\n  \"request_key\": \"{{ _.world_request_key }}\",\n  \"quote_id\": \"{{ _.world_quote_id }}\",\n  \"expected_revisions\": {{ _.world_expected_revisions }}\n}"
       },
       "parameters": [],
       "headers": [
@@ -4135,7 +4135,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/nodes/{{ _.world_node_id }}/housing",
       "name": "GET /world/nodes/{id}/housing",
-      "description": "Источник: docs/api/world-housing.openapi.json. Read personal house bunk and current lodging assignment",
+      "description": "Read personal house bunk and current lodging assignment",
       "method": "GET",
       "body": {},
       "parameters": [],
@@ -4162,7 +4162,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/nodes/{{ _.world_node_id }}/housing-lodge-preview",
       "name": "POST /world/nodes/{id}/housing-lodge-preview",
-      "description": "Источник: docs/api/world-housing.openapi.json. CommandBus owner/registry locks serialize shelter and house occupancy. One current assignment per player. No charge. Preview lasts 300 seconds; commit pins place/actor/interval and room revision, saves audit/outbox and exact replay. Protection requires the same place for the entire night; no retroactive healing. Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело.",
+      "description": "CommandBus owner/registry locks serialize shelter and house occupancy. One current assignment per player. No charge. Preview lasts 300 seconds; commit pins place/actor/interval and room revision, saves audit/outbox and exact replay. Protection requires the same place for the entire night; no retroactive healing. Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело.",
       "method": "POST",
       "body": {
         "mimeType": "application/json",
@@ -4197,7 +4197,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/nodes/{{ _.world_node_id }}/housing-lodge",
       "name": "POST /world/nodes/{id}/housing-lodge",
-      "description": "Источник: docs/api/world-housing.openapi.json. CommandBus owner/registry locks serialize shelter and house occupancy. One current assignment per player. No charge. Preview lasts 300 seconds; commit pins place/actor/interval and room revision, saves audit/outbox and exact replay. Protection requires the same place for the entire night; no retroactive healing. Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело.",
+      "description": "CommandBus owner/registry locks serialize shelter and house occupancy. One current assignment per player. No charge. Preview lasts 300 seconds; commit pins place/actor/interval and room revision, saves audit/outbox and exact replay. Protection requires the same place for the entire night; no retroactive healing. Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело.",
       "method": "POST",
       "body": {
         "mimeType": "application/json",
@@ -4232,7 +4232,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/nodes/{{ _.world_node_id }}/housing-leave-preview",
       "name": "POST /world/nodes/{id}/housing-leave-preview",
-      "description": "Источник: docs/api/world-housing.openapi.json. CommandBus owner/registry locks serialize shelter and house occupancy. One current assignment per player. No charge. Preview lasts 300 seconds; commit pins place/actor/interval and room revision, saves audit/outbox and exact replay. Protection requires the same place for the entire night; no retroactive healing. Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело.",
+      "description": "CommandBus owner/registry locks serialize shelter and house occupancy. One current assignment per player. No charge. Preview lasts 300 seconds; commit pins place/actor/interval and room revision, saves audit/outbox and exact replay. Protection requires the same place for the entire night; no retroactive healing. Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело.",
       "method": "POST",
       "body": {
         "mimeType": "application/json",
@@ -4267,7 +4267,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/nodes/{{ _.world_node_id }}/housing-leave",
       "name": "POST /world/nodes/{id}/housing-leave",
-      "description": "Источник: docs/api/world-housing.openapi.json. CommandBus owner/registry locks serialize shelter and house occupancy. One current assignment per player. No charge. Preview lasts 300 seconds; commit pins place/actor/interval and room revision, saves audit/outbox and exact replay. Protection requires the same place for the entire night; no retroactive healing. Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело.",
+      "description": "CommandBus owner/registry locks serialize shelter and house occupancy. One current assignment per player. No charge. Preview lasts 300 seconds; commit pins place/actor/interval and room revision, saves audit/outbox and exact replay. Protection requires the same place for the entire night; no retroactive healing. Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело.",
       "method": "POST",
       "body": {
         "mimeType": "application/json",
@@ -4314,7 +4314,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/nodes/{{ _.world_node_id }}/nights",
       "name": "GET /world/nodes/{id}/nights",
-      "description": "Источник: docs/api/world-nights.openapi.json. Owner-only starter campsite state. GET never resolves a night. History is pinned to the returned health checkpoint. Publication and worker execution are separate CLI operations.",
+      "description": "Owner-only starter campsite state. GET never resolves a night. History is pinned to the returned health checkpoint. Publication and worker execution are separate CLI operations.",
       "method": "GET",
       "body": {},
       "parameters": [
@@ -4327,6 +4327,13 @@
           "name": "outcome",
           "value": "",
           "disabled": true
+        },
+        {
+          "id": "pair_world_nights_limit",
+          "name": "per-page",
+          "value": "30",
+          "description": "Последние 30 ночей в модалке; допустимо 1–30",
+          "disabled": false
         }
       ],
       "headers": [],
@@ -4364,7 +4371,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/notifications",
       "name": "GET /world/notifications",
-      "description": "Источник: docs/api/world-notifications.openapi.json. Recipient authorization is independent of world-manage. Search/count/page share one snapshot. No raw outbox payload, owner financial metadata or node link in the response.",
+      "description": "Recipient authorization is independent of world-manage. Search/count/page share one snapshot. No raw outbox payload, owner financial metadata or node link in the response.",
       "method": "GET",
       "body": {},
       "parameters": [
@@ -4412,7 +4419,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/notifications/{{ _.world_notification_id }}/read",
       "name": "POST /world/notifications/{id}/read",
-      "description": "Источник: docs/api/world-notifications.openapi.json. POST without quote. Repeating preserves the original read_at. Missing or foreign notification returns 404. Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело.",
+      "description": "POST without quote. Repeating preserves the original read_at. Missing or foreign notification returns 404. Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело.",
       "method": "POST",
       "body": {
         "mimeType": "application/json",
@@ -4447,7 +4454,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/notification-preferences",
       "name": "GET /world/notification-preferences",
-      "description": "Источник: docs/api/world-notifications.openapi.json. Read notification preferences",
+      "description": "Read notification preferences",
       "method": "GET",
       "body": {},
       "parameters": [],
@@ -4474,7 +4481,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/notification-preferences",
       "name": "POST /world/notification-preferences",
-      "description": "Источник: docs/api/world-notifications.openapi.json. POST without quote; expected_revision=0 creates an absent preference. Stale different values return 409; retry with identical values succeeds. Quiet times are both null or both minutes 0..1439 with different values, including overnight ranges. In-app messages remain visible during quiet hours; push delivery is not implemented. Disabled types suppress future delivery, not existing inbox rows. Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело.",
+      "description": "POST without quote; expected_revision=0 creates an absent preference. Stale different values return 409; retry with identical values succeeds. Quiet times are both null or both minutes 0..1439 with different values, including overnight ranges. In-app messages remain visible during quiet hours; push delivery is not implemented. Disabled types suppress future delivery, not existing inbox rows. Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело.",
       "method": "POST",
       "body": {
         "mimeType": "application/json",
@@ -4521,7 +4528,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/nodes/{{ _.world_node_id }}/orders",
       "name": "GET /world/nodes/{id}/orders",
-      "description": "Источник: docs/api/world-orders.openapi.json. ",
+      "description": "",
       "method": "GET",
       "body": {},
       "parameters": [
@@ -4564,7 +4571,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/nodes/{{ _.world_node_id }}/order-items",
       "name": "GET /world/nodes/{id}/order-items",
-      "description": "Источник: docs/api/world-orders.openapi.json. ",
+      "description": "",
       "method": "GET",
       "body": {},
       "parameters": [
@@ -4602,7 +4609,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/nodes/{{ _.world_node_id }}/order-stock",
       "name": "GET /world/nodes/{id}/order-stock",
-      "description": "Источник: docs/api/world-orders.openapi.json. ",
+      "description": "",
       "method": "GET",
       "body": {},
       "parameters": [
@@ -4640,7 +4647,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/nodes/{{ _.world_node_id }}/order-publish-preview",
       "name": "POST /world/nodes/{id}/order-publish-preview",
-      "description": "Источник: docs/api/world-orders.openapi.json.  Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело.",
+      "description": "Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело.",
       "method": "POST",
       "body": {
         "mimeType": "application/json",
@@ -4675,7 +4682,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/nodes/{{ _.world_node_id }}/order-publish",
       "name": "POST /world/nodes/{id}/order-publish",
-      "description": "Источник: docs/api/world-orders.openapi.json.  Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело.",
+      "description": "Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело.",
       "method": "POST",
       "body": {
         "mimeType": "application/json",
@@ -4710,7 +4717,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/nodes/{{ _.world_node_id }}/order-deliver-preview",
       "name": "POST /world/nodes/{id}/order-deliver-preview",
-      "description": "Источник: docs/api/world-orders.openapi.json.  Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело.",
+      "description": "Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело.",
       "method": "POST",
       "body": {
         "mimeType": "application/json",
@@ -4745,7 +4752,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/nodes/{{ _.world_node_id }}/order-deliver",
       "name": "POST /world/nodes/{id}/order-deliver",
-      "description": "Источник: docs/api/world-orders.openapi.json.  Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело.",
+      "description": "Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело.",
       "method": "POST",
       "body": {
         "mimeType": "application/json",
@@ -4780,7 +4787,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/nodes/{{ _.world_node_id }}/order-cancel-preview",
       "name": "POST /world/nodes/{id}/order-cancel-preview",
-      "description": "Источник: docs/api/world-orders.openapi.json.  Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело.",
+      "description": "Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело.",
       "method": "POST",
       "body": {
         "mimeType": "application/json",
@@ -4815,7 +4822,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/nodes/{{ _.world_node_id }}/order-cancel",
       "name": "POST /world/nodes/{id}/order-cancel",
-      "description": "Источник: docs/api/world-orders.openapi.json.  Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело.",
+      "description": "Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело.",
       "method": "POST",
       "body": {
         "mimeType": "application/json",
@@ -4862,7 +4869,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/nodes/{{ _.world_node_id }}/premises",
       "name": "GET /world/nodes/{id}/premises",
-      "description": "Источник: docs/api/world-premises.openapi.json. List ready premises offered by the settlement; owned campsite adds private area information",
+      "description": "List ready premises offered by the settlement; owned campsite adds private area information",
       "method": "GET",
       "body": {},
       "parameters": [
@@ -4900,7 +4907,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/nodes/{{ _.world_node_id }}/premises-publish-preview",
       "name": "POST /world/nodes/{id}/premises-publish-preview",
-      "description": "Источник: docs/api/world-premises.openapi.json. Settlement owner or world manager of an unowned public settlement. Creates immutable terms; no charge. Preview creates only a 300-second quote. Commit requires unchanged exact payload/revisions; same request key replays the saved result. Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело.",
+      "description": "Settlement owner or world manager of an unowned public settlement. Creates immutable terms; no charge. Preview creates only a 300-second quote. Commit requires unchanged exact payload/revisions; same request key replays the saved result. Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело.",
       "method": "POST",
       "body": {
         "mimeType": "application/json",
@@ -4935,7 +4942,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/nodes/{{ _.world_node_id }}/premises-publish",
       "name": "POST /world/nodes/{id}/premises-publish",
-      "description": "Источник: docs/api/world-premises.openapi.json. Settlement owner or world manager of an unowned public settlement. Creates immutable terms; no charge. Preview creates only a 300-second quote. Commit requires unchanged exact payload/revisions; same request key replays the saved result. Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело. Successful publication also returns offer_id; replay returns the same offer_id.",
+      "description": "Settlement owner or world manager of an unowned public settlement. Creates immutable terms; no charge. Preview creates only a 300-second quote. Commit requires unchanged exact payload/revisions; same request key replays the saved result. Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело. Successful publication also returns offer_id; replay returns the same offer_id.",
       "method": "POST",
       "body": {
         "mimeType": "application/json",
@@ -4970,7 +4977,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/nodes/{{ _.world_node_id }}/premises-buy-preview",
       "name": "[DEPRECATED] POST /world/nodes/{id}/premises-buy-preview",
-      "description": "Deprecated для схемы 38: создание объектов через /v1/world/start и /v1/world/builds, см. docs/api/simple-world.md. Источник: docs/api/world-premises.openapi.json. Schema marker 19. Ready purchases remain immediate. Construction reserves plot budget and backpack raw materials; no room or usable equipment slots exist until the fenced worker completes. Purchase result has building_id, project_id and finish_at for construction, or building_id and room_id for ready delivery. Quotes last 300 seconds; material_plan pins inventory_id/storage_id/item_id/quantity and revisions. Cancellation before actual completion releases the full credit reserve and returns all materials to available backpack slots; a full backpack blocks cancellation without partial changes. No local/runtime acceptance performed. Requires owned active campsite, free area, storage_v2, exact wallet and published settlement finance policy. House requires starter membership. Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело.",
+      "description": "Deprecated для схемы 38: создание объектов через /v1/world/start и /v1/world/builds, см. docs/architecture/simple-world-api.md. Schema marker 19. Ready purchases remain immediate. Construction reserves plot budget and backpack raw materials; no room or usable equipment slots exist until the fenced worker completes. Purchase result has building_id, project_id and finish_at for construction, or building_id and room_id for ready delivery. Quotes last 300 seconds; material_plan pins inventory_id/storage_id/item_id/quantity and revisions. Cancellation before actual completion releases the full credit reserve and returns all materials to available backpack slots; a full backpack blocks cancellation without partial changes. No local/runtime acceptance performed. Requires owned active campsite, free area, storage_v2, exact wallet and published settlement finance policy. House requires starter membership. Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело.",
       "method": "POST",
       "body": {
         "mimeType": "application/json",
@@ -5005,7 +5012,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/nodes/{{ _.world_node_id }}/premises-buy",
       "name": "[DEPRECATED] POST /world/nodes/{id}/premises-buy",
-      "description": "Deprecated для схемы 38: создание объектов через /v1/world/start и /v1/world/builds, см. docs/api/simple-world.md. Источник: docs/api/world-premises.openapi.json. Schema marker 19. Ready purchases remain immediate. Construction reserves plot budget and backpack raw materials; no room or usable equipment slots exist until the fenced worker completes. Purchase result has building_id, project_id and finish_at for construction, or building_id and room_id for ready delivery. Quotes last 300 seconds; material_plan pins inventory_id/storage_id/item_id/quantity and revisions. Cancellation before actual completion releases the full credit reserve and returns all materials to available backpack slots; a full backpack blocks cancellation without partial changes. No local/runtime acceptance performed. Requires owned active campsite, free area, storage_v2, exact wallet and published settlement finance policy. House requires starter membership. Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело.",
+      "description": "Deprecated для схемы 38: создание объектов через /v1/world/start и /v1/world/builds, см. docs/architecture/simple-world-api.md. Schema marker 19. Ready purchases remain immediate. Construction reserves plot budget and backpack raw materials; no room or usable equipment slots exist until the fenced worker completes. Purchase result has building_id, project_id and finish_at for construction, or building_id and room_id for ready delivery. Quotes last 300 seconds; material_plan pins inventory_id/storage_id/item_id/quantity and revisions. Cancellation before actual completion releases the full credit reserve and returns all materials to available backpack slots; a full backpack blocks cancellation without partial changes. No local/runtime acceptance performed. Requires owned active campsite, free area, storage_v2, exact wallet and published settlement finance policy. House requires starter membership. Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело.",
       "method": "POST",
       "body": {
         "mimeType": "application/json",
@@ -5040,7 +5047,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/nodes/{{ _.world_node_id }}/premises-withdraw-preview",
       "name": "POST /world/nodes/{id}/premises-withdraw-preview",
-      "description": "Источник: docs/api/world-premises.openapi.json. Same authority as publication. Stops future purchases; previously acquired premises are retained. Preview creates only a 300-second quote. Commit requires unchanged exact payload/revisions; same request key replays the saved result. Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело.",
+      "description": "Same authority as publication. Stops future purchases; previously acquired premises are retained. Preview creates only a 300-second quote. Commit requires unchanged exact payload/revisions; same request key replays the saved result. Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело.",
       "method": "POST",
       "body": {
         "mimeType": "application/json",
@@ -5075,7 +5082,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/nodes/{{ _.world_node_id }}/premises-withdraw",
       "name": "POST /world/nodes/{id}/premises-withdraw",
-      "description": "Источник: docs/api/world-premises.openapi.json. Same authority as publication. Stops future purchases; previously acquired premises are retained. Preview creates only a 300-second quote. Commit requires unchanged exact payload/revisions; same request key replays the saved result. Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело.",
+      "description": "Same authority as publication. Stops future purchases; previously acquired premises are retained. Preview creates only a 300-second quote. Commit requires unchanged exact payload/revisions; same request key replays the saved result. Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело.",
       "method": "POST",
       "body": {
         "mimeType": "application/json",
@@ -5122,7 +5129,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/professions",
       "name": "GET /world/professions",
-      "description": "Источник: docs/api/world-progression.openapi.json. Descending profession ID. Read-only repeatable snapshot. Five seeded professions start as drafts and are absent until publication. Existing enrollment retains its pinned rules revision. Limits are returned as content; consumers must enforce their relevant limits.",
+      "description": "Descending profession ID. Read-only repeatable snapshot. Five seeded professions start as drafts and are absent until publication. Existing enrollment retains its pinned rules revision. Limits are returned as content; consumers must enforce their relevant limits.",
       "method": "GET",
       "body": {},
       "parameters": [
@@ -5160,7 +5167,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/professions/{{ _.world_profession_id }}/enroll-preview",
       "name": "POST /world/professions/{id}/enroll-preview",
-      "description": "Источник: docs/api/world-progression.openapi.json. enroll preview Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело.",
+      "description": "enroll preview Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело.",
       "method": "POST",
       "body": {
         "mimeType": "application/json",
@@ -5195,7 +5202,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/professions/{{ _.world_profession_id }}/enroll",
       "name": "POST /world/professions/{id}/enroll",
-      "description": "Источник: docs/api/world-progression.openapi.json. enroll Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело.",
+      "description": "enroll Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело.",
       "method": "POST",
       "body": {
         "mimeType": "application/json",
@@ -5230,7 +5237,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/professions/{{ _.world_profession_id }}/level-up-preview",
       "name": "POST /world/professions/{id}/level-up-preview",
-      "description": "Источник: docs/api/world-progression.openapi.json. level-up preview Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело.",
+      "description": "level-up preview Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело.",
       "method": "POST",
       "body": {
         "mimeType": "application/json",
@@ -5265,7 +5272,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/professions/{{ _.world_profession_id }}/level-up",
       "name": "POST /world/professions/{id}/level-up",
-      "description": "Источник: docs/api/world-progression.openapi.json. level-up Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело.",
+      "description": "level-up Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело.",
       "method": "POST",
       "body": {
         "mimeType": "application/json",
@@ -5300,7 +5307,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/professions/publish-preview",
       "name": "POST /world/professions/publish-preview",
-      "description": "Источник: docs/api/world-progression.openapi.json. Requires world-manage permission. First level XP=0 and no achievements; subsequent thresholds strictly increase. Source keys: craft.completed, world.orders.deliver, world.construction.finished, world.crop.harvested, production.completed, npc.training.finished, world.quest.claimed. Reward is per unique event, not per item. Daily cap uses event time in Europe/Moscow. Unimplemented producers do not emit events. No HTTP XP award endpoint. Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело.",
+      "description": "Requires world-manage permission. First level XP=0 and no achievements; subsequent thresholds strictly increase. Source keys: craft.completed, world.orders.deliver, world.construction.finished, world.crop.harvested, production.completed, npc.training.finished, world.quest.claimed. Reward is per unique event, not per item. Daily cap uses event time in Europe/Moscow. Unimplemented producers do not emit events. No HTTP XP award endpoint. Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело.",
       "method": "POST",
       "body": {
         "mimeType": "application/json",
@@ -5335,7 +5342,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/professions/publish",
       "name": "POST /world/professions/publish",
-      "description": "Источник: docs/api/world-progression.openapi.json. Requires world-manage permission. First level XP=0 and no achievements; subsequent thresholds strictly increase. Source keys: craft.completed, world.orders.deliver, world.construction.finished, world.crop.harvested, production.completed, npc.training.finished, world.quest.claimed. Reward is per unique event, not per item. Daily cap uses event time in Europe/Moscow. Unimplemented producers do not emit events. No HTTP XP award endpoint. Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело.",
+      "description": "Requires world-manage permission. First level XP=0 and no achievements; subsequent thresholds strictly increase. Source keys: craft.completed, world.orders.deliver, world.construction.finished, world.crop.harvested, production.completed, npc.training.finished, world.quest.claimed. Reward is per unique event, not per item. Daily cap uses event time in Europe/Moscow. Unimplemented producers do not emit events. No HTTP XP award endpoint. Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело.",
       "method": "POST",
       "body": {
         "mimeType": "application/json",
@@ -5370,7 +5377,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/achievements",
       "name": "GET /world/achievements",
-      "description": "Источник: docs/api/world-progression.openapi.json. Read-only snapshot; descending ID. Only the authenticated player progress is joined. There is no HTTP award endpoint.",
+      "description": "Read-only snapshot; descending ID. Only the authenticated player progress is joined. There is no HTTP award endpoint.",
       "method": "GET",
       "body": {},
       "parameters": [
@@ -5413,7 +5420,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/achievements/publish-preview",
       "name": "POST /world/achievements/publish-preview",
-      "description": "Источник: docs/api/world-progression.openapi.json. world-manage permission required. Code is the stable identity. Existing earned records are preserved; previous name and reason remain in command terms. Internal award writer requires a committed domain event, matching actor and transaction. Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело.",
+      "description": "world-manage permission required. Code is the stable identity. Existing earned records are preserved; previous name and reason remain in command terms. Internal award writer requires a committed domain event, matching actor and transaction. Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело.",
       "method": "POST",
       "body": {
         "mimeType": "application/json",
@@ -5448,7 +5455,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/achievements/publish",
       "name": "POST /world/achievements/publish",
-      "description": "Источник: docs/api/world-progression.openapi.json. world-manage permission required. Code is the stable identity. Existing earned records are preserved; previous name and reason remain in command terms. Internal award writer requires a committed domain event, matching actor and transaction. Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело.",
+      "description": "world-manage permission required. Code is the stable identity. Existing earned records are preserved; previous name and reason remain in command terms. Internal award writer requires a committed domain event, matching actor and transaction. Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело.",
       "method": "POST",
       "body": {
         "mimeType": "application/json",
@@ -5495,7 +5502,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/nodes/{{ _.world_node_id }}/repair-contracts",
       "name": "GET /world/nodes/{id}/repair-contracts",
-      "description": "Источник: docs/api/world-repair-contracts.openapi.json. Owner only, no writes. Published offers explicitly enabled for existing purchases, original seller settlement, exact kind and area. SQL filtering before total and pagination, newest IDs first. Existing contract or unsupported building returns reasons and no offers.",
+      "description": "Owner only, no writes. Published offers explicitly enabled for existing purchases, original seller settlement, exact kind and area. SQL filtering before total and pagination, newest IDs first. Existing contract or unsupported building returns reasons and no offers.",
       "method": "GET",
       "body": {},
       "parameters": [
@@ -5533,7 +5540,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/nodes/{{ _.world_node_id }}/repair-contract-preview",
       "name": "POST /world/nodes/{id}/repair-contract-preview",
-      "description": "Источник: docs/api/world-repair-contracts.openapi.json. Actual owner only. Requires world_write and storage_v2, no wallet debit or inventory mutation. Revalidates offer status, kind/area, purchase/ownership and absence of existing contract under CommandBus locks. Free acceptance fixes future repair terms, not an immediate repair. Original purchase JSON is unchanged. Terms remain valid after offer withdrawal; no replacement or cancellation in this slice. Expiring quote, revisions, atomic unique contract, audit/outbox and same-key replay. Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело.",
+      "description": "Actual owner only. Requires world_write and storage_v2, no wallet debit or inventory mutation. Revalidates offer status, kind/area, purchase/ownership and absence of existing contract under CommandBus locks. Free acceptance fixes future repair terms, not an immediate repair. Original purchase JSON is unchanged. Terms remain valid after offer withdrawal; no replacement or cancellation in this slice. Expiring quote, revisions, atomic unique contract, audit/outbox and same-key replay. Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело.",
       "method": "POST",
       "body": {
         "mimeType": "application/json",
@@ -5568,7 +5575,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/nodes/{{ _.world_node_id }}/repair-contract",
       "name": "POST /world/nodes/{id}/repair-contract",
-      "description": "Источник: docs/api/world-repair-contracts.openapi.json. Actual owner only. Requires world_write and storage_v2, no wallet debit or inventory mutation. Revalidates offer status, kind/area, purchase/ownership and absence of existing contract under CommandBus locks. Free acceptance fixes future repair terms, not an immediate repair. Original purchase JSON is unchanged. Terms remain valid after offer withdrawal; no replacement or cancellation in this slice. Expiring quote, revisions, atomic unique contract, audit/outbox and same-key replay. Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело.",
+      "description": "Actual owner only. Requires world_write and storage_v2, no wallet debit or inventory mutation. Revalidates offer status, kind/area, purchase/ownership and absence of existing contract under CommandBus locks. Free acceptance fixes future repair terms, not an immediate repair. Original purchase JSON is unchanged. Terms remain valid after offer withdrawal; no replacement or cancellation in this slice. Expiring quote, revisions, atomic unique contract, audit/outbox and same-key replay. Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело.",
       "method": "POST",
       "body": {
         "mimeType": "application/json",
@@ -5615,7 +5622,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/nodes/{{ _.world_node_id }}/shelter",
       "name": "GET /world/nodes/{id}/shelter",
-      "description": "Источник: docs/api/world-shelter.openapi.json. ",
+      "description": "",
       "method": "GET",
       "body": {},
       "parameters": [],
@@ -5642,7 +5649,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/nodes/{{ _.world_node_id }}/shelter-claim-preview",
       "name": "POST /world/nodes/{id}/shelter-claim-preview",
-      "description": "Источник: docs/api/world-shelter.openapi.json. Account-wide shelter lifecycle. direct_deploy=true only for claim; end_lodging=true only for fold. Repair consumes the quoted raw materials from active backpack slots at zero credits, preserving the instance, deployment and lodging. Protection resumes at repair time without changing past nights. Night illness requires a separately published calendar. Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело.",
+      "description": "Account-wide shelter lifecycle. direct_deploy=true only for claim; end_lodging=true only for fold. Repair consumes the quoted raw materials from active backpack slots at zero credits, preserving the instance, deployment and lodging. Protection resumes at repair time without changing past nights. Night illness requires a separately published calendar. Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело.",
       "method": "POST",
       "body": {
         "mimeType": "application/json",
@@ -5677,7 +5684,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/nodes/{{ _.world_node_id }}/shelter-claim",
       "name": "POST /world/nodes/{id}/shelter-claim",
-      "description": "Источник: docs/api/world-shelter.openapi.json. Account-wide shelter lifecycle. direct_deploy=true only for claim; end_lodging=true only for fold. Repair consumes the quoted raw materials from active backpack slots at zero credits, preserving the instance, deployment and lodging. Protection resumes at repair time without changing past nights. Night illness requires a separately published calendar. Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело.",
+      "description": "Account-wide shelter lifecycle. direct_deploy=true only for claim; end_lodging=true only for fold. Repair consumes the quoted raw materials from active backpack slots at zero credits, preserving the instance, deployment and lodging. Protection resumes at repair time without changing past nights. Night illness requires a separately published calendar. Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело.",
       "method": "POST",
       "body": {
         "mimeType": "application/json",
@@ -5712,7 +5719,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/nodes/{{ _.world_node_id }}/shelter-deploy-preview",
       "name": "[DEPRECATED] POST /world/nodes/{id}/shelter-deploy-preview",
-      "description": "Deprecated для схемы 38: создание объектов через /v1/world/start и /v1/world/builds, см. docs/api/simple-world.md. Источник: docs/api/world-shelter.openapi.json. Account-wide shelter lifecycle. direct_deploy=true only for claim; end_lodging=true only for fold. Repair consumes the quoted raw materials from active backpack slots at zero credits, preserving the instance, deployment and lodging. Protection resumes at repair time without changing past nights. Night illness requires a separately published calendar. Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело.",
+      "description": "Deprecated для схемы 38: создание объектов через /v1/world/start и /v1/world/builds, см. docs/architecture/simple-world-api.md. Account-wide shelter lifecycle. direct_deploy=true only for claim; end_lodging=true only for fold. Repair consumes the quoted raw materials from active backpack slots at zero credits, preserving the instance, deployment and lodging. Protection resumes at repair time without changing past nights. Night illness requires a separately published calendar. Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело.",
       "method": "POST",
       "body": {
         "mimeType": "application/json",
@@ -5747,7 +5754,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/nodes/{{ _.world_node_id }}/shelter-deploy",
       "name": "[DEPRECATED] POST /world/nodes/{id}/shelter-deploy",
-      "description": "Deprecated для схемы 38: создание объектов через /v1/world/start и /v1/world/builds, см. docs/api/simple-world.md. Источник: docs/api/world-shelter.openapi.json. Account-wide shelter lifecycle. direct_deploy=true only for claim; end_lodging=true only for fold. Repair consumes the quoted raw materials from active backpack slots at zero credits, preserving the instance, deployment and lodging. Protection resumes at repair time without changing past nights. Night illness requires a separately published calendar. Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело.",
+      "description": "Deprecated для схемы 38: создание объектов через /v1/world/start и /v1/world/builds, см. docs/architecture/simple-world-api.md. Account-wide shelter lifecycle. direct_deploy=true only for claim; end_lodging=true only for fold. Repair consumes the quoted raw materials from active backpack slots at zero credits, preserving the instance, deployment and lodging. Protection resumes at repair time without changing past nights. Night illness requires a separately published calendar. Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело.",
       "method": "POST",
       "body": {
         "mimeType": "application/json",
@@ -5782,7 +5789,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/nodes/{{ _.world_node_id }}/shelter-fold-preview",
       "name": "POST /world/nodes/{id}/shelter-fold-preview",
-      "description": "Источник: docs/api/world-shelter.openapi.json. Account-wide shelter lifecycle. direct_deploy=true only for claim; end_lodging=true only for fold. Repair consumes the quoted raw materials from active backpack slots at zero credits, preserving the instance, deployment and lodging. Protection resumes at repair time without changing past nights. Night illness requires a separately published calendar. Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело.",
+      "description": "Account-wide shelter lifecycle. direct_deploy=true only for claim; end_lodging=true only for fold. Repair consumes the quoted raw materials from active backpack slots at zero credits, preserving the instance, deployment and lodging. Protection resumes at repair time without changing past nights. Night illness requires a separately published calendar. Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело.",
       "method": "POST",
       "body": {
         "mimeType": "application/json",
@@ -5817,7 +5824,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/nodes/{{ _.world_node_id }}/shelter-fold",
       "name": "POST /world/nodes/{id}/shelter-fold",
-      "description": "Источник: docs/api/world-shelter.openapi.json. Account-wide shelter lifecycle. direct_deploy=true only for claim; end_lodging=true only for fold. Repair consumes the quoted raw materials from active backpack slots at zero credits, preserving the instance, deployment and lodging. Protection resumes at repair time without changing past nights. Night illness requires a separately published calendar. Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело.",
+      "description": "Account-wide shelter lifecycle. direct_deploy=true only for claim; end_lodging=true only for fold. Repair consumes the quoted raw materials from active backpack slots at zero credits, preserving the instance, deployment and lodging. Protection resumes at repair time without changing past nights. Night illness requires a separately published calendar. Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело.",
       "method": "POST",
       "body": {
         "mimeType": "application/json",
@@ -5852,7 +5859,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/nodes/{{ _.world_node_id }}/shelter-lodge-preview",
       "name": "POST /world/nodes/{id}/shelter-lodge-preview",
-      "description": "Источник: docs/api/world-shelter.openapi.json. Account-wide shelter lifecycle. direct_deploy=true only for claim; end_lodging=true only for fold. Repair consumes the quoted raw materials from active backpack slots at zero credits, preserving the instance, deployment and lodging. Protection resumes at repair time without changing past nights. Night illness requires a separately published calendar. Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело.",
+      "description": "Account-wide shelter lifecycle. direct_deploy=true only for claim; end_lodging=true only for fold. Repair consumes the quoted raw materials from active backpack slots at zero credits, preserving the instance, deployment and lodging. Protection resumes at repair time without changing past nights. Night illness requires a separately published calendar. Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело.",
       "method": "POST",
       "body": {
         "mimeType": "application/json",
@@ -5887,7 +5894,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/nodes/{{ _.world_node_id }}/shelter-lodge",
       "name": "POST /world/nodes/{id}/shelter-lodge",
-      "description": "Источник: docs/api/world-shelter.openapi.json. Account-wide shelter lifecycle. direct_deploy=true only for claim; end_lodging=true only for fold. Repair consumes the quoted raw materials from active backpack slots at zero credits, preserving the instance, deployment and lodging. Protection resumes at repair time without changing past nights. Night illness requires a separately published calendar. Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело.",
+      "description": "Account-wide shelter lifecycle. direct_deploy=true only for claim; end_lodging=true only for fold. Repair consumes the quoted raw materials from active backpack slots at zero credits, preserving the instance, deployment and lodging. Protection resumes at repair time without changing past nights. Night illness requires a separately published calendar. Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело.",
       "method": "POST",
       "body": {
         "mimeType": "application/json",
@@ -5922,7 +5929,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/nodes/{{ _.world_node_id }}/shelter-leave-preview",
       "name": "POST /world/nodes/{id}/shelter-leave-preview",
-      "description": "Источник: docs/api/world-shelter.openapi.json. Account-wide shelter lifecycle. direct_deploy=true only for claim; end_lodging=true only for fold. Repair consumes the quoted raw materials from active backpack slots at zero credits, preserving the instance, deployment and lodging. Protection resumes at repair time without changing past nights. Night illness requires a separately published calendar. Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело.",
+      "description": "Account-wide shelter lifecycle. direct_deploy=true only for claim; end_lodging=true only for fold. Repair consumes the quoted raw materials from active backpack slots at zero credits, preserving the instance, deployment and lodging. Protection resumes at repair time without changing past nights. Night illness requires a separately published calendar. Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело.",
       "method": "POST",
       "body": {
         "mimeType": "application/json",
@@ -5957,7 +5964,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/nodes/{{ _.world_node_id }}/shelter-leave",
       "name": "POST /world/nodes/{id}/shelter-leave",
-      "description": "Источник: docs/api/world-shelter.openapi.json. Account-wide shelter lifecycle. direct_deploy=true only for claim; end_lodging=true only for fold. Repair consumes the quoted raw materials from active backpack slots at zero credits, preserving the instance, deployment and lodging. Protection resumes at repair time without changing past nights. Night illness requires a separately published calendar. Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело.",
+      "description": "Account-wide shelter lifecycle. direct_deploy=true only for claim; end_lodging=true only for fold. Repair consumes the quoted raw materials from active backpack slots at zero credits, preserving the instance, deployment and lodging. Protection resumes at repair time without changing past nights. Night illness requires a separately published calendar. Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело.",
       "method": "POST",
       "body": {
         "mimeType": "application/json",
@@ -5992,7 +5999,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/nodes/{{ _.world_node_id }}/shelter-repair-preview",
       "name": "POST /world/nodes/{id}/shelter-repair-preview",
-      "description": "Источник: docs/api/world-shelter.openapi.json. Account-wide shelter lifecycle. direct_deploy=true only for claim; end_lodging=true only for fold. Repair consumes the quoted raw materials from active backpack slots at zero credits, preserving the instance, deployment and lodging. Protection resumes at repair time without changing past nights. Night illness requires a separately published calendar. Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело.",
+      "description": "Account-wide shelter lifecycle. direct_deploy=true only for claim; end_lodging=true only for fold. Repair consumes the quoted raw materials from active backpack slots at zero credits, preserving the instance, deployment and lodging. Protection resumes at repair time without changing past nights. Night illness requires a separately published calendar. Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело.",
       "method": "POST",
       "body": {
         "mimeType": "application/json",
@@ -6027,7 +6034,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/nodes/{{ _.world_node_id }}/shelter-repair",
       "name": "POST /world/nodes/{id}/shelter-repair",
-      "description": "Источник: docs/api/world-shelter.openapi.json. Account-wide shelter lifecycle. direct_deploy=true only for claim; end_lodging=true only for fold. Repair consumes the quoted raw materials from active backpack slots at zero credits, preserving the instance, deployment and lodging. Protection resumes at repair time without changing past nights. Night illness requires a separately published calendar. Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело.",
+      "description": "Account-wide shelter lifecycle. direct_deploy=true only for claim; end_lodging=true only for fold. Repair consumes the quoted raw materials from active backpack slots at zero credits, preserving the instance, deployment and lodging. Protection resumes at repair time without changing past nights. Night illness requires a separately published calendar. Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело.",
       "method": "POST",
       "body": {
         "mimeType": "application/json",
@@ -6074,7 +6081,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/storages",
       "name": "GET /world/storages",
-      "description": "Источник: docs/api/world-storage.openapi.json. ",
+      "description": "\n\n2026-10-09: карта возвращает названия, иконки и characteristics размещённых предметов в equipment_cells; inventory_id/storage_id доступны владельцу. Возврат в рюкзак использует transfer-preview + transfer. Хранилища подписаны названием объекта; закрытые ячейки карты недоступны для размещения. Денежный контракт сохраняет точность четырёх знаков, интерфейс округляет до десятых.",
       "method": "GET",
       "body": {},
       "parameters": [
@@ -6107,7 +6114,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/storage/{{ _.world_storage_id }}",
       "name": "GET /world/storage/{id}",
-      "description": "Источник: docs/api/world-storage.openapi.json. ",
+      "description": "\n\n2026-10-09: карта возвращает названия, иконки и characteristics размещённых предметов в equipment_cells; inventory_id/storage_id доступны владельцу. Возврат в рюкзак использует transfer-preview + transfer. Хранилища подписаны названием объекта; закрытые ячейки карты недоступны для размещения. Денежный контракт сохраняет точность четырёх знаков, интерфейс округляет до десятых.",
       "method": "GET",
       "body": {},
       "parameters": [
@@ -6140,7 +6147,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/storage/transfer-preview",
       "name": "POST /world/storage/transfer-preview",
-      "description": "Источник: docs/api/world-storage.openapi.json.  Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело.",
+      "description": "Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело.\n\n2026-10-09: карта возвращает названия, иконки и characteristics размещённых предметов в equipment_cells; inventory_id/storage_id доступны владельцу. Возврат в рюкзак использует transfer-preview + transfer. Хранилища подписаны названием объекта; закрытые ячейки карты недоступны для размещения. Денежный контракт сохраняет точность четырёх знаков, интерфейс округляет до десятых.",
       "method": "POST",
       "body": {
         "mimeType": "application/json",
@@ -6175,7 +6182,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/storage/transfer",
       "name": "POST /world/storage/transfer",
-      "description": "Источник: docs/api/world-storage.openapi.json.  Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело.",
+      "description": "Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело.\n\n2026-10-09: карта возвращает названия, иконки и characteristics размещённых предметов в equipment_cells; inventory_id/storage_id доступны владельцу. Возврат в рюкзак использует transfer-preview + transfer. Хранилища подписаны названием объекта; закрытые ячейки карты недоступны для размещения. Денежный контракт сохраняет точность четырёх знаков, интерфейс округляет до десятых.",
       "method": "POST",
       "body": {
         "mimeType": "application/json",
@@ -6210,7 +6217,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/storage/chest-repair-preview",
       "name": "POST /world/storage/chest-repair-preview",
-      "description": "Источник: docs/api/world-storage.openapi.json.  Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело.",
+      "description": "Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело.\n\n2026-10-09: карта возвращает названия, иконки и characteristics размещённых предметов в equipment_cells; inventory_id/storage_id доступны владельцу. Возврат в рюкзак использует transfer-preview + transfer. Хранилища подписаны названием объекта; закрытые ячейки карты недоступны для размещения. Денежный контракт сохраняет точность четырёх знаков, интерфейс округляет до десятых.",
       "method": "POST",
       "body": {
         "mimeType": "application/json",
@@ -6245,7 +6252,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/storage/chest-repair",
       "name": "POST /world/storage/chest-repair",
-      "description": "Источник: docs/api/world-storage.openapi.json.  Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело.",
+      "description": "Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело.\n\n2026-10-09: карта возвращает названия, иконки и characteristics размещённых предметов в equipment_cells; inventory_id/storage_id доступны владельцу. Возврат в рюкзак использует transfer-preview + transfer. Хранилища подписаны названием объекта; закрытые ячейки карты недоступны для размещения. Денежный контракт сохраняет точность четырёх знаков, интерфейс округляет до десятых.",
       "method": "POST",
       "body": {
         "mimeType": "application/json",
@@ -6292,7 +6299,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/nodes/{{ _.world_node_id }}/treasury-receipts",
       "name": "GET /world/nodes/{id}/treasury-receipts",
-      "description": "Источник: docs/api/world-treasury-receipts.openapi.json. world_read required; no wallet/storage activation needed for reading. One REPEATABLE READ transaction without write/registry locks provides coherent rows and aggregate collected/lost amounts for up to 20 receipts. Receipt original = remaining + collected + lost; recorded losses are not projected losses. Published new policies do not change old receipt rules. Projection covers one period only; delayed worker may owe multiple periods. No cross-world financial totals or revenue classification is provided.",
+      "description": "world_read required; no wallet/storage activation needed for reading. One REPEATABLE READ transaction without write/registry locks provides coherent rows and aggregate collected/lost amounts for up to 20 receipts. Receipt original = remaining + collected + lost; recorded losses are not projected losses. Published new policies do not change old receipt rules. Projection covers one period only; delayed worker may owe multiple periods. No cross-world financial totals or revenue classification is provided.",
       "method": "GET",
       "body": {},
       "parameters": [
@@ -6347,7 +6354,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/workspace",
       "name": "GET /world/workspace",
-      "description": "Источник: docs/api/world-workspace.openapi.json. recipes[].icon содержит иконку выходного предмета для плиток мастерской.",
+      "description": "Изготовление временно доступно только в собственной действующей стоянке PLOT/campsite. node_id — ID стоянки. Инструменты, станции и склады дочерних помещений входят в её область. Для других объектов WORKSPACE_UNAVAILABLE. recipes[].icon содержит иконку выходного предмета для плиток мастерской.",
       "method": "GET",
       "body": {},
       "parameters": [
@@ -6385,7 +6392,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/workspace/preview",
       "name": "POST /world/workspace/preview",
-      "description": "Источник: docs/api/world-workspace.openapi.json.  Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело.",
+      "description": "Изготовление временно доступно только в собственной действующей стоянке PLOT/campsite. node_id — ID стоянки. Инструменты, станции и склады дочерних помещений входят в её область. Для других объектов WORKSPACE_UNAVAILABLE. Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело.",
       "method": "POST",
       "body": {
         "mimeType": "application/json",
@@ -6420,7 +6427,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/workspace/craft",
       "name": "POST /world/workspace/craft",
-      "description": "Источник: docs/api/world-workspace.openapi.json.  Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело.",
+      "description": "Изготовление временно доступно только в собственной действующей стоянке PLOT/campsite. node_id — ID стоянки. Инструменты, станции и склады дочерних помещений входят в её область. Для других объектов WORKSPACE_UNAVAILABLE. Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело.",
       "method": "POST",
       "body": {
         "mimeType": "application/json",
@@ -6455,7 +6462,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/storage/recovery",
       "name": "GET /world/storage/recovery",
-      "description": "Источник: docs/api/world-workspace.openapi.json. ",
+      "description": "\n\n2026-10-09: карта возвращает названия, иконки и characteristics размещённых предметов в equipment_cells; inventory_id/storage_id доступны владельцу. Возврат в рюкзак использует transfer-preview + transfer. Хранилища подписаны названием объекта; закрытые ячейки карты недоступны для размещения. Денежный контракт сохраняет точность четырёх знаков, интерфейс округляет до десятых.",
       "method": "GET",
       "body": {},
       "parameters": [
@@ -6488,7 +6495,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/storage/recovery-preview",
       "name": "POST /world/storage/recovery-preview",
-      "description": "Источник: docs/api/world-workspace.openapi.json.  Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело.",
+      "description": "Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело.\n\n2026-10-09: карта возвращает названия, иконки и characteristics размещённых предметов в equipment_cells; inventory_id/storage_id доступны владельцу. Возврат в рюкзак использует transfer-preview + transfer. Хранилища подписаны названием объекта; закрытые ячейки карты недоступны для размещения. Денежный контракт сохраняет точность четырёх знаков, интерфейс округляет до десятых.",
       "method": "POST",
       "body": {
         "mimeType": "application/json",
@@ -6523,7 +6530,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/storage/recover",
       "name": "POST /world/storage/recover",
-      "description": "Источник: docs/api/world-workspace.openapi.json.  Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело.",
+      "description": "Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело.\n\n2026-10-09: карта возвращает названия, иконки и characteristics размещённых предметов в equipment_cells; inventory_id/storage_id доступны владельцу. Возврат в рюкзак использует transfer-preview + transfer. Хранилища подписаны названием объекта; закрытые ячейки карты недоступны для размещения. Денежный контракт сохраняет точность четырёх знаков, интерфейс округляет до десятых.",
       "method": "POST",
       "body": {
         "mimeType": "application/json",
@@ -6570,7 +6577,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world",
       "name": "GET /world",
-      "description": "Источник: docs/api/world.openapi.json. ",
+      "description": "",
       "method": "GET",
       "body": {},
       "parameters": [
@@ -6623,7 +6630,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/nodes/{{ _.world_node_id }}",
       "name": "GET /world/nodes/{id}",
-      "description": "Источник: docs/api/world.openapi.json. ",
+      "description": "Общий DTO ноды: одинаковые details.condition,max_condition,repair_active и actions; extensions объявляет дополнительные блоки огорода, шахты, ночлега. include=map возвращает единый экран, без отдельной загрузки по виду объекта.",
       "method": "GET",
       "body": {},
       "parameters": [],
@@ -6650,7 +6657,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/nodes/{{ _.world_node_id }}/children",
       "name": "GET /world/nodes/{id}/children",
-      "description": "Источник: docs/api/world.openapi.json. ",
+      "description": "",
       "method": "GET",
       "body": {},
       "parameters": [
@@ -6703,7 +6710,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/nodes/{{ _.world_node_id }}/map",
       "name": "GET /world/nodes/{id}/map",
-      "description": "Источник: docs/api/world.openapi.json. ",
+      "description": "\n\n2026-10-09: карта возвращает названия, иконки и characteristics размещённых предметов в equipment_cells; inventory_id/storage_id доступны владельцу. Возврат в рюкзак использует transfer-preview + transfer. Хранилища подписаны названием объекта; закрытые ячейки карты недоступны для размещения. Денежный контракт сохраняет точность четырёх знаков, интерфейс округляет до десятых.",
       "method": "GET",
       "body": {},
       "parameters": [],
@@ -6730,7 +6737,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/nodes/{{ _.world_node_id }}/map-explore-preview",
       "name": "POST /world/nodes/{id}/map-explore-preview",
-      "description": "Источник: docs/api/world.openapi.json.  Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело. Новый контракт: cells; x/y deprecated. Исследование одной ячейки: уровень 1–3 или use_elixir=true (один эликсир в рюкзаке). Город и выше пока закрыты. Покупка нескольких исследованных ячеек атомарна; от 3 действует скидка 5%. Цены для UI приходят в GET map и navigation?include=map.",
+      "description": "Select 1-100 unique cells on the same owned expandable map. Batch exploration is atomic; each selected cell must be free and unexplored. Required level is checked per cell; use_elixir=true consumes one elixir for each cell above current level. Batch terms.elixir_quantity gives the exact amount. Qualified cells cost no elixir. Buy only discovered free cells; from 3 cells discount is 5%. Preview first; execute with identical cells, quote_id, expected_revisions and request_key. Retries do not repeat charges. Legacy x/y still supported for a single cell.\n\nMVP 2026-10-07: одинаковый цикл ячеек для владельца действующего объекта на любом уровне. Новые карты 5×5, начальная ячейка открыта. Базовый уровень исследования 1 доступен без вступления в профессию; для следующих уровней нужна профессия или эликсиры. Ранее купленные грядки сохраняют garden-expand.\n\n2026-10-09: карта возвращает названия, иконки и characteristics размещённых предметов в equipment_cells; inventory_id/storage_id доступны владельцу. Возврат в рюкзак использует transfer-preview + transfer. Хранилища подписаны названием объекта; закрытые ячейки карты недоступны для размещения. Денежный контракт сохраняет точность четырёх знаков, интерфейс округляет до десятых.",
       "method": "POST",
       "body": {
         "mimeType": "application/json",
@@ -6765,7 +6772,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/nodes/{{ _.world_node_id }}/map-explore",
       "name": "POST /world/nodes/{id}/map-explore",
-      "description": "Источник: docs/api/world.openapi.json.  Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело. Новый контракт: cells; x/y deprecated. Исследование одной ячейки: уровень 1–3 или use_elixir=true (один эликсир в рюкзаке). Город и выше пока закрыты. Покупка нескольких исследованных ячеек атомарна; от 3 действует скидка 5%. Цены для UI приходят в GET map и navigation?include=map.",
+      "description": "Select 1-100 unique cells on the same owned expandable map. Batch exploration is atomic; each selected cell must be free and unexplored. Required level is checked per cell; use_elixir=true consumes one elixir for each cell above current level. Batch terms.elixir_quantity gives the exact amount. Qualified cells cost no elixir. Buy only discovered free cells; from 3 cells discount is 5%. Preview first; execute with identical cells, quote_id, expected_revisions and request_key. Retries do not repeat charges. Legacy x/y still supported for a single cell.\n\nMVP 2026-10-07: одинаковый цикл ячеек для владельца действующего объекта на любом уровне. Новые карты 5×5, начальная ячейка открыта. Базовый уровень исследования 1 доступен без вступления в профессию; для следующих уровней нужна профессия или эликсиры. Ранее купленные грядки сохраняют garden-expand.\n\n2026-10-09: карта возвращает названия, иконки и characteristics размещённых предметов в equipment_cells; inventory_id/storage_id доступны владельцу. Возврат в рюкзак использует transfer-preview + transfer. Хранилища подписаны названием объекта; закрытые ячейки карты недоступны для размещения. Денежный контракт сохраняет точность четырёх знаков, интерфейс округляет до десятых.",
       "method": "POST",
       "body": {
         "mimeType": "application/json",
@@ -6800,7 +6807,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/nodes/{{ _.world_node_id }}/map-buy-preview",
       "name": "POST /world/nodes/{id}/map-buy-preview",
-      "description": "Источник: docs/api/world.openapi.json.  Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело. Новый контракт: cells; x/y deprecated. Исследование одной ячейки: уровень 1–3 или use_elixir=true (один эликсир в рюкзаке). Город и выше пока закрыты. Покупка нескольких исследованных ячеек атомарна; от 3 действует скидка 5%. Цены для UI приходят в GET map и navigation?include=map.",
+      "description": "Select 1-100 unique cells on the same owned expandable map. Batch exploration is atomic; each selected cell must be free and unexplored. Required level is checked per cell; use_elixir=true consumes one elixir for each cell above current level. Batch terms.elixir_quantity gives the exact amount. Qualified cells cost no elixir. Buy only discovered free cells; from 3 cells discount is 5%. Preview first; execute with identical cells, quote_id, expected_revisions and request_key. Retries do not repeat charges. Legacy x/y still supported for a single cell.\n\nMVP 2026-10-07: одинаковый цикл ячеек для владельца действующего объекта на любом уровне. Новые карты 5×5, начальная ячейка открыта. Базовый уровень исследования 1 доступен без вступления в профессию; для следующих уровней нужна профессия или эликсиры. Ранее купленные грядки сохраняют garden-expand.\n\n2026-10-09: карта возвращает названия, иконки и characteristics размещённых предметов в equipment_cells; inventory_id/storage_id доступны владельцу. Возврат в рюкзак использует transfer-preview + transfer. Хранилища подписаны названием объекта; закрытые ячейки карты недоступны для размещения. Денежный контракт сохраняет точность четырёх знаков, интерфейс округляет до десятых.",
       "method": "POST",
       "body": {
         "mimeType": "application/json",
@@ -6835,7 +6842,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/nodes/{{ _.world_node_id }}/map-buy",
       "name": "POST /world/nodes/{id}/map-buy",
-      "description": "Источник: docs/api/world.openapi.json.  Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело. Новый контракт: cells; x/y deprecated. Исследование одной ячейки: уровень 1–3 или use_elixir=true (один эликсир в рюкзаке). Город и выше пока закрыты. Покупка нескольких исследованных ячеек атомарна; от 3 действует скидка 5%. Цены для UI приходят в GET map и navigation?include=map.",
+      "description": "Select 1-100 unique cells on the same owned expandable map. Batch exploration is atomic; each selected cell must be free and unexplored. Required level is checked per cell; use_elixir=true consumes one elixir for each cell above current level. Batch terms.elixir_quantity gives the exact amount. Qualified cells cost no elixir. Buy only discovered free cells; from 3 cells discount is 5%. Preview first; execute with identical cells, quote_id, expected_revisions and request_key. Retries do not repeat charges. Legacy x/y still supported for a single cell.\n\nMVP 2026-10-07: одинаковый цикл ячеек для владельца действующего объекта на любом уровне. Новые карты 5×5, начальная ячейка открыта. Базовый уровень исследования 1 доступен без вступления в профессию; для следующих уровней нужна профессия или эликсиры. Ранее купленные грядки сохраняют garden-expand.\n\n2026-10-09: карта возвращает названия, иконки и characteristics размещённых предметов в equipment_cells; inventory_id/storage_id доступны владельцу. Возврат в рюкзак использует transfer-preview + transfer. Хранилища подписаны названием объекта; закрытые ячейки карты недоступны для размещения. Денежный контракт сохраняет точность четырёх знаков, интерфейс округляет до десятых.",
       "method": "POST",
       "body": {
         "mimeType": "application/json",
@@ -6870,7 +6877,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/nodes/{{ _.world_node_id }}/navigation",
       "name": "GET /world/nodes/{id}/navigation",
-      "description": "Источник: docs/api/world.openapi.json. ",
+      "description": "",
       "method": "GET",
       "body": {},
       "parameters": [],
@@ -6897,7 +6904,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/nodes/{{ _.world_node_id }}/statistics",
       "name": "GET /world/nodes/{id}/statistics",
-      "description": "Источник: docs/api/world.openapi.json. ",
+      "description": "",
       "method": "GET",
       "body": {},
       "parameters": [],
@@ -6924,7 +6931,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/nodes/{{ _.world_node_id }}/actions",
       "name": "GET /world/nodes/{id}/actions",
-      "description": "Источник: docs/api/world.openapi.json. ",
+      "description": "",
       "method": "GET",
       "body": {},
       "parameters": [],
@@ -6951,7 +6958,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/onboarding",
       "name": "GET /world/onboarding",
-      "description": "Источник: docs/api/world.openapi.json. ",
+      "description": "",
       "method": "GET",
       "body": {},
       "parameters": [],
@@ -6978,7 +6985,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/onboarding/preview",
       "name": "POST /world/onboarding/preview",
-      "description": "Источник: docs/api/world.openapi.json.  Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело.",
+      "description": "Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело.",
       "method": "POST",
       "body": {
         "mimeType": "application/json",
@@ -7013,7 +7020,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/onboarding/join",
       "name": "[DEPRECATED] POST /world/onboarding/join",
-      "description": "Deprecated для схемы 38: создание объектов через /v1/world/start и /v1/world/builds, см. docs/api/simple-world.md. Источник: docs/api/world.openapi.json.  Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело.",
+      "description": "Deprecated для схемы 38: создание объектов через /v1/world/start и /v1/world/builds, см. docs/architecture/simple-world-api.md. Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело.",
       "method": "POST",
       "body": {
         "mimeType": "application/json",
@@ -7048,7 +7055,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/nodes/{{ _.world_node_id }}/move-preview",
       "name": "[DEPRECATED] POST /world/nodes/{id}/move-preview",
-      "description": "Deprecated для схемы 38: создание объектов через /v1/world/start и /v1/world/builds, см. docs/api/simple-world.md. Источник: docs/api/world.openapi.json.  Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело.",
+      "description": "Deprecated для схемы 38: создание объектов через /v1/world/start и /v1/world/builds, см. docs/architecture/simple-world-api.md. Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело.",
       "method": "POST",
       "body": {
         "mimeType": "application/json",
@@ -7083,7 +7090,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/nodes/{{ _.world_node_id }}/move",
       "name": "[DEPRECATED] POST /world/nodes/{id}/move",
-      "description": "Deprecated для схемы 38: создание объектов через /v1/world/start и /v1/world/builds, см. docs/api/simple-world.md. Источник: docs/api/world.openapi.json.  Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело.",
+      "description": "Deprecated для схемы 38: создание объектов через /v1/world/start и /v1/world/builds, см. docs/architecture/simple-world-api.md. Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело.",
       "method": "POST",
       "body": {
         "mimeType": "application/json",
@@ -7118,7 +7125,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/nodes/{{ _.world_node_id }}/archive-preview",
       "name": "POST /world/nodes/{id}/archive-preview",
-      "description": "Источник: docs/api/world.openapi.json.  Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело.",
+      "description": "Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело.",
       "method": "POST",
       "body": {
         "mimeType": "application/json",
@@ -7153,7 +7160,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/nodes/{{ _.world_node_id }}/archive",
       "name": "POST /world/nodes/{id}/archive",
-      "description": "Источник: docs/api/world.openapi.json.  Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело.",
+      "description": "Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело.",
       "method": "POST",
       "body": {
         "mimeType": "application/json",
@@ -10040,7 +10047,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/craft/command",
       "name": "DEPRECATED command",
-      "description": "Deprecated. Actions: craft, starter, gather, discard, use, merge, transfer, buy_slots, repair. Параметры: docs/implementation/craft/classic-craft.md. Для новых операций используйте world/workspace/craft и другие world API.",
+      "description": "Deprecated. Actions: craft, starter, gather, discard, use, merge, transfer, buy_slots, repair. Параметры: yii2/common/modules/world/modules/craft. Для новых операций используйте world/workspace/craft и другие world API.",
       "method": "POST",
       "body": {
         "mimeType": "application/json",
@@ -10215,7 +10222,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/beds/{{ _.world_bed_id }}/dig-preview",
       "name": "POST /world/beds/{id}/dig-preview",
-      "description": "Contract: docs/api/world-cultivation.openapi.json. Growth never pauses. Missed watering halves yield; expired crops cannot be harvested. Dig requires a shovel and wears it once. Harvest enters five-slot garden storage.",
+      "description": "Growth never pauses. Missed watering halves yield; expired crops cannot be harvested. Dig requires a shovel and wears it once. Harvest enters five-slot garden storage.",
       "method": "POST",
       "body": {
         "mimeType": "application/json",
@@ -10250,7 +10257,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/beds/{{ _.world_bed_id }}/dig",
       "name": "POST /world/beds/{id}/dig",
-      "description": "Contract: docs/api/world-cultivation.openapi.json. Growth never pauses. Missed watering halves yield; expired crops cannot be harvested. Dig requires a shovel and wears it once. Harvest enters five-slot garden storage.",
+      "description": "Growth never pauses. Missed watering halves yield; expired crops cannot be harvested. Dig requires a shovel and wears it once. Harvest enters five-slot garden storage.",
       "method": "POST",
       "body": {
         "mimeType": "application/json",
@@ -10285,7 +10292,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/nodes/{{ _.world_node_id }}/warehouse",
       "name": "GET /world/nodes/{id}/warehouse",
-      "description": "Источник: docs/api/world-warehouse.openapi.json. Owned production stockpile or standalone warehouse. A paid expansion adds one item slot. Price is base_price * (capacity - initial_capacity + 1). Default base 5 Cr; production 4 to 40 slots, warehouse 20 to 200. Admin may configure price and limit without granting slots. Optional personal top-up fills the exact budget shortfall. Payment reaches settlement treasury atomically with capacity change; replay cannot double-charge.",
+      "description": "Owned production stockpile or standalone warehouse. A paid expansion adds one item slot. Price is base_price * (capacity - initial_capacity + 1). Default base 5 Cr; production 4 to 40 slots, warehouse 20 to 200. Admin may configure price and limit without granting slots. Optional personal top-up fills the exact budget shortfall. Payment reaches settlement treasury atomically with capacity change; replay cannot double-charge.",
       "method": "GET",
       "body": {},
       "parameters": [],
@@ -10312,7 +10319,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/nodes/{{ _.world_node_id }}/warehouse-expand-preview",
       "name": "POST /world/nodes/{id}/warehouse-expand-preview",
-      "description": "Источник: docs/api/world-warehouse.openapi.json. Owned production stockpile or standalone warehouse. A paid expansion adds one item slot. Price is base_price * (capacity - initial_capacity + 1). Default base 5 Cr; production 4 to 40 slots, warehouse 20 to 200. Admin may configure price and limit without granting slots. Optional personal top-up fills the exact budget shortfall. Payment reaches settlement treasury atomically with capacity change; replay cannot double-charge. Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело.",
+      "description": "Owned production stockpile or standalone warehouse. A paid expansion adds one item slot. Price is base_price * (capacity - initial_capacity + 1). Default base 5 Cr; production 4 to 40 slots, warehouse 20 to 200. Admin may configure price and limit without granting slots. Optional personal top-up fills the exact budget shortfall. Payment reaches settlement treasury atomically with capacity change; replay cannot double-charge. Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело.",
       "method": "POST",
       "body": {
         "mimeType": "application/json",
@@ -10347,7 +10354,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/nodes/{{ _.world_node_id }}/warehouse-expand",
       "name": "POST /world/nodes/{id}/warehouse-expand",
-      "description": "Источник: docs/api/world-warehouse.openapi.json. Owned production stockpile or standalone warehouse. A paid expansion adds one item slot. Price is base_price * (capacity - initial_capacity + 1). Default base 5 Cr; production 4 to 40 slots, warehouse 20 to 200. Admin may configure price and limit without granting slots. Optional personal top-up fills the exact budget shortfall. Payment reaches settlement treasury atomically with capacity change; replay cannot double-charge. Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело.",
+      "description": "Owned production stockpile or standalone warehouse. A paid expansion adds one item slot. Price is base_price * (capacity - initial_capacity + 1). Default base 5 Cr; production 4 to 40 slots, warehouse 20 to 200. Admin may configure price and limit without granting slots. Optional personal top-up fills the exact budget shortfall. Payment reaches settlement treasury atomically with capacity change; replay cannot double-charge. Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело.",
       "method": "POST",
       "body": {
         "mimeType": "application/json",
@@ -10382,7 +10389,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world",
       "name": "GET /world?view=home — страница одним запросом",
-      "description": "Источник: docs/api/world.openapi.json, Screen. Узел, хлебные крошки, соседи, карта и capabilities одним запросом.",
+      "description": ", Screen. Узел, хлебные крошки, соседи, карта и capabilities одним запросом.",
       "method": "GET",
       "body": {},
       "parameters": [
@@ -10415,7 +10422,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/nodes/{{ _.world_node_id }}/navigation",
       "name": "GET /world/nodes/{id}/navigation?include=map — страница одним запросом",
-      "description": "Источник: docs/api/world.openapi.json, Screen. Узел, хлебные крошки, соседи, карта и capabilities одним запросом.",
+      "description": "Screen. Узел, хлебные крошки, соседи, карта и capabilities одним запросом. Архивные объекты и потомки архивных предков исключены, включая аккаунты с world-manage. Прямая ссылка на отменённую стройку возвращает NODE_NOT_FOUND (404).",
       "method": "GET",
       "body": {},
       "parameters": [
@@ -10448,7 +10455,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/nodes/{{ _.world_node_id }}/harvest",
       "name": "GET /world/nodes/{id}/harvest",
-      "description": "Contract: docs/api/world-harvest.openapi.json; placement-options: docs/api/world-storage.openapi.json.",
+      "description": "Склад урожая: пять ячеек, данные партий и цен. Для владельца destinations содержит доступные собственные рюкзак, сундуки и склады на территории огорода.",
       "method": "GET",
       "body": {},
       "parameters": [],
@@ -10475,7 +10482,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/nodes/{{ _.world_node_id }}/harvest-price-preview",
       "name": "POST /world/nodes/{id}/harvest-price-preview",
-      "description": "Contract: docs/api/world-harvest.openapi.json; placement-options: docs/api/world-storage.openapi.json.",
+      "description": "placement-options: GET /v1/world/nodes/{id}/placement-options.",
       "method": "POST",
       "body": {
         "mimeType": "application/json",
@@ -10510,7 +10517,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/nodes/{{ _.world_node_id }}/harvest-price",
       "name": "POST /world/nodes/{id}/harvest-price",
-      "description": "Contract: docs/api/world-harvest.openapi.json; placement-options: docs/api/world-storage.openapi.json.",
+      "description": "placement-options: GET /v1/world/nodes/{id}/placement-options.",
       "method": "POST",
       "body": {
         "mimeType": "application/json",
@@ -10545,7 +10552,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/nodes/{{ _.world_node_id }}/harvest-buy-preview",
       "name": "POST /world/nodes/{id}/harvest-buy-preview",
-      "description": "Contract: docs/api/world-harvest.openapi.json; placement-options: docs/api/world-storage.openapi.json.",
+      "description": "placement-options: GET /v1/world/nodes/{id}/placement-options.",
       "method": "POST",
       "body": {
         "mimeType": "application/json",
@@ -10580,7 +10587,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/nodes/{{ _.world_node_id }}/harvest-buy",
       "name": "POST /world/nodes/{id}/harvest-buy",
-      "description": "Contract: docs/api/world-harvest.openapi.json; placement-options: docs/api/world-storage.openapi.json.",
+      "description": "placement-options: GET /v1/world/nodes/{id}/placement-options.",
       "method": "POST",
       "body": {
         "mimeType": "application/json",
@@ -10615,11 +10622,11 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/nodes/{{ _.world_node_id }}/harvest-withdraw-preview",
       "name": "POST /world/nodes/{id}/harvest-withdraw-preview",
-      "description": "Contract: docs/api/world-harvest.openapi.json; placement-options: docs/api/world-storage.openapi.json.",
+      "description": "Перемещение урожая в выбранное собственное хранилище из destinations GET harvest. Необязательный destination_storage_id; без него — рюкзак. Preview проверяет вместимость и право доступа; execute с теми же входом, quote_id, expected_revisions и request_key. Повтор не дублирует выдачу.",
       "method": "POST",
       "body": {
         "mimeType": "application/json",
-        "text": "{\n  \"inventory_id\": 1,\n  \"quantity\": 1\n}"
+        "text": "{\n  \"inventory_id\": 1,\n  \"quantity\": 1,\n  \"destination_storage_id\": {{ _.world_output_storage_id }}\n}"
       },
       "parameters": [],
       "headers": [
@@ -10650,11 +10657,11 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/nodes/{{ _.world_node_id }}/harvest-withdraw",
       "name": "POST /world/nodes/{id}/harvest-withdraw",
-      "description": "Contract: docs/api/world-harvest.openapi.json; placement-options: docs/api/world-storage.openapi.json.",
+      "description": "Перемещение урожая в выбранное собственное хранилище из destinations GET harvest. Необязательный destination_storage_id; без него — рюкзак. Preview проверяет вместимость и право доступа; execute с теми же входом, quote_id, expected_revisions и request_key. Повтор не дублирует выдачу.",
       "method": "POST",
       "body": {
         "mimeType": "application/json",
-        "text": "{\n  \"inventory_id\": 1,\n  \"quantity\": 1,\n  \"request_key\": \"{{ _.world_request_key }}\",\n  \"quote_id\": \"{{ _.world_quote_id }}\",\n  \"expected_revisions\": {}\n}"
+        "text": "{\n  \"inventory_id\": 1,\n  \"quantity\": 1,\n  \"destination_storage_id\": {{ _.world_output_storage_id }},\n  \"request_key\": \"{{ _.world_request_key }}\",\n  \"quote_id\": \"{{ _.world_quote_id }}\",\n  \"expected_revisions\": {}\n}"
       },
       "parameters": [],
       "headers": [
@@ -10685,10 +10692,21 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/nodes/{{ _.world_node_id }}/placement-options",
       "name": "GET /world/nodes/{id}/placement-options",
-      "description": "Contract: docs/api/world-harvest.openapi.json; placement-options: docs/api/world-storage.openapi.json.",
+      "description": "Общий каталог станций, мебели и сундуков. Без вещи: quantity=0,requires_crafting=true,input=null. У чужих объектов личные количества и inventory IDs не раскрываются. Для установки нужна свободная открытая ячейка собственного действующего объекта.",
       "method": "GET",
       "body": {},
-      "parameters": [],
+      "parameters": [
+        {
+          "name": "x",
+          "value": "0",
+          "disabled": true
+        },
+        {
+          "name": "y",
+          "value": "0",
+          "disabled": true
+        }
+      ],
       "headers": [],
       "authentication": {
         "type": "bearer",
@@ -10711,7 +10729,7 @@
       "modified": 1791244800000,
       "created": 1791244800000,
       "name": "World · simple core",
-      "description": "Схема 38. docs/api/simple-world.md. Для нового POST — новый ключ simple_request_key, для повтора — прежние ключ и тело.",
+      "description": "Схема 38. docs/architecture/simple-world-api.md. Для нового POST — новый ключ simple_request_key, для повтора — прежние ключ и тело.",
       "environment": {
         "simple_node_id": "8",
         "simple_parent_id": "8",
@@ -10732,7 +10750,7 @@
       "name": "GET · Мир",
       "url": "{{ _.baseUrl }}/v1/world/objects?hierarchy_level=1&envelope=1",
       "method": "GET",
-      "description": "Контракт: docs/api/simple-world.md. ID в окружении — примеры: сначала получите действительные ID из GET.",
+      "description": "Контракт: docs/architecture/simple-world-api.md. ID в окружении — примеры: сначала получите действительные ID из GET.",
       "body": {},
       "parameters": [],
       "headers": [
@@ -10763,7 +10781,7 @@
       "name": "GET · Дочерние объекты",
       "url": "{{ _.baseUrl }}/v1/world/objects?parent_id={{ _.simple_parent_id }}&envelope=1",
       "method": "GET",
-      "description": "Контракт: docs/api/simple-world.md. ID в окружении — примеры: сначала получите действительные ID из GET.",
+      "description": "Контракт: docs/architecture/simple-world-api.md. ID в окружении — примеры: сначала получите действительные ID из GET.",
       "body": {},
       "parameters": [],
       "headers": [
@@ -10794,7 +10812,7 @@
       "name": "GET · Города для старта",
       "url": "{{ _.baseUrl }}/v1/world/objects?hierarchy_level=3&envelope=1",
       "method": "GET",
-      "description": "Контракт: docs/api/simple-world.md. ID в окружении — примеры: сначала получите действительные ID из GET.",
+      "description": "Контракт: docs/architecture/simple-world-api.md. ID в окружении — примеры: сначала получите действительные ID из GET.",
       "body": {},
       "parameters": [],
       "headers": [
@@ -10825,7 +10843,7 @@
       "name": "GET · Объект",
       "url": "{{ _.baseUrl }}/v1/world/objects/{{ _.simple_node_id }}",
       "method": "GET",
-      "description": "Контракт: docs/api/simple-world.md. ID в окружении — примеры: сначала получите действительные ID из GET.",
+      "description": "Контракт: docs/architecture/simple-world-api.md. ID в окружении — примеры: сначала получите действительные ID из GET.",
       "body": {},
       "parameters": [],
       "headers": [
@@ -10856,7 +10874,7 @@
       "name": "GET · Шаблоны для родителя",
       "url": "{{ _.baseUrl }}/v1/world/templates?parent_id={{ _.simple_parent_id }}&envelope=1",
       "method": "GET",
-      "description": "Контракт: docs/api/simple-world.md. ID в окружении — примеры: сначала получите действительные ID из GET.",
+      "description": "Общий каталог для всех типов и уровней родителя. available/unavailable_reason учитывают права, состояние, материалы, инструменты и станции. Уровень экземпляра определяется родителем; эквивалентные старые рецепты не дублируются.",
       "body": {},
       "parameters": [],
       "headers": [
@@ -10887,7 +10905,7 @@
       "name": "GET · Действующие события",
       "url": "{{ _.baseUrl }}/v1/world/events?node_id={{ _.simple_node_id }}&envelope=1",
       "method": "GET",
-      "description": "Контракт: docs/api/simple-world.md. ID в окружении — примеры: сначала получите действительные ID из GET.",
+      "description": "Контракт: docs/architecture/simple-world-api.md. ID в окружении — примеры: сначала получите действительные ID из GET.",
       "body": {},
       "parameters": [],
       "headers": [
@@ -10918,7 +10936,7 @@
       "name": "GET · Доступные стройки",
       "url": "{{ _.baseUrl }}/v1/world/builds?envelope=1",
       "method": "GET",
-      "description": "Контракт: docs/api/simple-world.md. ID в окружении — примеры: сначала получите действительные ID из GET.",
+      "description": "Контракт: docs/architecture/simple-world-api.md. ID в окружении — примеры: сначала получите действительные ID из GET.",
       "body": {},
       "parameters": [],
       "headers": [
@@ -10949,7 +10967,7 @@
       "name": "GET · Стройка и труд",
       "url": "{{ _.baseUrl }}/v1/world/builds/{{ _.simple_build_id }}",
       "method": "GET",
-      "description": "Контракт: docs/api/simple-world.md. ID в окружении — примеры: сначала получите действительные ID из GET.",
+      "description": "Контракт: docs/architecture/simple-world-api.md. ID в окружении — примеры: сначала получите действительные ID из GET.",
       "body": {},
       "parameters": [],
       "headers": [
@@ -10980,7 +10998,7 @@
       "name": "GET · Своя стоянка",
       "url": "{{ _.baseUrl }}/v1/world/start",
       "method": "GET",
-      "description": "Контракт: docs/api/simple-world.md. ID в окружении — примеры: сначала получите действительные ID из GET.",
+      "description": "Контракт: docs/architecture/simple-world-api.md. ID в окружении — примеры: сначала получите действительные ID из GET.",
       "body": {},
       "parameters": [],
       "headers": [
@@ -11011,7 +11029,7 @@
       "name": "POST · Начать стоянку",
       "url": "{{ _.baseUrl }}/v1/world/start",
       "method": "POST",
-      "description": "Контракт: docs/api/simple-world.md. ID в окружении — примеры: сначала получите действительные ID из GET. Новый ключ для нового действия; тот же ключ и тело при повторе.",
+      "description": "Контракт: docs/architecture/simple-world-api.md. ID в окружении — примеры: сначала получите действительные ID из GET. Новый ключ для нового действия; тот же ключ и тело при повторе.",
       "body": {
         "mimeType": "application/json",
         "text": "{\"city_id\": {{ _.simple_city_id }}}"
@@ -11053,10 +11071,10 @@
       "name": "POST · Начать стройку",
       "url": "{{ _.baseUrl }}/v1/world/builds",
       "method": "POST",
-      "description": "Контракт: docs/api/simple-world.md. ID в окружении — примеры: сначала получите действительные ID из GET. Новый ключ для нового действия; тот же ключ и тело при повторе.",
+      "description": "Contract: docs/architecture/simple-world-api.md. Existing budget is reserved first; top_up=true permits only the missing amount from the personal wallet. Funding, materials and construction are atomic. Retry with the same Idempotency-Key and body.",
       "body": {
         "mimeType": "application/json",
-        "text": "{\"parent_id\": {{ _.simple_parent_id }}, \"template_id\": {{ _.simple_template_id }}, \"name\": \"Мой дом\", \"labor_budget\": \"0\"}"
+        "text": "{\"parent_id\": {{ _.simple_parent_id }}, \"template_id\": {{ _.simple_template_id }}, \"name\": \"Мой дом\", \"labor_budget\": \"0\", \"x\": 0, \"y\": 0,\n  \"top_up\": false\n}"
       },
       "parameters": [],
       "headers": [
@@ -11095,7 +11113,7 @@
       "name": "POST · Начать работу",
       "url": "{{ _.baseUrl }}/v1/world/builds/{{ _.simple_build_id }}/start",
       "method": "POST",
-      "description": "Контракт: docs/api/simple-world.md. ID в окружении — примеры: сначала получите действительные ID из GET. Новый ключ для нового действия; тот же ключ и тело при повторе.",
+      "description": "Контракт: docs/architecture/simple-world-api.md. ID в окружении — примеры: сначала получите действительные ID из GET. Новый ключ для нового действия; тот же ключ и тело при повторе.",
       "body": {
         "mimeType": "application/json",
         "text": "{}"
@@ -11137,7 +11155,7 @@
       "name": "POST · Учесть труд",
       "url": "{{ _.baseUrl }}/v1/world/builds/{{ _.simple_build_id }}/heartbeat",
       "method": "POST",
-      "description": "Контракт: docs/api/simple-world.md. ID в окружении — примеры: сначала получите действительные ID из GET. Новый ключ для нового действия; тот же ключ и тело при повторе.",
+      "description": "Контракт: docs/architecture/simple-world-api.md. ID в окружении — примеры: сначала получите действительные ID из GET. Новый ключ для нового действия; тот же ключ и тело при повторе.",
       "body": {
         "mimeType": "application/json",
         "text": "{}"
@@ -11179,7 +11197,7 @@
       "name": "POST · Остановить работу",
       "url": "{{ _.baseUrl }}/v1/world/builds/{{ _.simple_build_id }}/stop",
       "method": "POST",
-      "description": "Контракт: docs/api/simple-world.md. ID в окружении — примеры: сначала получите действительные ID из GET. Новый ключ для нового действия; тот же ключ и тело при повторе.",
+      "description": "Контракт: docs/architecture/simple-world-api.md. ID в окружении — примеры: сначала получите действительные ID из GET. Новый ключ для нового действия; тот же ключ и тело при повторе.",
       "body": {
         "mimeType": "application/json",
         "text": "{}"
@@ -11221,7 +11239,7 @@
       "name": "POST · Отменить стройку",
       "url": "{{ _.baseUrl }}/v1/world/builds/{{ _.simple_build_id }}/cancel",
       "method": "POST",
-      "description": "Контракт: docs/api/simple-world.md. ID в окружении — примеры: сначала получите действительные ID из GET. Новый ключ для нового действия; тот же ключ и тело при повторе.",
+      "description": "Контракт: docs/architecture/simple-world-api.md. Новая стройка: объект архивируется и исчезает с карты; возвращается floor(quantity * 0.7) каждого материала даже до начала работ. Ответ {build, return_node_id}; клиент открывает родительскую карту. Ремонт: объект сохраняется, ответ {build}. Только владелец. Новый ключ для нового действия; тот же ключ и тело при повторе.",
       "body": {
         "mimeType": "application/json",
         "text": "{}"
@@ -11263,7 +11281,7 @@
       "name": "GET · Бюджет родителя",
       "url": "{{ _.baseUrl }}/v1/world/objects/{{ _.simple_node_id }}/budget",
       "method": "GET",
-      "description": "Контракт: docs/api/simple-world.md. ID в окружении — примеры: сначала получите действительные ID из GET.",
+      "description": "Контракт: docs/architecture/simple-world-api.md. ID в окружении — примеры: сначала получите действительные ID из GET.",
       "body": {},
       "parameters": [],
       "headers": [
@@ -11294,7 +11312,7 @@
       "name": "POST · Пополнить свой бюджет",
       "url": "{{ _.baseUrl }}/v1/world/objects/{{ _.simple_node_id }}/budget",
       "method": "POST",
-      "description": "Контракт: docs/api/simple-world.md. ID в окружении — примеры: сначала получите действительные ID из GET. Новый ключ для нового действия; тот же ключ и тело при повторе.",
+      "description": "Контракт: docs/architecture/simple-world-api.md. ID в окружении — примеры: сначала получите действительные ID из GET. Новый ключ для нового действия; тот же ключ и тело при повторе.",
       "body": {
         "mimeType": "application/json",
         "text": "{\"amount\":\"10.0000\"}"
@@ -11333,10 +11351,10 @@
       "parentId": "fld_6d6e271b7544c709bed8d6c70f1b90e0",
       "modified": 1791244800000,
       "created": 1791244800000,
-      "name": "POST · Дневной сбор / шахта",
+      "name": "POST · Сбор на своей стоянке",
       "url": "{{ _.baseUrl }}/v1/world/objects/{{ _.simple_node_id }}/gather",
       "method": "POST",
-      "description": "Контракт: docs/api/simple-world.md. ID в окружении — примеры: сначала получите действительные ID из GET. Новый ключ для нового действия; тот же ключ и тело при повторе.",
+      "description": "Только собственная действующая стоянка. Раз в день Europe/Moscow. Ответ содержит message, gather_available, gather_available_at, server_time. Новый Idempotency-Key для нового действия.",
       "body": {
         "mimeType": "application/json",
         "text": "{}"
@@ -11361,6 +11379,377 @@
         "token": "{{ _.bearer }}"
       },
       "metaSortKey": 17,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_d29d35883dcb5da783ad301418997cc2",
+      "parentId": "fld_6d6e271b7544c709bed8d6c70f1b90e0",
+      "modified": 1791244800000,
+      "created": 1791244800000,
+      "name": "GET · Текущая работа",
+      "url": "{{ _.baseUrl }}/v1/world/builds/active",
+      "method": "GET",
+      "description": "{build: Build|null}. Восстановление активной работы после перезагрузки, перед переходом на другую карту требуется stop.",
+      "body": {},
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Accept",
+          "value": "application/json"
+        }
+      ],
+      "authentication": {
+        "type": "bearer",
+        "token": "{{ _.bearer }}"
+      },
+      "metaSortKey": 30.0356,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_c33e1bcfb09a59f39a4d1a44094049fc",
+      "parentId": "fld_6d6e271b7544c709bed8d6c70f1b90e0",
+      "modified": 1791244800000,
+      "created": 1791244800000,
+      "name": "GET · Таймер сбора",
+      "url": "{{ _.baseUrl }}/v1/world/objects/{{ _.simple_node_id }}/gather",
+      "method": "GET",
+      "description": "{gather_available,gather_available_at,server_time}. Только своя действующая стоянка; GET ничего не списывает.",
+      "body": {},
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Accept",
+          "value": "application/json"
+        }
+      ],
+      "authentication": {
+        "type": "bearer",
+        "token": "{{ _.bearer }}"
+      },
+      "metaSortKey": 30.0357,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_0959e8a31d17579090141bb935fba924",
+      "parentId": "fld_6d6e271b7544c709bed8d6c70f1b90e0",
+      "modified": 1791244800000,
+      "created": 1791244800000,
+      "name": "POST · Имя и бюджет стройки",
+      "url": "{{ _.baseUrl }}/v1/world/builds/{{ _.simple_build_id }}/settings",
+      "method": "POST",
+      "description": "Contract: docs/architecture/simple-world-api.md. Existing budget is reserved first; top_up=true permits only the missing amount from the personal wallet. Funding, materials and construction are atomic. Retry with the same Idempotency-Key and body.",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\"name\":\"Мой дом\", \"labor_budget\":\"0\",\n  \"top_up\": false\n}"
+      },
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Accept",
+          "value": "application/json"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "name": "Idempotency-Key",
+          "value": "{{ _.simple_request_key }}"
+        }
+      ],
+      "authentication": {
+        "type": "bearer",
+        "token": "{{ _.bearer }}"
+      },
+      "metaSortKey": 30.0358,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_780642e03267abf887f0c89db4d8efdc",
+      "parentId": "fld_6d6e271b7544c709bed8d6c70f1b90e0",
+      "modified": 1791244800000,
+      "created": 1791244800000,
+      "name": "GET - Mining view",
+      "url": "{{ _.baseUrl }}/v1/world/objects/{{ _.simple_node_id }}/mining",
+      "method": "GET",
+      "description": "Contract: docs/architecture/simple-world-api.md. Set simple_node_id to a visible active mine containing a completed drilling rig. Workers produce ore for its owner; heartbeat every 10 seconds, maximum 60 seconds credited after disconnect. Commands require a new key per action; retries retain the key.",
+      "body": {},
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Accept",
+          "value": "application/json"
+        }
+      ],
+      "authentication": {
+        "type": "bearer",
+        "token": "{{ _.bearer }}"
+      },
+      "metaSortKey": 31.0,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_ddbf1e379ea7df92f9c58c4cc62f4a5f",
+      "parentId": "fld_6d6e271b7544c709bed8d6c70f1b90e0",
+      "modified": 1791244800000,
+      "created": 1791244800000,
+      "name": "POST - Mining start",
+      "url": "{{ _.baseUrl }}/v1/world/objects/{{ _.simple_node_id }}/mining/start",
+      "method": "POST",
+      "description": "Contract: docs/architecture/simple-world-api.md. Set simple_node_id to a visible active mine containing a completed drilling rig. Workers produce ore for its owner; heartbeat every 10 seconds, maximum 60 seconds credited after disconnect. Commands require a new key per action; retries retain the key.",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{}"
+      },
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Accept",
+          "value": "application/json"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "name": "Idempotency-Key",
+          "value": "{{ _.simple_request_key }}"
+        }
+      ],
+      "authentication": {
+        "type": "bearer",
+        "token": "{{ _.bearer }}"
+      },
+      "metaSortKey": 31.1,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_1c526fa1785aff8e89bd42580f6cab9c",
+      "parentId": "fld_6d6e271b7544c709bed8d6c70f1b90e0",
+      "modified": 1791244800000,
+      "created": 1791244800000,
+      "name": "POST - Mining heartbeat",
+      "url": "{{ _.baseUrl }}/v1/world/objects/{{ _.simple_node_id }}/mining/heartbeat",
+      "method": "POST",
+      "description": "Contract: docs/architecture/simple-world-api.md. Set simple_node_id to a visible active mine containing a completed drilling rig. Workers produce ore for its owner; heartbeat every 10 seconds, maximum 60 seconds credited after disconnect. Commands require a new key per action; retries retain the key.",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{}"
+      },
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Accept",
+          "value": "application/json"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "name": "Idempotency-Key",
+          "value": "{{ _.simple_request_key }}"
+        }
+      ],
+      "authentication": {
+        "type": "bearer",
+        "token": "{{ _.bearer }}"
+      },
+      "metaSortKey": 31.2,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_8ad104ab8fe6de27d245144675c915df",
+      "parentId": "fld_6d6e271b7544c709bed8d6c70f1b90e0",
+      "modified": 1791244800000,
+      "created": 1791244800000,
+      "name": "POST - Mining stop",
+      "url": "{{ _.baseUrl }}/v1/world/objects/{{ _.simple_node_id }}/mining/stop",
+      "method": "POST",
+      "description": "Contract: docs/architecture/simple-world-api.md. Set simple_node_id to a visible active mine containing a completed drilling rig. Workers produce ore for its owner; heartbeat every 10 seconds, maximum 60 seconds credited after disconnect. Commands require a new key per action; retries retain the key.",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{}"
+      },
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Accept",
+          "value": "application/json"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "name": "Idempotency-Key",
+          "value": "{{ _.simple_request_key }}"
+        }
+      ],
+      "authentication": {
+        "type": "bearer",
+        "token": "{{ _.bearer }}"
+      },
+      "metaSortKey": 31.3,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_world_object_repair_20261009",
+      "parentId": "fld_6d6e271b7544c709bed8d6c70f1b90e0",
+      "modified": 1791244800000,
+      "created": 1791244800000,
+      "name": "POST · Ремонт объекта",
+      "url": "{{ _.baseUrl }}/v1/world/objects/{{ _.simple_node_id }}/repair",
+      "method": "POST",
+      "description": "Create a repair job for an owned active damaged object at any level. Save build.id as simple_build_id, then use existing build settings/start/heartbeat/stop/cancel. Helpers are paid from the reserved labor budget. Cancelling keeps the object and restored strength. Exact retries use the same Idempotency-Key and payload.",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{}"
+      },
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Accept",
+          "value": "application/json"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "name": "Idempotency-Key",
+          "value": "{{ _.simple_request_key }}"
+        }
+      ],
+      "authentication": {
+        "type": "bearer",
+        "token": "{{ _.bearer }}"
+      },
+      "metaSortKey": 30.036,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_world_common_screen_20261009",
+      "parentId": "fld_ea15edb61c8ffcbe49e62c342cd39e5c",
+      "modified": 1791009594237,
+      "created": 1791009594237,
+      "url": "{{ _.baseUrl }}/v1/world/nodes/{{ _.world_node_id }}",
+      "name": "GET — Общий экран ноды с картой",
+      "description": "Общий DTO ноды: одинаковые details.condition,max_condition,repair_active и actions; extensions объявляет дополнительные блоки огорода, шахты, ночлега. include=map возвращает единый экран, без отдельной загрузки по виду объекта.",
+      "method": "GET",
+      "body": {},
+      "parameters": [
+        {
+          "id": "pair_common_map_20261009",
+          "name": "include",
+          "value": "map",
+          "disabled": false
+        }
+      ],
+      "headers": [],
+      "authentication": {
+        "type": "bearer",
+        "token": "{{ _.bearer }}",
+        "disabled": false
+      },
+      "metaSortKey": 208,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_world_nested_screen_20261009",
+      "parentId": "fld_ea15edb61c8ffcbe49e62c342cd39e5c",
+      "modified": 1791009594237,
+      "created": 1791009594237,
+      "url": "{{ _.baseUrl }}/v1/world/nodes/{{ _.world_node_id }}",
+      "name": "GET · Вложенное дерево мира для экрана",
+      "description": "Открытая ветвь мира: children, geo, state, construction, owner, map. children_loaded отмечает полную загрузку прямых детей. Собирается пакетно, без полной загрузки мира.",
+      "method": "GET",
+      "body": {},
+      "parameters": [
+        {
+          "id": "pair_common_map_20261009",
+          "name": "include",
+          "value": "tree",
+          "disabled": false
+        }
+      ],
+      "headers": [],
+      "authentication": {
+        "type": "bearer",
+        "token": "{{ _.bearer }}",
+        "disabled": false
+      },
+      "metaSortKey": 208,
       "isPrivate": false,
       "settingStoreCookies": true,
       "settingSendCookies": true,

@@ -16,11 +16,11 @@ $values = ['canopy' => 'Навес', 'workroom' => 'Мастерская', 'hous
     <?php if ($publish): ?>
         <dl class="dl-horizontal">
         <?php foreach ($labels as $key => $label): $value = $terms['config'][$key] ?? null; ?>
-            <dt><?= Html::encode($label) ?></dt><dd><?= Html::encode($value === null ? 'Нет' : ($values[(string)$value] ?? (string)$value)) ?></dd>
+            <dt><?= Html::encode($label) ?></dt><dd><?= Html::encode($value === null ? 'Нет' : (\backend\support\EntityDisplay::creditField($key) ? \backend\support\EntityDisplay::credits($value) : ($values[(string)$value] ?? (string)$value))) ?></dd>
         <?php endforeach ?>
         </dl>
         <?php if (!empty($terms['config']['repair'])): ?>
-            <p>Полный ремонт: <?= Html::encode($terms['config']['repair']['full_price']) ?> Cr из бюджета здания в казну поселения. Цена и материалы уменьшаются пропорционально повреждению с округлением вверх. Ремонт выполняется сразу после подтверждения, без станции игрока.</p>
+            <p>Полный ремонт: <?= Html::encode(\backend\support\EntityDisplay::credits($terms['config']['repair']['full_price'])) ?> Cr из бюджета здания в казну поселения. Цена и материалы уменьшаются пропорционально повреждению с округлением вверх. Ремонт выполняется сразу после подтверждения, без станции игрока.</p>
             <?php if (!empty($terms['config']['repair_for_existing'])): ?><p>Договор также будет предложен прежним зданиям того же типа и площади без условий ремонта. Владелец принимает его отдельно и бесплатно. После принятия тариф сохраняется, даже если предложение снято с продажи.</p><?php endif ?>
             <ul><?php foreach ($terms['config']['repair']['materials'] as $material): ?>
                 <li><?= Html::encode($material['name']) ?>: <?= (int)$material['quantity'] ?></li>

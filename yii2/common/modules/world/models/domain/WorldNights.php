@@ -19,19 +19,19 @@ class WorldNights
     private function one(string $table, array $where): ?array { return (new Query())->from($table)->where($where)->one($this->db) ?: null; }
     public function policy(int $world): ?array { return $this->one('world_night_policy', ['world_id' => $world, 'version' => 1]); }
     /** Read-only state/history. Opening a page never enrolls, heals or resolves a night. */
-    public function state(int $user, int $node, int $page, string $outcome): array
+    public function state(int $user, int $node, int $page, string $outcome, int $size = 20): array
     {
         $this->flags->requireFlag('world_read');
         $place = (new WorldQuery($this->db, new WorldAccessPolicy($user)))->node($node);
         $membership = $this->one('world_membership', ['user_id' => $user, 'starter_site_id' => $node]);
         if (!$membership || !$place['permissions']['storage']) throw new GameError('NIGHT_OWNER_REQUIRED', 'Ночлег и здоровье доступны на собственной стоянке.', 403);
-        if ($page < 1 || $page > 1000000 || !in_array($outcome, ['', 'protected', 'unprotected'], true)) throw new GameError('INVALID_NIGHT_FILTER', 'Некорректные параметры истории ночей.', 422);
+        if ($page < 1 || $page > 1000000 || $size < 1 || $size > 30 || !in_array($outcome, ['', 'protected', 'unprotected'], true)) throw new GameError('INVALID_NIGHT_FILTER', 'Некорректные параметры истории ночей.', 422);
         $policy = $this->policy((int)$membership['world_id']); $actor = $this->one('game_actor', ['user_id' => $user]);
         $health = $policy && $actor ? $this->one('actor_night_health', ['actor_id' => $actor['id'], 'policy_id' => $policy['id'], 'membership_id' => $membership['id']]) : null;
         $now = time();
         $result = ['node_id' => $node, 'enabled' => (bool)$policy, 'processing_available' => false, 'enrollment_pending' => false, 'catching_up' => false,
             'policy' => null, 'grace_until' => null, 'first_eligible_night' => null, 'current_or_next_night' => null, 'protection_forecast' => null, 'health' => null,
-            'history' => ['items' => [], '_meta' => ['totalCount' => 0, 'pageCount' => 0, 'currentPage' => $page, 'perPage' => 20]], 'server_time' => $now];
+            'history' => ['items' => [], '_meta' => ['totalCount' => 0, 'pageCount' => 0, 'currentPage' => $page, 'perPage' => $size]], 'server_time' => $now];
         if (!$policy) return $result;
         $registry = $this->one('world_registry', ['id' => 1]); $flags = $this->flags->capabilities();
         $result['processing_available'] = $flags['world_write'] && $flags['storage_v2'] && (int)$registry['active_world_id'] === (int)$policy['world_id'];
@@ -55,11 +55,11 @@ class WorldNights
             $query->andWhere(['<', 'p.sequence', (int)$health['next_sequence']]);
             if ($outcome !== '') $query->andWhere(['r.outcome' => $outcome]);
             $total = (int)(clone $query)->count('*', $this->db); $items = [];
-            foreach ($query->orderBy(['p.sequence' => SORT_DESC])->offset(($page - 1) * 20)->limit(20)->all($this->db) as $row) {
+            foreach ($query->orderBy(['p.sequence' => SORT_DESC])->offset(($page - 1) * $size)->limit($size)->all($this->db) as $row) {
                 foreach ($row as $key => $value) if ($key !== 'outcome') $row[$key] = (int)$value;
                 $items[] = $row;
             }
-            $result['history'] = ['items' => $items, '_meta' => ['totalCount' => $total, 'pageCount' => (int)ceil($total / 20), 'currentPage' => $page, 'perPage' => 20]];
+            $result['history'] = ['items' => $items, '_meta' => ['totalCount' => $total, 'pageCount' => (int)ceil($total / $size), 'currentPage' => $page, 'perPage' => $size]];
         }
         return $result;
     }
@@ -111,6 +111,21 @@ class WorldNights
     {
         $policy = $this->policy((int)$membership['world_id']);
         if ($policy) $this->enqueue($policy, $membership, 0, time());
+    }
+    /** Repair enrollment missed by older start commands without resolving health in GET. */
+    public function discover(): void
+    {
+        $this->db->transaction(function () {
+            $locks = new Locks($this->db); $locks->row('craft_meta', ['id' => 1]); $locks->row('world_registry', ['id' => 1]);
+            $registry = $this->one('world_registry', ['id' => 1]);
+            $policy = $registry ? $this->policy((int)$registry['active_world_id']) : null;
+            if (!$policy) return;
+            $rows = (new Query())->select('m.*')->from(['m' => 'world_membership'])
+                ->leftJoin(['a' => 'game_actor'], 'a.user_id=m.user_id')
+                ->leftJoin(['h' => 'actor_night_health'], 'h.actor_id=a.id AND h.membership_id=m.id AND h.policy_id=' . (int)$policy['id'])
+                ->where(['m.world_id' => $policy['world_id'], 'h.actor_id' => null])->limit(100)->all($this->db);
+            foreach ($rows as $membership) $this->joined($membership);
+        });
     }
     private function enqueue(array $policy, array $membership, int $cursor, int $at): void
     {

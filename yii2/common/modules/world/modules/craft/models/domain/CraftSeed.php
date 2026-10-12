@@ -14,7 +14,7 @@ final class CraftSeed
             // Add new content only; an existing catalog remains under administrator control.
             foreach(['categories'=>'craft_category','items'=>'craft_item','stations'=>'craft_station','recipes'=>'craft_recipe'] as $group=>$table) {
                 $existing=(new \yii\db\Query())->select('code')->from($table)->column($db);
-                $data[$group]=array_values(array_filter($data[$group],static function($row)use($existing){return $row['code']==='classic-space-elixir'&&!in_array($row['code'],$existing,true);}));
+                $data[$group]=array_values(array_filter($data[$group],static function($row)use($existing){return in_array($row['code'], ['classic-space-elixir', 'classic-bed', 'classic-campfire'], true)&&!in_array($row['code'],$existing,true);}));
             }
             if(!$data['items']&&!$data['recipes'])return false;
         }

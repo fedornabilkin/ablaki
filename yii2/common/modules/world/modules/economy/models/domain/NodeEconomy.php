@@ -45,7 +45,8 @@ class NodeEconomy
             }
         }
         $rule = $owner ? (new EconomyHierarchy($this->db))->current($node) : null;
-        $writable = $place['has_finances'] && $place['status'] === 'active' && !(new \common\modules\world\models\domain\WorldTree($this->db))->isShelter($node) && WalletSchema::ready($this->db) && $this->flags->capabilities()['world_write'];
+        $common = isset($this->db->schema->getTableSchema('world_node')->columns['hierarchy_level']);
+        $writable = $place['has_finances'] && $place['status'] === 'active' && ($common || !(new \common\modules\world\models\domain\WorldTree($this->db))->isShelter($node)) && WalletSchema::ready($this->db) && $this->flags->capabilities()['world_write'];
         $catchingUp = $owner && isset($accounts['treasury']) && (new TreasuryLedger($this->db))->catchingUp((int)$accounts['treasury']['id'], time());
         return ['node_id' => $node, 'finance_node_id' => (new EconomyHierarchy($this->db))->financialNode($node), 'has_finances' => $place['has_finances'], 'currency' => 'Cr', 'balances' => $balances, 'can_view_finances' => $owner, 'collection_rule' => $rule,
             'can_invest' => $writable,
@@ -77,7 +78,7 @@ class NodeEconomy
     private function prepare(int $user, array $input): array
     {
         $place = $this->node($user, $input['node_id']); WalletSchema::requireReady($this->db);
-        if ((new \common\modules\world\models\domain\WorldTree($this->db))->isShelter($place['id'])) throw new GameError('SHELTER_HAS_NO_BUDGET', 'Вкладывайте кредиты в бюджет стоянки. Шалаш — переносной предмет.');
+        if (!isset($this->db->schema->getTableSchema('world_node')->columns['hierarchy_level']) && (new \common\modules\world\models\domain\WorldTree($this->db))->isShelter($place['id'])) throw new GameError('SHELTER_HAS_NO_BUDGET', 'Вкладывайте кредиты в бюджет стоянки. Шалаш — переносной предмет.');
         if (!$place['has_finances']) throw new GameError('PARENT_BUDGET_REQUIRED', 'Этот объект использует бюджет родителя. Откройте родительский объект.');
         if ($place['status'] !== 'active') throw new GameError('INVESTMENT_UNAVAILABLE', 'Объект недоступен для вложений.');
         $amount = Money::parse($input['amount']);

@@ -16,7 +16,7 @@ class ShelterController extends LegacyController
         if (!Yii::$app->request->isGet) throw new \yii\web\MethodNotAllowedHttpException('Используйте GET.');
         $outcome = Yii::$app->request->get('outcome', '');
         if (!is_string($outcome)) throw new GameError('INVALID_NIGHT_FILTER', 'Некорректный фильтр ночей.', 422);
-        return (new \common\modules\world\models\domain\WorldNights(Yii::$app->db, $this->flags()))->state((int)Yii::$app->user->id, $this->id($id), $this->id(Yii::$app->request->get('page', 1)), $outcome);
+        return (new \common\modules\world\models\domain\WorldNights(Yii::$app->db, $this->flags()))->state((int)Yii::$app->user->id, $this->id($id), $this->id(Yii::$app->request->get('page', 1)), $outcome, $this->id(Yii::$app->request->get('per-page', 20)));
     }
     private function shelterCommand($id, string $operation, bool $preview): array
     {

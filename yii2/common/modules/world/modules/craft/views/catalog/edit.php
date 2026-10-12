@@ -1,6 +1,6 @@
 <?php use yii\helpers\Html; $this->title='Редактор каталога';
 $labels=['code'=>'Код','name'=>'Название','description'=>'Описание','category'=>'Категория','kind'=>'Тип','rarity'=>'Редкость','icon'=>'Иконка Font Awesome','stack_size'=>'Предметов в слоте','destroyable'=>'Можно удалять (0/1)','use_xp'=>'Опыт категории при использовании расходника','gather_quantity'=>'Сырья в ежедневном наборе (0 — не выдаётся)','active'=>'Активен (0/1)','item'=>'Предмет станции (не расходуется)','output'=>'Результат','output_quantity'=>'Количество результата','cost_credits'=>'Цена одного крафта, Cr','experience'=>'Опыт за один крафт','min_level'=>'Минимальный уровень категории','station'=>'Станция','ingredients'=>'Ингредиенты: код:количество, по одному на строку','tools'=>'Инструменты (не расходуются), коды через запятую','requires'=>'Сначала освоить рецепты, коды через запятую']; ?>
-<?php $labels['storage_kind']='Назначение хранилища'; ?>
+<?php $labels['storage_kind']='Назначение хранилища'; $labels['label']='Подпись (по умолчанию — название)'; ?>
 <h1><?= Html::encode($this->title) ?></h1>
 <?= Html::beginForm('','post') ?>
 <?php foreach($record as $key=>$value): $id='craft-'.$key; ?>

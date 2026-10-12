@@ -15,8 +15,8 @@ use yii\db\ActiveRecord;
  * @property int $id
  * @property string|null $name
  * @property string|null $description
- * @property int|null $crafting_time
- * @property int|null $rare
+ * @property string $kind
+ * @property string $rarity
  * @property int $category_id
  * @property int|null $active
  *
@@ -56,9 +56,9 @@ class CraftItem extends ActiveRecord implements ModelNameInterface
         return [
             [['category_id'], 'default', 'value' => 1],
             [['active'], 'default', 'value' => 0],
-            [['crafting_time'], 'default', 'value' => 20],
-            [['rare'], 'default', 'value' => 100],
-            [['crafting_time', 'rare', 'category_id', 'active'], 'integer'],
+            [['category_id', 'active'], 'integer'],
+            [['kind'], 'in', 'range' => ['material', 'tool', 'equipment', 'consumable', 'station', 'product']],
+            [['rarity'], 'in', 'range' => ['common', 'uncommon', 'rare', 'epic', 'legendary']],
             [['name', 'category_id'], 'required'],
             [['name'], 'string', 'max' => 50],
             [['description'], 'string', 'max' => 5000],
@@ -76,8 +76,8 @@ class CraftItem extends ActiveRecord implements ModelNameInterface
             'id' => Yii::t('craft', 'ID'),
             'name' => Yii::t('craft', 'Name'),
             'description' => Yii::t('craft', 'Description'),
-            'crafting_time' => Yii::t('craft', 'Crafting Time'),
-            'rare' => Yii::t('craft', 'Rare'),
+            'kind' => Yii::t('craft', 'Kind'),
+            'rarity' => Yii::t('craft', 'Rarity'),
             'category_id' => Yii::t('craft', 'Category ID'),
             'categoryName' => Yii::t('craft', 'Category'),
             'active' => Yii::t('craft', 'Active'),
