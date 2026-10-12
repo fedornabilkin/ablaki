@@ -11,8 +11,8 @@ $this->params['breadcrumbs'][] = $this->title;
 $attributes = [['label' => 'ID', 'value' => $id], ['label' => 'Состояние', 'value' => $node['status'] === 'archived' ? 'В архиве' : 'Действует'], ['label' => 'Версия', 'value' => $node['revision']]];
 foreach (array_merge(['name', 'code', 'slug', 'parent_id', 'owner_user_id', 'visibility', 'portable', 'position_x', 'position_y', 'position'], $model->detailFields()) as $field) {
     $value = $model->$field;
-    $attributes[] = ['label' => $model->getAttributeLabel($field), 'format' => 'raw', 'value' => $field === 'parent_id'
-        ? \common\modules\world\models\admin\WorldRelations::value('world_node', $field, $value)
+    $attributes[] = ['label' => $model->getAttributeLabel($field), 'format' => 'raw', 'value' => in_array($field, ['name', 'parent_id', 'owner_user_id'], true)
+        ? \common\modules\world\models\admin\WorldRelations::value('world_node', $field, $value, $node)
         : Html::encode((string)(WorldNodeForm::choices()[$field][$value] ?? $value))];
 }
 $attributes[] = ['label' => 'Полигон на карте', 'value' => $model->footprint ?: 'Одна ячейка'];

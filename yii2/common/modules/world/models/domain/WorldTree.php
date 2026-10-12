@@ -21,6 +21,11 @@ class WorldTree
     }
     public function assertParent(string $type, ?array $parent): void
     {
+        if (isset($this->db->schema->getTableSchema('world_node')->columns['hierarchy_level'])) {
+            if (!in_array($type, array_merge(self::TYPES, ['CHEST', 'PLACE']), true) || (!$parent && $type !== 'WORLD') || ($parent && !(new CommonNodePolicy())->permitsChild($parent)))
+                throw new GameError('INVALID_PARENT', 'Родительский объект недоступен или достигнут предел глубины дерева.', 422);
+            return;
+        }
         if ($parent && $this->isShelter((int)$parent['id'])) throw new GameError('SHELTER_NOT_A_ROOM', 'В шалаше нельзя создавать помещения или места оборудования.');
         $allowed = ['WORLD' => ['REGION'], 'REGION' => ['SETTLEMENT'], 'SETTLEMENT' => ['BUILDING', 'PLOT'], 'BUILDING' => ['ROOM', 'PLOT'], 'PLOT' => ['BUILDING', 'BED', 'PLOT'], 'ROOM' => [], 'BED' => []];
         if (!in_array($type, self::TYPES, true) || (!$parent && $type !== 'WORLD') || ($parent && !in_array($type, $allowed[$parent['node_type']] ?? [], true))) throw new GameError('INVALID_PARENT', 'Здесь нельзя разместить такой объект.', 422);
@@ -89,7 +94,7 @@ class WorldTree
         $this->touchAncestors($id);
         return $this->get($id);
     }
-    public function assertFreePosition(int $parent, int $x, int $y, ?int $except = null): void
+    public function assertFreePosition(int $parent, int $x, int $y, ?int $except = null, bool $checkEquipment = true): void
     {
         WorldLayout::assertCell($this->get($parent), $x, $y);
         $query = (new Query())->select(['id', 'position_x', 'position_y', 'footprint_json'])->from('world_node')->where(['parent_id' => $parent])->andWhere(['<>', 'status', 'archived']);
@@ -97,10 +102,13 @@ class WorldTree
         foreach ($query->all($this->db) as $row)
             if (WorldMapGeometry::covers($row['footprint_json'], (int)$row['position_x'], (int)$row['position_y'], $x, $y))
                 throw new GameError('MAP_CELL_OCCUPIED', 'В этих координатах уже расположен объект.', 422);
+        if ($checkEquipment) foreach ((new PlacementProvisioner($this->db))->equipmentCells($parent) as $cell)
+            if ($cell['x'] === $x && $cell['y'] === $y) throw new GameError('MAP_CELL_OCCUPIED', 'Ячейка занята оборудованием.', 422);
     }
     public function nextPosition(int $parent): array
     {
         $bounds = $this->get($parent); $occupied = [];
+        foreach ((new PlacementProvisioner($this->db))->equipmentCells($parent) as $cell) $occupied[$cell['x'] . ':' . $cell['y']] = true;
         foreach ((new Query())->select(['position_x', 'position_y', 'footprint_json'])->from('world_node')->where(['parent_id' => $parent])->andWhere(['<>', 'status', 'archived'])->all($this->db) as $row)
             foreach (WorldMapGeometry::cells($row['footprint_json'], (int)$row['position_x'], (int)$row['position_y']) as $cell)
                 $occupied[$cell['x'] . ':' . $cell['y']] = true;

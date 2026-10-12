@@ -7,5 +7,5 @@ class NodeController extends CrudController
     public $searchClass = \common\modules\world\models\NodeSearch::class;
     public $title = 'Объекты мира';
     public $columns = ['id', 'name', 'parent_id', 'template_id', 'hierarchy_level', 'owner_user_id', 'status'];
-    public $fields = ['name', 'code', 'slug', 'parent_id', 'template_id', 'owner_user_id', 'visibility'];
+    public $fields = ['name', 'code', 'slug', 'parent_id', 'template_id', 'owner_user_id', 'visibility', 'settings_json'];
 }

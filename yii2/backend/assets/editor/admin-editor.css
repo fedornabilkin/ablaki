@@ -1,0 +1,32 @@
+form.admin-form-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0 18px; align-items: start; }
+form.admin-form-grid > .form-group { min-width: 0; }
+form.admin-form-grid > fieldset { min-width: 0; }
+form.admin-form-grid [hidden] { display: none !important; }
+form.admin-form-grid > .row, form.admin-form-grid > h2, form.admin-form-grid > h3, form.admin-form-grid > p,
+form.admin-form-grid > details, form.admin-form-grid > fieldset, form.admin-form-grid > .admin-wide,
+form.admin-form-grid > .error-summary { grid-column: 1 / -1; }
+.admin-radio-list { display: flex; flex-wrap: wrap; gap: 8px 16px; padding-top: 6px; }
+.admin-radio-list label { font-weight: normal; }
+.select2-container { max-width: 100%; }
+.select2-container .select2-selection--single { min-height: 34px; padding-top: 3px; border-color: #d2d6de; }
+.select2-container .select2-selection--single .select2-selection__arrow { top: 4px; }
+.admin-json-table { width: 100%; margin-block: 12px; }
+.admin-json-table th, .admin-json-table td { padding: 6px; vertical-align: top; }
+.admin-json-table select, .admin-json-table input { width: 100%; }
+.admin-json-table input[type="radio"] { width: auto; }
+.admin-json-table td:nth-child(2) { min-width: 180px; }
+.admin-json-table td:nth-child(3) { width: 110px; min-width: 90px; }
+.admin-parent-tree { max-height: 26rem; overflow: auto; padding: 12px; border: 1px solid #d2d6de; border-radius: 4px; }
+.admin-parent-tree label { display: block; font-weight: normal; }
+.admin-parent-tree summary { cursor: pointer; }
+.admin-parent-tree summary label { display: inline-block; margin-bottom: 4px; }
+.admin-tree-children { margin-left: 18px; padding-left: 10px; border-left: 1px solid #ddd; }
+.admin-tree-leaf { padding-left: 16px; }
+.admin-parent-tree label.disabled { opacity: .45; }
+.admin-settings { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.admin-map-cells { display: grid; grid-template-columns: repeat(auto-fill, minmax(75px, 1fr)); gap: 6px; max-height: 22rem; overflow: auto; }
+.admin-map-cells label { border: 1px solid #ddd; padding: 8px; cursor: pointer; font-weight: normal; }
+.admin-map-cells label.occupied { background: #eee; color: #999; cursor: default; }
+.admin-map-cells label:has(input:checked) { border-color: #3c8dbc; background: #e8f4fa; }
+@media (max-width: 1100px) { form.admin-form-grid, .admin-settings { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 640px) { form.admin-form-grid, .admin-settings { grid-template-columns: minmax(0, 1fr); }.admin-parent-tree label { padding-left: 0; } }

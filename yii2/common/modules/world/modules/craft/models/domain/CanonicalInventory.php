@@ -294,7 +294,7 @@ class CanonicalInventory
             if ((int)$row['item_quantity'] < 1) continue;
             $occupied[(int)$row['slot']] = true;
             // Harvests have independent ageing/price lots; never merge different harvest dates.
-            if (!$canStore || $target['kind'] === 'harvest' || (int)$row['slot'] > (int)$target['capacity'] || (int)$row['item_id'] !== (int)$output['id']) continue;
+            if (!$canStore || $target['kind'] === 'harvest' || !empty($target['preserve_batches']) || (int)$row['slot'] > (int)$target['capacity'] || (int)$row['item_id'] !== (int)$output['id']) continue;
             $add = min($left, max(0, $stack - (int)$row['item_quantity'])); if (!$add) continue;
             $grants[] = ['inventory_id' => (int)$row['id'], 'position' => (int)$row['slot'], 'quantity' => $add]; $left -= $add;
         }
@@ -311,8 +311,8 @@ class CanonicalInventory
         $this->transaction();
         if ($quantity < 1 || !in_array($reason, ['harvest.spoiled', 'harvest.sold', 'harvest.withdrawn'], true)) throw new \LogicException('Invalid harvest consumption.');
         $row = (new Query())->from('craft_inventory')->where(['id' => $inventory, 'user_id' => $owner])->one($this->db);
-        $storage = $row ? (new Query())->from('craft_storage')->where(['id' => $row['storage_id'], 'owner_user_id' => $owner, 'kind' => 'harvest', 'status' => 'active'])->one($this->db) : null;
-        if (!$storage || (int)$row['item_quantity'] < $quantity || $this->equipment->units($inventory)) throw new ConflictHttpException('Урожай на складе изменился.');
+        $storage = $row ? (new Query())->from('craft_storage')->where(['id' => $row['storage_id'], 'owner_user_id' => $owner, 'kind' => ['harvest', 'stockpile'], 'status' => 'active'])->one($this->db) : null;
+        if (!$storage || (int)$row['item_quantity'] - (new ProductionReservations($this->db))->quantity($inventory) < $quantity || $this->equipment->units($inventory)) throw new ConflictHttpException('Продукция на складе изменилась или зарезервирована.');
         $left = (int)$row['item_quantity'] - $quantity;
         $this->write($inventory, ['item_quantity' => $left, 'item_id' => $left ? $row['item_id'] : null, 'slot' => $left ? $row['slot'] : null]);
         $this->record($owner, $row, $quantity, (int)$storage['id'], null, $reason);
@@ -407,6 +407,18 @@ class CanonicalInventory
             if ($wear) $this->db->createCommand()->update('craft_container', ['durability' => max(0, (int)$container['durability'] - $wear)], ['id' => $container['id']])->execute();
         }
         $this->record($user, $out, $quantity, (int)$source['id'], $destination, 'transfer');
+        if ($target['kind'] === 'stockpile' && $this->db->schema->getTableSchema('world_harvest_lot')) {
+            $originalLot = (new Query())->from('world_harvest_lot')->where(['inventory_id' => $inventory])->one($this->db);
+            $targetLot = (new Query())->from('world_harvest_lot')->where(['inventory_id' => $out['id']])->one($this->db);
+            // Added products must never inherit the price of a previously advertised stack.
+            if ($targetLot) $this->db->createCommand()->update('world_harvest_lot', ['price' => null], ['inventory_id' => $out['id']])->execute();
+            if ($originalLot) {
+                $stamp = $targetLot ? min((int)$targetLot['harvested_at'], (int)$originalLot['harvested_at']) : (int)$originalLot['harvested_at'];
+                if ($targetLot) $this->db->createCommand()->update('world_harvest_lot', ['harvested_at' => $stamp, 'spoiled_at' => $originalLot['spoiled_at'] === null || $targetLot['spoiled_at'] === null ? null : min((int)$targetLot['spoiled_at'], (int)$originalLot['spoiled_at'])], ['inventory_id' => $out['id']])->execute();
+                else $this->db->createCommand()->insert('world_harvest_lot', ['inventory_id' => $out['id'], 'harvested_at' => $stamp, 'spoiled_at' => $originalLot['spoiled_at'], 'price' => null, 'operation_id' => $this->s->operationId])->execute();
+            }
+        }
+        \common\modules\world\models\domain\FurnishingPlacement::synchronize($this->db, [$source['node_id'], $target['node_id']], $this->s->operationId);
         $this->touch([(int)$source['id'], $destination]);
         return ['quantity' => $quantity, 'inventory_id' => (int)$out['id'], 'instance_ids' => $p['unit_ids'], 'changed_storage_ids' => array_values(array_unique([(int)$source['id'], $destination]))];
     }

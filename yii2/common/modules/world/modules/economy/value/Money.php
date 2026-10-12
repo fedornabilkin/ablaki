@@ -22,6 +22,13 @@ final class Money
         $units = abs($this->units);
         return ($this->units < 0 ? '-' : '') . intdiv($units, self::SCALE) . '.' . str_pad((string)($units % self::SCALE), 4, '0', STR_PAD_LEFT);
     }
+    /** UI only: whole credits or one fractional digit, without changing ledger precision. */
+    public function display(): string
+    {
+        $absolute = abs($this->units);
+        $tenths = intdiv($absolute, 1000) + (int)($absolute % 1000 >= 500);
+        return ($this->units < 0 && $tenths > 0 ? '-' : '') . intdiv($tenths, 10) . ($tenths % 10 ? '.' . ($tenths % 10) : '');
+    }
     /** Compatibility boundary only. New APIs must accept decimal strings directly. */
     public static function fromLegacy(float $amount): self
     {

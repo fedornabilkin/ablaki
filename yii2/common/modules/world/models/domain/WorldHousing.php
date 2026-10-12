@@ -26,7 +26,7 @@ class WorldHousing
     {
         $this->flags->requireFlag('world_read');
         $room = (new WorldQuery($this->db, new WorldAccessPolicy($user)))->node($node);
-        if ($room['type'] !== 'ROOM' || !$room['permissions']['storage']) throw new GameError('HOUSING_OWNER_REQUIRED', 'Откройте комнату собственного дома.', 403);
+        if (!$room['permissions']['storage']) throw new GameError('HOUSING_OWNER_REQUIRED', 'Откройте собственный объект с кроватью.', 403);
         $place = $this->one('world_housing_place', ['room_id' => $node, 'ordinal' => 1]);
         $actor = $this->one('game_actor', ['user_id' => $user, 'kind' => 'player']);
         $current = $actor ? (new LodgingAssignments($this->db))->current((int)$actor['id']) : null;
@@ -37,7 +37,8 @@ class WorldHousing
             $purchase = $purchase ?: $constructed;
             $membership = $this->one('world_membership', ['user_id' => $user, 'world_id' => $room['root_id']] + ($constructed ? [] : ['starter_site_id' => $place['plot_id']]));
             if (!$purchase || !$membership || !(new Query())->from('world_node_closure')->where(['ancestor_id' => $place['plot_id'], 'descendant_id' => $node])->exists($this->db)) throw new GameError('HOUSING_STATE_INVALID', 'Принадлежность жилья требует сверки.');
-            $active = ((array)$room['details'])['exposure_class'] === 'indoor'
+            $active = (!$this->db->schema->getTableSchema('world_furnishing_rule') || FurnishingPlacement::hasBed($this->db, $node))
+                && in_array(((array)$room['details'])['exposure_class'] ?? null, ['indoor', 'covered'], true)
                 && !(new Query())->from(['n' => 'world_node'])->innerJoin(['c' => 'world_node_closure'], '[[c.ancestor_id]]=[[n.id]]')->where(['c.descendant_id' => $node])->andWhere(['<>', 'n.status', 'active'])->exists($this->db)
                 && !(new Query())->from(['b' => 'world_building'])->innerJoin(['c' => 'world_node_closure'], '[[c.ancestor_id]]=[[b.node_id]]')->where(['c.descendant_id' => $node])->andWhere(['or', ['<>', 'b.operational_status', 'active'], ['<', 'b.condition', 1]])->exists($this->db);
             $lodging = $this->one('world_housing_interval', ['active_place_id' => $place['id']]);

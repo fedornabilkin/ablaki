@@ -12,7 +12,12 @@ echo GridView::widget(['dataProvider' => $provider, 'columns' => [
     }],
     ['attribute' => 'code', 'label' => 'Код'],
     ['attribute' => 'node_type', 'label' => 'Раздел', 'value' => static function (array $row): string { return WorldNodeForm::TYPES[$row['node_type']]; }],
-    ['attribute' => 'parent_id', 'label' => 'Родитель, ID'], ['attribute' => 'owner_user_id', 'label' => 'Владелец, ID'],
+    ['attribute' => 'parent_id', 'label' => 'Родитель', 'format' => 'raw', 'value' => static function (array $row): string {
+        return \common\modules\world\models\admin\WorldRelations::value('world_node', 'parent_id', $row['parent_id'], $row);
+    }],
+    ['attribute' => 'owner_user_id', 'label' => 'Владелец', 'format' => 'raw', 'value' => static function (array $row): string {
+        return \common\modules\world\models\admin\WorldRelations::value('world_node', 'owner_user_id', $row['owner_user_id'], $row);
+    }],
     ['attribute' => 'status', 'label' => 'Состояние', 'value' => static function (array $row): string { return $row['status'] === 'archived' ? 'В архиве' : 'Действует'; }],
     ['attribute' => 'revision', 'label' => 'Версия'],
     ['label' => 'Действия', 'format' => 'raw', 'value' => static function (array $row): string {

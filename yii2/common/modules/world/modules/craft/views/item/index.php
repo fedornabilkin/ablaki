@@ -38,13 +38,8 @@ $this->params['breadcrumbs'][] = $this->title;
                     return StringHelper::truncate($model->description, 70);
                 }
             ],
-            [
-                'attribute' => 'crafting_time',
-                'value' => static function (CraftItem $model) {
-                    return date('H:i:s', $model->crafting_time);
-                },
-            ],
-            'rare',
+            'kind',
+            'rarity',
             // virtual field
             [
                 'attribute' => 'categoryName',

@@ -10,7 +10,12 @@ class StorageController extends LegacyController
     public function actionPlacementOptions($id): array
     {
         if (!Yii::$app->request->isGet) throw new \yii\web\MethodNotAllowedHttpException('Используйте GET.');
-        return (new \common\modules\world\modules\craft\models\domain\WorldStorage(Yii::$app->db, $this->flags()))->placementOptions((int)Yii::$app->user->id, $this->id($id));
+        $x = Yii::$app->request->get('x'); $y = Yii::$app->request->get('y'); $cell = null;
+        if ($x !== null || $y !== null) {
+            foreach ([$x, $y] as $value) if ((!is_string($value) && !is_int($value)) || !preg_match('/^-?[0-9]{1,7}$/D', (string)$value)) throw new GameError('INVALID_POSITION', 'Выберите одну ячейку.', 422);
+            $cell = ['x' => (int)$x, 'y' => (int)$y];
+        }
+        return (new \common\modules\world\modules\craft\models\domain\WorldStorage(Yii::$app->db, $this->flags()))->placementOptions((int)Yii::$app->user->id, $this->id($id), $cell);
     }
     public function actionStorages(): array
     {

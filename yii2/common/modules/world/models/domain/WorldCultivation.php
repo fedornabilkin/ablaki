@@ -192,7 +192,10 @@ class WorldCultivation
                     $this->db->createCommand()->insert('world_bed_active_cycle', ['bed_id' => $payload['bed_id'], 'cycle_id' => $cycleId])->execute();
                 } else {
                     $cycleId = (int)$p['cycle']['id'];
-                    if ($action === 'water') $values = ['water_missed' => (int)$terms['water_missed'], 'water_due_at' => $now + (int)$p['rules']['water_interval_seconds']];
+                    if ($action === 'water') {
+                        $nextDue = (int)$p['cycle']['water_due_at'] + (int)$p['rules']['water_interval_seconds'];
+                        $values = ['water_missed' => (int)$terms['water_missed'], 'water_due_at' => $nextDue < (int)$p['cycle']['ready_at'] ? $nextDue : null];
+                    }
                     else {
                         $values = ['status' => $action === 'harvest' ? 'harvested' : 'cancelled', 'closed_at' => $now];
                         if ($this->db->createCommand()->delete('world_bed_active_cycle', ['bed_id' => $payload['bed_id'], 'cycle_id' => $cycleId])->execute() !== 1) throw new \RuntimeException('Crop guard changed.');

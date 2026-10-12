@@ -36,10 +36,11 @@ class StarterPack extends Record
         (new domain\ActorResolver(self::getDb()))->player($user);
         if ($membership && Node::requireOne($membership->starter_site_id)->status !== 'archived') return ['node' => Node::requireOne($membership->starter_site_id)->toArray()];
         $template = NodeTemplate::requireOne(['code' => 'starter-site']);
-        $build = Build::begin($user, ['parent_id' => $city, 'template_id' => $template->id, 'name' => 'Стоянка', 'labor_budget' => '0'], $operation);
+        $build = Build::begin($user, ['parent_id' => $city, 'template_id' => $template->id, 'name' => 'Стоянка', 'labor_budget' => '0'], $operation, true);
         $membership = $membership ?: new Membership(); $membership->setAttributes(['user_id' => $user, 'world_id' => $parent->root_id,
             'starter_site_id' => $build->node_id, 'joined_at' => time(), 'grace_until' => time() + 86400], false);
         if (!$membership->save(false)) throw new \RuntimeException('Membership write failed.');
+        (new domain\WorldNights(self::getDb(), new domain\WorldFlags(self::getDb(), \Yii::$app->getModule('world'))))->joined($membership->getAttributes());
         return ['node' => $build->node->toArray(), 'build' => $build->toArray()];
     }
 }

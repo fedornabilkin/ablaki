@@ -27,7 +27,7 @@ class m261005_100000_simple_world extends WorldDomainMigration
             'labor_budget' => $this->decimal(19, 4)->notNull()->defaultValue('0.0000'), 'commitment_id' => $this->integer(),
             'materials_json' => $this->text()->notNull(), 'status' => $this->string(16)->notNull()->defaultValue('building'),
             'revision' => $this->integer()->notNull()->defaultValue(1), 'created_at' => $this->integer()->notNull(), 'finished_at' => $this->integer(),
-        ], ['node_id' => ['world_node'], 'parent_id' => ['world_node'], 'owner_user_id' => ['user']], [['node_id']], [['status', 'id']]);
+        ], ['node_id' => ['world_node'], 'parent_id' => ['world_node'], 'owner_user_id' => ['user']], [], [['node_id'], ['status', 'id']]);
         $this->foreign('fk_world_build_commitment', 'world_build', 'commitment_id', 'economy_spending_commitment');
         $this->domain('world_build_work', [
             'started_at' => $this->integer()->notNull(), 'last_seen_at' => $this->integer()->notNull(),

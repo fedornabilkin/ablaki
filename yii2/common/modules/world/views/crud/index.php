@@ -11,5 +11,8 @@ $this->title = $this->context->title;
 <?= Html::submitButton('Найти', ['class' => 'btn btn-primary']) ?>
 <?= Html::a('Сбросить', ['index'], ['class' => 'btn btn-default']) ?>
 <?php ActiveForm::end(); ?>
+<?php $columns = array_map(static function ($column) {
+    return $column === 'build_seconds' ? ['attribute'=>'build_seconds', 'label'=>'Трудоёмкость (время мира)', 'value'=>static function ($model) { return \common\modules\world\models\WorldTime::duration((int)$model->build_seconds * \common\modules\world\models\WorldTime::rate()); }] : $column;
+}, $this->context->columns); ?>
 <?= GridView::widget(['dataProvider' => $dataProvider, 'filterModel' => $searchModel,
-    'columns' => array_merge($this->context->columns, [['class' => 'yii\grid\ActionColumn', 'template' => '{view} {update}']])]) ?>
+    'columns' => array_merge($columns, [['class' => 'yii\grid\ActionColumn', 'template' => '{view} {update}']])]) ?>

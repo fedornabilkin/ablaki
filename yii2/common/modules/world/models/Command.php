@@ -20,6 +20,7 @@ class Command extends Record
             $locks->row('craft_meta', ['id' => 1]);
             $owners = [$user];
             if (isset($payload['build_id'])) $owners = array_merge($owners, BuildWork::participants((int)$payload['build_id']));
+            if (isset($payload['mining_node_id'])) $owners[] = (int)Node::requireOne($payload['mining_node_id'])->owner_user_id;
             $locks->owners($owners, false); $locks->owners([$user]); $locks->row('world_registry', ['id' => 1]);
             $previous = self::findOne(['user_id' => $user, 'request_key' => $key]);
             if ($previous) {
@@ -30,6 +31,13 @@ class Command extends Record
             $operation = bin2hex(random_bytes(16));
             $db->createCommand()->insert('game_operation', ['id' => $operation, 'user_id' => $user, 'type' => $type, 'created_at' => time()])->execute();
             $result = $handler($operation) + ['operation_id' => $operation];
+            $changed = $result['changed_node_ids'] ?? [];
+            foreach ([$result['node']['id'] ?? null, $result['build']['node_id'] ?? null, $payload['node_id'] ?? null] as $id) if ($id !== null) $changed[] = (int)$id;
+            $result['changed_node_ids'] = array_values(array_unique($changed));
+            if ($result['changed_node_ids']) {
+                $bus = new \common\modules\world\support\CommandBus($db, new WorldFlags($db, Yii::$app->getModule('world')));
+                $bus->emit($operation, $user, 'world.node.changed', ['node_ids' => $result['changed_node_ids'], 'command' => $type]);
+            }
             $record = new self(); $record->setAttributes(['user_id' => $user, 'request_key' => $key, 'command_type' => $type, 'contract_version' => 2,
                 'fingerprint' => $fingerprint, 'operation_id' => $operation, 'result_json' => CanonicalJson::encode($result), 'created_at' => time()], false);
             if (!$record->save(false)) throw new \RuntimeException('Command write failed.');

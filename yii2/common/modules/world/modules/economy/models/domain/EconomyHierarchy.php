@@ -18,7 +18,7 @@ class EconomyHierarchy
         for ($depth = 0; $depth < 33; $depth++) {
             $row = (new Query())->from('world_node')->where(['id' => $node])->one($this->db);
             if (!$row) throw new \common\modules\world\support\GameError('NODE_NOT_FOUND', 'Объект не найден.', 404);
-            if (!empty($row['template_id'])) return $node;
+            if (isset($row['hierarchy_level']) || !empty($row['template_id'])) return $node;
             if ($depth === 0) $owner = $row['owner_user_id'];
             $warehouse = $row['node_type'] === 'BUILDING' && (new Query())->from('world_building')->where(['node_id' => $node, 'building_kind' => 'warehouse'])->exists($this->db);
             if (!in_array($row['node_type'], ['ROOM', 'BED'], true) && !$warehouse) {
@@ -42,7 +42,7 @@ class EconomyHierarchy
     public function provision(int $node, string $operation): array
     {
         if (!$this->db->getTransaction()) throw new \LogicException('Economy provisioning requires a world command transaction.');
-        if ((new \common\modules\world\models\domain\WorldTree($this->db))->isShelter($node)) throw new \common\modules\world\support\GameError('SHELTER_HAS_NO_BUDGET', 'Переносной шалаш не имеет отдельного бюджета. Для развития используйте бюджет стоянки.');
+        if (!isset($this->db->schema->getTableSchema('world_node')->columns['hierarchy_level']) && (new \common\modules\world\models\domain\WorldTree($this->db))->isShelter($node)) throw new \common\modules\world\support\GameError('SHELTER_HAS_NO_BUDGET', 'Переносной шалаш не имеет отдельного бюджета. Для развития используйте бюджет стоянки.');
         $node = $this->financialNode($node);
         WalletMaintenance::writable($this->db);
         if (!(new Locks($this->db))->row('world_registry', ['id' => 1])) throw new \RuntimeException('World registry unavailable.');
@@ -51,7 +51,7 @@ class EconomyHierarchy
         while ($cursor !== null) {
             if (isset($chain[$cursor]) || count($chain) > 32) throw new \RuntimeException('Invalid financial ancestry.');
             $row = (new Query())->from('world_node')->where(['id' => $cursor])->one($this->db);
-            if (!$row || $row['status'] !== 'active') throw new \RuntimeException('Financial ancestor unavailable.');
+            if (!$row || ($row['status'] !== 'active' && !($cursor === $node && $row['status'] === 'constructing'))) throw new \RuntimeException('Financial ancestor unavailable.');
             if ($root !== null && $root !== (int)$row['root_id']) throw new \RuntimeException('Financial ancestry crosses worlds.');
             $root = (int)$row['root_id']; $chain[$cursor] = $row;
             $cursor = $row['parent_id'] === null ? null : (int)$row['parent_id'];
@@ -80,7 +80,7 @@ class EconomyHierarchy
                     'operation_id' => $operation, 'reason' => 'Initial parent at account provisioning',
                 ])->execute();
                 $this->db->createCommand()->insert('economy_parent_rule', ['subject_id' => $subject['id'], 'history_id' => (int)$this->db->getLastInsertID(), 'revision' => 1])->execute();
-                \common\modules\world\models\domain\TestWorldDefaults::initialPolicy($this->db, (int)$subject['id'], $operation);
+                \common\modules\world\models\domain\DefaultTreasuryPolicy::initialPolicy($this->db, (int)$subject['id'], $operation);
                 $changed = true;
             }
             if ($changed) $this->db->createCommand()->update('world_node', ['revision' => new Expression('[[revision]]+1'), 'updated_at' => time()], ['id' => $place['id']])->execute();

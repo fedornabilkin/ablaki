@@ -24,7 +24,7 @@ class NightWorkEfficiency
         $next = $row['next_sequence'] === null
             ? NightCalendar::firstStartingAt($row, max((int)$row['joined_at'], (int)$row['activated_at']) + (int)$row['day_seconds'])
             : (int)$row['next_sequence'];
-        if (NightCalendar::bounds($row, $next)['ended_at'] <= time()) throw new GameError('NIGHT_CATCHING_UP', 'Расчёт прошедших ночей ещё выполняется. Повторите действие позже.', 409);
+        if (NightCalendar::bounds($row, $next)['ended_at'] <= time()) throw new GameError('NIGHT_CATCHING_UP', 'Рассчитывается здоровье после прошедших ночей. Подождите несколько секунд и повторите действие. Ресурсы не списаны.', 409);
         return $row['severity'] === null ? 10000 : NightCalendar::efficiency($row, (int)$row['severity']);
     }
 }

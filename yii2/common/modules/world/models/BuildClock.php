@@ -27,5 +27,6 @@ final class BuildClock
         }
         $build->worked_seconds += $credited; $build->revision++;
         if (!$build->save(false)) throw new \RuntimeException('Build progress failed.');
+        BuildStrength::synchronize($build);
     }
 }

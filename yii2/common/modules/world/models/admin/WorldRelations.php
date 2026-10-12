@@ -64,9 +64,11 @@ class WorldRelations
     public static function value(string $table, string $field, $value, array $record = []): string
     {
         if ($value === null) return '—';
+        $display = \backend\support\EntityDisplay::value($table, $field, $value, $record);
+        if ($display !== null) return $display;
         if (in_array($field, ['item_id', 'seed_item_id', 'yield_item_id', 'water_item_id'], true)) {
             $name = (new Query())->select('name')->from('craft_item')->where(['id' => $value])->scalar(Yii::$app->db);
-            if ($name !== false) return self::link(['/world/craft/item/view', 'id' => $value], '#' . $value . ' · ' . $name);
+            if ($name !== false) return self::link(['/world/craft/item/view', 'id' => $value], $name);
         }
         foreach (self::schema($table)->foreignKeys as $foreign) {
             $parent = $foreign[0]; unset($foreign[0]);
@@ -84,7 +86,7 @@ class WorldRelations
             $row = (new Query())->from($parent)->where($condition)->one(Yii::$app->db);
             if ($row) {
                 $url = self::route($parent, $row);
-                if ($url && Helper::checkRoute($url[0])) return self::link($url, '#' . $value . (isset($row['name']) ? ' · ' . $row['name'] : ''));
+                if ($url && Helper::checkRoute($url[0])) return self::link($url, \backend\support\EntityDisplay::label($parent, $row));
             }
         }
         if (preg_match('/(_at|_until)$/D', $field) && is_numeric($value) && (int)$value > 0) return Html::encode(Yii::$app->formatter->asDatetime((int)$value));

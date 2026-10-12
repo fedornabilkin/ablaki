@@ -21,12 +21,14 @@ class WorldWorkerController extends \yii\console\Controller
             $consumers['world.notifications.v1'] = function (array $payload, array $event) use ($notifications) { $notifications->consume($payload, $event); };
         }
         if ($flags->capabilities()['world_write'] && $flags->capabilities()['storage_v2']) {
+            \common\modules\world\models\Mining::discover();
             $construction = new \common\modules\world\models\domain\WorldConstruction(Yii::$app->db, $flags);
             $handlers['world.construction.finish'] = function (array $payload, array $job) use ($construction) { $construction->finish($payload, $job); };
             $wear = new \common\modules\world\models\domain\EquipmentWearJob(Yii::$app->db, $flags);
             $wear->discover();
             $handlers['world.equipment.wear'] = function (array $payload, array $job) use ($wear) { $wear->settle($payload, $job); };
             $nights = new \common\modules\world\models\domain\WorldNights(Yii::$app->db, $flags);
+            $nights->discover();
             $handlers['world.night.enroll'] = function (array $payload) use ($nights) { $nights->enroll($payload); };
             $handlers['world.night.resolve'] = function (array $payload, array $job) use ($nights) { $nights->resolve($payload, $job); };
         }

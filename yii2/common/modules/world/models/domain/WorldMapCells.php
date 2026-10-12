@@ -48,7 +48,24 @@ class WorldMapCells
     public static function pricing(Connection $db, int $node): array
     {
         $paid = (int)(new Query())->from('world_map_cell')->where(['parent_id' => $node, 'state' => 'open'])->andWhere(['>', 'price', 0])->count('*', $db);
-        return ['paid_cells' => $paid, 'base_price' => '1.0000', 'next_price' => ($paid + 1) . '.0000', 'bulk_minimum' => 3, 'discount_bps' => 500, 'max_quantity' => 100, 'currency' => 'Cr'];
+        $level = $db->schema->getTableSchema('world_node')->getColumn('hierarchy_level')
+            ? (int)(new Query())->select('hierarchy_level')->from('world_node')->where(['id' => $node])->scalar($db)
+            : 1 + (int)(new Query())->select(new Expression('MAX([[distance]])'))->from('world_node_closure')->where(['descendant_id' => $node])->scalar($db);
+        $base = max(1, 8 - max(1, $level));
+        return ['paid_cells' => $paid, 'base_price' => $base . '.0000', 'next_price' => $base . '.0000', 'curve' => 'rings', 'bulk_minimum' => 3, 'discount_bps' => 500, 'max_quantity' => 100, 'currency' => 'Cr'];
+    }
+    public static function purchasePricing(array $pricing, array $cells): array
+    {
+        $base = Money::parse($pricing['base_price']); $gross = Money::parse('0'); $discount = Money::parse('0'); $carry = 0; $units = [];
+        $bps = count($cells) >= $pricing['bulk_minimum'] ? (int)$pricing['discount_bps'] : 0;
+        foreach ($cells as $point) {
+            $unit = $base->multiply(max(1, abs($point['x']), abs($point['y'])));
+            $part = $unit->portion($bps, $carry); $carry = $part['carry'];
+            $gross = $gross->add($unit); $discount = $discount->add($part['amount']);
+            $units[] = $point + ['gross_price' => $unit->decimal(), 'price' => $unit->subtract($part['amount'])->decimal()];
+        }
+        return ['quantity' => count($cells), 'unit_prices' => $units, 'gross_total' => $gross->decimal(), 'discount_bps' => $bps,
+            'discount_amount' => $discount->decimal(), 'total' => $gross->subtract($discount)->decimal(), 'currency' => 'Cr', 'curve' => 'rings'];
     }
 
     private function prepare(int $user, array $input, string $action): array
@@ -66,17 +83,22 @@ class WorldMapCells
         }
         $terms = ['node_id' => (int)$node['id'], 'cells' => $input['cells'], 'action' => $action, 'currency' => 'Cr'];
         if ($action === 'explore') {
-            if (count($input['cells']) !== 1) throw new GameError('EXPLORE_ONE_CELL', 'Исследуйте по одной ячейке.', 422);
-            $point = $input['cells'][0]; $required = MapExploration::requiredLevel($point['x'], $point['y']);
+            $required = 1; $elixirs = 0;
+            foreach ($input['cells'] as $point) {
+                $level = MapExploration::requiredLevel($point['x'], $point['y']); $required = max($required, $level);
+                if ($exploration['level'] < $level) $elixirs++;
+            }
+            if (count($input['cells']) === 1 && $input['use_elixir']) $elixirs = 1;
             if ($input['use_elixir']) {
-                if ($exploration['elixir_quantity'] < 1) throw new GameError('EXPLORER_ELIXIR_REQUIRED', 'В доступных ячейках рюкзака нет эликсира исследователя.');
+                if ($exploration['elixir_quantity'] < $elixirs) throw new GameError('EXPLORER_ELIXIR_REQUIRED', 'В доступных ячейках рюкзака недостаточно эликсиров исследователя.');
             } elseif ($exploration['level'] < $required) throw new GameError('EXPLORER_LEVEL_REQUIRED', 'Нужен уровень исследователя ' . $required . ' или один эликсир исследователя.');
+            if (count($input['cells']) > 1) $terms['elixir_quantity'] = $input['use_elixir'] ? $elixirs : 0;
             return ['revisions' => $revisions, 'terms' => $terms + ['price' => '0.0000', 'required_level' => $required, 'use_elixir' => $input['use_elixir']]];
         }
         if ($action !== 'buy' || $input['use_elixir']) throw new GameError('INVALID_MAP_ACTION', 'Некорректное действие карты.', 422);
         WalletSchema::requireReady($this->db);
-        $paid = self::pricing($this->db, (int)$node['id'])['paid_cells'];
-        $pricing = (new ExpansionPolicy())->quote(0, $paid, max(10000, $paid + count($input['cells'])), '1.0000', count($input['cells']));
+        $mapPricing = self::pricing($this->db, (int)$node['id']); $paid = $mapPricing['paid_cells'];
+        $pricing = self::purchasePricing($mapPricing, $input['cells']);
         $price = Money::parse($pricing['total']);
         $hierarchy = new EconomyHierarchy($this->db); $payer = $hierarchy->financialNode((int)$node['id']);
         $accounts = $hierarchy->accounts($payer); $budget = $accounts['budget'] ?? null;
@@ -123,12 +145,12 @@ class WorldMapCells
                         if ($updated !== 1) throw new GameError('MAP_CELL_CHANGED', 'Ячейка изменилась. Обновите карту.');
                     }
                 } else {
-                    if ($terms['use_elixir']) {
+                    if ($terms['use_elixir'] && ($terms['elixir_quantity'] ?? 1) > 0) {
                         $item = (new Query())->from('craft_item')->where(['code' => ExplorationCatalog::ELIXIR, 'active' => 1])->one($this->db);
                         $store = new CraftStorage($this->db); $store->operationId = $operation;
-                        (new CanonicalInventory($store))->change($user, $item, -1);
+                        (new CanonicalInventory($store))->change($user, $item, -($terms['elixir_quantity'] ?? 1));
                     }
-                    $this->db->createCommand()->insert('world_map_cell', ['parent_id' => $payload['node_id']] + $payload['cells'][0] + [
+                    foreach ($payload['cells'] as $point) $this->db->createCommand()->insert('world_map_cell', ['parent_id' => $payload['node_id']] + $point + [
                         'state' => 'discovered', 'price' => '0.0000', 'operation_id' => $operation, 'created_at' => time(), 'updated_at' => time(),
                     ])->execute();
                 }

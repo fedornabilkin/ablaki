@@ -1,5 +1,6 @@
 <?php
 return [
+    'mining-api' => ['class' => \common\modules\world\apiControllers\MiningApiController::class],
     'account-api' => ['class' => \common\modules\world\apiControllers\AccountApiController::class],
     'supply-api' => ['class' => \common\modules\world\apiControllers\SupplyApiController::class],
     'start-api' => ['class' => \common\modules\world\apiControllers\StartApiController::class],

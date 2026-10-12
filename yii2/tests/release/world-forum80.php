@@ -21,7 +21,7 @@ foreach (glob($yiiRoot . '/console/world-migrations/*.php') as $file) {
     require_once $file; $class = basename($file, '.php');
     // Exercise the legacy rules on their schema first; world-admin-entities applies
     // the new migration afterwards and checks conversion of these populated rows.
-    if ($class === 'm261005_100000_simple_world') continue;
+    if (in_array($class, ['m261005_100000_simple_world', 'm261006_190000_world_interior_placement', 'm261008_120000_world_mvp_facilities', 'm261008_160000_world_construction_mining', 'm261008_210000_world_object_repair', 'm261009_170000_world_common_foundation', 'm261009_180000_world_chest_item_only'], true)) continue;
     if ($db->driverName === 'sqlite' && $class === 'm260928_003400_system_profession_author') {
         $sql = $db->createCommand("SELECT sql FROM sqlite_master WHERE type='table' AND name='profession_revision'")->queryScalar();
         $sql = preg_replace('/([`"\[]?author_user_id[`"\]]?\s+[^,]*?)\s+NOT NULL/i', '$1', $sql);
@@ -141,6 +141,7 @@ putenv('WORLD_TEST_MODE=1');
 $accounts = $db->transaction(function () use ($db, $garden, $operation) { return (new \common\modules\world\modules\economy\models\domain\EconomyHierarchy($db))->provision((int)$garden['id'], $operation); });
 $market = new \common\modules\world\models\domain\GardenHarvest($db, $flags);
 $gardenId = (int)$garden['id'];
+$db->createCommand()->update('world_node', ['visibility' => 'public'], ['id' => $gardenId])->execute();
 $marketState = $market->state(9001, $gardenId);
 checkCraft($marketState['capacity'] === 5 && count($marketState['items']) === 1 && $marketState['items'][0]['quantity'] === 2, 'harvest goes to five-slot garden warehouse');
 checkCraft($reader->node($bedId)['details']->harvested_quantity === 2 && $reader->node($gardenId)['details']->harvested_quantity === 2, 'harvest statistics aggregate bed and garden');

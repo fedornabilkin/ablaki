@@ -180,6 +180,9 @@ if (!defined('WORLD_TEST_DEFER_CORE')) {
     $accountsBefore = (new Query())->from('economy_account')->orderBy('id')->all($db);
     $ownersBefore = (new Query())->select(['id', 'name', 'owner_user_id'])->from('world_node')->indexBy('id')->all($db);
     ob_start(); try { (new m261005_100000_simple_world(['db' => $db]))->safeUp(); } finally { ob_end_clean(); }
+    ob_start(); try { (new m261006_190000_world_interior_placement(['db' => $db]))->safeUp(); } finally { ob_end_clean(); }
+    ob_start(); try { (new m261009_180000_world_chest_item_only(['db' => $db]))->safeUp(); } finally { ob_end_clean(); }
+    checkCraft(!(new Query())->from('world_template')->where(['code' => 'chest', 'enabled' => 1])->exists($db), 'chest is an inventory item, not a construction template');
     checkCraft($inventoryBefore === (new Query())->from('craft_inventory')->orderBy('id')->all($db), 'canonical migration retains inventory');
     checkCraft($accountsBefore === (new Query())->from('economy_account')->orderBy('id')->all($db), 'canonical migration retains finance');
     foreach ($ownersBefore as $id => $before) {

@@ -1,15 +1,8 @@
 <?php
-use yii\db\Migration;
+use common\modules\world\support\WorldMigration;
 
-class m260920_190000_extend_classic_craft extends Migration
+class m260920_190000_extend_classic_craft extends WorldMigration
 {
-    private function reference($table)
-    {
-        // Imported MySQL installations may use unsigned bigint IDs; match the actual parent.
-        $schema=$this->db->schema->getTableSchema($table,true);
-        if(!$schema||!isset($schema->columns['id']))throw new \RuntimeException('Required application table missing: '.$table);
-        return $schema->columns['id']->dbType;
-    }
     private function legacySchema()
     {
         // Some installations never ran the original craft migrations. Create only missing tables.
@@ -23,11 +16,12 @@ class m260920_190000_extend_classic_craft extends Migration
             'craft_recipe_item'=>function(){return ['id'=>$this->primaryKey(),'recipe_id'=>$this->reference('craft_recipe').' NOT NULL','item_id'=>$this->reference('craft_item').' NOT NULL','item_quantity'=>$this->integer()->notNull()];},
             'craft_recipe_tool'=>function(){return ['id'=>$this->primaryKey(),'recipe_id'=>$this->reference('craft_recipe').' NOT NULL','item_id'=>$this->reference('craft_item').' NOT NULL'];},
         ];
-        foreach($definitions as $table=>$columns)if(!$this->db->schema->getTableSchema($table,true)){
-            $this->createTable($table,$columns());
-            if(in_array($table,['craft_item','craft_recipe'],true))$this->createIndex('idx-'.$table.'-name',$table,'name',true);
-            if($table==='craft_recipe')$this->createIndex('idx-craft_recipe-item_id',$table,'item_id',true);
-            if(in_array($table,['craft_recipe_item','craft_recipe_tool'],true))$this->createIndex('ux_'.$table.'_pair',$table,['recipe_id','item_id'],true);
+        foreach($definitions as $table=>$columns){
+            $fresh = !$this->db->schema->getTableSchema($table,true);
+            $this->table($table,$columns());
+            if(in_array($table,['craft_item','craft_recipe'],true))$this->index('idx-'.$table.'-name',$table,['name'],true);
+            if($table==='craft_recipe' && $fresh)$this->index('idx-craft_recipe-item_id',$table,['item_id'],true);
+            if(in_array($table,['craft_recipe_item','craft_recipe_tool'],true))$this->index('ux_'.$table.'_pair',$table,['recipe_id','item_id'],true);
             $schema=$this->db->schema->getTableSchema($table,true);
             foreach(['category_id'=>'craft_category','item_id'=>'craft_item','recipe_id'=>'craft_recipe','user_id'=>'user'] as $field=>$parent)if(isset($schema->columns[$field]))$this->addForeignKey('fk_initial_'.$table.'_'.$field,$table,$field,$parent,'id',$field==='user_id'?'CASCADE':'RESTRICT');
         }
@@ -35,7 +29,10 @@ class m260920_190000_extend_classic_craft extends Migration
     public function addForeignKey($name, $table, $columns, $refTable, $refColumns, $delete = null, $update = null)
     {
         // SQLite is only used by disposable tests; target DB suites check the foreign keys.
-        if ($this->db->driverName !== 'sqlite') parent::addForeignKey($name,$table,$columns,$refTable,$refColumns,$delete,$update);
+        if ($this->db->driverName === 'sqlite') return;
+        foreach ($this->db->schema->getTableForeignKeys($table, true) as $key)
+            if ($key->name === $name || ($key->columnNames === (array)$columns && $key->foreignTableName === $refTable && $key->foreignColumnNames === (array)$refColumns)) return;
+        parent::addForeignKey($name,$table,$columns,$refTable,$refColumns,$delete,$update);
     }
     public function safeUp()
     {
@@ -46,31 +43,31 @@ class m260920_190000_extend_classic_craft extends Migration
             'craft_recipe' => ['code'=>$this->string(64), 'output_quantity'=>$this->integer()->notNull()->defaultValue(1), 'cost_credits'=>$this->integer()->notNull()->defaultValue(0), 'experience'=>$this->integer()->notNull()->defaultValue(10), 'min_level'=>$this->integer()->notNull()->defaultValue(1), 'station_id'=>$this->integer()],
         ];
         foreach ($columns as $table=>$fields) {
-            foreach ($fields as $name=>$type) $this->addColumn($table,$name,$type);
-            foreach ((new \yii\db\Query())->from($table)->all($this->db) as $row) $this->update($table,['code'=>'legacy-'.str_replace('craft_','',$table).'-'.$row['id']],['id'=>$row['id']]);
-            $this->createIndex('ux_'.$table.'_code',$table,'code',true);
+            foreach ($fields as $name=>$type) if (!$this->db->schema->getTableSchema($table,true)->getColumn($name)) $this->addColumn($table,$name,$type);
+            foreach ((new \yii\db\Query())->from($table)->where(['code' => null])->all($this->db) as $row) $this->update($table,['code'=>'legacy-'.str_replace('craft_','',$table).'-'.$row['id']],['id'=>$row['id'], 'code' => null]);
+            $this->index('ux_'.$table.'_code',$table,['code'],true);
         }
-        $this->createIndex('idx_craft_recipe_result','craft_recipe','item_id');
-        $this->dropIndex('idx-craft_recipe-item_id','craft_recipe');
-        $this->createTable('craft_station',['id'=>$this->primaryKey(),'code'=>$this->string(64)->notNull()->unique(),'name'=>$this->string(100)->notNull(),'item_id'=>$this->reference('craft_item'),'active'=>$this->smallInteger()->notNull()->defaultValue(1)]);
+        $this->index('idx_craft_recipe_result','craft_recipe',['item_id']);
+        foreach ($this->db->schema->getTableIndexes('craft_recipe', true) as $index) if ($index->name === 'idx-craft_recipe-item_id') $this->dropIndex($index->name,'craft_recipe');
+        $this->table('craft_station',['id'=>$this->primaryKey(),'code'=>$this->string(64)->notNull()->unique(),'name'=>$this->string(100)->notNull(),'item_id'=>$this->reference('craft_item'),'active'=>$this->smallInteger()->notNull()->defaultValue(1)]);
         $this->addForeignKey('fk_craft_station_item','craft_station','item_id','craft_item','id','RESTRICT');
         $this->addForeignKey('fk_craft_recipe_station','craft_recipe','station_id','craft_station','id','RESTRICT');
-        $this->createTable('craft_dependency',['recipe_id'=>$this->reference('craft_recipe').' NOT NULL','requires_id'=>$this->reference('craft_recipe').' NOT NULL','PRIMARY KEY ([[recipe_id]], [[requires_id]])']);
+        $this->table('craft_dependency',['recipe_id'=>$this->reference('craft_recipe').' NOT NULL','requires_id'=>$this->reference('craft_recipe').' NOT NULL','PRIMARY KEY ([[recipe_id]], [[requires_id]])']);
         foreach (['recipe_id','requires_id'] as $field) $this->addForeignKey('fk_craft_dependency_'.$field,'craft_dependency',$field,'craft_recipe','id','RESTRICT');
         $userType=$this->reference('user').' NOT NULL';
-        $this->createTable('craft_skill',['user_id'=>$userType,'category_id'=>$this->reference('craft_category').' NOT NULL','experience'=>$this->integer()->notNull()->defaultValue(0),'PRIMARY KEY ([[user_id]], [[category_id]])']);
-        $this->createTable('craft_known',['user_id'=>$userType,'recipe_id'=>$this->reference('craft_recipe').' NOT NULL','quantity'=>$this->integer()->notNull()->defaultValue(0),'PRIMARY KEY ([[user_id]], [[recipe_id]])']);
-        $this->createTable('craft_command',['id'=>$this->primaryKey(),'user_id'=>$userType,'request_key'=>$this->string(80)->notNull(),'fingerprint'=>$this->string(64)->notNull(),'result'=>$this->text()->notNull(),'created_at'=>$this->integer()->notNull()]);
-        $this->createIndex('ux_craft_command_user_key','craft_command',['user_id','request_key'],true);
-        $this->createTable('craft_event',['id'=>$this->primaryKey(),'user_id'=>$userType,'action'=>$this->string(30)->notNull(),'recipe_id'=>$this->reference('craft_recipe'),'item_id'=>$this->reference('craft_item'),'quantity'=>$this->integer()->notNull(),'credit_change'=>$this->integer()->notNull()->defaultValue(0),'details'=>$this->text(),'created_at'=>$this->integer()->notNull()]);
-        $this->createIndex('idx_craft_event_user','craft_event',['user_id','id']);
+        $this->table('craft_skill',['user_id'=>$userType,'category_id'=>$this->reference('craft_category').' NOT NULL','experience'=>$this->integer()->notNull()->defaultValue(0),'PRIMARY KEY ([[user_id]], [[category_id]])']);
+        $this->table('craft_known',['user_id'=>$userType,'recipe_id'=>$this->reference('craft_recipe').' NOT NULL','quantity'=>$this->integer()->notNull()->defaultValue(0),'PRIMARY KEY ([[user_id]], [[recipe_id]])']);
+        $this->table('craft_command',['id'=>$this->primaryKey(),'user_id'=>$userType,'request_key'=>$this->string(80)->notNull(),'fingerprint'=>$this->string(64)->notNull(),'result'=>$this->text()->notNull(),'created_at'=>$this->integer()->notNull()]);
+        $this->index('ux_craft_command_user_key','craft_command',['user_id','request_key'],true);
+        $this->table('craft_event',['id'=>$this->primaryKey(),'user_id'=>$userType,'action'=>$this->string(30)->notNull(),'recipe_id'=>$this->reference('craft_recipe'),'item_id'=>$this->reference('craft_item'),'quantity'=>$this->integer()->notNull(),'credit_change'=>$this->integer()->notNull()->defaultValue(0),'details'=>$this->text(),'created_at'=>$this->integer()->notNull()]);
+        $this->index('idx_craft_event_user','craft_event',['user_id','id']);
         foreach (['craft_skill','craft_known','craft_command','craft_event'] as $table) $this->addForeignKey('fk_'.$table.'_user',$table,'user_id','user','id','CASCADE');
         $this->addForeignKey('fk_craft_skill_category','craft_skill','category_id','craft_category','id','RESTRICT');
         $this->addForeignKey('fk_craft_known_recipe','craft_known','recipe_id','craft_recipe','id','RESTRICT');
-        $this->createTable('craft_meta',['id'=>$this->primaryKey(),'revision'=>$this->integer()->notNull()->defaultValue(1)]);
-        $this->insert('craft_meta',['id'=>1,'revision'=>1]);
+        $this->table('craft_meta',['id'=>$this->primaryKey(),'revision'=>$this->integer()->notNull()->defaultValue(1)]);
+        if (!(new \yii\db\Query())->from('craft_meta')->where(['id' => 1])->exists($this->db)) $this->insert('craft_meta',['id'=>1,'revision'=>1]);
         // Existing slots and their contents are preserved. Duplicate legacy slot labels are not used as identity.
-        $this->createIndex('idx_craft_inventory_owner_item','craft_inventory',['user_id','item_id']);
+        $this->index('idx_craft_inventory_owner_item','craft_inventory',['user_id','item_id']);
     }
     public function safeDown() { echo "Craft data must be preserved; restore a verified backup for schema rollback.\n"; return false; }
 }

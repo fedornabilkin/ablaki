@@ -15,7 +15,13 @@ class WorldAccessPolicy
     public function isAdmin(): bool { return $this->admin; }
     public function filter(Query $query, string $alias = 'n'): Query
     {
-        if ($this->admin) return $query;
+        if ($this->admin) {
+            // Administrative permissions reveal private objects, not retired map positions.
+            $archived = (new Query())->select('archived_path.ancestor_id')->from(['archived_path' => 'world_node_closure'])
+                ->innerJoin(['archived_node' => 'world_node'], '[[archived_node.id]]=[[archived_path.ancestor_id]]')
+                ->where('[[archived_path.descendant_id]]=[[' . $alias . '.id]]')->andWhere(['archived_node.status' => 'archived']);
+            return $query->andWhere(['<>', $alias . '.status', 'archived'])->andWhere(['not exists', $archived]);
+        }
         if (isset(\common\modules\world\models\Node::getTableSchema()->columns['hierarchy_level']))
             return $query->andWhere([$alias . '.id' => \common\modules\world\models\Node::visibleTo($this->userId)->select('id')]);
         // World maps show every active object, regardless of its owner. Management

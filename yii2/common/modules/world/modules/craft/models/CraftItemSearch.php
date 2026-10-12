@@ -18,8 +18,8 @@ class CraftItemSearch extends CraftItem
     public function rules()
     {
         return [
-            [['id', 'crafting_time', 'rare', 'category_id', 'active'], 'integer'],
-            [['name', 'description', 'categoryName'], 'safe'],
+            [['id', 'category_id', 'active'], 'integer'],
+            [['name', 'description', 'categoryName', 'kind', 'rarity'], 'safe'],
         ];
     }
 
@@ -64,8 +64,8 @@ class CraftItemSearch extends CraftItem
         // grid filtering conditions
         $query->andFilterWhere([
             'id' => $this->id,
-            'crafting_time' => $this->crafting_time,
-            'rare' => $this->rare,
+            'kind' => $this->kind,
+            'rarity' => $this->rarity,
             'category_id' => $this->category_id,
             'active' => $this->active,
         ]);
