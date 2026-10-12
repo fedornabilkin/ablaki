@@ -3,9 +3,12 @@ use common\modules\world\models\Node;
 use common\modules\world\models\NodeFactory;
 use common\modules\world\models\NodeTemplate;
 use common\modules\world\models\domain\PlacementProvisioner;
+use common\modules\world\models\domain\WorldTree;
+use common\modules\world\models\domain\WorldMapGeometry;
 use common\modules\world\models\migration\SimpleWorldSeed;
 use common\modules\world\modules\craft\models\domain\CraftSeed;
 use common\modules\world\support\Locks;
+use common\modules\world\support\GameError;
 use common\modules\world\support\WorldDomainMigration;
 use yii\db\Query;
 use yii\helpers\Json;
@@ -55,7 +58,21 @@ class m261008_120000_world_mvp_facilities extends WorldDomainMigration
                 if (isset((Json::decode($parent->settings_json ?: '{}'))['storage_capacity'])) continue;
                 if ($parent->status !== 'active' || !$parent->owner_user_id || (int)$parent->hierarchy_level >= 7) continue;
                 $template = NodeTemplate::requireOne(['code' => 'mini-storage-level-' . ((int)$parent->hierarchy_level + 1)]);
-                $node = NodeFactory::create($template, $parent, (int)$parent->owner_user_id, 'Мини-склад', 'mvp-stockpile-' . $storage['id'], null, 'constructing');
+                try {
+                    $cell = (new WorldTree($this->db))->nextPosition((int)$parent->id);
+                } catch (GameError $error) {
+                    if ($error->reason !== 'MAP_FULL') throw $error;
+                    // This warehouse already exists implicitly. Add room for its visible
+                    // representation without moving equipment or consuming purchased cells.
+                    $x = (int)$parent->map_origin_x + (int)$parent->map_width;
+                    foreach ((new PlacementProvisioner($this->db))->equipmentCells((int)$parent->id) as $occupied) $x = max($x, $occupied['x'] + 1);
+                    foreach (Node::find()->where(['parent_id' => $parent->id])->andWhere(['<>', 'status', 'archived'])->all() as $child)
+                        foreach (WorldMapGeometry::cells($child->footprint_json, (int)$child->position_x, (int)$child->position_y) as $occupied) $x = max($x, $occupied['x'] + 1);
+                    $cell = ['x' => $x, 'y' => (int)$parent->map_origin_y];
+                    $this->db->createCommand()->update('world_node', ['map_width' => $x - (int)$parent->map_origin_x + 1, 'revision' => (int)$parent->revision + 1], ['id' => $parent->id])->execute();
+                    $parent->refresh();
+                }
+                $node = NodeFactory::create($template, $parent, (int)$parent->owner_user_id, 'Мини-склад', 'mvp-stockpile-' . $storage['id'], $cell, 'constructing');
                 $this->db->createCommand()->update('world_node', ['status' => 'active', 'condition' => $node->max_condition], ['id' => $node->id])->execute(); $node->refresh();
                 $this->db->createCommand()->update('craft_storage', ['kind' => 'stockpile', 'node_id' => $node->id], ['id' => $storage['id']])->execute();
                 (new \common\modules\world\modules\economy\models\domain\EconomyHierarchy($this->db))->provision((int)$node->id, $operation);
