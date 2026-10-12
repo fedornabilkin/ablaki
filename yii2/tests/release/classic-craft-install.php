@@ -28,7 +28,11 @@ try {
     checkInstall($setup->runAction('install-production')===0,'production installer applies craft migrations and catalog');
     $versions=(new \yii\db\Query())->select('version')->from('migration')->column($db);
     checkInstall(count($versions)===5&&in_array('m260920_190000_extend_classic_craft',$versions,true)&&in_array('m260921_100000_craft_credit_switch',$versions,true),'only the four craft migrations enter standard migration history');
-    checkInstall((int)(new \yii\db\Query())->from('craft_item')->count('*',$db)===45&&(int)(new \yii\db\Query())->from('craft_recipe')->count('*',$db)===35,'initial catalog is installed');
+    checkInstall((int)(new \yii\db\Query())->from('craft_item')->count('*',$db)===47&&(int)(new \yii\db\Query())->from('craft_recipe')->count('*',$db)===37,'initial catalog includes bed and campfire recipes');
+    foreach (['classic-bed', 'classic-campfire'] as $code) {
+        $output = (new \yii\db\Query())->select('id')->from('craft_item')->where(['code' => $code, 'active' => 1])->scalar($db);
+        checkInstall($output && (new \yii\db\Query())->from('craft_recipe')->where(['code' => $code, 'item_id' => $output, 'active' => 1])->exists($db), $code . ' has an active recipe and matching output');
+    }
     checkInstall((int)$db->createCommand('SELECT charge_credits FROM craft_meta WHERE id=1')->queryScalar()===0,'new installation disables credit charges');
     $item=(int)(new \yii\db\Query())->select('id')->from('craft_item')->where(['code'=>'classic-log'])->scalar($db);
     $db->createCommand()->update('craft_item',['description'=>'Administrator edit'],['id'=>$item])->execute();
