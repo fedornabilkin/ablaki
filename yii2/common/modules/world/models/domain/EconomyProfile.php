@@ -50,7 +50,7 @@ final class EconomyProfile
             || ($data['money_scale'] ?? null) !== 4 || ($data['time_basis'] ?? null) !== 'real_seconds'
             || ($data['crafting_mode'] ?? null) !== 'instant' || ($data['payments_enabled'] ?? null) !== false
             || ($data['bank_enabled'] ?? null) !== false) throw new \InvalidArgumentException('Unsupported economy profile contract.');
-        foreach (['items', 'objects', 'recipes', 'actions', 'starter', 'daily', 'map', 'limits', 'crop', 'goals'] as $field) {
+        foreach (['items', 'objects', 'recipes', 'actions', 'starter', 'daily', 'map', 'limits', 'crop', 'goals', 'operating_costs'] as $field) {
             if (empty($data[$field]) || !is_array($data[$field])) throw new \InvalidArgumentException('Missing profile section: ' . $field);
         }
         foreach (['items', 'objects', 'recipes', 'actions'] as $field) {
@@ -59,6 +59,16 @@ final class EconomyProfile
             }
         }
         self::moneyFields($data);
+        $costs = $data['operating_costs'];
+        if ($costs['equipment_max_durability'] !== 100 || $costs['craft_base_work_wear'] !== 0
+            || $costs['source_tool_wear_per_batch'] !== 1 || $costs['crop_dig_tool_wear_per_cycle'] !== 1
+            || !Money::parse($costs['new_objects_daily_upkeep_cr'])->isZero() || $costs['new_objects_passive_condition_loss'] !== 0
+            || $costs['existing_published_terms'] !== 'preserved' || $costs['treasury_example']['guaranteed_daily_income'] !== null
+            || $costs['treasury_example']['funding'] !== 'existing_finite_reserved_settlement_purchase_order'
+            || $costs['treasury_example']['income_destination'] !== 'object_treasury_then_object_budget_not_personal_wallet') {
+            throw new \InvalidArgumentException('Operating costs must match the candidate and existing wear rules.');
+        }
+        EconomyOperatingCosts::treasury($costs['treasury_example'], 0);
         $items = $data['items'];
         foreach ($items as $code => $row) {
             foreach (['reference_price_cr', 'sale_price_cr'] as $field) {
@@ -97,6 +107,16 @@ final class EconomyProfile
             self::references($row['tools'], $items, $code);
             if (!is_int($row['work_seconds']) || $row['work_seconds'] < 0 || !is_int($row['cooldown_seconds'])
                 || $row['cooldown_seconds'] < 0 || $row['work_seconds'] + $row['cooldown_seconds'] < 1) throw new \InvalidArgumentException('Resource action needs a bounded work or cooldown interval.');
+        }
+        $crop = $data['crop']; $harvest = $data['actions']['harvest-carrot'];
+        $cropFee = Money::parse($crop['dig_fee_cr'])->add(Money::parse($crop['water_fee_cr']))
+            ->add(Money::parse($crop['sow_fee_cr']))->add(Money::parse($crop['harvest_fee_cr']));
+        if ($crop['water_actions_per_cycle'] !== 2 || $crop['water_quantity_per_action'] !== 1 || $crop['seed_quantity'] !== 1
+            || $harvest['ingredients'] != [$crop['seed'] => 1, $crop['water'] => 2]
+            || $harvest['output'] != [$crop['yield'] => $crop['yield_quantity']]
+            || Money::parse($harvest['fee_cr'])->compare($cropFee) !== 0
+            || $data['recipes']['starter-carrot-seeds']['ingredients'] != [$crop['yield'] => 1]) {
+            throw new \InvalidArgumentException('Carrot aggregate must include the complete published cycle.');
         }
         foreach ($data['goals'] as $code => $row) {
             self::quantities($row['items'], $items, $code);
@@ -171,9 +191,11 @@ final class EconomyProfile
                 'reference_value_cr' => self::valuation($data['daily']['items'], $data['items'], 'reference_price_cr')->decimal(),
                 'sale_value_before_limits_cr' => self::valuation($data['daily']['items'], $data['items'], 'sale_price_cr')->decimal()],
             'first_day_objects_only_cr' => $objects->decimal(), 'recipe_margins' => $margins,
+            'operating_costs' => EconomyOperatingCosts::report($data),
             'reachability' => self::reachability($data),
             'limitations' => ['candidate_not_published', 'reference_prices_are_not_a_shop',
-                'sale_values_require_funded_demand_and_quotas', 'margins_exclude_tool_station_wear_and_capital_costs',
+                'sale_values_require_funded_demand_and_quotas', 'recipe_margins_exclude_wear_use_operating_costs_for_work_reserves',
+                'passive_wear_repairs_and_capital_require_a_schedule',
                 'reachability_is_not_a_day_or_week_simulation', 'quantities_time_skills_capacity_and_money_require_BAL_scenarios']];
     }
 }

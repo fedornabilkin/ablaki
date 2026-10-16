@@ -65,7 +65,7 @@ class EquipmentExposure
             $class = (string)(new Query())->select('exposure_class')->from('world_slot')->where(['storage_id' => $storage['id'], 'position' => $position])->scalar($this->db);
             if (!in_array($class, ['outdoor', 'covered', 'indoor'], true)) throw new ConflictHttpException('Не настроена защита места размещения.');
         }
-        $rates = ['carried' => 0, 'outdoor' => 4, 'covered' => 1, 'indoor' => 0];
+        $rates = self::dailyRates();
         foreach ($ids as $id) {
             $unit = $this->settle($id);
             $values = ['exposure_class' => $class, 'daily_wear' => $rates[$class], 'settled_at' => $unit['settled_at'], 'remainder' => $unit['remainder'], 'policy_version' => 1];
@@ -80,7 +80,16 @@ class EquipmentExposure
     }
     public function cost(array $unit, int $base, int $batches = 1, bool $station = false): int
     {
-        $outdoor = $station && $unit['exposure_class'] === 'outdoor';
+        return self::workCost($unit['exposure_class'], $base, $batches, $station);
+    }
+    /** Shared by live operations and the offline economy audit. */
+    public static function dailyRates(): array
+    {
+        return ['carried' => 0, 'outdoor' => 4, 'covered' => 1, 'indoor' => 0];
+    }
+    public static function workCost(string $exposure, int $base, int $batches = 1, bool $station = false): int
+    {
+        $outdoor = $station && $exposure === 'outdoor';
         return $batches * ($base * ($outdoor ? 2 : 1) + ($outdoor ? 1 : 0));
     }
     /** Caller has paid the approved material plan under owner/catalog/registry locks. */

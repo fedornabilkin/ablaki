@@ -71,6 +71,36 @@
     "tools": "existing_durability_rules",
     "note": "10% station fee deferred; no second implicit charge"
   },
+  "operating_costs": {
+    "equipment_max_durability": 100,
+    "craft_base_work_wear": 0,
+    "source_tool_wear_per_batch": 1,
+    "crop_dig_tool_wear_per_cycle": 1,
+    "wear_valuation": "sale_value_replacement_reserve_not_cash_payment",
+    "tool_repair": "no_generic_route_replace_by_recipe",
+    "chest_repair": "ceil_recipe_ingredient_times_damage_over_2_maximum_output",
+    "shelter_repair": "ceil_raw_plank_and_rope_batch_inputs_times_damage_over_maximum",
+    "premises_repair": "accepted_contract_price_and_materials_scaled_up_by_damage",
+    "premises_repair_time": "instant_existing_contract_owner_no_work_fee",
+    "premises_repair_receiver": "existing_contractor_settlement_treasury",
+    "common_node_repair": "existing_world_repair_create_zero_materials_owner_work",
+    "common_node_repair_seconds": "ceil_missing_condition_times_60_over_100_minimum_1_real_second",
+    "common_node_repair_fee_cr": "0.0000",
+    "new_objects_daily_upkeep_cr": "0.0000",
+    "new_objects_passive_condition_loss": 0,
+    "existing_published_terms": "preserved",
+    "treasury_example": {
+      "gross_cr": "100.0000",
+      "rate_bps": 1000,
+      "protected_seconds": 3600,
+      "loss_period_seconds": 3600,
+      "loss_rate_bps": 100,
+      "tax_due_seconds": 86400,
+      "income_destination": "object_treasury_then_object_budget_not_personal_wallet",
+      "funding": "existing_finite_reserved_settlement_purchase_order",
+      "guaranteed_daily_income": null
+    }
+  },
   "limits": {
     "timezone": "Europe/Moscow",
     "scope": "user_active_world_all_cities",
