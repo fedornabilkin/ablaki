@@ -2,7 +2,7 @@
 
 Дата: 2026-09-26. Дополнение по прямому поручению владельца к [архитектуре](world-architecture.md) и [ТЗ](../tz/world.md). Это проект правил для реализации; цены и коэффициенты, обозначенные как пример, не утверждены как игровой баланс.
 
-Планы: [BE](../plan/2026-09-26-world-backend.md), [DB](../plan/2026-09-26-world-database.md), [FE](../../../frontend/docs/plan/2026-09-26-world-frontend.md), [API](../api/world-api.md).
+Планы: [BE](../plan/2026-09-26-world-backend.md), [DB](../plan/2026-09-26-world-database.md), [FE](../../../frontend/docs/plan/2026-09-26-world-frontend.md), API.
 
 ## 1. Что изменяется относительно первого проекта
 

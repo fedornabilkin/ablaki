@@ -25,7 +25,7 @@
 
 - Backend feature `e703251`, test `ed7976935ed7eb11e51d5db6b0393e7b9cde845b`: [GitHub Actions](https://github.com/fedornabilkin/ablaki/actions/runs/36332484377) — checks и deploy успешны. Журнал подтверждает обновление checkout до этого SHA; новых миграций нет, world setup завершён. Marker остаётся 19.
 - Frontend feature `bb23109`, test `1c80f9418119c23c4d886c9e5a8784d8d95f4dfa`: [GitHub Actions](https://github.com/fedornabilkin/ablaki-front/actions/runs/36332676350) — checks/build и deploy успешны. Test push выполнен после успешного backend deployment.
-- Админка: http://94.250.251.94:3195/world-root/index. Игровой интерфейс: http://94.250.251.94:3181/world. [Настройка маршрутных прав](../implementation/world/world-admin-crud.md): старое одиночное `world-manage` не заменяет новые права Yii-страниц; права пользователям автоматически не назначались.
+- Админка: http://94.250.251.94:3195/world-root/index. Игровой интерфейс: http://94.250.251.94:3181/world. Настройка маршрутных прав: старое одиночное `world-manage` не заменяет новые права Yii-страниц; права пользователям автоматически не назначались.
 - Локальные тесты/сборка и браузерная/игровая приёмка не запускались. Штатный CI выполнен автоматически. Production, активация storage/wallet, календарь и расписание worker этим выпуском не менялись.
 
 ## Выпуск схемы 19 — 2026-09-27
