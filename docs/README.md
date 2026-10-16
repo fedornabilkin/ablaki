@@ -15,6 +15,7 @@
 
 - [MVP: подготовка к закрытому тестированию](plan/2026-10-15-world-closed-test.md) — очередь по [дополнительному ТЗ](tz/mvp-world.md): [баланс](plan/2026-10-15-world-economy-balance.md), [сервер/БД](plan/2026-10-15-world-economy-integrity.md), [приёмка](plan/2026-10-15-world-closed-test-acceptance.md) и [интерфейс](../../frontend/docs/plan/2026-10-15-world-closed-test-ui.md). Банк не нужен, переводы кредитов уже реализованы; остаются их регрессия и интеграция учёта. Оплата и пополнение не предусмотрены.
 - Первый этап по [economy.md](tz/economy.md): [CONTENT — новый контент экономики](plan/2026-10-16-world-economy-content.md) и [CONUI — его интерфейс](../../frontend/docs/plan/2026-10-16-world-economy-content-ui.md). Расхождения чисел разрешаются до изменения тарифов; целевой расчёт старта — 250 Cr, мгновенный крафт сохраняется.
+- [Профиль экономики v1 и CLI-аудит](architecture/economy-closed-test-profile.md) — первый результат выполнения CONTENT/BAL: выбранные значения и проверяемые зависимости. Статус candidate, игровые настройки не изменены.
 - Второй этап по [bazar.md](tz/bazar.md): [MKT — NPC и P2P](plan/2026-10-16-world-market.md), [MKTOP — управление, защита и допуск](plan/2026-10-16-world-market-operations.md), [MUI — интерфейс](../../frontend/docs/plan/2026-10-16-world-market-ui.md). Сначала городской магазин, затем P2P после наблюдения NPC.
 
 - [Простая модель мира](architecture/simple-world.md), [новый API](architecture/simple-world-api.md), [порядок установки](operations/simple-world-install.md).

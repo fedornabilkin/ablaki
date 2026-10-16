@@ -12,6 +12,12 @@ class WorldAuditController extends \yii\console\Controller
         $this->stdout(json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT | JSON_THROW_ON_ERROR) . "\n");
         return 0;
     }
+    public function actionEconomyProfile(): int
+    {
+        $data = \common\modules\world\models\domain\EconomyProfile::report(\common\modules\world\models\domain\EconomyProfile::load());
+        $this->output($data);
+        return $data['reachability']['blocked_targets'] || $data['reachability']['blocked_recipes'] ? 1 : 0;
+    }
     public function actionStorage(): int
     {
         return $this->output((new \common\modules\world\modules\craft\models\domain\StorageReconciliation(Yii::$app->db))->report());
