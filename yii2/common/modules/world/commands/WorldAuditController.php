@@ -18,6 +18,10 @@ class WorldAuditController extends \yii\console\Controller
         $this->output($data);
         return $data['reachability']['blocked_targets'] || $data['reachability']['blocked_recipes'] ? 1 : 0;
     }
+    public function actionEconomyCohort(string $cohort = '', int $afterUser = 0, int $limit = 100): int
+    {
+        return $this->output((new \common\modules\world\models\domain\EconomyReport(Yii::$app->db))->report($cohort, $afterUser, $limit));
+    }
     public function actionEconomyScenario(string $scenario = 'first-four-days'): int
     {
         $data = \common\modules\world\models\domain\EconomyScenario::report(

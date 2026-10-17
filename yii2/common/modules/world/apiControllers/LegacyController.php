@@ -13,6 +13,12 @@ abstract class LegacyController extends \yii\rest\Controller
     use AuthTrait;
     public function authExceptAction(): array { return ['options']; }
     public function actionOptions() { Yii::$app->response->statusCode = 204; return null; }
+    public function beforeAction($action)
+    {
+        if (!parent::beforeAction($action)) return false;
+        if ($action->id !== 'options') \common\modules\world\models\domain\EconomyRuntime::requireAccess(Yii::$app->db, (int)Yii::$app->user->id, Yii::$app->user->can('world-manage'));
+        return true;
+    }
     protected function verbs() { return ['index' => ['GET'], 'node' => ['GET'], 'children' => ['GET'], 'navigation' => ['GET'], 'map' => ['GET'], 'statistics' => ['GET'], 'actions' => ['GET'], 'campsite' => ['GET'], 'onboarding' => ['GET'], 'join-preview' => ['POST'], 'join' => ['POST'], 'move-preview' => ['POST'], 'move' => ['POST'], 'archive-preview' => ['POST'], 'archive' => ['POST'], 'storages' => ['GET'], 'storage' => ['GET'], 'storage-transfer-preview' => ['POST'], 'storage-transfer' => ['POST']]; }
     public function runAction($id, $params = [])
     {

@@ -19,7 +19,7 @@ final class Supplies
     public static function state(int $nodeId, int $user): array
     {
         self::campsite($nodeId, $user);
-        $period = (new \DateTimeImmutable('today', new \DateTimeZone('Europe/Moscow')))->getTimestamp();
+        $period = (new \DateTimeImmutable('@' . time()))->setTimezone(new \DateTimeZone('Europe/Moscow'))->setTime(0, 0)->getTimestamp();
         return ['gather_available' => !(new Query())->from('craft_event')->where(['user_id' => $user, 'action' => 'gather'])->andWhere(['>=', 'created_at', $period])->exists(Node::getDb()),
             'gather_available_at' => $period + 86400, 'server_time' => time()];
     }

@@ -53,7 +53,7 @@ class EquipmentWearJob
         $unit = (new EquipmentExposure($this->db))->settle($id);
         if ((int)$before['durability'] !== (int)$unit['durability']) {
             $operation = bin2hex(random_bytes(16));
-            $this->db->createCommand()->insert('game_operation', ['id' => $operation, 'user_id' => $row['user_id'], 'type' => 'world.equipment.wear', 'created_at' => time()])->execute();
+            $this->db->createCommand()->insert('game_operation', ['id' => $operation, 'user_id' => $row['user_id'], 'type' => 'world.equipment.wear', 'created_at' => time()] + \common\modules\world\models\domain\EconomyRuntime::operationContext($this->db, []))->execute();
             (new CommandBus($this->db, $this->flags))->emit($operation, (int)$row['user_id'], 'world.equipment.worn', ['instance_id' => $id, 'durability' => (int)$unit['durability'], 'broken' => (int)$unit['durability'] === 0]);
         }
         $next = $this->candidates()->andWhere(['e.id' => $id])->one($this->db);

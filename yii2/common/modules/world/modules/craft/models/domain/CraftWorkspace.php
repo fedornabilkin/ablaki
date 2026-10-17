@@ -80,7 +80,9 @@ class CraftWorkspace
             } catch (\yii\web\HttpException $e) { continue; } catch (GameError $e) { continue; }
         }
         $recipes = (new WorkspaceAvailability($this->db))->recipes($user, $store, $catalog, $recipes, $storages);
-        return ['node_id' => $node, 'name' => $place['name'], 'recipe_id' => $selected ? (int)$selected['id'] : null, 'recipes' => $recipes, 'equipment' => $equipment, 'storages' => $storages, 'writable' => $this->flags->capabilities()['world_write'], 'server_time' => time()];
+        $profile = \common\modules\world\models\domain\EconomyRuntime::current($this->db);
+        return ['node_id' => $node, 'name' => $place['name'], 'recipe_id' => $selected ? (int)$selected['id'] : null, 'recipes' => $recipes, 'equipment' => $equipment, 'storages' => $storages, 'writable' => $this->flags->capabilities()['world_write'],
+            'quota' => \common\modules\world\models\domain\EconomyQuota::state($this->db, $user, 'crafting_hourly'), 'object_budget_payment' => (bool)($profile['profile']['craft_fees']['object_budget_payment'] ?? false), 'server_time' => time()];
     }
     private function prepare(int $user, array $payload): array
     {
@@ -103,15 +105,33 @@ class CraftWorkspace
         $plan = (new CanonicalInventory($store))->planCraft($sources, $target, $input['required'], $input['items'], $input['output'], (int)$input['recipe']['output_quantity'] * $payload['quantity']);
         foreach ($plan['materials'] as $material) if (!$material['available']) $reasons[] = 'Не хватает: ' . $material['name'];
         if (!$plan['output_fits']) $reasons[] = 'В выбранном хранилище недостаточно места для результата или оно не подходит для предмета.';
+        $quota = \common\modules\world\models\domain\EconomyQuota::state($this->db, $user, 'crafting_hourly');
+        if ($quota && $payload['quantity'] > $quota['remaining']) $reasons[] = 'Часового лимита недостаточно для выбранного числа партий.';
         $meta = (new Query())->from('craft_meta')->where(['id' => 1])->one($this->db);
         $cost = (int)$meta['charge_credits'] === 1 ? (int)$input['recipe']['cost_credits'] * $payload['quantity'] : 0;
         $efficiency = (new \common\modules\world\models\domain\NightWorkEfficiency($this->db))->basisPoints($user);
         $baseExperience = (int)$input['recipe']['experience'] * $payload['quantity'];
         $experience = $baseExperience ? max(1, intdiv($baseExperience * $efficiency, 10000)) : 0;
         $person = (new Query())->from('persone')->where(['user_id' => $user])->one($this->db);
-        if (!$person || (float)$person['credit'] < $cost) $reasons[] = 'Не хватает кредитов.';
+        $profile = \common\modules\world\models\domain\EconomyRuntime::current($this->db);
+        $useBudget = $payload['use_object_budget'] ?? false;
+        if (!is_bool($useBudget) || ($useBudget && !($profile['profile']['craft_fees']['object_budget_payment'] ?? false))) throw new GameError('INVALID_FUNDING', 'Оплата из бюджета объекта сейчас недоступна.', 422);
+        $payer = null; $budget = null;
+        if ($useBudget) {
+            $hierarchy = new \common\modules\world\modules\economy\models\domain\EconomyHierarchy($this->db);
+            $payer = $hierarchy->financialNode($place['id']);
+            $owned = (new Query())->from('world_node')->where(['id' => $payer, 'owner_user_id' => $user, 'status' => 'active'])->exists($this->db);
+            if (!$owned) throw new GameError('INVALID_FUNDING', 'Выберите собственный объект для оплаты.', 403);
+            $budget = $hierarchy->accounts($payer)['budget'] ?? null;
+            $available = $budget ? (new \common\modules\world\modules\economy\models\domain\BudgetSpending($this->db))->available((int)$budget['id']) : \common\modules\world\modules\economy\value\Money::parse('0');
+            if ($available->compare(\common\modules\world\modules\economy\value\Money::parse((string)$cost)) < 0) $reasons[] = 'В бюджете объекта недостаточно свободных кредитов.';
+        } elseif (!$person || \common\modules\world\modules\economy\value\Money::parse((string)$person['credit'])->compare(\common\modules\world\modules\economy\value\Money::parse((string)$cost)) < 0) $reasons[] = 'Не хватает кредитов.';
         if ($cost) (new CraftInventory($store))->requireTransactionalBalance();
         $revisions = ['node:' . $place['id'] => $place['revision'], 'catalog' => (int)$meta['revision']];
+        if ($useBudget) {
+            $revisions['registry'] = (int)(new Query())->select('content_revision')->from('world_registry')->where(['id' => 1])->scalar($this->db);
+            if ($budget) $revisions['account:' . $budget['id']] = (int)$budget['revision'];
+        }
         foreach (array_merge($sources, [$target]) as $storage) $revisions['storage:' . $storage['id']] = (int)$storage['revision'];
         foreach ($selected as $unit) {
             $instance = (new Query())->from('craft_equipment_instance')->where(['id' => $unit['instance_id']])->one($this->db);
@@ -121,6 +141,7 @@ class CraftWorkspace
             'output' => ['item_id' => (int)$input['output']['id'], 'name' => trim($input['output']['name']), 'quantity' => (int)$input['recipe']['output_quantity'] * $payload['quantity'], 'storage_id' => (int)$target['id'], 'fits' => $plan['output_fits']],
             'price' => $cost . '.0000', 'currency' => 'Cr', 'experience' => $experience, 'work_efficiency_bps' => $efficiency,
             'reasons' => array_values(array_unique($reasons))];
+        if ($useBudget) $terms['payment'] = ['source' => 'object_budget', 'node_id' => $payer, 'profile_id' => $profile['id']];
         return compact('store', 'input', 'sources', 'target', 'plan', 'selected', 'cost', 'revisions', 'terms');
     }
     public function preview(int $user, array $payload): array
@@ -140,7 +161,8 @@ class CraftWorkspace
             $p['store']->operationId = $operation;
             foreach ($p['selected'] as $unit) (new EquipmentExposure($this->db))->use($unit['instance_id'], 0, $input['quantity'], $unit['is_station']);
             (new CanonicalInventory($p['store']))->applyCraft($user, $p['plan'], $p['target'], $p['input']['items'], $p['input']['output']);
-            $message = (new Crafting($p['store']))->completeRecipe($user, $p['input']['recipe'], $p['input']['output'], $input['quantity'], $p['cost']);
+            if (isset($terms['payment'])) \common\modules\world\models\domain\EconomyPayments::charge($this->db, $user, $terms['payment']['node_id'], \common\modules\world\modules\economy\value\Money::parse((string)$p['cost']), false, $operation, 'Изготовление: ' . $p['input']['output']['name']);
+            $message = (new Crafting($p['store']))->completeRecipe($user, $p['input']['recipe'], $p['input']['output'], $input['quantity'], isset($terms['payment']) ? 0 : $p['cost']);
             $storages = array_merge(array_column($p['sources'], 'id'), [$p['target']['id']], array_column($p['selected'], 'storage_id'));
             return ['message' => $message, 'changed_node_ids' => [$input['node_id']], 'changed_storage_ids' => array_values(array_unique(array_map('intval', $storages)))];
         });

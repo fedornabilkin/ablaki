@@ -12,6 +12,20 @@
   "crafting_mode": "instant",
   "payments_enabled": false,
   "bank_enabled": false,
+  "closed_test": {
+    "restricted": true,
+    "permission": "world-closed-test",
+    "role": "world-tester",
+    "verified_second_milestone_day": 5,
+    "verified_with_one_missed_day": 6,
+    "feedback_path": "/forum/read/80"
+  },
+  "health": {
+    "maximum_hp": 100,
+    "unprotected_night_damage_hp": 15,
+    "food_removes_night_illness": false,
+    "zero_hp_destroys_items": false
+  },
   "starter": {
     "credits_cr": "250.0000",
     "credit_source": "existing_transfer",
@@ -66,6 +80,8 @@
     "placement_policy": "enabled_template_owned_active_parent_depth_lt_32"
   },
   "craft_fees": {
+    "object_budget_payment": true,
+    "object_budget_fee_receiver": "existing_settlement_budget",
     "mode": "fixed_existing_whole_credits",
     "station_surcharge_bps": 0,
     "settlement": "existing_craft_debit",
@@ -143,7 +159,44 @@
     "mini_storage_slots": 5,
     "middle_storage_slots": 50,
     "warehouse_slots": 100,
-    "existing_rights": "preserve"
+    "existing_rights": "preserve",
+    "expansions": {
+      "backpack-5": {
+        "kind": "backpack",
+        "node_code": null,
+        "slots": 5,
+        "price_cr": "50.0000",
+        "maximum": 50
+      },
+      "backpack-10": {
+        "kind": "backpack",
+        "node_code": null,
+        "slots": 10,
+        "price_cr": "90.0000",
+        "maximum": 50
+      },
+      "chest-10": {
+        "kind": "chest",
+        "node_code": null,
+        "slots": 10,
+        "price_cr": "40.0000",
+        "maximum": 100
+      },
+      "middle-25": {
+        "kind": "stockpile",
+        "node_code": "storage-building",
+        "slots": 25,
+        "price_cr": "100.0000",
+        "maximum": 200
+      },
+      "warehouse-50": {
+        "kind": "stockpile",
+        "node_code": "warehouse",
+        "slots": 50,
+        "price_cr": "250.0000",
+        "maximum": 200
+      }
+    }
   },
   "crop": {
     "code": "starter-carrot",
@@ -685,12 +738,12 @@
     },
     "house": {
       "name": "Дом",
-      "price_cr": "800.0000",
+      "price_cr": "40.0000",
       "work_seconds": 7200,
       "materials": {
-        "classic-plank": 100,
-        "classic-stone": 80,
-        "classic-rope": 30
+        "classic-plank": 4,
+        "classic-stone": 2,
+        "classic-rope": 1
       }
     },
     "warehouse": {
@@ -792,21 +845,21 @@
     },
     "workshop-building": {
       "name": "Ремесленная мастерская",
-      "price_cr": "150.0000",
+      "price_cr": "70.0000",
       "work_seconds": 600,
       "materials": {
-        "classic-plank": 20,
-        "classic-stone": 8
+        "classic-plank": 12,
+        "classic-stone": 5
       }
     },
     "storage-building": {
       "name": "Хозсклад",
-      "price_cr": "200.0000",
+      "price_cr": "30.0000",
       "work_seconds": 900,
       "materials": {
-        "classic-plank": 30,
-        "classic-stone": 10,
-        "classic-rope": 5
+        "classic-plank": 4,
+        "classic-stone": 2,
+        "classic-rope": 1
       },
       "storage_slots": 50
     },

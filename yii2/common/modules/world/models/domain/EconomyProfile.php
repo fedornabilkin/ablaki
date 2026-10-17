@@ -59,6 +59,11 @@ final class EconomyProfile
             }
         }
         self::moneyFields($data);
+        $access = $data['closed_test'] ?? [];
+        if (!is_bool($access['restricted'] ?? null) || ($access['permission'] ?? null) !== 'world-closed-test' || ($access['role'] ?? null) !== 'world-tester'
+            || !is_string($access['feedback_path'] ?? null) || !preg_match('~^/forum/read/[1-9][0-9]*$~D', $access['feedback_path'])) throw new \InvalidArgumentException('Closed-test admission requires built-in RBAC and an internal feedback topic.');
+        if (isset($data['health']) && ($data['health']['maximum_hp'] !== 100 || $data['health']['unprotected_night_damage_hp'] !== 15
+            || $data['health']['food_removes_night_illness'] !== false || $data['health']['zero_hp_destroys_items'] !== false)) throw new \InvalidArgumentException('Unsupported closed-test health contract.');
         $costs = $data['operating_costs'];
         if ($costs['equipment_max_durability'] !== 100 || $costs['craft_base_work_wear'] !== 0
             || $costs['source_tool_wear_per_batch'] !== 1 || $costs['crop_dig_tool_wear_per_cycle'] !== 1
@@ -87,6 +92,9 @@ final class EconomyProfile
             if (!isset($row['price_cr']) || !is_int($row['work_seconds']) || $row['work_seconds'] < 1) throw new \InvalidArgumentException('Object needs a price and work duration: ' . $code);
             self::quantities($row['materials'], $items, $code);
             self::references($row['capability_requirements'] ?? [], $data['objects'], $code);
+            if (isset($row['grow_duration_bps']) && (!is_int($row['grow_duration_bps']) || $row['grow_duration_bps'] < 1000 || $row['grow_duration_bps'] > 10000)) throw new \InvalidArgumentException('Invalid growth duration modifier: ' . $code);
+            if (isset($row['event_protection']) && (($row['event_protection']['code'] ?? null) !== 'light_crop_damage' || ($row['event_protection']['max_event_loss_bps'] ?? null) !== 2500
+                || !is_int($row['event_protection']['loss_reduction_bps'] ?? null) || $row['event_protection']['loss_reduction_bps'] < 0 || $row['event_protection']['loss_reduction_bps'] > 10000)) throw new \InvalidArgumentException('Invalid crop event protection: ' . $code);
         }
         foreach ($data['recipes'] as $code => $row) {
             if (!isset($row['fee_cr'])) throw new \InvalidArgumentException('Recipe needs a declared fee: ' . $code);
@@ -126,6 +134,26 @@ final class EconomyProfile
         $map = $data['map'];
         if ($map['starter_open_cells'] !== 9 || $map['max_cells'] !== 25 || $map['bounds'] !== [-2, 2]
             || $map['starter_open_square'] !== [-1, 1]) throw new \InvalidArgumentException('Inconsistent starter map dimensions.');
+        foreach (['bulk_minimum' => [1, 25], 'discount_bps' => [0, 10000]] as $field => $range) {
+            if (!is_int($map[$field] ?? null) || $map[$field] < $range[0] || $map[$field] > $range[1]) throw new \InvalidArgumentException('Invalid map pricing: ' . $field);
+        }
+        $limits = $data['limits'];
+        if (($limits['crafting_hourly']['unit'] ?? null) !== 'recipe_batches' || ($limits['crafting_hourly']['window'] ?? null) !== 'rolling_3600_seconds'
+            || ($limits['extraction_daily']['unit'] ?? null) !== 'successful_source_batches' || ($limits['active_labor_sessions'] ?? null) !== 1 || ($limits['daily_supply'] ?? null) !== 1) throw new \InvalidArgumentException('Unsupported quota semantics.');
+        foreach ([$limits['crafting_hourly']['maximum'] ?? null, $limits['extraction_daily']['maximum'] ?? null, $limits['sales_daily']['operations'] ?? null,
+            $limits['sales_daily']['same_item_per_operation'] ?? null, $limits['active_constructions'] ?? null] as $maximum) {
+            if (!is_int($maximum) || $maximum < 1 || $maximum > 10000) throw new \InvalidArgumentException('Quota maxima must be positive integers.');
+        }
+        foreach ($limits['objects'] as $code => $maximum) if (!is_int($maximum) || $maximum < 1 || $maximum > 10000) throw new \InvalidArgumentException('Invalid object maximum: ' . $code);
+        foreach (['chest_slots', 'mini_storage_slots', 'middle_storage_slots', 'warehouse_slots'] as $field) if (!is_int($data['storage'][$field] ?? null) || $data['storage'][$field] < 1 || $data['storage'][$field] > 100) throw new \InvalidArgumentException('Invalid storage capacity: ' . $field);
+        foreach ($data['storage']['expansions'] ?? [] as $code => $pack) {
+            if (!is_string($pack['price_cr'] ?? null) || Money::parse($pack['price_cr'])->isNegative()) throw new \InvalidArgumentException('Invalid storage expansion price: ' . $code);
+            if (!is_string($code) || !preg_match('/^[a-z][a-z0-9-]{0,79}$/D', $code) || !in_array($pack['kind'] ?? null, ['backpack', 'chest', 'stockpile'], true)
+                || !is_int($pack['slots'] ?? null) || $pack['slots'] < 1 || $pack['slots'] > 100 || !is_int($pack['maximum'] ?? null) || $pack['maximum'] < $pack['slots'] || $pack['maximum'] > 200
+                || !array_key_exists('node_code', $pack) || ($pack['node_code'] !== null && !isset($data['objects'][$pack['node_code']]))) throw new \InvalidArgumentException('Invalid storage expansion: ' . $code);
+        }
+        if (!is_int($data['storage']['backpack_slots'] ?? null) || $data['storage']['backpack_slots'] < 1 || $data['storage']['backpack_slots'] > 100
+            || ($data['storage']['existing_rights'] ?? null) !== 'preserve') throw new \InvalidArgumentException('Existing backpack rights must be preserved.');
     }
 
     private static function valuation(array $quantities, array $items, string $field): ?Money

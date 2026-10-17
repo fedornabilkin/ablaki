@@ -197,11 +197,12 @@ class WorldNights
             if ($this->one('world_night_resolution', ['actor_id' => $id, 'period_id' => $period['id']])) throw new \LogicException('Health checkpoint differs from the night journal.');
             $coverage = $this->coverage($id, $membership, $night); $protected = $coverage['protected'];
             $next = NightCalendar::advance($policy, $health, $protected, $night['ended_at']); $operation = bin2hex(random_bytes(16));
-            $this->db->createCommand()->insert('game_operation', ['id' => $operation, 'user_id' => $membership['user_id'], 'type' => 'world.night.resolved', 'created_at' => $now])->execute();
+            $this->db->createCommand()->insert('game_operation', ['id' => $operation, 'user_id' => $membership['user_id'], 'type' => 'world.night.resolved', 'created_at' => $now] + \common\modules\world\models\domain\EconomyRuntime::operationContext($this->db, ['node_id' => (int)$membership['starter_site_id']]))->execute();
             $this->db->createCommand()->insert('world_night_resolution', ['actor_id' => $id, 'period_id' => $period['id'], 'outcome' => $protected ? 'protected' : 'unprotected', 'severity_before' => $health['severity'], 'severity_after' => $next['severity'], 'recovery_progress' => $next['recovery_progress'], 'deployment_id' => $coverage['deployment_id'], 'coverage_json' => CanonicalJson::encode($coverage), 'operation_id' => $operation, 'resolved_at' => $now])->execute();
             if ($coverage['housing_place_id'] !== null) $this->db->createCommand()->insert('world_housing_night_claim', ['resolution_id' => (int)$this->db->getLastInsertID(), 'place_id' => $coverage['housing_place_id'], 'period_id' => $period['id']])->execute();
             $next += ['next_sequence' => $night['sequence'] + 1, 'processed_until' => $night['ended_at'], 'revision' => (int)$health['revision'] + 1];
             if ($this->db->createCommand()->update('actor_night_health', $next, ['actor_id' => $id, 'revision' => $health['revision']])->execute() !== 1) throw new \RuntimeException('Health checkpoint write failed.');
+            WorldFood::night($this->db, (int)$membership['user_id'], $protected, $operation);
             $health = array_merge($health, $next);
             (new CommandBus($this->db, $this->flags))->emit($operation, (int)$membership['user_id'], 'world.night.resolved', ['actor_id' => $id, 'period_id' => (int)$period['id'], 'outcome' => $protected ? 'protected' : 'unprotected', 'severity' => $next['severity']]);
         }

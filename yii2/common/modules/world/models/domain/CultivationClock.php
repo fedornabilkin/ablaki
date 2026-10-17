@@ -15,6 +15,7 @@ class CultivationClock
         $canWater = $due !== null && $due < $ready && $now >= $due && $now < $ready;
         return ['state' => $now >= $expires ? 'expired' : ($now >= $ready ? 'ripe' : ($canWater ? 'needs_water' : 'growing')),
             'ready_at' => $ready, 'water_due_at' => $due, 'water_deadline_at' => $deadline, 'expires_at' => $expires,
-            'water_missed' => $missed, 'yield_factor_bps' => $missed ? 5000 : 10000, 'can_water' => $canWater];
+            'water_missed' => $missed, 'event_loss_bps' => (int)($cycle['event_loss_bps'] ?? 0),
+            'yield_factor_bps' => intdiv(($missed ? 5000 : 10000) * (10000 - (int)($cycle['event_loss_bps'] ?? 0)), 10000), 'can_water' => $canWater];
     }
 }

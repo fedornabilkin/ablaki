@@ -25,6 +25,10 @@ class CultivationController extends LegacyController
         $service = $this->cultivationService(); $user = (int)Yii::$app->user->id;
         $input = $action === 'publish' ? $service->publication($body) : ['bed_id' => $this->id($id)];
         if ($action === 'sow') $input['crop_revision_id'] = $this->id($body['crop_revision_id'] ?? null);
+        if (array_key_exists('top_up', $body) && $action !== 'publish') {
+            if (!is_bool($body['top_up'])) throw new GameError('INVALID_FUNDING', 'Укажите способ оплаты.', 422);
+            $input['top_up'] = $body['top_up'];
+        }
         if ($preview) return $service->preview($user, $action, $input);
         if (!is_string($body['request_key'] ?? null) || !is_string($body['quote_id'] ?? null) || !is_array($body['expected_revisions'] ?? null)) throw new GameError('INVALID_COMMAND', 'Требуется подтверждённый расчёт.', 422);
         return $service->execute($user, $action, $input, $body['request_key'], $body['quote_id'], $body['expected_revisions']);

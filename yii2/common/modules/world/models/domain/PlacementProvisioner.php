@@ -66,7 +66,7 @@ class PlacementProvisioner
         $key = 'placement:node:' . $node->id;
         $storage = (new Query())->from('craft_storage')->where(['identity_key' => $key])->one($this->db);
         $capacity = min(100, (int)$node->map_width * (int)$node->map_height);
-        $exposure = 'indoor';
+        $exposure = $node->exposure_class ?: (in_array($node->node_type, ['PLOT', 'BED'], true) ? 'outdoor' : 'indoor');
         if (!$storage) {
             $this->db->createCommand()->insert('craft_storage', ['identity_key' => $key, 'kind' => 'placement', 'owner_user_id' => $node->owner_user_id, 'node_id' => $node->id, 'capacity' => $capacity])->execute();
             $storage = ['id' => (int)$this->db->getLastInsertID()];
@@ -83,6 +83,14 @@ class PlacementProvisioner
     public function openObjectMap(\common\modules\world\models\Node $node, ?string $operation = null): void
     {
         if (!$this->db->getTransaction()) throw new \LogicException('Map provisioning requires a transaction.');
+        if ($node->status === 'active' && EconomyRuntime::current($this->db) && $node->template && $node->template->code === 'starter-site') {
+            for ($y = -1; $y <= 1; $y++) for ($x = -1; $x <= 1; $x++) {
+                $where = ['parent_id' => $node->id, 'x' => $x, 'y' => $y];
+                $cell = (new Query())->from('world_map_cell')->where($where)->one($this->db);
+                if (!$cell) $this->db->createCommand()->insert('world_map_cell', $where + ['state' => 'open', 'price' => '0.0000', 'operation_id' => $operation, 'created_at' => time(), 'updated_at' => time()])->execute();
+                elseif ($cell['state'] === 'discovered') $this->db->createCommand()->update('world_map_cell', ['state' => 'open', 'updated_at' => time()], $where)->execute();
+            }
+        }
         if ($node->status !== 'active' || (new Query())->from('world_map_cell')->where(['parent_id' => $node->id])->exists($this->db)) return;
         $x = max((int)$node->map_origin_x, min(0, (int)$node->map_origin_x + (int)$node->map_width - 1));
         $y = max((int)$node->map_origin_y, min(0, (int)$node->map_origin_y + (int)$node->map_height - 1));

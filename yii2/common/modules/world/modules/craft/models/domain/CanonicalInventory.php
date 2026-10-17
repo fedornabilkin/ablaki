@@ -80,7 +80,7 @@ class CanonicalInventory
     {
         if (!$this->s->operationId) {
             $this->s->operationId = bin2hex(random_bytes(16));
-            $this->db->createCommand()->insert('game_operation', ['id' => $this->s->operationId, 'user_id' => $user, 'type' => 'inventory.legacy', 'created_at' => time()])->execute();
+            $this->db->createCommand()->insert('game_operation', ['id' => $this->s->operationId, 'user_id' => $user, 'type' => 'inventory.legacy', 'created_at' => time()] + \common\modules\world\models\domain\EconomyRuntime::operationContext($this->db, ['node_id' => $this->s->workspaceNodeId]))->execute();
         }
         $this->db->createCommand()->insert('inventory_movement', ['operation_id' => $this->s->operationId, 'inventory_id' => $row['id'], 'item_id' => $row['item_id'], 'source_storage_id' => $source, 'destination_storage_id' => $destination, 'quantity' => $quantity, 'reason' => $reason, 'created_at' => time()])->execute();
     }
@@ -240,7 +240,9 @@ class CanonicalInventory
         if (!$row || !$definition || $quantity < 1 || $quantity > 10000 || (int)$row['item_quantity'] < $quantity) throw new ConflictHttpException('В выбранной ячейке недостаточно предметов.');
         $crop = (int)$definition['gather_quantity'] < 1 && $this->db->schema->getTableSchema('world_crop_revision')
             && (new Query())->from('world_crop_revision')->where(['yield_item_id' => $item, 'status' => ['published', 'superseded', 'withdrawn']])->exists($this->db);
-        if (($definition['storage_kind'] ?? 'none') !== 'none' || $definition['kind'] !== 'material' || ((int)$definition['gather_quantity'] < 1 && !$crop) || $this->equipment->tracked($definition) || $this->equipment->units($inventory)) throw new ConflictHttpException('Для заказа требуется обычное сырьё или урожай.');
+        $profileRaw = in_array($definition['code'], \common\modules\world\models\domain\EconomyRuntime::rawCodes($this->db), true);
+        if (($definition['storage_kind'] ?? 'none') !== 'none' || $definition['kind'] !== 'material' || ((int)$definition['gather_quantity'] < 1 && !$crop && !$profileRaw) || $this->equipment->tracked($definition) || $this->equipment->units($inventory)) throw new ConflictHttpException('Для заказа требуется обычное сырьё или урожай.');
+        if ($quantity > (int)$row['item_quantity'] - (new ProductionReservations($this->db))->quantity($inventory)) throw new ConflictHttpException('Предметы зарезервированы производством.');
         $storage = (new StorageAccessPolicy($this->db))->storage($user, (int)$row['storage_id']);
         if ($storage['kind'] !== 'backpack' || (int)$row['slot'] < 1 || (int)$row['slot'] > (int)$storage['capacity']) throw new ConflictHttpException('Перенесите сырьё в доступную ячейку рюкзака.');
         return ['row' => $row, 'storage' => $storage];
@@ -370,6 +372,7 @@ class CanonicalInventory
         if ($occupied && (int)$occupied['item_id'] !== (int)$item['id']) throw new ConflictHttpException('Слот занят другим предметом.');
         $stack = $chest ? 1 : (int)$item['stack_size'];
         if ($target['kind'] === 'placement') {
+            \common\modules\world\models\domain\EconomyPlacement::check($this->db, $user, $item, $source, $target);
             $slot = (new Query())->from('world_slot')->where(['storage_id' => $destination, 'position' => $position, 'status' => 'active'])->one($this->db);
             if (!$slot) throw new ConflictHttpException('Предмет не подходит для этого места.');
             (new EquipmentPlacementPolicy($this->db))->assertAllowed($item, $target, $slot);

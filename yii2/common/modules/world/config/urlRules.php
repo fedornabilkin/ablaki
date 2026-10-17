@@ -1,5 +1,10 @@
 <?php
 return array_merge([
+    'GET v1/world/economy' => 'world/economy-api/index',
+    'GET v1/world/economy/history' => 'world/economy-api/history',
+    'POST v1/world/economy/food' => 'world/economy-api/food',
+    'POST v1/world/economy/goals/claim' => 'world/economy-api/goal',
+    'POST v1/world/economy/goals/fund' => 'world/economy-api/fund-goal',
     'POST v1/world/objects/<id:\d+>/repair' => 'world/build-api/repair',
     'GET v1/world/objects/<id:\d+>/mining' => 'world/mining-api/view',
     'POST v1/world/objects/<id:\d+>/mining/<action:start|heartbeat|stop>' => 'world/mining-api/<action>',
@@ -11,6 +16,9 @@ return array_merge([
     'GET v1/world/objects/<id:\d+>' => 'world/object-api/view',
     'GET v1/world/templates' => 'world/template-api/index',
     'GET v1/world/events' => 'world/event-api/index',
+    'GET v1/world/economy/storage/<id:\d+>' => 'world/economy-api/storage',
+    'POST v1/world/economy/storage/<id:\d+>/expand-preview' => 'world/economy-api/storage-expand-preview',
+    'POST v1/world/economy/storage/<id:\d+>/expand' => 'world/economy-api/storage-expand',
     'GET v1/world/builds' => 'world/build-api/index',
     'GET v1/world/builds/active' => 'world/build-api/active',
     'GET v1/world/builds/<id:\d+>' => 'world/build-api/view',

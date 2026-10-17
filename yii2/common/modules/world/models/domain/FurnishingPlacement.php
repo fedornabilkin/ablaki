@@ -17,6 +17,11 @@ final class FurnishingPlacement
     {
         if (!$db->schema->getTableSchema('world_furnishing_rule')) return;
         foreach (array_unique(array_filter($nodes)) as $node) {
+            if (EconomyRuntime::current($db)) {
+                $campfire = (new Query())->select('s.owner_user_id')->from(['s' => 'craft_storage'])->innerJoin(['i' => 'craft_inventory'], 'i.storage_id=s.id')
+                    ->innerJoin(['d' => 'craft_item'], 'd.id=i.item_id')->where(['s.node_id' => $node, 's.kind' => 'placement', 's.status' => 'active', 'd.code' => 'classic-campfire'])->andWhere(['>', 'i.item_quantity', 0])->scalar($db);
+                if ($campfire) EconomyRuntime::fact($db, (int)$campfire, 'placed:classic-campfire', 1, $operation);
+            }
             $installed = self::hasBed($db, (int)$node);
             $place = (new Query())->from('world_housing_place')->where(['room_id' => $node, 'ordinal' => 1])->one($db);
             if ($installed && !$place) {

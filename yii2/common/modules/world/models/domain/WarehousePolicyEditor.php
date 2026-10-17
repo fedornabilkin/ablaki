@@ -25,7 +25,7 @@ class WarehousePolicyEditor
             if (!$row || !$old || $row['status'] !== 'active' || (int)$old['revision'] !== $revision) throw new GameError('WAREHOUSE_CHANGED', 'Настройки изменились. Откройте форму заново.');
             if ($limit < (int)$row['capacity']) throw new GameError('PURCHASED_CAPACITY', 'Предел не может быть меньше уже доступной вместимости.', 422);
             $operation = bin2hex(random_bytes(16));
-            $this->db->createCommand()->insert('game_operation', ['id' => $operation, 'user_id' => $user, 'type' => 'world.warehouse.configure', 'created_at' => time()])->execute();
+            $this->db->createCommand()->insert('game_operation', ['id' => $operation, 'user_id' => $user, 'type' => 'world.warehouse.configure', 'created_at' => time()] + \common\modules\world\models\domain\EconomyRuntime::operationContext($this->db, ['node_id' => (int)$row['node_id']]))->execute();
             $values = ['max_capacity' => $limit, 'base_price' => $money->decimal(), 'revision' => new Expression('[[revision]]+1')];
             if ($this->db->createCommand()->update('world_warehouse_policy', $values, ['storage_id' => $storage, 'revision' => $revision])->execute() !== 1) throw new GameError('WAREHOUSE_CHANGED', 'Настройки изменились.');
             $this->db->createCommand()->update('craft_storage', ['revision' => new Expression('[[revision]]+1')], ['id' => $storage])->execute();

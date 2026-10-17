@@ -150,7 +150,7 @@ class TreasuryLedger
         $node = (new Query())->select('node_id')->from('economy_subject')->where(['id' => $account['subject_id']])->scalar($this->db);
         if (!$node || $account['role'] !== 'treasury') throw new \RuntimeException('Invalid treasury receipt account.');
         $operation = bin2hex(random_bytes(16));
-        $this->db->createCommand()->insert('game_operation', ['id' => $operation, 'user_id' => null, 'type' => 'economy.treasury.loss', 'created_at' => $now])->execute();
+        $this->db->createCommand()->insert('game_operation', ['id' => $operation, 'user_id' => null, 'type' => 'economy.treasury.loss', 'created_at' => $now] + \common\modules\world\models\domain\EconomyRuntime::operationContext($this->db, ['node_id' => (int)$node]))->execute();
         $remaining = $this->money($row['remaining_amount']); $fraction = (int)$row['loss_fraction']; $sequence = (int)$row['loss_sequence']; $sink = null;
         for ($period = 0; $period < 200 && $next <= $now && !$remaining->isZero(); $period++) {
             $part = $remaining->portion((int)$policy['loss_rate_bps'], $fraction);
@@ -233,7 +233,7 @@ class TreasuryLedger
     public function receiveBudgetPayment(int $budget, int $recipientNode, Money $amount, string $operation, string $purpose, string $kind = 'order_payment'): int
     {
         $this->writable();
-        if (!in_array($kind, ['order_payment', 'crop_purchase', 'premises_purchase', 'garden_purchase', 'garden_expansion', 'equipment_expansion', 'warehouse_expansion', 'building_repair', 'map_cell_purchase'], true)) throw new \LogicException('Unsupported budget payment kind.');
+        if (!in_array($kind, ['order_payment', 'crop_purchase', 'starter_goal', 'premises_purchase', 'garden_purchase', 'garden_expansion', 'equipment_expansion', 'warehouse_expansion', 'building_repair', 'map_cell_purchase'], true)) throw new \LogicException('Unsupported budget payment kind.');
         if ($this->account($budget)['role'] !== 'budget') throw new \LogicException('Expected a budget source.');
         $policy = $this->published($recipientNode); $accounts = (new EconomyHierarchy($this->db))->accounts($recipientNode);
         $transfer = $this->transfer($budget, (int)$accounts['treasury']['id'], $amount, $operation, 'budget-payment', $kind, $purpose);

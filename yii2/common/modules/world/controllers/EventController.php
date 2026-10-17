@@ -7,5 +7,5 @@ class EventController extends CrudController
     public $searchClass = \common\modules\world\models\EventSearch::class;
     public $title = 'События мира';
     public $columns = ['id', 'name', 'scope_node_id', 'status', 'starts_at:datetime', 'ends_at:datetime'];
-    public $fields = ['name', 'description', 'scope_node_id', 'status', 'starts_at', 'ends_at'];
+    public $fields = ['name', 'description', 'scope_node_id', 'status', 'starts_at', 'ends_at', 'rules_json'];
 }

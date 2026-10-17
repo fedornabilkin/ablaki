@@ -87,7 +87,7 @@ function race(array $commands): array {
     foreach ($commands as $args) {
         $command=escapeshellarg(PHP_BINARY).' '.escapeshellarg(__FILE__).' worker';
         foreach ($args as $arg) $command.=' '.escapeshellarg((string)$arg);
-        $pipes=[]; $process=proc_open($command,[0=>['pipe','r'],1=>['pipe','w'],2=>['pipe','w']],$pipes);
+        $pipes=[]; $process=proc_open($command,[0=>['pipe','r'],1=>['pipe','w'],2=>['pipe','w']],$pipes,null,null,['bypass_shell'=>true]);
         if (!is_resource($process)) throw new RuntimeException('Cannot start DB worker.');
         $children[]=[$process,$pipes];
     }

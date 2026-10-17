@@ -244,10 +244,9 @@ final class EconomyScenario
             $grant = []; foreach ($this->profile['daily']['items'] as $item => $amount) $grant[$item] = max(1, intdiv($amount * $this->efficiency(), 10000));
             $this->stock($grant, 1); $this->state['daily'][$day] = true;
         } elseif ($action === 'grant') {
-            // Narrow adapter for the existing BudgetGrants route used by this candidate.
-            // It does not make arbitrary owned budgets interchangeable.
+            // Direct owned children only; retain explicit movement and reserved parent funds.
             $source = $step['source']; $target = $step['destination'];
-            self::need($source === 'starter-site' && $target === 'garden' && ($this->state['objects'][$target] ?? null) === $source, 'GRANT_RELATION_REQUIRED');
+            self::need($source === 'starter-site' && in_array($target, ['garden', 'stone-plot'], true) && ($this->state['objects'][$target] ?? null) === $source, 'GRANT_RELATION_REQUIRED');
             if (!is_string($step['amount_cr'] ?? null)) throw new \InvalidArgumentException('Expected an exact budget grant.');
             $amount = self::money($step['amount_cr']);
             self::need(!$amount->isZero() && !$amount->isNegative(), 'INVALID_GRANT_AMOUNT');
@@ -412,6 +411,6 @@ final class EconomyScenario
                 'crop_labor_120_plus_60_seconds_is_a_conservative_allowance', 'backpack_stacks_compacted_after_each_operation',
                 'skills_above_level_one_and_general_repair_routes_require_separate_scenarios', 'night_penalty_affects_daily_and_crop_yield_source_work_matches_current_mining',
                 'constructed_lodging_only_no_equipment_shelter_or_retroactive_assignment', 'single_assignment_covers_whole_night_conservative',
-                'map_capacity_counts_rights_without_assigning_each_object_coordinates', 'only_starter_site_to_owned_child_garden_grants_modelled']];
+                'map_capacity_counts_rights_without_assigning_each_object_coordinates', 'only_starter_site_to_owned_child_garden_or_stone_plot_grants_modelled']];
     }
 }

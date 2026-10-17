@@ -356,6 +356,15 @@ $noMap['scenarios']['first-five-days-with-lodging'] = array_values(array_filter(
 $noMapResult = EconomyScenario::report($profile, $noMap, 'first-five-days-with-lodging');
 profileCheck($noMapResult['status'] === 'blocked' && $noMapResult['failure']['reason'] === 'PLACEMENT_FULL|starter-site', 'discovering the tenth root cell without buying it does not create a placement right');
 
+$week = EconomyScenario::report($profile, $routes, 'first-seven-days-with-lodging');
+profileCheck($week['status'] === 'completed' && $week['final']['money_conserved']
+    && $week['final']['money_total_with_sinks_cr'] === '810.0000', 'seven-day route conserves original funds with explicit child-budget funding');
+profileCheck(($week['final']['stock']['classic-pickaxe'] ?? 0) === 1
+    && isset($week['final']['objects']['workshop-building']), 'seven-day route reaches workshop and an iron pickaxe');
+profileCheck(isset($week['final']['objects']['storage-building'], $week['final']['objects']['house'])
+    && $profile['objects']['storage-building']['storage_slots'] === 50
+    && max($week['final']['extraction']) <= 20, 'seven-day route completes medium storage and house within the unchanged extraction quota');
+
 class EconomyAuditFixture extends \common\modules\world\commands\WorldAuditController
 {
     public $captured = '';

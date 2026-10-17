@@ -13,6 +13,17 @@ on:
         options: [test, production]
         default: test
         required: true
+      economy_test:
+        description: Preview or prepare the funded MVP test (test only)
+        type: choice
+        options: [skip, preview, prepare]
+        default: skip
+        required: true
+      economy_donor:
+        description: Existing test account funding the route (no credits are issued)
+        type: string
+        default: Test01
+        required: true
 
 permissions:
   contents: read
@@ -91,7 +102,7 @@ jobs:
         working-directory: yii2
         shell: bash
         run: |
-          for suite in auth-response frontend-lists frontend-api-routing game-overview five-game forum-gift forum-install daily-reward exchange-refund topic68-economy worker-barrier-test world-admin-entities classic-craft-install world-economy-profile user-activity user-cleanup; do
+          for suite in auth-response frontend-lists frontend-api-routing game-overview five-game forum-gift forum-install daily-reward exchange-refund topic68-economy worker-barrier-test world-economy-gameplay classic-craft-install world-economy-profile user-activity user-cleanup; do
             if ! php "tests/release/$suite.php" 2>&1 | tee "$RUNNER_TEMP/backend-$suite.log"; then
               details=$(tail -n 15 "$RUNNER_TEMP/backend-$suite.log")
               details=${details//%/%25}
@@ -112,7 +123,7 @@ jobs:
           docker exec "$MYSQL_CONTAINER" mysql -uroot -pci-only-root -e "ALTER USER 'ablakin_ci'@'%' IDENTIFIED WITH mysql_native_password BY 'ci-only-password';"
           check_database() {
             export ABL_TEST_DSN="$1"
-            php tests/release/target-database.php && php tests/release/world-admin-entities.php && php tests/release/user-activity.php
+            php tests/release/target-database.php && php tests/release/world-economy-race.php && php tests/release/user-activity.php
           }
           # Independent disposable databases; keep suites sequential within each database.
           check_database 'mysql:host=127.0.0.1;port=3306;dbname=ablakin_ci' > "$RUNNER_TEMP/mysql-checks.log" 2>&1 &
@@ -231,3 +242,17 @@ jobs:
           options=(-i "$HOME/.ssh/deploy_key" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=yes -o UserKnownHostsFile="$HOME/.ssh/known_hosts")
           ssh "${options[@]}" -p "$DEPLOY_PORT" "$DEPLOY_USER@$DEPLOY_HOST" \
             "bash /var/code/ablaki/deploy/world-open-test.sh"
+
+      - name: Prepare the explicitly requested funded economy test
+        if: env.TARGET == 'test' && inputs.economy_test != '' && inputs.economy_test != 'skip'
+        shell: bash
+        env:
+          ECONOMY_TEST: ${{ inputs.economy_test }}
+          ECONOMY_DONOR: ${{ inputs.economy_donor }}
+        run: |
+          apply=0
+          [[ "$ECONOMY_TEST" = prepare ]] && apply=1
+          [[ "$ECONOMY_DONOR" =~ ^[A-Za-z0-9_-]{1,32}$ ]]
+          options=(-i "$HOME/.ssh/deploy_key" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=yes -o UserKnownHostsFile="$HOME/.ssh/known_hosts")
+          ssh "${options[@]}" -p "$DEPLOY_PORT" "$DEPLOY_USER@$DEPLOY_HOST" \
+            "cd /var/code/ablaki && test \"\$(pwd -P)\" = /var/code/ablaki && docker-compose exec -T -e WORLD_INSTALL=confirmed-world-install -e WORLD_TEST_SETUP=confirmed-test-checkout -e WORLD_TEST_MODE=1 php php /web/yii2/yii world-setup/economy-test-prepare '$apply' '$ECONOMY_DONOR'"

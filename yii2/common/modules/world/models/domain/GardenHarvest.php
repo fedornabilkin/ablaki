@@ -183,7 +183,12 @@ class GardenHarvest
             }
             else {
                 if (!$p['plan']['output_fits']) throw new GameError('BACKPACK_FULL', 'Освободите место в выбранном хранилище.');
-                if ($action === 'buy') (new TreasuryLedger($this->db))->receivePersonalPayment($user, $garden, Money::parse($terms['total']), $operation, 'Покупка урожая: ' . $terms['name']);
+                if ($action === 'buy') {
+                    $profile = EconomyRuntime::current($this->db);
+                    if ($profile && $payload['quantity'] > $profile['profile']['limits']['sales_daily']['same_item_per_operation']) throw new GameError('SALE_QUANTITY_LIMIT', 'Превышен предел одинаковых предметов в одной продаже.', 422);
+                    EconomyQuota::consume($this->db, $p['owner'], 'sales_daily', 1, $operation, $terms['total']);
+                    (new TreasuryLedger($this->db))->receivePersonalPayment($user, $garden, Money::parse($terms['total']), $operation, 'Покупка урожая: ' . $terms['name']);
+                }
                 $inventory->consumeHarvest($p['owner'], $payload['inventory_id'], $payload['quantity'], $action === 'buy' ? 'harvest.sold' : 'harvest.withdrawn');
                 $inventory->applyCraft($user, $p['plan'], $p['target'], [], $p['item'], 'harvest.' . $action);
                 $changed[] = (int)$p['target']['id'];
