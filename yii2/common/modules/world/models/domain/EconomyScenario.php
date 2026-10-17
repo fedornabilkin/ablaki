@@ -24,6 +24,27 @@ final class EconomyScenario
     private static function money(string $value): Money { return Money::parse($value); }
     private function day(): string { return (new \DateTimeImmutable('@' . $this->state['now']))->setTimezone(new \DateTimeZone('Europe/Moscow'))->format('Y-m-d'); }
     private function available(string $node): Money { return $this->state['budgets'][$node]->subtract($this->state['tax_reserved'][$node]); }
+    private function efficiency(): int
+    {
+        return $this->state['night_enabled'] ? NightCalendar::efficiency($this->config['night_rules'], $this->state['health']['severity']) : 10000;
+    }
+    private function settleNights(): void
+    {
+        if (!$this->state['night_enabled']) return;
+        $policy = $this->config['night_rules'];
+        for ($i = 0; $i < 32; $i++) {
+            $night = NightCalendar::bounds($policy, $this->state['health']['next_sequence']);
+            if ($night['ended_at'] > $this->state['now']) return;
+            $protected = false;
+            foreach ($this->state['lodging'] as $interval) {
+                if ($interval['started_at'] <= $night['started_at'] && ($interval['ended_at'] === null || $interval['ended_at'] >= $night['ended_at'])) $protected = true;
+            }
+            $next = NightCalendar::advance($policy, $this->state['health'], $protected, $night['ended_at']);
+            $this->state['night_history'][] = $night + ['protected' => $protected, 'severity_before' => $this->state['health']['severity'], 'severity_after' => $next['severity']];
+            $this->state['health'] = $next + ['next_sequence' => $night['sequence'] + 1];
+        }
+        self::need(NightCalendar::bounds($policy, $this->state['health']['next_sequence'])['ended_at'] > $this->state['now'], 'NIGHT_CATCHING_UP');
+    }
     private function flow(string $from, string $to, Money $amount, string $kind): void
     {
         if (!$amount->isZero()) $this->state['flows'][] = ['step' => $this->state['step'], 'from' => $from, 'to' => $to, 'amount_cr' => $amount->decimal(), 'kind' => $kind];
@@ -165,6 +186,19 @@ final class EconomyScenario
                 $this->state['stations'][$code] = ['node' => $node, 'at' => $this->state['now'], 'work_remaining' => $durability, 'exposure' => 'outdoor'];
             }
             if ($code === 'classic-campfire') $this->state['facts']['campfire_placed'] = true;
+            if ($code === 'classic-bed') {
+                self::need(in_array($this->profile['objects'][$node]['exposure_class'] ?? 'outdoor', ['covered', 'indoor'], true), 'BED_REQUIRES_COVER');
+                $this->state['beds'][$node] = true;
+            }
+        } elseif ($action === 'lodge') {
+            self::need(isset($this->state['beds'][$code]), 'BED_REQUIRED', $code);
+            foreach ($this->state['lodging'] as $interval) self::need($interval['ended_at'] !== null, 'LODGING_ALREADY_ASSIGNED');
+            $this->state['lodging'][] = ['node' => $code, 'started_at' => $this->state['now'], 'ended_at' => null];
+        } elseif ($action === 'leave') {
+            $active = null;
+            foreach ($this->state['lodging'] as $index => $interval) if ($interval['ended_at'] === null) $active = $index;
+            self::need($active !== null, 'LODGING_NOT_ASSIGNED');
+            $this->state['lodging'][$active]['ended_at'] = $this->state['now'];
         } elseif ($action === 'explore') {
             self::need(isset($this->state['objects'][$code]), 'MAP_UNAVAILABLE');
             foreach ($step['cells'] as $point) {
@@ -176,7 +210,8 @@ final class EconomyScenario
             }
         } elseif ($action === 'daily') {
             self::need(!isset($this->state['daily'][$day]), 'DAILY_ALREADY_CLAIMED');
-            $this->stock($this->profile['daily']['items'], 1); $this->state['daily'][$day] = true;
+            $grant = []; foreach ($this->profile['daily']['items'] as $item => $amount) $grant[$item] = max(1, intdiv($amount * $this->efficiency(), 10000));
+            $this->stock($grant, 1); $this->state['daily'][$day] = true;
         } elseif ($action === 'day') {
             $at = $this->config['start'] + ($quantity - 1) * 86400;
             self::need($at >= $this->state['now'] && $quantity <= 7, 'INVALID_DAY_ADVANCE'); $this->state['now'] = $at;
@@ -198,8 +233,9 @@ final class EconomyScenario
                 $this->spend('garden', self::money($crop['water_fee_cr'])); $this->stock([$crop['water'] => 1], -1);
                 $this->state['now'] += 60; $this->state['crop']['water_due_at'] = null;
             } else {
-                self::need($clock['state'] === 'ripe' && $clock['yield_factor_bps'] === 10000, 'CROP_NOT_READY_OR_DAMAGED');
-                $this->spend('garden', self::money($crop['harvest_fee_cr'])); $this->stock([$crop['yield'] => $crop['yield_quantity']], 1);
+                self::need($clock['state'] === 'ripe', 'CROP_NOT_READY_OR_EXPIRED');
+                $quantity = max(1, intdiv($crop['yield_quantity'] * $this->efficiency() * $clock['yield_factor_bps'], 100000000));
+                $this->spend('garden', self::money($crop['harvest_fee_cr'])); $this->stock([$crop['yield'] => $quantity], 1);
                 $this->state['crop'] = null; $this->state['facts']['carrot_harvested'] = true;
             }
         } elseif ($action === 'goal') {
@@ -233,6 +269,7 @@ final class EconomyScenario
         } elseif ($action === 'checkpoint') {
             $this->state['checkpoints'][$code] = $this->summary();
         } else throw new \InvalidArgumentException('Unknown economy scenario action: ' . $action);
+        $this->settleNights();
         $this->capacity();
     }
 
@@ -253,7 +290,9 @@ final class EconomyScenario
             'loss_sink_cr' => $this->state['loss_sink']->decimal(), 'craft_fee_sink_cr' => $this->state['craft_fee_sink']->decimal(), 'money_total_with_sinks_cr' => $total->decimal(), 'money_conserved' => $total->compare($this->initialMoney) === 0,
             'stock' => array_filter($this->state['stock']), 'objects' => $this->state['objects'], 'tools' => $this->state['tools'], 'stations' => $stations,
             'extraction' => $this->state['extraction'], 'sales' => $this->state['sales'], 'crafted_batches' => $this->state['crafted'],
-            'remaining_orders' => $this->state['orders'], 'claimed_goals' => array_keys($this->state['goals']), 'explored_cells' => count($this->state['explored']), 'peak_backpack_slots' => $this->state['peak_slots']];
+            'remaining_orders' => $this->state['orders'], 'claimed_goals' => array_keys($this->state['goals']), 'explored_cells' => count($this->state['explored']), 'peak_backpack_slots' => $this->state['peak_slots'],
+            'night_policy_enabled' => $this->state['night_enabled'], 'night_health' => $this->state['night_enabled'] ? $this->state['health'] + ['work_efficiency_bps' => $this->efficiency()] : null,
+            'lodging_intervals' => $this->state['lodging']];
     }
 
     public static function report(array $profile, array $config, string $scenario): array
@@ -267,6 +306,18 @@ final class EconomyScenario
         $start = new \DateTimeImmutable($config['starts_at']);
         if ($start->format('c') !== $config['starts_at']) throw new \InvalidArgumentException('Invalid fixed scenario date.');
         $self->config['start'] = $start->getTimestamp();
+        $nightEnabled = in_array($scenario, $config['night_scenarios'] ?? [], true);
+        $health = ['severity' => 0, 'recovery_progress' => 0, 'onset_at' => null, 'exposure_nights' => 0, 'next_sequence' => 0];
+        if ($nightEnabled) {
+            if (($config['night_policy']['status'] ?? null) !== 'analysis_only_not_published') throw new \InvalidArgumentException('Expected an explicit offline night-policy example.');
+            $epoch = $config['night_policy']['activated_at'];
+            if (!is_string($epoch) || !preg_match('/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\+03:00$/D', $epoch)) throw new \InvalidArgumentException('Expected a fixed night epoch.');
+            $activation = new \DateTimeImmutable($epoch);
+            if ($activation->format('c') !== $epoch) throw new \InvalidArgumentException('Invalid night epoch.');
+            $self->config['night_rules'] = WorldNights::rules($config['night_policy']) + ['activated_at' => $activation->getTimestamp()];
+            $policy = $self->config['night_rules'];
+            $health['next_sequence'] = NightCalendar::firstStartingAt($policy, max($self->config['start'], $policy['activated_at']) + $policy['day_seconds']);
+        }
         $reserve = self::money('0'); $orders = [];
         $eligible = [$profile['crop']['yield'] => true];
         foreach ($profile['actions'] as $action) if ($action['quota'] === 'extraction_daily') foreach ($action['output'] as $code => $amount) $eligible[$code] = true;
@@ -282,7 +333,8 @@ final class EconomyScenario
         $self->state = ['now' => $self->config['start'], 'wallet' => $wallet, 'municipal' => $municipal, 'municipal_reserved' => $reserve, 'loss_sink' => self::money('0'), 'craft_fee_sink' => self::money('0'), 'flows' => [], 'step' => 0,
             'stock' => $profile['starter']['items'], 'tools' => [], 'stations' => [], 'objects' => [], 'budgets' => [], 'tax_reserved' => [], 'tax_carry' => [], 'receipts' => [],
             'placements' => [], 'orders' => $orders, 'daily' => [], 'goals' => [], 'crafted' => [], 'craft_times' => [], 'gathered' => [], 'action_counts' => [],
-            'extraction' => [], 'sales' => [], 'explored' => [], 'facts' => ['city_joined' => true], 'crop' => null, 'peak_slots' => 0, 'checkpoints' => []];
+            'extraction' => [], 'sales' => [], 'explored' => [], 'facts' => ['city_joined' => true], 'crop' => null, 'peak_slots' => 0, 'checkpoints' => [],
+            'night_enabled' => $nightEnabled, 'health' => $health, 'night_history' => [], 'beds' => [], 'lodging' => []];
         foreach ($profile['starter']['items'] as $code => $quantity) if ($profile['items'][$code]['kind'] === 'tool') $self->state['tools'][$code] = array_fill(0, $quantity, $profile['operating_costs']['equipment_max_durability']);
         $trace = []; $failure = null;
         try { self::need($municipal->compare($reserve) >= 0, 'INSUFFICIENT_MUNICIPAL_RESERVE', $reserve->decimal()); $self->capacity(); }
@@ -304,11 +356,12 @@ final class EconomyScenario
             $trace[] = ['step' => $index + 1, 'input' => $step, 'at' => $self->summary()['at'], 'wallet_cr' => $self->state['wallet']->decimal()];
         }
         return ['profile' => $profile['code'], 'scenario' => $scenario, 'status' => $failure === null ? 'completed' : 'blocked', 'applied' => false,
-            'initial_total_cr' => $self->initialMoney->decimal(), 'failure' => $failure, 'trace' => $trace, 'flows' => $self->state['flows'], 'checkpoints' => $self->state['checkpoints'], 'final' => $self->summary(),
-            'limitations' => ['candidate_not_live_game', 'full_health_efficiency_assumed_not_a_night_survival_test',
+            'initial_total_cr' => $self->initialMoney->decimal(), 'failure' => $failure, 'trace' => $trace, 'flows' => $self->state['flows'], 'checkpoints' => $self->state['checkpoints'], 'night_history' => $self->state['night_history'], 'final' => $self->summary(),
+            'limitations' => ['candidate_not_live_game', $nightEnabled ? 'explicit_example_night_rules_not_a_live_policy' : 'full_health_efficiency_assumed_not_a_night_survival_test',
                 'initial_municipal_funding_and_uncompeted_orders_are_test_setup_prerequisites', 'no_market_or_additional_personal_transfers',
                 'one_object_per_code_and_serial_labor_with_heartbeat_at_most_60_seconds', 'tax_reserved_unspendable_remittance_not_simulated',
                 'crop_labor_120_plus_60_seconds_is_a_conservative_allowance', 'backpack_stacks_compacted_after_each_operation',
-                'skills_above_level_one_and_general_repair_routes_require_separate_scenarios']];
+                'skills_above_level_one_and_general_repair_routes_require_separate_scenarios', 'night_penalty_affects_daily_and_crop_yield_source_work_matches_current_mining',
+                'constructed_lodging_only_no_equipment_shelter_or_retroactive_assignment', 'single_assignment_covers_whole_night_conservative']];
     }
 }

@@ -8,6 +8,7 @@ Yii::setAlias('@common', dirname(__DIR__, 2) . '/common');
 use common\modules\world\models\domain\EconomyProfile;
 use common\modules\world\models\domain\EconomyOperatingCosts;
 use common\modules\world\models\domain\EconomyScenario;
+use common\modules\world\models\domain\EconomyBootstrapBound;
 use common\modules\world\modules\craft\models\domain\EquipmentExposure;
 
 function profileCheck(bool $condition, string $message): void
@@ -221,6 +222,57 @@ rejectsProfile($badProfile, 'zero-size inventory stacks are rejected');
 $badProfile = $profile; $badProfile['goals']['day-1']['credit_destination'] = 'mint_wallet';
 rejectsProfile($badProfile, 'milestone destination cannot bypass the funded treasury route');
 
+$bound = EconomyBootstrapBound::report($profile, $routes['bootstrap_bound']);
+$reversedTargets = $routes['bootstrap_bound']; $reversedTargets['objects'] = array_reverse($reversedTargets['objects']);
+$reversedTargets['crafted_items'] = array_reverse($reversedTargets['crafted_items'], true);
+$reversedBound = EconomyBootstrapBound::report($profile, $reversedTargets);
+profileCheck($bound['required_raw_items'] === ['classic-clay' => 8, 'classic-coal' => 1, 'classic-fibre' => 12, 'classic-log' => 23, 'classic-ore' => 2, 'classic-sand' => 4, 'classic-stone' => 40]
+    && $bound['required_raw_value_cr'] === '157.0000' && $reversedBound['required_raw_items'] === $bound['required_raw_items']
+    && $reversedBound['cash_upper_bound_cr'] === $bound['cash_upper_bound_cr'], 'bootstrap expansion shares intermediate surplus and preserves the bound when target order is reversed');
+profileCheck($bound['mandatory_building_prices_cr'] === '515.0000' && $bound['initial_raw_potential_cr'] === '61.5000', 'bound separates unavoidable prices and generous initial raw potential');
+profileCheck($bound['best_source_batch_cr'] === '6.0000' && $bound['maximum_source_batches'] === 40
+    && in_array('deep-mining', $bound['excluded_sources'], true), 'pre-ingot frontier excludes circular income from the iron pickaxe');
+profileCheck($bound['seed_potential_cr'] === '1.2500' && $bound['maximum_crop_cycles'] === 44
+    && $bound['maximum_crop_bonus_cr'] === '11.0000', 'seed reproduction cannot become an unlimited hidden source of optimistic cash');
+profileCheck($bound['status'] === 'impossible_under_fixed_assumptions' && $bound['cash_upper_bound_cr'] === '455.5000'
+    && $bound['minimum_shortfall_cr'] === '59.5000', 'even zero taxes unlimited raw demand and free time cannot fund the fixed two-calendar-day target');
+profileCheck(EconomyBootstrapBound::report($profile, $routes['bootstrap_bound'], 3)['status'] === 'not_ruled_out', 'nonnegative optimistic bound never claims a feasible three-day route');
+$changed = $profile; $changed['recipes']['classic-plank']['quantity'] = 1;
+profileCheck(EconomyBootstrapBound::report($changed, $routes['bootstrap_bound'])['required_raw_items']['classic-log'] === 42, 'bound recalculates raw demand when a recipe output changes');
+$badContract = $routes['bootstrap_bound']; $badContract['objects'][] = 'mine';
+try { EconomyBootstrapBound::report($profile, $badContract); throw new RuntimeException('Expected duplicate target rejection.'); }
+catch (InvalidArgumentException $exception) { profileCheck(true, 'duplicate mandatory objects cannot fabricate an impossibility proof'); }
+$giftedCapital = $profile; $giftedCapital['starter']['items']['classic-pickaxe'] = 1;
+try { EconomyBootstrapBound::report($giftedCapital, $routes['bootstrap_bound']); throw new RuntimeException('Expected capital rejection.'); }
+catch (InvalidArgumentException $exception) { profileCheck(true, 'gifted advanced tools cannot be ignored when excluding circular resource income'); }
+
+$unprotected = EconomyScenario::report($profile, $routes, 'first-four-days-with-nights');
+$lodged = EconomyScenario::report($profile, $routes, 'return-with-lodging');
+$notAssigned = EconomyScenario::report($profile, $routes, 'return-without-assignment');
+$recovery = EconomyScenario::report($profile, $routes, 'late-lodging-recovery');
+profileCheck($unprotected['status'] === 'blocked' && $unprotected['failure']['reason'] === 'MATERIAL_REQUIRED|world-carrot'
+    && $unprotected['final']['night_health']['severity'] === 1 && $unprotected['final']['night_health']['work_efficiency_bps'] === 8000, 'four-day ideal route fails its planned crop sale once the actual night formula is applied');
+profileCheck($unprotected['night_history'][0]['started_at'] === strtotime('2026-10-18T22:00:00+03:00')
+    && count($unprotected['night_history']) === 1, 'one-day grace skips the first night and only completed eligible nights are settled');
+profileCheck($lodged['status'] === 'completed' && $lodged['final']['night_health']['severity'] === 0
+    && $lodged['night_history'][0]['protected'], 'bed placed under cover and assigned before night preserves a healthy return');
+profileCheck($lodged['final']['wallet_cr'] === '1.8000' && $lodged['final']['budgets']['starter-site']['available_cr'] === '88.4000'
+    && $lodged['final']['budgets']['garden']['available_cr'] === '5.0000' && $lodged['final']['money_conserved'], 'healthy return pays for meadow bed materials and cultivation from existing funds');
+profileCheck($notAssigned['status'] === 'blocked' && $notAssigned['final']['night_health']['severity'] === 1
+    && $notAssigned['final']['lodging_intervals'] === [], 'an installed bed without an explicit assignment does not protect a past night');
+profileCheck($recovery['checkpoints']['ill-day-3']['night_health']['severity'] === 1
+    && $recovery['checkpoints']['recovering-day-4']['night_health']['severity'] === 1
+    && $recovery['checkpoints']['recovering-day-4']['night_health']['recovery_progress'] === 1
+    && $recovery['final']['night_health']['severity'] === 0, 'late lodging does not heal retroactively and two protected nights recover one illness level');
+profileCheck(count($recovery['night_history']) === 3 && $recovery['night_history'][0]['protected'] === false
+    && $recovery['night_history'][1]['protected'] && $recovery['night_history'][2]['protected'], 'night checkpoint advances once per completed period during offline day jumps');
+$bedRequiredRoutes = $routes;
+$bedRequiredRoutes['common_steps'][] = ['action' => 'lodge', 'code' => 'starter-shelter'];
+blockedRoute($profile, $bedRequiredRoutes, 'BED_REQUIRED', 'building a shelter alone cannot create free lodging');
+$badNight = $routes; $badNight['night_policy']['activated_at'] = 'now';
+try { EconomyScenario::report($profile, $badNight, 'return-with-lodging'); throw new RuntimeException('Expected fixed epoch rejection.'); }
+catch (InvalidArgumentException $exception) { profileCheck(true, 'night analysis cannot depend on the current computer clock'); }
+
 class EconomyAuditFixture extends \common\modules\world\commands\WorldAuditController
 {
     public $captured = '';
@@ -237,4 +289,7 @@ profileCheck($scenarioController->actionEconomyScenario() === 0
 $scenarioController->captured = '';
 profileCheck($scenarioController->actionEconomyScenario('first-two-days') === 1
     && json_decode($scenarioController->captured, true, 64, JSON_THROW_ON_ERROR)['failure'] === $twoDays['failure'], 'scenario CLI returns a failing audit status for the blocked two-day route');
+$scenarioController->captured = '';
+profileCheck($scenarioController->actionEconomyBootstrapBound() === 1
+    && json_decode($scenarioController->captured, true, 64, JSON_THROW_ON_ERROR) === $bound, 'bound CLI reports a failing target without a database');
 echo 'Economy profile checks passed.' . PHP_EOL;

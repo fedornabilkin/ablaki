@@ -647,7 +647,8 @@
       "materials": {
         "classic-plank": 4,
         "classic-rope": 2
-      }
+      },
+      "exposure_class": "covered"
     },
     "garden": {
       "name": "Огород",

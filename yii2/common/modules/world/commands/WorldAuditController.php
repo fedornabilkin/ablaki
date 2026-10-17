@@ -25,6 +25,14 @@ class WorldAuditController extends \yii\console\Controller
         $this->output($data);
         return $data['status'] === 'completed' ? 0 : 1;
     }
+    public function actionEconomyBootstrapBound(int $days = 2): int
+    {
+        $config = \common\modules\world\models\domain\EconomyScenario::load();
+        $data = \common\modules\world\models\domain\EconomyBootstrapBound::report(
+            \common\modules\world\models\domain\EconomyProfile::load(), $config['bootstrap_bound'], $days);
+        $this->output($data);
+        return $data['status'] === 'impossible_under_fixed_assumptions' ? 1 : 0;
+    }
     public function actionStorage(): int
     {
         return $this->output((new \common\modules\world\modules\craft\models\domain\StorageReconciliation(Yii::$app->db))->report());
