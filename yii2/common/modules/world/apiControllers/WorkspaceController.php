@@ -27,6 +27,10 @@ class WorkspaceController extends LegacyController
             if (count(array_unique($payload[$field])) !== count($values)) throw new GameError('DUPLICATE_SELECTION', 'Уберите повторяющиеся хранилища или экземпляры.', 422);
         }
         sort($payload['equipment_instance_ids']);
+        if (array_key_exists('use_object_budget', $body)) {
+            if (!is_bool($body['use_object_budget'])) throw new GameError('INVALID_FUNDING', 'Укажите способ оплаты изготовления.', 422);
+            $payload['use_object_budget'] = $body['use_object_budget'];
+        }
         $service = new \common\modules\world\modules\craft\models\domain\CraftWorkspace(Yii::$app->db, $this->flags()); $user = (int)Yii::$app->user->id;
         if ($preview) return $service->preview($user, $payload);
         if (!is_string($body['request_key'] ?? null) || !is_string($body['quote_id'] ?? null) || !is_array($body['expected_revisions'] ?? null)) throw new GameError('INVALID_COMMAND', 'Требуется подтверждённый расчёт.', 422);

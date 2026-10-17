@@ -141,7 +141,7 @@ class WorldConstruction
         $site = (new Query())->from('world_construction_site')->where(['project_id' => $project['id']])->one($this->db);
         if (!$site || (int)$node['parent_id'] !== (int)$site['plot_id']) throw new GameError('CONSTRUCTION_CHANGED', 'Площадка строительства недоступна.');
         $terms = json_decode($project['terms_json'], true, 512, JSON_THROW_ON_ERROR); $operation = bin2hex(random_bytes(16));
-        $this->db->createCommand()->insert('game_operation', ['id' => $operation, 'user_id' => $user, 'type' => 'world.construction.finish', 'created_at' => time()])->execute();
+        $this->db->createCommand()->insert('game_operation', ['id' => $operation, 'user_id' => $user, 'type' => 'world.construction.finish', 'created_at' => time()] + \common\modules\world\models\domain\EconomyRuntime::operationContext($this->db, ['node_id' => (int)$project['node_id']]))->execute();
         $transfer = (new BudgetSpending($this->db))->pay((int)$site['commitment_id'], $terms['recipient_node_id'], Money::parse($terms['config']['price']), $operation, 'premises_purchase');
         $changed = $this->inventory($operation)->resolveConstruction($user, (int)$site['storage_id'], false);
         $this->update('world_building', ['operational_status' => 'active', 'active_project_id' => null], ['node_id' => $project['node_id']]);

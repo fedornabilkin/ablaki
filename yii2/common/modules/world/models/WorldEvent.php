@@ -10,7 +10,13 @@ class WorldEvent extends LockedRecord
         return [[['name', 'scope_node_id', 'starts_at', 'status'], 'required'], ['name', 'string', 'max' => 120],
             ['description', 'string', 'max' => 10000], [['scope_node_id', 'starts_at', 'ends_at'], 'integer', 'min' => 1],
             ['status', 'in', 'range' => ['draft', 'active', 'closed']], ['scope_node_id', 'validateScope'],
-            ['ends_at', 'compare', 'compareAttribute' => 'starts_at', 'operator' => '>', 'type' => 'number']];
+            ['ends_at', 'compare', 'compareAttribute' => 'starts_at', 'operator' => '>', 'type' => 'number'], ['rules_json', 'validateRules']];
+    }
+    public function validateRules(): void {
+        $rules = json_decode($this->rules_json ?: '{}', true);
+        if (!is_array($rules) || array_diff(array_keys($rules), ['crop_damage'])) { $this->addError('rules_json', 'Ожидается JSON правил события.'); return; }
+        if (isset($rules['crop_damage']) && (!is_array($rules['crop_damage']) || ($rules['crop_damage']['code'] ?? null) !== 'light_crop_damage'
+            || !is_int($rules['crop_damage']['loss_bps'] ?? null) || $rules['crop_damage']['loss_bps'] < 1 || $rules['crop_damage']['loss_bps'] > 2500)) $this->addError('rules_json', 'Лёгкий урон урожаю: код light_crop_damage и loss_bps от 1 до 2500.');
     }
     public function validateScope(): void
     {
@@ -19,7 +25,7 @@ class WorldEvent extends LockedRecord
     }
     public function beforeSave($insert)
     {
-        if ($insert) { $this->seed = bin2hex(random_bytes(16)); $this->rules_json = '{}'; $this->revision = 1; }
+        if ($insert) { $this->seed = bin2hex(random_bytes(16)); if (!$this->rules_json) $this->rules_json = '{}'; $this->revision = 1; }
         return parent::beforeSave($insert);
     }
     public function attributeLabels(): array

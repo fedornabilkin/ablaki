@@ -9,10 +9,49 @@ use yii\web\UnprocessableEntityHttpException;
 
 class CatalogController extends AdminController
 {
-    public function behaviors() { return ['verbs'=>['class'=>\yii\filters\VerbFilter::class,'actions'=>['preview'=>['POST'],'import'=>['POST'],'settings'=>['POST'],'edit'=>['GET','POST'],'export'=>['GET']]]]; }
+    public function behaviors() { return ['verbs'=>['class'=>\yii\filters\VerbFilter::class,'actions'=>['preview'=>['POST'],'import'=>['POST'],'settings'=>['POST'],'edit'=>['GET','POST'],'export'=>['GET'],'economy'=>['GET','POST']]]]; }
     private function catalog(): CraftCatalog { return new CraftCatalog(new CraftStorage(Yii::$app->db)); }
     private function settings(): CraftSettings { return new CraftSettings(new CraftStorage(Yii::$app->db)); }
     public function actionIndex() { return $this->render('index',['catalog'=>$this->catalog()->export(),'error'=>'','chargeCredits'=>$this->settings()->chargeCredits(),'inventorySettings'=>$this->settings()->inventory()]); }
+    public function actionEconomy()
+    {
+        $db = Yii::$app->db; $request = Yii::$app->request;
+        $revision = $request->get('revision', '0');
+        if ((!is_string($revision) && !is_int($revision)) || !preg_match('/^[0-9]{1,9}$/D', (string)$revision)) throw new UnprocessableEntityHttpException('Выберите версию профиля.');
+        $current = \common\modules\world\models\domain\EconomyRuntime::current($db);
+        $profile = $current ? $current['profile'] : \common\modules\world\models\domain\EconomyProfile::load();
+        if ((int)$revision) {
+            $historical = (new \yii\db\Query())->from('world_economy_profile')->where(['id' => (int)$revision])->one($db);
+            if (!$historical) throw new \yii\web\NotFoundHttpException('Версия не найдена.');
+            $profile = json_decode($historical['config_json'], true, 64, JSON_THROW_ON_ERROR);
+        }
+        $document = json_encode($profile, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR);
+        $error = ''; $preview = null; $reason = '';
+        if ($request->isPost) {
+            try {
+                $document = $request->post('document', ''); $reason = $request->post('reason', '');
+                if (!is_string($document) || strlen($document) > 2097152 || !is_string($reason) || trim($reason) === '' || mb_strlen($reason) > 500) throw new \InvalidArgumentException('Нужны JSON до 2 МБ и причина до 500 символов.');
+                $profile = json_decode($document, true, 64, JSON_THROW_ON_ERROR);
+                if (!is_array($profile)) throw new \InvalidArgumentException('Ожидается объект JSON.');
+                $publisher = new \common\modules\world\models\domain\EconomyProfilePublisher($db);
+                if ($request->post('publish') === '1') {
+                    $digest = $request->post('digest');
+                    if (!is_string($digest) || !preg_match('/^[a-f0-9]{64}$/D', $digest)) throw new \InvalidArgumentException('Сначала проверьте изменения.');
+                    $result = $publisher->publish($profile, $digest, (int)Yii::$app->user->id, $reason);
+                    Yii::$app->session->setFlash('success', $result['changed'] ? 'Опубликована версия ' . $result['version'] . '. Принятые операции сохранены.' : 'Этот профиль уже действует.');
+                    return $this->redirect(['economy']);
+                }
+                $preview = $publisher->preview($profile);
+            } catch (\common\modules\world\support\GameError $failure) { Yii::$app->response->statusCode = $failure->status; $error = $failure->getMessage(); }
+            catch (\JsonException $failure) { Yii::$app->response->statusCode = 422; $error = 'Некорректный JSON.'; }
+            catch (\InvalidArgumentException $failure) { Yii::$app->response->statusCode = 422; $error = $failure->getMessage(); }
+        }
+        $page = $request->get('page', '1');
+        if ((!is_string($page) && !is_int($page)) || !preg_match('/^[1-9][0-9]{0,5}$/D', (string)$page)) throw new UnprocessableEntityHttpException('Некорректная страница.');
+        $history = (new \yii\db\Query())->select(['id', 'version', 'author_user_id', 'reason', 'created_at'])->from('world_economy_profile')->orderBy(['version' => SORT_DESC])->limit(20)->offset(((int)$page - 1) * 20)->all($db);
+        $total = (int)(new \yii\db\Query())->from('world_economy_profile')->count('*', $db);
+        return $this->render('economy', compact('current', 'document', 'reason', 'preview', 'error', 'history', 'page', 'total'));
+    }
     public function actionSettings()
     {
         $enabled=Yii::$app->request->post('charge_credits');

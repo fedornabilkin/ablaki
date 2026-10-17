@@ -15,17 +15,22 @@ class SupplyGrant
     public function plan(int $user, string $action): array
     {
         if (!in_array($action, ['starter', 'gather'], true)) throw new GameError('INVALID_ACTION', 'Неизвестный вид снабжения.', 422);
-        $period = (new \DateTimeImmutable('today', new \DateTimeZone('Europe/Moscow')))->getTimestamp();
+        $period = (new \DateTimeImmutable('@' . time()))->setTimezone(new \DateTimeZone('Europe/Moscow'))->setTime(0, 0)->getTimestamp();
         $event = (new Query())->from('craft_event')->where(['user_id' => $user, 'action' => $action]);
         if ($action === 'gather') $event->andWhere(['>=', 'created_at', $period]);
         if ($event->exists($this->db)) throw new GameError('SUPPLIES_ALREADY_CLAIMED', $action === 'starter' ? 'Стартовый набор уже получен.' : 'Сырьё на сегодня уже собрано.');
         $efficiency = $action === 'gather' ? (new NightWorkEfficiency($this->db))->basisPoints($user) : 10000;
         $items = []; $sizes = [];
-        foreach ((new Query())->from('craft_item')->where(['active' => 1])->andWhere(['>', 'gather_quantity', 0])->orderBy(['id' => SORT_ASC])->all($this->db) as $item) {
-            $base = (int)$item['gather_quantity'] * ($action === 'starter' ? 3 : 1);
+        $revision = EconomyRuntime::current($this->db);
+        $quantities = $revision ? $revision['profile'][$action === 'starter' ? 'starter' : 'daily']['items'] : null;
+        $query = (new Query())->from('craft_item')->where(['active' => 1]);
+        $quantities !== null ? $query->andWhere(['code' => array_keys($quantities)]) : $query->andWhere(['>', 'gather_quantity', 0]);
+        foreach ($query->orderBy(['id' => SORT_ASC])->all($this->db) as $item) {
+            $base = $quantities !== null ? $quantities[$item['code']] : (int)$item['gather_quantity'] * ($action === 'starter' ? 3 : 1);
             $items[] = ['item_id' => (int)$item['id'], 'name' => (string)$item['name'], 'quantity' => max(1, intdiv($base * $efficiency, 10000))];
             $sizes[(int)$item['id']] = (int)$item['stack_size'];
         }
+        if ($quantities !== null && count($items) !== count($quantities)) throw new GameError('SUPPLIES_UNAVAILABLE', 'Стартовый каталог ещё не подготовлен.', 503);
         if (!$items) throw new GameError('SUPPLIES_UNAVAILABLE', 'Источники сырья пока не настроены.');
         $inventory = new CraftInventory(new CraftStorage($this->db)); $active = $inventory->capacity($user)['active_slots'];
         $occupied = 0; $spare = [];
@@ -56,6 +61,7 @@ class SupplyGrant
             $store->move($user, $item, $entry['quantity']); $total += $entry['quantity'];
         }
         $this->db->createCommand()->insert('craft_event', ['user_id' => $user, 'action' => $action, 'quantity' => $total, 'credit_change' => 0, 'created_at' => time()])->execute();
+        if ($store->operationId) EconomyRuntime::fact($this->db, $user, $action === 'starter' ? 'starter_claimed' : 'daily_supply_claimed', 1, $store->operationId);
         return $action === 'starter' ? 'Стартовые материалы получены.' : 'Сырьё на сегодня собрано.';
     }
 }

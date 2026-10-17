@@ -49,6 +49,10 @@ class WorldEntityCatalog
                 'economy_purchase_order' => 'Заказы на закупку', 'economy_order_fulfillment' => 'Поставки по заказам',
             ],
             'Правила и история' => [
+                'world_economy_profile' => 'Версии экономики закрытого теста', 'world_test_participant' => 'Когорты тестирования (метаданные)',
+                'world_economy_usage' => 'Расход квот', 'world_economy_fact_event' => 'События начального маршрута',
+                'world_source_work' => 'Партии ручной добычи', 'world_player_health' => 'Здоровье игроков', 'world_health_event' => 'Изменения здоровья',
+                'world_goal_pool' => 'Резервы стартовых наград', 'world_goal_claim' => 'Полученные стартовые награды', 'world_storage_expansion' => 'Расширения хранилищ',
                 'world_starter_definition' => 'Стартовые наборы', 'world_starter_revision' => 'Версии стартовых наборов',
                 'world_starter_item' => 'Состав стартовых наборов', 'world_starter_grant' => 'Выданные стартовые вещи',
                 'world_economy_policy' => 'Правила экономики', 'world_tick' => 'Экономические периоды',

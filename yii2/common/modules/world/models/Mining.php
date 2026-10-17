@@ -22,6 +22,7 @@ final class Mining
     }
     public static function state(int $nodeId, int $user): array
     {
+        if (domain\WorldSources::handles(Node::readable($nodeId, $user))) return domain\WorldSources::state($nodeId, $user);
         [$node, $config] = self::context($nodeId, $user); $db = Node::getDb(); $now = time();
         $state = (new Query())->from('world_mining_state')->where(['node_id' => $nodeId])->one($db);
         $workers = (new Query())->from('world_mining_worker')->where(['node_id' => $nodeId])->andWhere(['>', 'last_seen_at', $now - 60])->all($db);
@@ -29,8 +30,9 @@ final class Mining
             'workers' => count($workers), 'produced_quantity' => (int)($state['produced_quantity'] ?? 0), 'pending_quantity' => $state ? max(0, intdiv((int)$state['worked_seconds'], (int)$state['seconds_per_unit']) - (int)$state['produced_quantity']) : 0,
             'seconds_per_unit' => (int)($state['seconds_per_unit'] ?? $config['seconds_per_unit'] ?? 60), 'server_time' => $now];
     }
-    public static function start(int $nodeId, int $user, string $operation): array
+    public static function start(int $nodeId, int $user, string $operation, ?string $action = null, ?int $target = null): array
     {
+        if (domain\WorldSources::handles(Node::readable($nodeId, $user))) return domain\WorldSources::start($nodeId, $user, $operation, $action, $target);
         [$node, $config] = self::context($nodeId, $user); $db = Node::getDb();
         if (!$config) throw new GameError('EXTRACTOR_REQUIRED', 'Сначала постройте буровую установку внутри шахты.', 422);
         if ((new Query())->from('world_builder')->where(['user_id' => $user])->exists($db)) throw new GameError('BUILDER_BUSY', 'Приостановите строительство перед добычей.', 409);
@@ -49,6 +51,7 @@ final class Mining
     }
     public static function heartbeat(int $nodeId, int $user, string $operation, bool $stop = false): array
     {
+        if (domain\WorldSources::handles(Node::readable($nodeId, $user))) return domain\WorldSources::heartbeat($nodeId, $user, $operation, $stop);
         self::context($nodeId, $user); $db = Node::getDb();
         $worker = (new Query())->from('world_mining_worker')->where(['user_id' => $user, 'node_id' => $nodeId])->one($db);
         if (!$worker) throw new GameError('WORK_NOT_STARTED', 'Сначала начните добычу.', 409);
@@ -60,6 +63,7 @@ final class Mining
     public static function checkpoint(int $nodeId, string $operation): void
     {
         $db = Node::getDb(); if (!$db->getTransaction()) throw new \LogicException('Mining requires a command transaction.');
+        if (domain\WorldSources::handles(Node::requireOne($nodeId))) { domain\WorldSources::checkpoint($nodeId, $operation); return; }
         $node = Node::requireOne($nodeId);
         try { [, $config] = self::context($nodeId, (int)$node->owner_user_id); }
         catch (GameError $e) { $db->createCommand()->delete('world_mining_worker', ['node_id' => $nodeId])->execute(); return; }
@@ -79,7 +83,10 @@ final class Mining
             if (!$item) throw new GameError('RESOURCE_UNAVAILABLE', 'Ресурс добычи отключён.', 503);
             if ($target) {
                 $plan = $inventory->planCraft([], $target, [], [], $item, $quantity);
-                if ($plan['output_fits']) { $inventory->applyCraft((int)$node->owner_user_id, $plan, $target, [], $item, 'mining'); $produced += $quantity; }
+                if ($plan['output_fits']) {
+                    domain\EconomyQuota::consume($db, (int)$node->owner_user_id, 'extraction_daily', $quantity, $operation);
+                    $inventory->applyCraft((int)$node->owner_user_id, $plan, $target, [], $item, 'mining'); $produced += $quantity;
+                }
             }
         }
         $db->createCommand()->update('world_mining_state', ['worked_seconds' => $total, 'produced_quantity' => $produced], ['node_id' => $nodeId])->execute();

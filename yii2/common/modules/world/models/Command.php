@@ -27,9 +27,10 @@ class Command extends Record
                 if (!hash_equals($previous->fingerprint, $fingerprint)) throw new GameError('REQUEST_KEY_REUSED', 'Ключ уже использован для другого действия.', 409);
                 return json_decode($previous->result_json, true);
             }
+            domain\EconomyRuntime::requireAccess($db, $user);
             (new WorldFlags($db, Yii::$app->getModule('world')))->requireFlags(['world_write', 'storage_v2']);
             $operation = bin2hex(random_bytes(16));
-            $db->createCommand()->insert('game_operation', ['id' => $operation, 'user_id' => $user, 'type' => $type, 'created_at' => time()])->execute();
+            $db->createCommand()->insert('game_operation', ['id' => $operation, 'user_id' => $user, 'type' => $type, 'created_at' => time()] + \common\modules\world\models\domain\EconomyRuntime::operationContext($db, $payload))->execute();
             $result = $handler($operation) + ['operation_id' => $operation];
             $changed = $result['changed_node_ids'] ?? [];
             foreach ([$result['node']['id'] ?? null, $result['build']['node_id'] ?? null, $payload['node_id'] ?? null] as $id) if ($id !== null) $changed[] = (int)$id;

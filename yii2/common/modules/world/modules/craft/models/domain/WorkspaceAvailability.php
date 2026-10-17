@@ -45,8 +45,14 @@ class WorkspaceAvailability
         $candidates = []; $resolver = new StationResolver($store); $byId = array_column($catalog, null, 'id');
         $credit = (new Query())->select('credit')->from('persone')->where(['user_id' => $user])->scalar($this->db);
         $charged = (new CraftSettings($store))->chargeCredits();
+        $profile = \common\modules\world\models\domain\EconomyRuntime::current($this->db);
+        $contextCode = $store->workspaceNodeId ? (new Query())->select('t.code')->from(['n' => 'world_node'])->innerJoin(['t' => 'world_template'], 't.id=n.template_id')->where(['n.id' => $store->workspaceNodeId])->scalar($this->db) : null;
+        $quota = \common\modules\world\models\domain\EconomyQuota::state($this->db, $user, 'crafting_hourly');
         foreach ($recipes as &$recipe) {
             $source = $byId[$recipe['id']]; $missing = $recipe['locked_reasons']; $required = $ingredients[$recipe['id']] ?? [];
+            $requiredContext = $profile['profile']['recipes'][trim($source['code'])]['context'] ?? null;
+            if ($requiredContext !== null && $requiredContext !== $contextCode) $missing[] = 'Выберите объект: ' . ($profile['profile']['objects'][$requiredContext]['name'] ?? 'место приготовления еды');
+            if ($quota && !$quota['remaining']) $missing[] = 'Часовой лимит изготовления исчерпан.';
             $equipment = $roles[$recipe['id']] ?? [];
             if ($source['station_id'] !== null) {
                 $station = $stations[$source['station_id']] ?? null;

@@ -22,6 +22,46 @@ class WorldSetupController extends \yii\console\Controller
     {
         if (getenv('WORLD_INSTALL') !== 'confirmed-world-install') throw new \RuntimeException('Set the explicit WORLD_INSTALL context for this database first.');
     }
+    public function actionEconomyTestPrepare(int $apply = 0, string $donor = 'Test01'): int
+    {
+        if (!in_array($apply, [0, 1], true)) throw new \InvalidArgumentException('Use 0 for preview or 1 for explicit test preparation.');
+        $setup = new \common\modules\world\models\domain\TestEconomySetup(Yii::$app->db, $donor);
+        return $this->rolloutOutput($apply ? $setup->prepare() : $setup->preview());
+    }
+    public function actionEconomyPreview(int $revision = 0): int
+    {
+        $profile = $this->economyProfile($revision);
+        $preview = (new \common\modules\world\models\domain\EconomyProfilePublisher(Yii::$app->db))->preview($profile);
+        unset($preview['patch'], $preview['before']);
+        $this->stdout(json_encode($preview, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT | JSON_THROW_ON_ERROR) . "\n");
+        return 0;
+    }
+    public function actionEconomyPublish(string $digest, int $author, string $reason, int $revision = 0): int
+    {
+        $this->requireInstall();
+        $result = (new \common\modules\world\models\domain\EconomyProfilePublisher(Yii::$app->db))->publish($this->economyProfile($revision), $digest, $author, $reason);
+        $this->stdout(json_encode($result, JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR) . "\n");
+        return 0;
+    }
+    private function economyProfile(int $revision): array
+    {
+        if ($revision === 0) return \common\modules\world\models\domain\EconomyProfile::load();
+        $row = (new \yii\db\Query())->from('world_economy_profile')->where(['id' => $revision])->one(Yii::$app->db);
+        if (!$row) throw new \InvalidArgumentException('Unknown historical profile.');
+        return json_decode($row['config_json'], true, 64, JSON_THROW_ON_ERROR);
+    }
+    public function actionEconomyAccess(): int
+    {
+        $this->requireInstall();
+        $auth = Yii::$app->authManager;
+        $permission = $auth->getPermission('world-closed-test');
+        if (!$permission) { $permission = $auth->createPermission('world-closed-test'); $permission->description = 'Участие в закрытом тестировании мира и крафта'; $auth->add($permission); }
+        $role = $auth->getRole('world-tester');
+        if (!$role) { $role = $auth->createRole('world-tester'); $role->description = 'Тестер мира'; $auth->add($role); }
+        if (!$auth->hasChild($role, $permission)) $auth->addChild($role, $permission);
+        $this->stdout("RBAC role world-tester is ready. Assign it through the existing RBAC administration. No user-ID allowlist is used.\n");
+        return 0;
+    }
     public function actionInstall(): int
     {
         $this->requireInstall();

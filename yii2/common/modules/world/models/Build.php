@@ -25,6 +25,7 @@ class Build extends Record
         if (!$onboarding || $parent->owner_user_id !== null) $parent->requireOwner($user);
         $template = NodeTemplate::requireOne($input['template_id']);
         if (!$template->player_buildable || !$template->enabled || !$template->permits($parent)) throw new GameError('INVALID_TEMPLATE', 'Этот объект здесь строить нельзя.', 422);
+        $economyTerms = domain\EconomyConstruction::check($template, $user, $input, $onboarding);
         $cell = isset($input['x'], $input['y']) ? ['x' => $input['x'], 'y' => $input['y']]
             : ($onboarding ? null : (new \common\modules\world\models\domain\WorldTree(self::getDb()))->nextPosition((int)$parent->id));
         if ($cell) {
@@ -37,6 +38,7 @@ class Build extends Record
         $hold = null;
         BuildRequirements::check($user, (int)$parent->id, $template);
         BuildMaterials::consume($user, $template->materials(), $operation, (int)$parent->id);
+        if ($economyTerms) domain\EconomyPayments::charge(self::getDb(), $user, (int)$parent->id, Money::parse($economyTerms['price_cr']), (bool)($input['top_up'] ?? false), $operation, 'Постройка: ' . $template->name);
         $node = NodeFactory::create($template, $parent, $user, $input['name'], 'build-' . $operation, $cell, 'constructing');
         $accounts = (new EconomyHierarchy(self::getDb()))->provision((int)$node->id, $operation);
         if (!$budget->isZero()) {
@@ -156,7 +158,10 @@ class Build extends Record
             if (Node::updateAllCounters(['revision' => 1], ['id' => $this->parent_id]) !== 1)
                 throw new \RuntimeException('Cancelled build parent update failed.');
         }
-        if (!$cancel && !$this->isRepair()) BuildFacilities::provision($node, $operation);
+        if (!$cancel && !$this->isRepair()) {
+            BuildFacilities::provision($node, $operation);
+            domain\EconomyRuntime::fact(self::getDb(), (int)$this->owner_user_id, 'built:' . $node->template->code, 1, $operation);
+        }
     }
     public static function listing(int $user, array $filter): \yii\data\ActiveDataProvider
     {

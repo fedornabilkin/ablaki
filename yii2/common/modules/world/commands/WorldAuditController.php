@@ -12,6 +12,31 @@ class WorldAuditController extends \yii\console\Controller
         $this->stdout(json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT | JSON_THROW_ON_ERROR) . "\n");
         return 0;
     }
+    public function actionEconomyProfile(): int
+    {
+        $data = \common\modules\world\models\domain\EconomyProfile::report(\common\modules\world\models\domain\EconomyProfile::load());
+        $this->output($data);
+        return $data['reachability']['blocked_targets'] || $data['reachability']['blocked_recipes'] ? 1 : 0;
+    }
+    public function actionEconomyCohort(string $cohort = '', int $afterUser = 0, int $limit = 100): int
+    {
+        return $this->output((new \common\modules\world\models\domain\EconomyReport(Yii::$app->db))->report($cohort, $afterUser, $limit));
+    }
+    public function actionEconomyScenario(string $scenario = 'first-four-days'): int
+    {
+        $data = \common\modules\world\models\domain\EconomyScenario::report(
+            \common\modules\world\models\domain\EconomyProfile::load(), \common\modules\world\models\domain\EconomyScenario::load(), $scenario);
+        $this->output($data);
+        return $data['status'] === 'completed' ? 0 : 1;
+    }
+    public function actionEconomyBootstrapBound(int $days = 2): int
+    {
+        $config = \common\modules\world\models\domain\EconomyScenario::load();
+        $data = \common\modules\world\models\domain\EconomyBootstrapBound::report(
+            \common\modules\world\models\domain\EconomyProfile::load(), $config['bootstrap_bound'], $days);
+        $this->output($data);
+        return $data['status'] === 'impossible_under_fixed_assumptions' ? 1 : 0;
+    }
     public function actionStorage(): int
     {
         return $this->output((new \common\modules\world\modules\craft\models\domain\StorageReconciliation(Yii::$app->db))->report());

@@ -82,6 +82,8 @@ class WorldCultivation
             $c = $this->context($user, $bed); $cycle = $c['cycle']; $result = null; $now = time();
             if ($cycle) {
                 $rules = $this->one('world_crop_revision', ['id' => $cycle['crop_revision_id']]);
+                $environment = CultivationEnvironment::accepted($cycle); $rules = CultivationEnvironment::rules($rules, $environment);
+                $cycle['event_loss_bps'] = CultivationEnvironment::damage($this->db, $cycle, $environment, $now)['loss_bps'];
                 $result = ['id' => (int)$cycle['id'], 'crop_revision_id' => (int)$cycle['crop_revision_id'], 'revision' => (int)$cycle['revision']];
                 $result = array_merge($result, CultivationClock::project($cycle, $rules, $now));
                 $result['name'] = $this->one('world_crop', ['id' => $rules['crop_id']])['name'];
@@ -111,7 +113,9 @@ class WorldCultivation
             if ($cycle) throw new GameError('BED_OCCUPIED', 'Сначала соберите или уберите урожай.');
             if ($c['bed']['dug_at'] !== null) throw new GameError('BED_ALREADY_DUG', 'Грядка уже вскопана.');
             $shovel = GardenTools::shovel($this->db, $user);
-            return $c + ['terms' => ['bed_id' => $input['bed_id'], 'action' => 'dig', 'tool' => $shovel['result']], 'revisions' => $revisions + $shovel['revisions']];
+            $profile = EconomyRuntime::current($this->db);
+            return $c + ['terms' => ['bed_id' => $input['bed_id'], 'action' => 'dig', 'tool' => $shovel['result'],
+                'price_cr' => $profile ? $profile['profile']['crop']['dig_fee_cr'] : '0.0000', 'payer_node_id' => (int)$c['bed']['garden_node_id']], 'revisions' => $revisions + $shovel['revisions']];
         }
         if ($action === 'sow') {
             if ($c['bed']['dug_at'] === null) throw new GameError('BED_NOT_DUG', 'Сначала вскопайте грядку.');
@@ -122,7 +126,15 @@ class WorldCultivation
             $rules = $this->one('world_crop_revision', ['id' => $cycle['crop_revision_id']]);
         }
         if (!$rules) throw new GameError('CROP_UNAVAILABLE', 'Культура недоступна.', 404);
+        $environment = $cycle ? CultivationEnvironment::accepted($cycle) : CultivationEnvironment::snapshot($this->db, $input['bed_id'], $user);
+        $rules = CultivationEnvironment::rules($rules, $environment);
+        $weather = $cycle ? CultivationEnvironment::damage($this->db, $cycle, $environment, time()) : ['loss_bps' => 0, 'effects' => []];
+        if ($cycle) $cycle['event_loss_bps'] = $weather['loss_bps'];
         $terms = ['bed_id' => $input['bed_id'], 'cycle_id' => $cycle ? (int)$cycle['id'] : null, 'cycle_revision' => $cycle ? (int)$cycle['revision'] : null, 'crop_revision_id' => (int)$rules['id'], 'grow_seconds' => (int)$rules['grow_seconds'], 'water_interval_seconds' => (int)$rules['water_interval_seconds'], 'cancel_refund' => false];
+        $accepted = json_decode($rules['config_json'], true) ?: [];
+        $terms += ['price_cr' => $action === 'cancel' ? '0.0000' : ($accepted['fees'][$action] ?? '0.0000'), 'payer_node_id' => (int)$c['bed']['garden_node_id']];
+        $terms['environment'] = $environment; $terms['event_loss_bps'] = $cycle['event_loss_bps'] ?? 0;
+        $terms['weather_effects'] = $weather['effects'];
         if ($action === 'cancel') return $c + compact('rules', 'terms', 'revisions');
         $clock = $cycle ? CultivationClock::project($cycle, $rules, time()) : null;
         $terms['water_missed'] = $clock ? $clock['water_missed'] : false;
@@ -159,11 +171,13 @@ class WorldCultivation
             $p = $this->prepare($user, $action, $payload);
             if (CanonicalJson::encode($p['terms']) !== CanonicalJson::encode($terms)) throw new GameError('CROP_CHANGED', 'Условия выращивания изменились. Повторите расчёт.');
             $now = time();
+            if (isset($terms['price_cr'])) EconomyPayments::charge($this->db, $user, $terms['payer_node_id'], \common\modules\world\modules\economy\value\Money::parse($terms['price_cr']), (bool)($payload['top_up'] ?? false), $operation, 'Огород: ' . $action);
             if ($action === 'dig') {
                 if (!$terms['tool']['available']) throw new GameError('SHOVEL_REQUIRED', 'Для вскапывания нужна исправная лопата в рюкзаке.');
                 (new \common\modules\world\modules\craft\models\domain\EquipmentExposure($this->db))->use($terms['tool']['instance_id'], 1, 1, false);
                 $this->db->createCommand()->update('world_bed', ['dug_at' => $now], ['node_id' => $payload['bed_id']])->execute();
                 $this->db->createCommand()->update('world_node', ['revision' => new Expression('[[revision]]+1')], ['id' => $payload['bed_id']])->execute();
+                EconomyRuntime::fact($this->db, $user, 'bed_dug', 1, $operation);
                 $result = ['changed_node_ids' => [$payload['bed_id']], 'changed_storage_ids' => []];
                 $bus->emit($operation, $user, 'world.crop.dig', $result); return $result;
             }
@@ -185,6 +199,7 @@ class WorldCultivation
             } else {
                 if ($action !== 'cancel') { $p['store']->operationId = $operation; (new CanonicalInventory($p['store']))->applyCraft($user, $p['plan'], $p['target'], $p['items'], $p['output'], 'cultivation.' . $action); }
                 if ($action === 'harvest') (new GardenHarvest($this->db, $this->flags))->recordHarvest($p['target'], $p['plan'], $operation);
+                if ($action === 'sow' || $action === 'harvest') EconomyRuntime::fact($this->db, $user, $action === 'sow' ? 'carrot_sown' : 'carrot_harvested', 1, $operation);
                 if ($action === 'sow') {
                     $this->db->createCommand()->insert('world_crop_cycle', ['bed_id' => $payload['bed_id'], 'owner_user_id' => $user, 'crop_revision_id' => $p['rules']['id'], 'operation_id' => $operation, 'status' => 'growing', 'planted_at' => $now, 'ready_at' => $now + (int)$p['rules']['grow_seconds'], 'water_due_at' => $p['rules']['water_item_id'] === null ? null : $now + (int)$p['rules']['water_interval_seconds'], 'terms_json' => CanonicalJson::encode($terms)])->execute();
                     $cycleId = (int)$this->db->getLastInsertID();

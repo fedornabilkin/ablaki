@@ -25,7 +25,9 @@ class ShelterRepair
             if (!$ingredients || count($ingredients) > 20) throw new GameError('SHELTER_REPAIR_RECIPE_UNAVAILABLE', 'Материалы ручного ремонта требуют настройки.');
             foreach ($ingredients as $ingredient) {
                 $item = (new Query())->from('craft_item')->where(['id' => $ingredient['item_id'], 'active' => 1])->one($this->db); $amount = (int)$ingredient['item_quantity'];
-                if (!$item || $item['kind'] !== 'material' || $item['storage_kind'] !== 'none' || (int)$item['gather_quantity'] < 1 || $equipment->tracked($item) || $amount < 1 || $amount > 10000) throw new GameError('SHELTER_REPAIR_RECIPE_UNAVAILABLE', 'Ремонт стартового укрытия должен использовать доступное для бесплатного сбора сырьё.');
+                if (!$item || $item['kind'] !== 'material' || $item['storage_kind'] !== 'none'
+                    || ((int)$item['gather_quantity'] < 1 && !in_array($item['code'], EconomyRuntime::rawCodes($this->db), true))
+                    || $equipment->tracked($item) || $amount < 1 || $amount > 10000) throw new GameError('SHELTER_REPAIR_RECIPE_UNAVAILABLE', 'Ремонт стартового укрытия должен использовать доступное для бесплатного сбора сырьё.');
                 $id = (int)$item['id'];
                 if (!isset($materials[$id])) $materials[$id] = ['item_id' => $id, 'name' => trim($item['name']), 'icon' => trim($item['icon']), 'full_quantity' => 0];
                 $materials[$id]['full_quantity'] += $amount;

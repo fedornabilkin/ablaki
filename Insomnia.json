@@ -11758,6 +11758,325 @@
       "settingRebuildPath": true,
       "settingFollowRedirects": "global",
       "_type": "request"
+    },
+    {
+      "_id": "fld_e1a56479acb24b0fc1782280fd0c9402",
+      "parentId": "fld_c49c74cffee363cb9236af7b3e084008",
+      "modified": 1792195200000,
+      "created": 1792195200000,
+      "name": "World - closed-test economy",
+      "description": "Contract: docs/architecture/economy-runtime-api.md. Change the request key for each new command; retain the exact key and body on retry. Preview does not execute a purchase.",
+      "environment": {
+        "economy_storage_id": "1",
+        "economy_settlement_id": "3",
+        "economy_goal_code": "day-1",
+        "economy_food_code": "world-cooked-carrot",
+        "economy_health_revision": "0",
+        "economy_pack_code": "replace-from-storage-options",
+        "economy_request_key": "insomnia-economy-command-0001",
+        "economy_quote_id": "replace-from-preview",
+        "economy_expected_revisions": "{}"
+      },
+      "environmentPropertyOrder": null,
+      "metaSortKey": -99,
+      "_type": "request_group"
+    },
+    {
+      "_id": "req_ec1c52da6a367f8ec92fa56b80727843",
+      "parentId": "fld_e1a56479acb24b0fc1782280fd0c9402",
+      "modified": 1792195200000,
+      "created": 1792195200000,
+      "name": "GET - State",
+      "url": "{{ _.baseUrl }}/v1/world/economy",
+      "method": "GET",
+      "description": "Contract: docs/architecture/economy-runtime-api.md. Use a local or disposable acceptance environment. Read current state/options before supplying IDs, codes, health revision and preview revisions. A new command needs a new key; an uncertain result requires the same key and exact body.",
+      "body": {},
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Accept",
+          "value": "application/json"
+        }
+      ],
+      "authentication": {
+        "type": "bearer",
+        "token": "{{ _.bearer }}"
+      },
+      "metaSortKey": 1,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_d893389b01e40a941df2cfbbd7210f0a",
+      "parentId": "fld_e1a56479acb24b0fc1782280fd0c9402",
+      "modified": 1792195200000,
+      "created": 1792195200000,
+      "name": "GET - History",
+      "url": "{{ _.baseUrl }}/v1/world/economy/history",
+      "method": "GET",
+      "description": "Contract: docs/architecture/economy-runtime-api.md. Use a local or disposable acceptance environment. Read current state/options before supplying IDs, codes, health revision and preview revisions. A new command needs a new key; an uncertain result requires the same key and exact body.\nJournal correlation: actor_user_id, node_id, profile_id/profile_version, from/to, item_id, exact balance_before_cr/balance_after_cr, transfer_ids and transfer_phase=create|claim|cancel. Missing historical fields are null; transfer passwords and foreign balances are never returned.",
+      "body": {},
+      "parameters": [
+        {
+          "name": "source",
+          "value": "commands"
+        },
+        {
+          "name": "page",
+          "value": "1"
+        },
+        {
+          "name": "q",
+          "value": "",
+          "disabled": true
+        }
+      ],
+      "headers": [
+        {
+          "name": "Accept",
+          "value": "application/json"
+        }
+      ],
+      "authentication": {
+        "type": "bearer",
+        "token": "{{ _.bearer }}"
+      },
+      "metaSortKey": 2,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_da5c4f073d9da81c58605276b1578cf6",
+      "parentId": "fld_e1a56479acb24b0fc1782280fd0c9402",
+      "modified": 1792195200000,
+      "created": 1792195200000,
+      "name": "POST - Consume food",
+      "url": "{{ _.baseUrl }}/v1/world/economy/food",
+      "method": "POST",
+      "description": "Contract: docs/architecture/economy-runtime-api.md. Use a local or disposable acceptance environment. Read current state/options before supplying IDs, codes, health revision and preview revisions. A new command needs a new key; an uncertain result requires the same key and exact body.",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\"request_key\": \"{{ _.economy_request_key }}\", \"code\": \"{{ _.economy_food_code }}\", \"health_revision\": {{ _.economy_health_revision }}}"
+      },
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Accept",
+          "value": "application/json"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "authentication": {
+        "type": "bearer",
+        "token": "{{ _.bearer }}"
+      },
+      "metaSortKey": 3,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_81fa98646fce6a9dfbb6ac9034c1e3fe",
+      "parentId": "fld_e1a56479acb24b0fc1782280fd0c9402",
+      "modified": 1792195200000,
+      "created": 1792195200000,
+      "name": "POST - Claim goal",
+      "url": "{{ _.baseUrl }}/v1/world/economy/goals/claim",
+      "method": "POST",
+      "description": "Contract: docs/architecture/economy-runtime-api.md. Use a local or disposable acceptance environment. Read current state/options before supplying IDs, codes, health revision and preview revisions. A new command needs a new key; an uncertain result requires the same key and exact body.",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\"request_key\": \"{{ _.economy_request_key }}\", \"code\": \"{{ _.economy_goal_code }}\"}"
+      },
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Accept",
+          "value": "application/json"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "authentication": {
+        "type": "bearer",
+        "token": "{{ _.bearer }}"
+      },
+      "metaSortKey": 4,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_fe428c72283b0704519596a5bb4ecc2b",
+      "parentId": "fld_e1a56479acb24b0fc1782280fd0c9402",
+      "modified": 1792195200000,
+      "created": 1792195200000,
+      "name": "POST - Fund goal - manager only",
+      "url": "{{ _.baseUrl }}/v1/world/economy/goals/fund",
+      "method": "POST",
+      "description": "Contract: docs/architecture/economy-runtime-api.md. Use a local or disposable acceptance environment. Read current state/options before supplying IDs, codes, health revision and preview revisions. A new command needs a new key; an uncertain result requires the same key and exact body.",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\"request_key\": \"{{ _.economy_request_key }}\", \"code\": \"{{ _.economy_goal_code }}\", \"settlement_id\": {{ _.economy_settlement_id }}, \"participants\": 1}"
+      },
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Accept",
+          "value": "application/json"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "authentication": {
+        "type": "bearer",
+        "token": "{{ _.bearer }}"
+      },
+      "metaSortKey": 5,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_13b781f53b90e7bdbcd60953f44a59e5",
+      "parentId": "fld_e1a56479acb24b0fc1782280fd0c9402",
+      "modified": 1792195200000,
+      "created": 1792195200000,
+      "name": "GET - Storage options",
+      "url": "{{ _.baseUrl }}/v1/world/economy/storage/{{ _.economy_storage_id }}",
+      "method": "GET",
+      "description": "Contract: docs/architecture/economy-runtime-api.md. Use a local or disposable acceptance environment. Read current state/options before supplying IDs, codes, health revision and preview revisions. A new command needs a new key; an uncertain result requires the same key and exact body.",
+      "body": {},
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Accept",
+          "value": "application/json"
+        }
+      ],
+      "authentication": {
+        "type": "bearer",
+        "token": "{{ _.bearer }}"
+      },
+      "metaSortKey": 6,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_6defa8159df43f425f0333d528542078",
+      "parentId": "fld_e1a56479acb24b0fc1782280fd0c9402",
+      "modified": 1792195200000,
+      "created": 1792195200000,
+      "name": "POST - Preview storage expansion",
+      "url": "{{ _.baseUrl }}/v1/world/economy/storage/{{ _.economy_storage_id }}/expand-preview",
+      "method": "POST",
+      "description": "Contract: docs/architecture/economy-runtime-api.md. Use a local or disposable acceptance environment. Read current state/options before supplying IDs, codes, health revision and preview revisions. A new command needs a new key; an uncertain result requires the same key and exact body.",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\"code\": \"{{ _.economy_pack_code }}\"}"
+      },
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Accept",
+          "value": "application/json"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "authentication": {
+        "type": "bearer",
+        "token": "{{ _.bearer }}"
+      },
+      "metaSortKey": 7,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_e05ebf679a890a76b0a816a4a42729bc",
+      "parentId": "fld_e1a56479acb24b0fc1782280fd0c9402",
+      "modified": 1792195200000,
+      "created": 1792195200000,
+      "name": "POST - Confirm storage expansion",
+      "url": "{{ _.baseUrl }}/v1/world/economy/storage/{{ _.economy_storage_id }}/expand",
+      "method": "POST",
+      "description": "Contract: docs/architecture/economy-runtime-api.md. Use a local or disposable acceptance environment. Read current state/options before supplying IDs, codes, health revision and preview revisions. A new command needs a new key; an uncertain result requires the same key and exact body.",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\"request_key\": \"{{ _.economy_request_key }}\", \"code\": \"{{ _.economy_pack_code }}\", \"quote_id\": \"{{ _.economy_quote_id }}\", \"expected_revisions\": {{ _.economy_expected_revisions }}}"
+      },
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Accept",
+          "value": "application/json"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "authentication": {
+        "type": "bearer",
+        "token": "{{ _.bearer }}"
+      },
+      "metaSortKey": 8,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
     }
   ]
 }

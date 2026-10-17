@@ -23,6 +23,7 @@ class CommandBus
         $this->flags->requireFlag('world_write');
         return $this->db->transaction(function () use ($user, $type, $payload, $prepare) {
             $this->begin($user); $this->flags->requireFlag('world_write');
+            \common\modules\world\models\domain\EconomyRuntime::requireAccess($this->db, $user);
             \common\modules\world\modules\craft\models\domain\StorageMaintenance::writable($this->db);
             $this->rateLimit($user, 'game_quote', 60);
             $prepared = $prepare($payload);
@@ -47,6 +48,7 @@ class CommandBus
                 return json_decode($previous['result_json'], true, 512, JSON_THROW_ON_ERROR);
             }
             // Completed commands remain replayable when new writes are disabled.
+            \common\modules\world\models\domain\EconomyRuntime::requireAccess($this->db, $user);
             \common\modules\world\modules\craft\models\domain\StorageMaintenance::writable($this->db);
             $this->flags->requireFlag('world_write');
             $this->rateLimit($user, 'game_command', 60);
@@ -57,7 +59,7 @@ class CommandBus
             if (CanonicalJson::encode($expected) !== $quote['revisions_json']) throw new GameError('REVISION_CHANGED', 'Подтвердите актуальные условия.');
             $this->checkRevisions($expected);
             $operation = bin2hex(random_bytes(16));
-            $this->db->createCommand()->insert('game_operation', ['id' => $operation, 'user_id' => $user, 'type' => $type, 'created_at' => time()])->execute();
+            $this->db->createCommand()->insert('game_operation', ['id' => $operation, 'user_id' => $user, 'type' => $type, 'created_at' => time()] + \common\modules\world\models\domain\EconomyRuntime::operationContext($this->db, $payload))->execute();
             $result = $handler($payload, json_decode($quote['terms_json'], true, 512, JSON_THROW_ON_ERROR), $operation);
             $result['operation_id'] = $operation; $result['request_key'] = $key; $result['server_time'] = time(); $result['contract_version'] = 1;
             $encoded = json_encode($result, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR);

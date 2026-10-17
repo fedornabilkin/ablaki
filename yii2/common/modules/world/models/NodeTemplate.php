@@ -120,7 +120,7 @@ class NodeTemplate extends LockedRecord
     public function defaults(): array { return Json::decode($this->defaults_json); }
     public function fields(): array
     {
-        return array_merge(parent::fields(), ['world_time_rate' => function () { return WorldTime::rate(); },
+        return array_merge(parent::fields(), ['economy' => function () { return domain\EconomyConstruction::terms($this); }, 'world_time_rate' => function () { return WorldTime::rate(); },
             'world_build_seconds' => function () { return (int)$this->build_seconds * WorldTime::rate(); }, 'material_summary' => function () {
             $defaults = $this->defaults();
             $requirements = $this->materials() + ($defaults['build_tools'] ?? []) + ($defaults['build_stations'] ?? []);

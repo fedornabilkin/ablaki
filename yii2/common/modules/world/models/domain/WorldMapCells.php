@@ -47,6 +47,12 @@ class WorldMapCells
     /** Prices are a read projection, without creating a quote or changing inventory. */
     public static function pricing(Connection $db, int $node): array
     {
+        $revision = EconomyRuntime::current($db);
+        if ($revision) {
+            $map = $revision['profile']['map'];
+            return ['paid_cells' => (int)(new Query())->from('world_map_cell')->where(['parent_id' => $node, 'state' => 'open'])->andWhere(['>', 'price', 0])->count('*', $db),
+                'base_price' => $map['base_price_cr'], 'next_price' => $map['base_price_cr'], 'curve' => 'rings', 'bulk_minimum' => $map['bulk_minimum'], 'discount_bps' => $map['discount_bps'], 'max_quantity' => $map['max_cells'], 'currency' => 'Cr'];
+        }
         $paid = (int)(new Query())->from('world_map_cell')->where(['parent_id' => $node, 'state' => 'open'])->andWhere(['>', 'price', 0])->count('*', $db);
         $level = $db->schema->getTableSchema('world_node')->getColumn('hierarchy_level')
             ? (int)(new Query())->select('hierarchy_level')->from('world_node')->where(['id' => $node])->scalar($db)
@@ -111,8 +117,16 @@ class WorldMapCells
         }
         $payerNode = $tree->get($payer);
         $recipient = $payerNode['parent_id'] === null ? $payer : $hierarchy->financialNode((int)$payerNode['parent_id']);
-        (new TreasuryLedger($this->db))->published($recipient);
-        if (!isset($hierarchy->accounts($recipient)['treasury'])) throw new GameError('TREASURY_UNAVAILABLE', 'Казна получателя недоступна.');
+        $profile = EconomyRuntime::current($this->db);
+        if ($profile) {
+            $recipient = (int)(new Query())->select('n.id')->from(['c' => 'world_node_closure'])->innerJoin(['n' => 'world_node'], 'n.id=c.ancestor_id')
+                ->where(['c.descendant_id' => $payer, 'n.hierarchy_level' => 3])->scalar($this->db);
+            if (!$recipient) throw new GameError('SETTLEMENT_BUDGET_REQUIRED', 'Бюджет поселения ещё не подготовлен.', 503);
+            $terms['economy_profile_id'] = $profile['id']; $terms['fee_receiver'] = 'settlement_budget';
+        } else {
+            (new TreasuryLedger($this->db))->published($recipient);
+            if (!isset($hierarchy->accounts($recipient)['treasury'])) throw new GameError('TREASURY_UNAVAILABLE', 'Казна получателя недоступна.');
+        }
         $revisions['node:' . $payer] = (int)$payerNode['revision'];
         if ($budget) $revisions['account:' . $budget['id']] = (int)$budget['revision'];
         return ['revisions' => $revisions, 'terms' => $terms + ['price' => $price->decimal(), 'pricing' => $pricing, 'personal_charge' => $gap->decimal(), 'payer_node_id' => $payer,
@@ -134,12 +148,15 @@ class WorldMapCells
                 if (CanonicalJson::encode($current['terms']) !== CanonicalJson::encode($terms)) throw new GameError('MAP_PRICE_CHANGED', 'Стоимость ячейки изменилась. Повторите расчёт.');
                 $transfer = null;
                 if ($action === 'buy') {
+                    if (isset($terms['economy_profile_id'])) EconomyPayments::charge($this->db, $user, $terms['payer_node_id'], Money::parse($terms['price']), $payload['top_up'], $operation, 'Покупка ячейки карты');
+                    else {
                     $gap = Money::parse($terms['personal_charge']);
                     if (!$gap->isZero()) (new BudgetFunding($this->db))->contribute($user, $terms['payer_node_id'], $gap, 'Покупка ячейки карты', $operation);
                     $accounts = (new EconomyHierarchy($this->db))->accounts($terms['payer_node_id']);
                     $spending = new BudgetSpending($this->db); $amount = Money::parse($terms['price']);
                     $hold = $spending->reserve((int)$accounts['budget']['id'], $amount, 'Покупка ячейки карты', $operation);
                     $transfer = $spending->pay($hold, $terms['recipient_node_id'], $amount, $operation, 'map_cell_purchase');
+                    }
                     foreach ($payload['cells'] as $i => $point) {
                         $updated = $this->db->createCommand()->update('world_map_cell', ['state' => 'open', 'price' => $terms['pricing']['unit_prices'][$i]['price'], 'operation_id' => $operation, 'updated_at' => time()], ['parent_id' => $payload['node_id'], 'state' => 'discovered'] + $point)->execute();
                         if ($updated !== 1) throw new GameError('MAP_CELL_CHANGED', 'Ячейка изменилась. Обновите карту.');
@@ -153,6 +170,7 @@ class WorldMapCells
                     foreach ($payload['cells'] as $point) $this->db->createCommand()->insert('world_map_cell', ['parent_id' => $payload['node_id']] + $point + [
                         'state' => 'discovered', 'price' => '0.0000', 'operation_id' => $operation, 'created_at' => time(), 'updated_at' => time(),
                     ])->execute();
+                    EconomyRuntime::fact($this->db, $user, 'map_cell_explored', count($payload['cells']), $operation);
                 }
                 $this->db->createCommand()->update('world_node', ['revision' => new Expression('[[revision]]+1'), 'updated_at' => time()], ['id' => $payload['node_id']])->execute();
                 $cells = array_map(static function ($point) use ($action) { return $point + ['state' => $action === 'buy' ? 'open' : 'discovered']; }, $payload['cells']);

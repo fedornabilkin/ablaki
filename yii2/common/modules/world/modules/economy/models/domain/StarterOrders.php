@@ -49,7 +49,8 @@ class StarterOrders
         $item = (new Query())->from('craft_item')->where(['id' => $id, 'active' => 1, 'kind' => 'material', 'storage_kind' => 'none'])->one($this->db);
         $crop = $this->db->schema->getTableSchema('world_crop_revision')
             && (new Query())->from('world_crop_revision')->where(['yield_item_id' => $id, 'status' => 'published'])->exists($this->db);
-        if (!$item || ((int)$item['gather_quantity'] < 1 && !$crop) || (new EquipmentInstances($this->db))->tracked($item)) throw new GameError('ORDER_ITEM_UNAVAILABLE', 'Заказ принимает собираемое сырьё или урожай опубликованной культуры.', 422);
+        $profileRaw = $item && in_array($item['code'], \common\modules\world\models\domain\EconomyRuntime::rawCodes($this->db), true);
+        if (!$item || ((int)$item['gather_quantity'] < 1 && !$crop && !$profileRaw) || (new EquipmentInstances($this->db))->tracked($item)) throw new GameError('ORDER_ITEM_UNAVAILABLE', 'Заказ принимает собираемое сырьё или урожай опубликованной культуры.', 422);
         return $item;
     }
     private function meta(int $total, int $page, int $size = 20): array { return ['totalCount' => $total, 'pageCount' => (int)ceil($total / $size), 'currentPage' => $page, 'perPage' => $size]; }
@@ -70,7 +71,9 @@ class StarterOrders
                 'status' => $row['status'] === 'open' && (int)$row['expires_at'] <= time() ? 'expired' : $row['status'], 'can_cancel' => $canPublish && $row['status'] === 'open', 'expires_at' => (int)$row['expires_at']];
         }
         return ['node_id' => $node, 'items' => $items, '_meta' => $this->meta($total, $page), 'can_publish' => $canPublish,
-            'can_deliver' => $ready && $site !== null, 'site_node_id' => $site ? (int)$site['id'] : null, 'server_time' => time()];
+            'can_deliver' => $ready && $site !== null, 'site_node_id' => $site ? (int)$site['id'] : null,
+            'quota' => \common\modules\world\models\domain\EconomyQuota::state($this->db, $user, 'sales_daily'),
+            'max_sale_quantity' => \common\modules\world\models\domain\EconomyRuntime::current($this->db)['profile']['limits']['sales_daily']['same_item_per_operation'] ?? 10000, 'server_time' => time()];
     }
     public function catalog(int $user, int $node, int $page, string $search): array
     {
@@ -79,7 +82,9 @@ class StarterOrders
         $query = (new Query())->from(['i' => 'craft_item'])->where(['i.active' => 1, 'i.kind' => 'material', 'i.storage_kind' => 'none'])
             ->andWhere(['not exists', (new Query())->from('craft_station')->where(new Expression('[[item_id]]=[[i.id]]'))])
             ->andWhere(['not exists', (new Query())->from('craft_recipe_tool')->where(new Expression('[[item_id]]=[[i.id]]'))]);
-        if ($this->db->schema->getTableSchema('world_crop_revision')) $query->andWhere(['or', ['>', 'i.gather_quantity', 0],
+        $profileRaw = \common\modules\world\models\domain\EconomyRuntime::rawCodes($this->db);
+        if ($profileRaw) $query->andWhere(['i.code' => $profileRaw]);
+        elseif ($this->db->schema->getTableSchema('world_crop_revision')) $query->andWhere(['or', ['>', 'i.gather_quantity', 0],
             ['exists', (new Query())->from('world_crop_revision')->where(['status' => 'published'])->andWhere(new Expression('[[yield_item_id]]=[[i.id]]'))]]);
         else $query->andWhere(['>', 'i.gather_quantity', 0]);
         if ($search !== '') $query->andWhere(['like', 'i.name', $search]);
@@ -141,6 +146,10 @@ class StarterOrders
                         ->innerJoin(['m' => 'world_membership'], '[[m.id]]=[[p.membership_id]]')
                         ->where(['g.id' => $incomeNode, 'g.status' => 'active', 'g.owner_user_id' => $user, 'g.parent_id' => $site['id'],
                             'm.user_id' => $user, 'm.starter_site_id' => $site['id']])->exists($this->db);
+                    if (!$garden && $this->db->schema->getTableSchema('world_build')) $garden = (new Query())->from(['g' => 'world_node'])
+                        ->innerJoin(['c' => 'world_node_closure'], 'c.descendant_id=g.id')->innerJoin(['b' => 'world_build'], 'b.node_id=g.id')
+                        ->where(['g.id' => $incomeNode, 'g.plot_kind' => 'garden', 'g.status' => 'active', 'g.owner_user_id' => $user,
+                            'c.ancestor_id' => $site['id'], 'b.status' => 'completed'])->exists($this->db);
                     $crop = (new Query())->from('world_crop_revision')->where(['yield_item_id' => $order['item_id'], 'status' => ['published', 'superseded', 'withdrawn']])->exists($this->db);
                     if (!$garden || !$crop) throw new GameError('GARDEN_INCOME_UNAVAILABLE', 'Доход от урожая можно направить в казну своего огорода на этой стоянке.', 403);
                 }
@@ -195,6 +204,9 @@ class StarterOrders
                 $id = (int)$p['order']['id']; $this->close($p['order'], 'cancelled', $operation);
             } else {
                 $order = $p['order']; $id = (int)$order['id']; $site = (int)$p['site']['id'];
+                $revision = \common\modules\world\models\domain\EconomyRuntime::current($this->db);
+                if ($revision && $payload['quantity'] > $revision['profile']['limits']['sales_daily']['same_item_per_operation']) throw new GameError('SALE_QUANTITY_LIMIT', 'Сдавайте не больше 10 одинаковых предметов за операцию.', 422);
+                \common\modules\world\models\domain\EconomyQuota::consume($this->db, $user, 'sales_daily', 1, $operation, $terms['earned']);
                 if ($terms['income_node_id'] === $site) (new StarterIncomePolicy($this->db))->initialize($site, $payload['node_id'], (int)$order['starter_history_id'], $operation, $id);
                 $store = new CraftStorage($this->db); $store->operationId = $operation;
                 $storages[] = (new CanonicalInventory($store))->deliverOrder($user, $payload['inventory_id'], (int)$order['item_id'], $payload['quantity']);
@@ -223,7 +235,7 @@ class StarterOrders
         if (!$order || $order['status'] !== 'open') return;
         if ((int)$order['expires_at'] > time()) throw new \RuntimeException('Order expiry job is early.');
         $operation = bin2hex(random_bytes(16));
-        $this->db->createCommand()->insert('game_operation', ['id' => $operation, 'user_id' => null, 'type' => 'economy.order.expire', 'created_at' => time()])->execute();
+        $this->db->createCommand()->insert('game_operation', ['id' => $operation, 'user_id' => null, 'type' => 'economy.order.expire', 'created_at' => time()] + \common\modules\world\models\domain\EconomyRuntime::operationContext($this->db, ['node_id' => (int)$order['node_id']]))->execute();
         $this->close($order, 'expired', $operation);
         (new CommandBus($this->db, $this->flags))->emit($operation, null, 'economy.order.expire', ['order_id' => (int)$order['id'], 'node_id' => (int)$order['node_id']]);
     }

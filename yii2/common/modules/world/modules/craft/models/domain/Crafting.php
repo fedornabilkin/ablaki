@@ -82,6 +82,7 @@ class Crafting
             if ($this->s->isCanonical()) $this->s->lock('world_registry',['id'=>1]);
             $old=$this->one('craft_command',['user_id'=>$user,'request_key'=>$key]);
             if($old) { if(!hash_equals($old['fingerprint'],$fingerprint))throw new ConflictHttpException('Этот ключ уже использован для другой команды.'); return json_decode($old['result'],true)+['replayed'=>true]; }
+            \common\modules\world\models\domain\EconomyRuntime::requireAccess($this->s->db, $user);
             $this->s->operationId = null; $this->s->protectedInstances = [];
             StorageMaintenance::writable($this->s->db);
             $inventory=new CraftInventory($this->s);$inventory->synchronize($user);
@@ -134,6 +135,13 @@ class Crafting
     {
         if ($qty < 1 || $qty > 100) throw new UnprocessableEntityHttpException('Количество должно быть от 1 до 100.');
         $recipe=$this->one('craft_recipe',['id'=>$id,'active'=>1]); if(!$recipe)throw new ConflictHttpException('Рецепт недоступен.');
+        $revision = \common\modules\world\models\domain\EconomyRuntime::current($this->s->db);
+        $context = $revision['profile']['recipes'][trim($recipe['code'])]['context'] ?? null;
+        if ($context !== null) {
+            $place = $this->s->workspaceNodeId ? (new Query())->from(['n' => 'world_node'])->innerJoin(['t' => 'world_template'], 't.id=n.template_id')
+                ->where(['n.id' => $this->s->workspaceNodeId, 'n.owner_user_id' => $user, 'n.status' => 'active', 't.code' => $context])->exists($this->s->db) : false;
+            if (!$place) throw new \common\modules\world\support\GameError('CRAFT_CONTEXT_REQUIRED', 'Выберите подходящий объект для приготовления: ' . $context, 409);
+        }
         foreach (['output_quantity'=>[1,1000],'cost_credits'=>[0,1000000],'experience'=>[0,1000],'min_level'=>[1,100]] as $field=>$bounds) {
             if ((int)$recipe[$field]<$bounds[0]||(int)$recipe[$field]>$bounds[1]) throw new ConflictHttpException('Рецепт требует проверки администратором.');
         }
@@ -205,8 +213,10 @@ class Crafting
             if ($flags->capabilities()['world_write']) {
                 if (!$this->s->operationId) {
                     $this->s->operationId = bin2hex(random_bytes(16));
-                    $this->s->db->createCommand()->insert('game_operation', ['id' => $this->s->operationId, 'user_id' => $user, 'type' => 'craft.completed', 'created_at' => time()])->execute();
+                    $this->s->db->createCommand()->insert('game_operation', ['id' => $this->s->operationId, 'user_id' => $user, 'type' => 'craft.completed', 'created_at' => time()] + \common\modules\world\models\domain\EconomyRuntime::operationContext($this->s->db, ['node_id' => $this->s->workspaceNodeId]))->execute();
                 }
+                \common\modules\world\models\domain\EconomyQuota::consume($this->s->db, $user, 'crafting_hourly', $qty, $this->s->operationId);
+                \common\modules\world\models\domain\EconomyRuntime::fact($this->s->db, $user, 'crafted:' . trim($recipe['code']), $qty, $this->s->operationId);
                 (new \common\modules\world\support\CommandBus($this->s->db, $flags))->emit($this->s->operationId, $user, 'craft.completed', ['node_id' => $this->s->workspaceNodeId, 'recipe_id' => $id, 'batches' => $qty, 'output' => ['item_id' => (int)$output['id'], 'quantity' => (int)$recipe['output_quantity'] * $qty]]);
             }
         }
@@ -233,7 +243,7 @@ class Crafting
         $skills=array_map(static function($r){$xp=(int)$r['experience'];return ['category_id'=>(int)$r['category_id'],'experience'=>$xp,'level'=>1+intdiv($xp,100)];},$s->rows('craft_skill',['user_id'=>$user]));
         $inventory=[]; foreach($s->quantities($user) as $id=>$qty)if($qty>0)$inventory[]=['item_id'=>$id,'quantity'=>$qty];
         $storage=(new CraftInventory($s))->state($user);
-        $today=(new \DateTimeImmutable('today',new \DateTimeZone('Europe/Moscow')))->getTimestamp();
+        $today=(new \DateTimeImmutable('@'.time()))->setTimezone(new \DateTimeZone('Europe/Moscow'))->setTime(0,0)->getTimestamp();
         $settings=['charge_credits'=>(new CraftSettings($s))->chargeCredits(),'gather_available_at'=>$today+86400];
         return $settings+$storage+['items'=>$items,'categories'=>$categories,'recipes'=>$recipes,'stations'=>$stations,'skills'=>$skills,'inventory'=>$inventory,'credit'=>(float)$person['credit'],'starter_available'=>!$this->one('craft_event',['user_id'=>$user,'action'=>'starter']),'gather_available'=>!(new Query())->from('craft_event')->where(['user_id'=>$user,'action'=>'gather'])->andWhere(['>=','created_at',$today])->exists($s->db)];
     }
