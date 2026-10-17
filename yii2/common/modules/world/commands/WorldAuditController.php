@@ -18,6 +18,13 @@ class WorldAuditController extends \yii\console\Controller
         $this->output($data);
         return $data['reachability']['blocked_targets'] || $data['reachability']['blocked_recipes'] ? 1 : 0;
     }
+    public function actionEconomyScenario(string $scenario = 'first-four-days'): int
+    {
+        $data = \common\modules\world\models\domain\EconomyScenario::report(
+            \common\modules\world\models\domain\EconomyProfile::load(), \common\modules\world\models\domain\EconomyScenario::load(), $scenario);
+        $this->output($data);
+        return $data['status'] === 'completed' ? 0 : 1;
+    }
     public function actionStorage(): int
     {
         return $this->output((new \common\modules\world\modules\craft\models\domain\StorageReconciliation(Yii::$app->db))->report());

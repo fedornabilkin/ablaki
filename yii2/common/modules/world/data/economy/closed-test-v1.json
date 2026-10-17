@@ -3,6 +3,7 @@
   "code": "economy-closed-test-v1",
   "status": "candidate",
   "created_on": "2026-10-16",
+  "updated_on": "2026-10-17",
   "effective_from": null,
   "activation": "explicit_versioned_publication",
   "currency": "Cr",
@@ -169,378 +170,432 @@
       "kind": "station",
       "change": "existing",
       "reference_price_cr": null,
-      "sale_price_cr": null
+      "sale_price_cr": null,
+      "stack_size": 10
     },
     "classic-anvil": {
       "name": "Наковальня",
       "kind": "station",
       "change": "existing",
       "reference_price_cr": null,
-      "sale_price_cr": null
+      "sale_price_cr": null,
+      "stack_size": 10
     },
     "classic-axe": {
       "name": "Топор",
       "kind": "tool",
       "change": "existing",
       "reference_price_cr": null,
-      "sale_price_cr": null
+      "sale_price_cr": null,
+      "stack_size": 10
     },
     "classic-bag": {
       "name": "Сумка",
       "kind": "product",
       "change": "existing",
       "reference_price_cr": null,
-      "sale_price_cr": null
+      "sale_price_cr": null,
+      "stack_size": 100
     },
     "classic-bed": {
       "name": "Кровать",
       "kind": "product",
       "change": "existing",
       "reference_price_cr": null,
-      "sale_price_cr": "80.0000"
+      "sale_price_cr": "80.0000",
+      "stack_size": 100
     },
     "classic-bench": {
       "name": "Верстак",
       "kind": "station",
       "change": "existing",
       "reference_price_cr": null,
-      "sale_price_cr": "75.0000"
+      "sale_price_cr": "75.0000",
+      "stack_size": 10
     },
     "classic-boots": {
       "name": "Кожаные сапоги",
       "kind": "equipment",
       "change": "existing",
       "reference_price_cr": null,
-      "sale_price_cr": null
+      "sale_price_cr": null,
+      "stack_size": 10
     },
     "classic-bottle": {
       "name": "Бутылка",
       "kind": "product",
       "change": "existing",
       "reference_price_cr": null,
-      "sale_price_cr": null
+      "sale_price_cr": null,
+      "stack_size": 100
     },
     "classic-brick": {
       "name": "Кирпич",
       "kind": "material",
       "change": "existing",
       "reference_price_cr": "8.0000",
-      "sale_price_cr": "8.0000"
+      "sale_price_cr": "8.0000",
+      "stack_size": 100
     },
     "classic-campfire": {
       "name": "Костёр",
       "kind": "product",
       "change": "existing",
       "reference_price_cr": null,
-      "sale_price_cr": "45.0000"
+      "sale_price_cr": "45.0000",
+      "stack_size": 100
     },
     "classic-chair": {
       "name": "Стул",
       "kind": "product",
       "change": "existing",
       "reference_price_cr": null,
-      "sale_price_cr": null
+      "sale_price_cr": null,
+      "stack_size": 100
     },
     "classic-chest": {
       "name": "Сундук",
       "kind": "product",
       "change": "existing",
       "reference_price_cr": null,
-      "sale_price_cr": "70.0000"
+      "sale_price_cr": "70.0000",
+      "stack_size": 1
     },
     "classic-clay": {
       "name": "Глина",
       "kind": "material",
       "change": "existing",
       "reference_price_cr": "4.0000",
-      "sale_price_cr": "2.0000"
+      "sale_price_cr": "2.0000",
+      "stack_size": 100
     },
     "classic-cloth": {
       "name": "Ткань",
       "kind": "material",
       "change": "existing",
       "reference_price_cr": null,
-      "sale_price_cr": null
+      "sale_price_cr": null,
+      "stack_size": 100
     },
     "classic-coal": {
       "name": "Уголь",
       "kind": "material",
       "change": "existing",
       "reference_price_cr": "6.0000",
-      "sale_price_cr": "3.0000"
+      "sale_price_cr": "3.0000",
+      "stack_size": 100
     },
     "classic-door": {
       "name": "Дверь",
       "kind": "product",
       "change": "existing",
       "reference_price_cr": null,
-      "sale_price_cr": null
+      "sale_price_cr": null,
+      "stack_size": 100
     },
     "classic-extract": {
       "name": "Травяной экстракт",
       "kind": "material",
       "change": "existing",
       "reference_price_cr": null,
-      "sale_price_cr": null
+      "sale_price_cr": null,
+      "stack_size": 100
     },
     "classic-fibre": {
       "name": "Волокно",
       "kind": "material",
       "change": "existing",
       "reference_price_cr": "3.0000",
-      "sale_price_cr": "1.5000"
+      "sale_price_cr": "1.5000",
+      "stack_size": 100
     },
     "classic-furnace": {
       "name": "Плавильня",
       "kind": "station",
       "change": "existing",
       "reference_price_cr": null,
-      "sale_price_cr": "150.0000"
+      "sale_price_cr": "150.0000",
+      "stack_size": 10
     },
     "classic-glass": {
       "name": "Стекло",
       "kind": "material",
       "change": "existing",
       "reference_price_cr": "10.0000",
-      "sale_price_cr": "10.0000"
+      "sale_price_cr": "10.0000",
+      "stack_size": 100
     },
     "classic-hammer": {
       "name": "Каменный молоток",
       "kind": "tool",
       "change": "existing",
       "reference_price_cr": null,
-      "sale_price_cr": "15.0000"
+      "sale_price_cr": "15.0000",
+      "stack_size": 10
     },
     "classic-helmet": {
       "name": "Железный шлем",
       "kind": "equipment",
       "change": "existing",
       "reference_price_cr": null,
-      "sale_price_cr": null
+      "sale_price_cr": null,
+      "stack_size": 10
     },
     "classic-herb": {
       "name": "Лечебная трава",
       "kind": "material",
       "change": "existing",
       "reference_price_cr": "5.0000",
-      "sale_price_cr": "2.5000"
+      "sale_price_cr": "2.5000",
+      "stack_size": 100
     },
     "classic-hide": {
       "name": "Шкура",
       "kind": "material",
       "change": "existing",
       "reference_price_cr": "10.0000",
-      "sale_price_cr": "6.0000"
+      "sale_price_cr": "6.0000",
+      "stack_size": 100
     },
     "classic-ingot": {
       "name": "Железный слиток",
       "kind": "material",
       "change": "existing",
       "reference_price_cr": "24.0000",
-      "sale_price_cr": "24.0000"
+      "sale_price_cr": "24.0000",
+      "stack_size": 100
     },
     "classic-ink": {
       "name": "Чернила",
       "kind": "material",
       "change": "existing",
       "reference_price_cr": null,
-      "sale_price_cr": null
+      "sale_price_cr": null,
+      "stack_size": 100
     },
     "classic-ladder": {
       "name": "Лестница",
       "kind": "product",
       "change": "existing",
       "reference_price_cr": null,
-      "sale_price_cr": null
+      "sale_price_cr": null,
+      "stack_size": 100
     },
     "classic-lantern": {
       "name": "Фонарь",
       "kind": "product",
       "change": "existing",
       "reference_price_cr": null,
-      "sale_price_cr": null
+      "sale_price_cr": null,
+      "stack_size": 100
     },
     "classic-leather": {
       "name": "Кожа",
       "kind": "material",
       "change": "existing",
       "reference_price_cr": "15.0000",
-      "sale_price_cr": "15.0000"
+      "sale_price_cr": "15.0000",
+      "stack_size": 100
     },
     "classic-log": {
       "name": "Бревно",
       "kind": "material",
       "change": "existing",
       "reference_price_cr": "4.0000",
-      "sale_price_cr": "2.0000"
+      "sale_price_cr": "2.0000",
+      "stack_size": 100
     },
     "classic-manual": {
       "name": "Учебник ремесленника",
       "kind": "consumable",
       "change": "existing",
       "reference_price_cr": null,
-      "sale_price_cr": null
+      "sale_price_cr": null,
+      "stack_size": 100
     },
     "classic-nails": {
       "name": "Гвозди",
       "kind": "material",
       "change": "existing",
       "reference_price_cr": "4.0000",
-      "sale_price_cr": "4.0000"
+      "sale_price_cr": "4.0000",
+      "stack_size": 100
     },
     "classic-ore": {
       "name": "Железная руда",
       "kind": "material",
       "change": "existing",
       "reference_price_cr": "8.0000",
-      "sale_price_cr": "4.0000"
+      "sale_price_cr": "4.0000",
+      "stack_size": 100
     },
     "classic-paper": {
       "name": "Бумага",
       "kind": "material",
       "change": "existing",
       "reference_price_cr": null,
-      "sale_price_cr": null
+      "sale_price_cr": null,
+      "stack_size": 100
     },
     "classic-pickaxe": {
       "name": "Кирка",
       "kind": "tool",
       "change": "existing",
       "reference_price_cr": null,
-      "sale_price_cr": null
+      "sale_price_cr": null,
+      "stack_size": 10
     },
     "classic-plank": {
       "name": "Доска",
       "kind": "material",
       "change": "existing",
       "reference_price_cr": "3.0000",
-      "sale_price_cr": "1.5000"
+      "sale_price_cr": "1.5000",
+      "stack_size": 100
     },
     "classic-potion": {
       "name": "Настой мастерства",
       "kind": "consumable",
       "change": "existing",
       "reference_price_cr": null,
-      "sale_price_cr": null
+      "sale_price_cr": null,
+      "stack_size": 100
     },
     "classic-rope": {
       "name": "Верёвка",
       "kind": "material",
       "change": "existing",
       "reference_price_cr": "8.0000",
-      "sale_price_cr": "8.0000"
+      "sale_price_cr": "8.0000",
+      "stack_size": 100
     },
     "classic-sand": {
       "name": "Песок",
       "kind": "material",
       "change": "existing",
       "reference_price_cr": "3.0000",
-      "sale_price_cr": "1.5000"
+      "sale_price_cr": "1.5000",
+      "stack_size": 100
     },
     "classic-saw": {
       "name": "Пила",
       "kind": "tool",
       "change": "existing",
       "reference_price_cr": null,
-      "sale_price_cr": null
+      "sale_price_cr": null,
+      "stack_size": 10
     },
     "classic-shield": {
       "name": "Деревянный щит",
       "kind": "equipment",
       "change": "existing",
       "reference_price_cr": null,
-      "sale_price_cr": null
+      "sale_price_cr": null,
+      "stack_size": 10
     },
     "classic-space-elixir": {
       "name": "Эликсир пространства",
       "kind": "consumable",
       "change": "existing",
       "reference_price_cr": null,
-      "sale_price_cr": null
+      "sale_price_cr": null,
+      "stack_size": 100
     },
     "classic-stick": {
       "name": "Палка",
       "kind": "material",
       "change": "existing",
       "reference_price_cr": "1.0000",
-      "sale_price_cr": "0.5000"
+      "sale_price_cr": "0.5000",
+      "stack_size": 100
     },
     "classic-stone": {
       "name": "Камень",
       "kind": "material",
       "change": "existing",
       "reference_price_cr": "3.0000",
-      "sale_price_cr": "1.5000"
+      "sale_price_cr": "1.5000",
+      "stack_size": 100
     },
     "classic-sword": {
       "name": "Железный меч",
       "kind": "equipment",
       "change": "existing",
       "reference_price_cr": null,
-      "sale_price_cr": null
+      "sale_price_cr": null,
+      "stack_size": 10
     },
     "classic-table": {
       "name": "Стол",
       "kind": "product",
       "change": "existing",
       "reference_price_cr": null,
-      "sale_price_cr": null
+      "sale_price_cr": null,
+      "stack_size": 100
     },
     "classic-water": {
       "name": "Вода",
       "kind": "material",
       "change": "existing",
       "reference_price_cr": "2.0000",
-      "sale_price_cr": "1.0000"
+      "sale_price_cr": "1.0000",
+      "stack_size": 100
     },
     "world-carrot": {
       "name": "Морковь",
       "kind": "material",
       "change": "existing",
       "reference_price_cr": "5.0000",
-      "sale_price_cr": "2.5000"
+      "sale_price_cr": "2.5000",
+      "stack_size": 100
     },
     "world-carrot-seed": {
       "name": "Семена моркови",
       "kind": "material",
       "change": "existing",
       "reference_price_cr": "4.0000",
-      "sale_price_cr": "2.0000"
+      "sale_price_cr": "2.0000",
+      "stack_size": 100
     },
     "world-explorer-elixir": {
       "name": "Эликсир исследователя",
       "kind": "consumable",
       "change": "existing",
       "reference_price_cr": null,
-      "sale_price_cr": "35.0000"
+      "sale_price_cr": "35.0000",
+      "stack_size": 100
     },
     "world-magic-herb": {
       "name": "Волшебные травы",
       "kind": "material",
       "change": "existing",
       "reference_price_cr": null,
-      "sale_price_cr": null
+      "sale_price_cr": null,
+      "stack_size": 100
     },
     "world-shovel": {
       "name": "Огородная лопата",
       "kind": "tool",
       "change": "existing",
       "reference_price_cr": null,
-      "sale_price_cr": "20.0000"
+      "sale_price_cr": "20.0000",
+      "stack_size": 10
     },
     "world-starter-shelter": {
       "name": "Походный шалаш",
       "kind": "equipment",
       "change": "existing",
       "reference_price_cr": null,
-      "sale_price_cr": null
+      "sale_price_cr": null,
+      "stack_size": 1
     },
     "world-stone-pickaxe": {
       "name": "Каменная кирка",
       "kind": "tool",
       "change": "new",
       "reference_price_cr": null,
-      "sale_price_cr": null
+      "sale_price_cr": null,
+      "stack_size": 10
     },
     "world-cooked-carrot": {
       "name": "Печёная морковь",
@@ -548,7 +603,8 @@
       "change": "new",
       "reference_price_cr": null,
       "sale_price_cr": "8.0000",
-      "restore_health": 15
+      "restore_health": 15,
+      "stack_size": 100
     },
     "world-vegetable-broth": {
       "name": "Овощной отвар",
@@ -556,7 +612,8 @@
       "change": "new",
       "reference_price_cr": null,
       "sale_price_cr": "18.0000",
-      "restore_health": 30
+      "restore_health": 30,
+      "stack_size": 100
     },
     "world-travel-ration": {
       "name": "Походный паёк",
@@ -564,7 +621,8 @@
       "change": "new",
       "reference_price_cr": null,
       "sale_price_cr": "12.0000",
-      "restore_health": 20
+      "restore_health": 20,
+      "stack_size": 100
     }
   },
   "objects": {
@@ -1843,7 +1901,8 @@
       "items": {
         "world-explorer-elixir": 1
       },
-      "credit_source": "reserved_existing_settlement_budget"
+      "credit_source": "reserved_existing_settlement_budget",
+      "credit_destination": "existing_starter_site_treasury"
     },
     "day-2": {
       "facts": [
@@ -1864,7 +1923,8 @@
       "items": {
         "classic-ingot": 1
       },
-      "credit_source": "reserved_existing_settlement_budget"
+      "credit_source": "reserved_existing_settlement_budget",
+      "credit_destination": "existing_starter_site_treasury"
     }
   },
   "bootstrap_targets": [

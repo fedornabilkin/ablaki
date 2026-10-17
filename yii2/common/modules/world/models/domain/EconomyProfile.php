@@ -71,6 +71,7 @@ final class EconomyProfile
         EconomyOperatingCosts::treasury($costs['treasury_example'], 0);
         $items = $data['items'];
         foreach ($items as $code => $row) {
+            if (!isset($row['stack_size']) || !is_int($row['stack_size']) || $row['stack_size'] < 1 || $row['stack_size'] > 10000) throw new \InvalidArgumentException('Invalid stack size: ' . $code);
             foreach (['reference_price_cr', 'sale_price_cr'] as $field) {
                 if (!array_key_exists($field, $row)) throw new \InvalidArgumentException('Missing price declaration: ' . $code);
             }
@@ -120,7 +121,7 @@ final class EconomyProfile
         }
         foreach ($data['goals'] as $code => $row) {
             self::quantities($row['items'], $items, $code);
-            if ($row['credit_source'] !== 'reserved_existing_settlement_budget') throw new \InvalidArgumentException('Goal rewards need an existing funded budget.');
+            if ($row['credit_source'] !== 'reserved_existing_settlement_budget' || $row['credit_destination'] !== 'existing_starter_site_treasury') throw new \InvalidArgumentException('Goal rewards need an existing funded budget and explicit treasury destination.');
         }
         $map = $data['map'];
         if ($map['starter_open_cells'] !== 9 || $map['max_cells'] !== 25 || $map['bounds'] !== [-2, 2]

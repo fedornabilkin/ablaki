@@ -7,6 +7,7 @@ Yii::setAlias('@common', dirname(__DIR__, 2) . '/common');
 
 use common\modules\world\models\domain\EconomyProfile;
 use common\modules\world\models\domain\EconomyOperatingCosts;
+use common\modules\world\models\domain\EconomyScenario;
 use common\modules\world\modules\craft\models\domain\EquipmentExposure;
 
 function profileCheck(bool $condition, string $message): void
@@ -144,6 +145,82 @@ rejectsProfile($broken, 'cycle fee and crop fee cannot diverge');
 $broken = $profile; $broken['operating_costs']['treasury_example']['funding'] = 'unlimited';
 rejectsProfile($broken, 'treasury example cannot claim unfunded recurring income');
 
+$routes = EconomyScenario::load(); $routesBefore = serialize($routes);
+$firstDay = EconomyScenario::report($profile, $routes, 'first-day');
+$twoDays = EconomyScenario::report($profile, $routes, 'first-two-days');
+$fourDays = EconomyScenario::report($profile, $routes, 'first-four-days');
+profileCheck($firstDay['status'] === 'completed' && $firstDay['final']['claimed_goals'] === ['day-1'], 'day-one route completes its goal before further progression');
+profileCheck($firstDay['final']['wallet_cr'] === '1.8000' && $firstDay['final']['budgets']['starter-site']['available_cr'] === '27.0000'
+    && $firstDay['final']['budgets']['starter-site']['reserved_parent_cr'] === '9.2000', 'day one separates wallet available object budget and unspendable tax');
+profileCheck($firstDay['final']['explored_cells'] === 3 && $firstDay['final']['stock']['world-explorer-elixir'] === 2, 'three real free discoveries preserve starter and reward elixirs');
+$mapQuote = \common\modules\world\models\domain\WorldMapCells::purchasePricing(['base_price' => '4.0000', 'bulk_minimum' => 3, 'discount_bps' => 500],
+    [['x' => 1, 'y' => 0], ['x' => 0, 'y' => 1], ['x' => -1, 'y' => 0]]);
+profileCheck($mapQuote['total'] === '11.4000', 'purchasing three discovered cells would be a separate exact discounted fee');
+profileCheck($twoDays['status'] === 'blocked' && $twoDays['failure']['input']['code'] === 'forge'
+    && $twoDays['failure']['reason'] === 'INSUFFICIENT_FUNDS|need 150.0000, available 71.8000 at starter-site', 'two-day reference route exposes the funded cash shortfall before forge construction');
+profileCheck($twoDays['failure']['requirements']['shortfall_cr'] === '78.2000'
+    && $twoDays['failure']['requirements']['missing_materials'] === ['classic-plank' => 9, 'classic-stone' => 10], 'blocked build reports material deficits alongside the cash shortfall');
+profileCheck($twoDays['final']['claimed_goals'] === ['day-1'] && !isset($twoDays['final']['objects']['forge'])
+    && $twoDays['final']['municipal_reserved_cr'] === '343.0000', 'blocked route does not spend the future hundred-credit reward');
+profileCheck($fourDays['status'] === 'completed' && $fourDays['final']['claimed_goals'] === ['day-1', 'day-2']
+    && $fourDays['final']['stock']['classic-ingot'] === 2, 'unchanged profile completes the reference chain on day four with one crafted and one rewarded ingot');
+profileCheck($fourDays['final']['wallet_cr'] === '1.8000' && $fourDays['final']['budgets']['starter-site']['available_cr'] === '90.1000'
+    && $fourDays['final']['budgets']['garden']['available_cr'] === '0.5000', 'reward collection preserves account destinations and does not refill the wallet');
+profileCheck(array_values($fourDays['final']['extraction']) === [20, 20, 20, 13], 'four-day route respects twenty extraction batches per Moscow day');
+profileCheck($fourDays['final']['peak_backpack_slots'] === 16 && $fourDays['final']['stations'] === ['classic-bench' => 99, 'classic-furnace' => 99]
+    && min($fourDays['final']['tools']['world-stone-pickaxe']) === 52, 'route accounts for stacks placement and actual tool station wear');
+profileCheck($fourDays['final']['money_conserved'] && $fourDays['initial_total_cr'] === '810.0000'
+    && $fourDays['final']['money_total_with_sinks_cr'] === '810.0000', 'all cash flows conserve personal and pre-funded municipal money');
+profileCheck($fourDays['final']['remaining_orders'] === ['classic-stone' => 32, 'classic-coal' => 22, 'world-carrot' => 16]
+    && $fourDays['final']['municipal_reserved_cr'] === '154.0000', 'order quantities and remaining monetary reserves exhaust together');
+profileCheck(serialize($routes) === $routesBefore && EconomyScenario::report($profile, $routes, 'first-four-days') === $fourDays, 'scenario is deterministic and never changes input configuration');
+profileCheck(!array_filter($fourDays['flows'], static function (array $flow): bool { return $flow['to'] === 'wallet'; }), 'route does not rely on later personal transfers');
+
+function blockedRoute(array $profile, array $routes, string $reason, string $message): void
+{
+    $result = EconomyScenario::report($profile, $routes, 'first-day');
+    profileCheck($result['status'] === 'blocked' && strpos($result['failure']['reason'], $reason . '|') === 0, $message);
+}
+$badRoutes = $routes; $badRoutes['municipal_budget_cr'] = '559.9999';
+blockedRoute($profile, $badRoutes, 'INSUFFICIENT_MUNICIPAL_RESERVE', 'municipal setup cannot publish unfunded orders or rewards');
+$badRoutes = $routes; $badRoutes['orders']['classic-coal']['quantity'] = 1;
+blockedRoute($profile, $badRoutes, 'ORDER_QUANTITY_LIMIT', 'exhausted finite demand stops sales despite nominal item prices');
+$badRoutes = $routes; $badRoutes['order_lifetime_seconds'] = 1;
+blockedRoute($profile, $badRoutes, 'ORDER_EXPIRED', 'expired orders cannot finance later progress');
+$badProfile = $profile; $badProfile['limits']['extraction_daily']['maximum'] = 19;
+blockedRoute($badProfile, $routes, 'EXTRACTION_DAILY_LIMIT', 'one fewer extraction batch blocks the reference day-one route');
+$badProfile = $profile; $badProfile['limits']['sales_daily']['gross_cr'] = '40.0000';
+blockedRoute($badProfile, $routes, 'SALES_DAILY_LIMIT', 'sales share the daily gross cap across orders');
+$badProfile = $profile; $badProfile['items']['classic-coal']['stack_size'] = 1;
+profileCheck(EconomyScenario::report($badProfile, $routes, 'first-day')['final']['peak_backpack_slots'] === 20, 'twenty slots remain usable at the exact full-capacity boundary');
+$badProfile['storage']['backpack_slots'] = 19;
+blockedRoute($badProfile, $routes, 'BACKPACK_FULL', 'source results must fit actual stack capacities');
+$badRoutes = $routes; $badRoutes['scenarios']['first-day'][] = ['action' => 'goal', 'code' => 'day-1'];
+blockedRoute($profile, $badRoutes, 'GOAL_ALREADY_CLAIMED', 'milestone reward cannot be repeated');
+$badRoutes = $routes; $badRoutes['scenarios']['first-day'][] = ['action' => 'goal', 'code' => 'day-2'];
+blockedRoute($profile, $badRoutes, 'GOAL_FACT_REQUIRED', 'future goal cannot finance its own prerequisites');
+$badRoutes = $routes; $badRoutes['scenarios']['first-day'][] = ['action' => 'daily'];
+blockedRoute($profile, $badRoutes, 'DAILY_ALREADY_CLAIMED', 'daily supply cannot be repeated in one Moscow day');
+$badRoutes = $routes; $badRoutes['scenarios']['first-day'][] = ['action' => 'craft', 'code' => 'classic-plank', 'quantity' => 31];
+blockedRoute($profile, $badRoutes, 'CRAFT_HOURLY_LIMIT', 'one request for thirty-one batches cannot bypass the hourly limit');
+$badRoutes = $routes; $badRoutes['common_steps'][1]['quantity'] = 5;
+blockedRoute($profile, $badRoutes, 'MATERIAL_REQUIRED', 'bootstrap crafting cannot use more logs than the starting stock');
+$badRoutes = $routes; $badRoutes['scenarios']['first-day'][] = ['action' => 'explore', 'code' => 'forest-plot', 'cells' => [[1, 0]]];
+blockedRoute($profile, $badRoutes, 'MAP_CELL_EXPLORED', 'repeated discovery is not a new goal fact');
+$badRoutes = $routes; $badRoutes['orders']['classic-brick'] = ['quantity' => 1, 'unit_price_cr' => $profile['items']['classic-brick']['sale_price_cr']];
+try { EconomyScenario::report($profile, $badRoutes, 'first-day'); throw new RuntimeException('Expected raw-order rejection.'); }
+catch (InvalidArgumentException $exception) { profileCheck(true, 'municipal raw orders cannot become an implicit shop for crafted products'); }
+$badRoutes = $routes; $badRoutes['municipal_budget_cr'] = 560.0;
+try { EconomyScenario::report($profile, $badRoutes, 'first-day'); throw new RuntimeException('Expected exact-money rejection.'); }
+catch (InvalidArgumentException $exception) { profileCheck(true, 'scenario setup rejects floating point funding'); }
+$badRoutes = $routes; $badRoutes['starts_at'] = 'tomorrow';
+try { EconomyScenario::report($profile, $badRoutes, 'first-day'); throw new RuntimeException('Expected fixed-date rejection.'); }
+catch (InvalidArgumentException $exception) { profileCheck(true, 'scenario date cannot depend on the current computer clock'); }
+$badProfile = $profile; $badProfile['items']['classic-log']['stack_size'] = 0;
+rejectsProfile($badProfile, 'zero-size inventory stacks are rejected');
+$badProfile = $profile; $badProfile['goals']['day-1']['credit_destination'] = 'mint_wallet';
+rejectsProfile($badProfile, 'milestone destination cannot bypass the funded treasury route');
+
 class EconomyAuditFixture extends \common\modules\world\commands\WorldAuditController
 {
     public $captured = '';
@@ -154,4 +231,10 @@ $app = new \yii\console\Application(['id' => 'economy-profile-test', 'basePath' 
 $controller = new EconomyAuditFixture('world-audit', $app);
 profileCheck($controller->actionEconomyProfile() === 0, 'CLI succeeds without a database');
 profileCheck(json_decode($controller->captured, true, 64, JSON_THROW_ON_ERROR) === $report, 'CLI emits the exact audited JSON contract');
+$scenarioController = new EconomyAuditFixture('world-audit', $app);
+profileCheck($scenarioController->actionEconomyScenario() === 0
+    && json_decode($scenarioController->captured, true, 64, JSON_THROW_ON_ERROR) === $fourDays, 'scenario CLI executes the complete route without a database');
+$scenarioController->captured = '';
+profileCheck($scenarioController->actionEconomyScenario('first-two-days') === 1
+    && json_decode($scenarioController->captured, true, 64, JSON_THROW_ON_ERROR)['failure'] === $twoDays['failure'], 'scenario CLI returns a failing audit status for the blocked two-day route');
 echo 'Economy profile checks passed.' . PHP_EOL;
