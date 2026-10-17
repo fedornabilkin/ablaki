@@ -23,13 +23,15 @@ class StorageReconciliation
             if ($quantity < 0 || ($quantity > 0 && !$row['item_id'])) { $issue('INVALID_QUANTITY', $id); continue; }
             $storage = (new Query())->from('craft_storage')->where(['id' => $row['storage_id']])->one($this->db);
             if (!$storage || ($quantity > 0 && $storage['status'] !== 'active') || (int)$storage['owner_user_id'] !== (int)$row['user_id']) { $issue('INVALID_STORAGE_OWNER', $id); continue; }
-            if (!in_array($storage['kind'], ['backpack', 'chest', 'placement', 'stockpile', 'recovery', 'construction'], true)) $issue('INVALID_STORAGE_KIND', $id);
+            if (!in_array($storage['kind'], ['backpack', 'chest', 'placement', 'stockpile', 'recovery', 'construction', 'shelter'], true)) $issue('INVALID_STORAGE_KIND', $id);
             if (!$quantity) { if ($row['slot'] !== null) $issue('EMPTY_POSITION', $id); continue; }
             if ((int)$row['slot'] < 1) $issue('INVALID_POSITION', $id);
             $expectedContainer = $storage['kind'] === 'chest' ? (int)$storage['container_inventory_id'] : null;
             if (($row['container_id'] === null ? null : (int)$row['container_id']) !== $expectedContainer) $issue('LEGACY_PROJECTION_MISMATCH', $id);
             $item = (new Query())->from('craft_item')->where(['id' => $row['item_id']])->one($this->db);
             if (!$item) { $issue('MISSING_ITEM', $id); continue; }
+            if ($storage['kind'] === 'shelter' && ($quantity !== 1 || (int)$row['slot'] !== 1 || (int)$storage['capacity'] !== 1
+                || trim((string)$item['code']) !== \common\modules\world\models\domain\ShelterCatalog::CODE)) $issue('INVALID_SHELTER', $id);
             $units = $equipment->units($id);
             if (count($units) !== ($equipment->tracked($item) ? $quantity : 0)) $issue('INSTANCE_QUANTITY_MISMATCH', $id);
             foreach ($units as $unit) if ((int)$unit['item_id'] !== (int)$row['item_id'] || (int)$unit['durability'] < 0 || (int)$unit['durability'] > (int)$unit['max_durability']) $issue('INVALID_INSTANCE', $id);

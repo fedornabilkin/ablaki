@@ -40,6 +40,8 @@ final class EconomyHistory
             $total = (int)(clone $query)->count('*', $db); $items = [];
             $ownedAccounts = $source === 'credits' ? array_map('intval', $this->ownedAccounts($user)->column($db)) : [];
             foreach ($query->orderBy(['created_at' => SORT_DESC, 'id' => SORT_DESC])->offset(($page - 1) * 20)->limit(20)->all($db) as $row) {
+                // Existing PostgreSQL history uses CHAR(50), which PDO returns padded.
+                if ($source === 'transfers' || $source === 'wallet') { $row['type'] = trim((string)$row['type']); $row['comment'] = trim((string)$row['comment']); }
                 $entry = ['id' => $source === 'commands' ? $row['id'] : (int)$row['id'], 'source' => $source, 'operation_id' => $source === 'commands' ? $row['id'] : ($row['operation_id'] ?? null), 'created_at' => (int)$row['created_at'],
                     'kind' => $row[$field], 'classification' => 'action', 'amount_cr' => null, 'quantity' => null, 'balance_before_cr' => null, 'balance_after_cr' => null];
                 if ($source === 'credits') {

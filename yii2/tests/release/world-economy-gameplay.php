@@ -181,6 +181,12 @@ foreach ([9005, 9006] as $id) {
 if (!$db->schema->getTableSchema('persone')->getColumn('rating')) $db->createCommand()->addColumn('persone', 'rating', 'decimal(18,5) NOT NULL DEFAULT 0')->execute();
 if (!$db->schema->getTableSchema('credit_transfer')) $db->createCommand()->createTable('credit_transfer', ['id' => 'pk', 'user_id' => 'integer', 'user_buyer' => 'integer NOT NULL DEFAULT 0', 'amount' => 'integer', 'password' => 'string', 'created_at' => 'integer', 'updated_at' => 'integer'])->execute();
 $db->schema->refresh();
+// Match the deployed legacy PostgreSQL CHAR columns, including padded PDO values.
+if ($db->driverName === 'pgsql') {
+    $db->createCommand('ALTER TABLE history_balance ALTER COLUMN type TYPE CHAR(50)')->execute();
+    $db->createCommand('ALTER TABLE history_balance ALTER COLUMN comment TYPE CHAR(255)')->execute();
+    $db->schema->refresh();
+}
 $initialMoney = economyGameplayMoney($db);
 $app->user->switchIdentity(new EconomyGameplayIdentity(9006));
 $transferService = new \common\modules\exchange\service\TransferService(); $transfer = new \common\modules\exchange\models\CreditTransfer(); $transfer->amount = 250; $transferService->create($transfer);
@@ -192,7 +198,7 @@ $received = $journal->listing(9005, 'transfers', 1, '')['items'][0];
 $sent = $journal->listing(9006, 'transfers', 1, '')['items'][0];
 economyCheck($sent['transfer_ids'] === $received['transfer_ids'] && count($sent['transfer_ids']) === 1
     && $sent['transfer_phase'] === 'create' && $received['transfer_phase'] === 'claim'
-    && $received['balance_before_cr'] === '0.0000', 'existing transfer journal correlates sender and recipient without exposing its password');
+    && $received['balance_before_cr'] === '0.0000' && $received['kind'] === 'transfer' && $received['classification'] === 'internal_transfer', 'existing transfer journal normalizes legacy CHAR fields and correlates both parties without exposing its password');
 $app->user->switchIdentity(new EconomyGameplayIdentity(9006));
 $cancelFixture = new \common\modules\exchange\models\CreditTransfer(); $cancelFixture->amount = 1;
 $transferService->create($cancelFixture);
