@@ -273,6 +273,89 @@ $badNight = $routes; $badNight['night_policy']['activated_at'] = 'now';
 try { EconomyScenario::report($profile, $badNight, 'return-with-lodging'); throw new RuntimeException('Expected fixed epoch rejection.'); }
 catch (InvalidArgumentException $exception) { profileCheck(true, 'night analysis cannot depend on the current computer clock'); }
 
+$fiveDays = EconomyScenario::report($profile, $routes, 'first-five-days-with-lodging');
+$missed = EconomyScenario::report($profile, $routes, 'missed-day-resumed-with-lodging');
+$expired = EconomyScenario::report($profile, $routes, 'missed-day-expired-crop');
+$unfunded = EconomyScenario::report($profile, $routes, 'missed-day-unfunded-replant');
+$coalExhausted = EconomyScenario::report($profile, $routes, 'coal-order-exhausted');
+$stoneFallback = EconomyScenario::report($profile, $routes, 'after-coal-order-exhaustion');
+profileCheck($fiveDays['status'] === 'completed' && $fiveDays['final']['at'] === '2026-10-21T10:29:00+03:00'
+    && $fiveDays['final']['claimed_goals'] === ['day-1', 'day-2'] && $fiveDays['final']['stock']['classic-ingot'] === 2, 'night-safe route crafts its first ingot before claiming the second milestone on day five');
+profileCheck(count($fiveDays['night_history']) === 3 && !array_filter($fiveDays['night_history'], static function ($night) { return !$night['protected']; })
+    && $fiveDays['final']['night_health']['severity'] === 0, 'assigned lodging protects every eligible night through the complete early chain');
+profileCheck($fiveDays['final']['placements']['starter-site'] === 10 && count($fiveDays['final']['paid_map_cells']['starter-site']) === 1
+    && $fiveDays['final']['paid_map_cells']['starter-site']['starter-site:2:0']['price'] === '8.0000'
+    && $fiveDays['final']['stock']['world-explorer-elixir'] === 1, 'tenth root placement requires one separately explored and paid ring-two cell');
+profileCheck($fiveDays['final']['wallet_cr'] === '1.8000' && $fiveDays['final']['budgets']['starter-site']['available_cr'] === '112.0000'
+    && $fiveDays['final']['budgets']['garden']['available_cr'] === '6.0000', 'five-day balances include meadow map purchase crop costs and parent reserves');
+profileCheck(array_values($fiveDays['final']['extraction']) === [20, 20, 20, 20, 8] && $fiveDays['final']['peak_backpack_slots'] === 16
+    && $fiveDays['final']['tools']['world-stone-pickaxe'] === [41], 'complete lodging route fits daily work inventory and remaining tool durability');
+profileCheck($fiveDays['final']['remaining_orders'] === ['classic-stone' => 32, 'classic-coal' => 0, 'world-carrot' => 12]
+    && $fiveDays['final']['municipal_reserved_cr'] === '78.0000', 'coal demand is finite and exhausted before the full route ends');
+profileCheck($expired['status'] === 'blocked' && $expired['failure']['reason'] === 'CROP_NOT_READY_OR_EXPIRED|'
+    && $expired['final']['crop']['state'] === 'expired' && !isset($expired['final']['stock']['world-carrot']), 'returning after a missed day cannot harvest the expired crop');
+profileCheck($unfunded['failure']['reason'] === 'INSUFFICIENT_FUNDS|need 2.0000, available 0.3000 at garden'
+    && $unfunded['final']['budgets']['starter-site']['available_cr'] === '88.4000', 'a rich site budget does not automatically pay the garden watering bill');
+profileCheck($unfunded['final']['crop']['state'] === 'growing' && $unfunded['final']['stock']['classic-water'] === 5
+    && $unfunded['final']['money_conserved'], 'failed watering rolls back the clock water and money for that operation');
+profileCheck($missed['status'] === 'completed' && $missed['final']['at'] === '2026-10-22T10:29:00+03:00'
+    && $missed['final']['stock']['classic-ingot'] === 2 && $missed['final']['night_health']['severity'] === 0, 'missed-day route resumes using existing targeted funding and reaches the ingot on day six');
+profileCheck($missed['final']['claimed_daily_dates'] === ['2026-10-17', '2026-10-18', '2026-10-20', '2026-10-21', '2026-10-22']
+    && !isset($missed['final']['extraction']['2026-10-19']) && count($missed['night_history']) === 4, 'offline days settle nights without accumulating supply claims or extraction quotas');
+profileCheck(count($missed['final']['cancelled_crops']) === 1 && $missed['final']['cancelled_crops'][0]['state'] === 'expired'
+    && $missed['final']['stock']['world-carrot-seed'] === 4 && $fiveDays['final']['stock']['world-carrot-seed'] === 6, 'expired crop cancellation refunds neither the lost seed nor the missed seed reproduction');
+$grantFlows = array_values(array_filter($missed['flows'], static function ($flow) { return $flow['kind'] === 'existing_targeted_budget_grant'; }));
+profileCheck(count($grantFlows) === 1 && $grantFlows[0]['from'] === 'starter-site:budget' && $grantFlows[0]['to'] === 'garden:budget'
+    && $grantFlows[0]['amount_cr'] === '4.0000' && $missed['final']['wallet_cr'] === '1.8000'
+    && $missed['final']['budgets']['starter-site']['available_cr'] === '108.0000', 'replant funding is an explicit four-credit budget grant without wallet refill or minting');
+profileCheck($coalExhausted['status'] === 'blocked' && $coalExhausted['failure']['reason'] === 'ORDER_QUANTITY_LIMIT|'
+    && $coalExhausted['final'] === $fiveDays['final'], 'exhausted coal order rejects another delivery without consuming inventory or reserved money');
+profileCheck($stoneFallback['status'] === 'completed' && $stoneFallback['final']['remaining_orders'] === ['classic-stone' => 0, 'classic-coal' => 0, 'world-carrot' => 12]
+    && $stoneFallback['final']['budgets']['starter-site']['available_cr'] === '155.2000'
+    && $stoneFallback['final']['municipal_reserved_cr'] === '30.0000', 'remaining funded stone demand provides one bounded fallback after coal demand ends');
+foreach ([$fiveDays, $missed, $stoneFallback] as $completeRoute) {
+    profileCheck($completeRoute['final']['money_conserved'] && $completeRoute['final']['money_total_with_sinks_cr'] === '810.0000'
+        && !array_filter($completeRoute['flows'], static function ($flow) { return $flow['to'] === 'wallet'; }), $completeRoute['scenario'] . ' conserves all original cash without further personal transfers');
+}
+$badRoutes = $routes;
+$badRoutes['scenarios']['first-day'] = [['action' => 'explore', 'code' => 'starter-site', 'cells' => [[2, 0]]]];
+blockedRoute($profile, $badRoutes, 'EXPLORER_LEVEL_REQUIRED', 'ring-two discovery cannot silently grant an explorer level');
+$badRoutes['scenarios']['first-day'][0]['use_elixir'] = true;
+$badRoutes['scenarios']['first-day'][0]['cells'] = [[2, 0], [2, 1], [2, 2]];
+blockedRoute($profile, $badRoutes, 'MATERIAL_REQUIRED', 'batch discovery consumes one elixir per cell above the actual level');
+profileCheck(EconomyScenario::report($profile, $badRoutes, 'first-day')['final'] === $firstDay['final'], 'insufficient elixirs roll back every discovery in the batch');
+$badRoutes['scenarios']['first-day'][0]['cells'] = [[3, 0]];
+blockedRoute($profile, $badRoutes, 'MAP_OUT_OF_BOUNDS', 'elixirs do not bypass the candidate map boundary');
+$badRoutes['scenarios']['first-day'][0]['cells'] = [[2, 0], [2, 0]];
+blockedRoute($profile, $badRoutes, 'MAP_DUPLICATE_CELL', 'duplicate coordinates cannot buy extra capacity twice');
+$mapRoutes = $routes;
+$mapRoutes['scenarios']['first-day'] = [
+    ['action' => 'explore', 'code' => 'starter-site', 'cells' => [[2, 0]], 'use_elixir' => true],
+    ['action' => 'buy', 'code' => 'starter-site', 'cells' => [[2, 0]]],
+];
+$mapBought = EconomyScenario::report($profile, $mapRoutes, 'first-day');
+profileCheck($mapBought['status'] === 'completed' && $mapBought['final']['budgets']['starter-site']['available_cr'] === '19.0000'
+    && $mapBought['final']['stock']['world-explorer-elixir'] === 1, 'exploration consumes the elixir and a separate purchase consumes exact budget money');
+$mapRoutes['scenarios']['first-day'][] = ['action' => 'buy', 'code' => 'starter-site', 'cells' => [[2, 0]]];
+blockedRoute($profile, $mapRoutes, 'MAP_CELL_NOT_DISCOVERED', 'a purchased right cannot be charged and added a second time');
+$mapRoutes['scenarios']['first-day'] = [['action' => 'buy', 'code' => 'starter-site', 'cells' => [[2, 0]]]];
+blockedRoute($profile, $mapRoutes, 'MAP_CELL_NOT_DISCOVERED', 'closed cells cannot be purchased before exploration');
+$mapRoutes['scenarios']['first-day'] = [['action' => 'buy', 'code' => 'forest-plot', 'cells' => [[1, 0], [0, 1], [-1, 0]]]];
+blockedRoute($profile, $mapRoutes, 'INSUFFICIENT_FUNDS', 'nested map purchase cannot implicitly spend its parent budget');
+$grantRoutes = $routes;
+$grantRoutes['scenarios']['first-day'] = [['action' => 'grant', 'source' => 'starter-site', 'destination' => 'garden', 'amount_cr' => '27.0001']];
+blockedRoute($profile, $grantRoutes, 'INSUFFICIENT_GRANT_BUDGET', 'targeted funding cannot spend the parent-tax reserve or silently use the wallet');
+$grantRoutes['scenarios']['first-day'][0]['amount_cr'] = '0.0000';
+blockedRoute($profile, $grantRoutes, 'INVALID_GRANT_AMOUNT', 'zero targeted funding is rejected');
+$grantRoutes['scenarios']['first-day'][0]['amount_cr'] = '1.0000';
+$grantRoutes['scenarios']['first-day'][0]['source'] = 'garden';
+$grantRoutes['scenarios']['first-day'][0]['destination'] = 'starter-site';
+blockedRoute($profile, $grantRoutes, 'GRANT_RELATION_REQUIRED', 'targeted funding does not invent a reverse withdrawal route');
+$noMap = $routes;
+$noMap['scenarios']['first-five-days-with-lodging'] = array_values(array_filter($routes['scenarios']['first-five-days-with-lodging'], static function ($step) { return $step['action'] !== 'buy'; }));
+$noMapResult = EconomyScenario::report($profile, $noMap, 'first-five-days-with-lodging');
+profileCheck($noMapResult['status'] === 'blocked' && $noMapResult['failure']['reason'] === 'PLACEMENT_FULL|starter-site', 'discovering the tenth root cell without buying it does not create a placement right');
+
 class EconomyAuditFixture extends \common\modules\world\commands\WorldAuditController
 {
     public $captured = '';

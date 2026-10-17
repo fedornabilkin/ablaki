@@ -70,6 +70,27 @@ final class EconomyScenario
         self::need($slots <= $this->profile['storage']['backpack_slots'], 'BACKPACK_FULL', (string)$slots);
         $this->state['peak_slots'] = max($this->state['peak_slots'], $slots);
     }
+    private function placementLimit(string $node): int
+    {
+        $initial = $node === 'starter-site' ? $this->profile['map']['starter_open_cells'] : $this->profile['map']['other_nodes_initial_open'];
+        return $initial + count($this->state['paid_cells'][$node] ?? []);
+    }
+    private function mapCells(array $step): array
+    {
+        self::need(isset($this->state['objects'][$step['code']]), 'MAP_UNAVAILABLE');
+        $cells = $step['cells'] ?? null;
+        if (!is_array($cells) || count($cells) < 1 || count($cells) > 100 || !is_bool($step['use_elixir'] ?? false)) throw new \InvalidArgumentException('Invalid scenario map input.');
+        $result = []; $bounds = $this->profile['map']['bounds'];
+        foreach ($cells as $point) {
+            if (!is_array($point) || count($point) !== 2 || !is_int($point[0] ?? null) || !is_int($point[1] ?? null)) throw new \InvalidArgumentException('Expected integer map coordinates.');
+            self::need($point[0] >= $bounds[0] && $point[0] <= $bounds[1] && $point[1] >= $bounds[0] && $point[1] <= $bounds[1], 'MAP_OUT_OF_BOUNDS');
+            $key = $step['code'] . ':' . $point[0] . ':' . $point[1];
+            self::need(!isset($result[$key]), 'MAP_DUPLICATE_CELL');
+            $result[$key] = ['x' => $point[0], 'y' => $point[1]];
+        }
+        uasort($result, static function ($a, $b) { return [$a['y'], $a['x']] <=> [$b['y'], $b['x']]; });
+        return $result;
+    }
     private function spend(string $node, Money $amount): void
     {
         $gap = $amount->compare($this->available($node)) > 0 ? $amount->subtract($this->available($node)) : self::money('0');
@@ -128,7 +149,7 @@ final class EconomyScenario
             self::need(!isset($this->state['objects'][$code]) && ($parent === 'settlement' || isset($this->state['objects'][$parent])), 'OBJECT_UNAVAILABLE', $code);
             foreach ($row['capability_requirements'] ?? [] as $required) self::need(isset($this->state['objects'][$required]), 'OBJECT_CAPABILITY_REQUIRED', $required);
             if ($parent !== 'settlement') {
-                $limit = $parent === 'starter-site' ? $this->profile['map']['starter_open_cells'] : $this->profile['map']['other_nodes_initial_open'];
+                $limit = $this->placementLimit($parent);
                 self::need(($this->state['placements'][$parent] ?? 0) < $limit, 'PLACEMENT_FULL', $parent);
                 $this->spend($parent, self::money($row['price_cr']));
                 $this->state['placements'][$parent] = ($this->state['placements'][$parent] ?? 0) + 1;
@@ -178,7 +199,7 @@ final class EconomyScenario
             foreach (['mine-stone' => 'stone_mined', 'gather-coal' => 'coal_mined', 'gather-ore' => 'ore_mined'] as $source => $fact) if ($code === $source) $this->state['facts'][$fact] = true;
         } elseif ($action === 'place') {
             $node = $step['node'];
-            self::need(isset($this->state['objects'][$node]) && ($this->state['placements'][$node] ?? 0) < $this->profile['map']['other_nodes_initial_open'], 'PLACEMENT_FULL', $node);
+            self::need(isset($this->state['objects'][$node]) && ($this->state['placements'][$node] ?? 0) < $this->placementLimit($node), 'PLACEMENT_FULL', $node);
             $this->stock([$code => 1], -1); $this->state['placements'][$node] = ($this->state['placements'][$node] ?? 0) + 1;
             if ($this->profile['items'][$code]['kind'] === 'station') {
                 self::need(!isset($this->state['stations'][$code]), 'STATION_ALREADY_PLACED');
@@ -200,18 +221,40 @@ final class EconomyScenario
             self::need($active !== null, 'LODGING_NOT_ASSIGNED');
             $this->state['lodging'][$active]['ended_at'] = $this->state['now'];
         } elseif ($action === 'explore') {
-            self::need(isset($this->state['objects'][$code]), 'MAP_UNAVAILABLE');
-            foreach ($step['cells'] as $point) {
-                self::need(count($point) === 2 && is_int($point[0]) && is_int($point[1]) && MapExploration::requiredLevel($point[0], $point[1]) === 1, 'EXPLORER_LEVEL_REQUIRED');
-                $key = $code . ':' . $point[0] . ':' . $point[1];
-                $initial = $code === 'starter-site' ? max(abs($point[0]), abs($point[1])) <= 1 : $point === [0, 0];
+            $cells = $this->mapCells($step); $elixirs = 0;
+            foreach ($cells as $key => $point) {
+                $level = MapExploration::requiredLevel($point['x'], $point['y']);
+                self::need($level === 1 || ($step['use_elixir'] ?? false), 'EXPLORER_LEVEL_REQUIRED');
+                if ($level > 1) $elixirs++;
+                $initial = $code === 'starter-site' ? max(abs($point['x']), abs($point['y'])) <= 1 : $point === ['x' => 0, 'y' => 0];
                 self::need(!$initial && !isset($this->state['explored'][$key]), 'MAP_CELL_EXPLORED');
                 $this->state['explored'][$key] = true;
             }
+            if ($step['use_elixir'] ?? false) $this->stock([ExplorationCatalog::ELIXIR => count($cells) === 1 ? 1 : $elixirs], -1);
+        } elseif ($action === 'buy') {
+            $cells = $this->mapCells($step);
+            self::need(!($step['use_elixir'] ?? false), 'INVALID_MAP_ACTION');
+            foreach ($cells as $key => $point) self::need(isset($this->state['explored'][$key]) && !isset($this->state['paid_cells'][$code][$key]), 'MAP_CELL_NOT_DISCOVERED');
+            $map = $this->profile['map'];
+            $quote = WorldMapCells::purchasePricing(['base_price' => $map['base_price_cr'], 'bulk_minimum' => $map['bulk_minimum'], 'discount_bps' => $map['discount_bps']], array_values($cells));
+            $this->spend($code, self::money($quote['total']));
+            foreach (array_keys($cells) as $i => $key) $this->state['paid_cells'][$code][$key] = $quote['unit_prices'][$i];
         } elseif ($action === 'daily') {
             self::need(!isset($this->state['daily'][$day]), 'DAILY_ALREADY_CLAIMED');
             $grant = []; foreach ($this->profile['daily']['items'] as $item => $amount) $grant[$item] = max(1, intdiv($amount * $this->efficiency(), 10000));
             $this->stock($grant, 1); $this->state['daily'][$day] = true;
+        } elseif ($action === 'grant') {
+            // Narrow adapter for the existing BudgetGrants route used by this candidate.
+            // It does not make arbitrary owned budgets interchangeable.
+            $source = $step['source']; $target = $step['destination'];
+            self::need($source === 'starter-site' && $target === 'garden' && ($this->state['objects'][$target] ?? null) === $source, 'GRANT_RELATION_REQUIRED');
+            if (!is_string($step['amount_cr'] ?? null)) throw new \InvalidArgumentException('Expected an exact budget grant.');
+            $amount = self::money($step['amount_cr']);
+            self::need(!$amount->isZero() && !$amount->isNegative(), 'INVALID_GRANT_AMOUNT');
+            self::need($this->available($source)->compare($amount) >= 0, 'INSUFFICIENT_GRANT_BUDGET');
+            $this->state['budgets'][$source] = $this->state['budgets'][$source]->subtract($amount);
+            $this->state['budgets'][$target] = $this->state['budgets'][$target]->add($amount);
+            $this->flow($source . ':budget', $target . ':budget', $amount, 'existing_targeted_budget_grant');
         } elseif ($action === 'day') {
             $at = $this->config['start'] + ($quantity - 1) * 86400;
             self::need($at >= $this->state['now'] && $quantity <= 7, 'INVALID_DAY_ADVANCE'); $this->state['now'] = $at;
@@ -224,6 +267,10 @@ final class EconomyScenario
             $this->state['now'] += 120;
             $this->state['crop'] = ['ready_at' => $this->state['now'] + $crop['grow_seconds'], 'water_due_at' => $this->state['now'] + $crop['water_interval_seconds'], 'water_missed' => 0];
             $this->state['facts']['bed_dug'] = true; $this->state['facts']['carrot_sown'] = true;
+        } elseif ($action === 'cancel_crop') {
+            self::need($this->state['crop'] !== null, 'CROP_REQUIRED');
+            $this->state['cancelled_crops'][] = CultivationClock::project($this->state['crop'], $this->profile['crop'], $this->state['now']);
+            $this->state['crop'] = null;
         } elseif ($action === 'water' || $action === 'harvest') {
             self::need($this->state['crop'] !== null, 'CROP_REQUIRED'); $crop = $this->profile['crop'];
             if ($action === 'water' && $this->state['crop']['water_due_at'] !== null) $this->state['now'] = max($this->state['now'], $this->state['crop']['water_due_at']);
@@ -292,7 +339,9 @@ final class EconomyScenario
             'extraction' => $this->state['extraction'], 'sales' => $this->state['sales'], 'crafted_batches' => $this->state['crafted'],
             'remaining_orders' => $this->state['orders'], 'claimed_goals' => array_keys($this->state['goals']), 'explored_cells' => count($this->state['explored']), 'peak_backpack_slots' => $this->state['peak_slots'],
             'night_policy_enabled' => $this->state['night_enabled'], 'night_health' => $this->state['night_enabled'] ? $this->state['health'] + ['work_efficiency_bps' => $this->efficiency()] : null,
-            'lodging_intervals' => $this->state['lodging']];
+            'lodging_intervals' => $this->state['lodging'], 'paid_map_cells' => $this->state['paid_cells'], 'placements' => $this->state['placements'],
+            'claimed_daily_dates' => array_keys($this->state['daily']), 'cancelled_crops' => $this->state['cancelled_crops'],
+            'crop' => $this->state['crop'] === null ? null : CultivationClock::project($this->state['crop'], $this->profile['crop'], $this->state['now'])];
     }
 
     public static function report(array $profile, array $config, string $scenario): array
@@ -333,7 +382,7 @@ final class EconomyScenario
         $self->state = ['now' => $self->config['start'], 'wallet' => $wallet, 'municipal' => $municipal, 'municipal_reserved' => $reserve, 'loss_sink' => self::money('0'), 'craft_fee_sink' => self::money('0'), 'flows' => [], 'step' => 0,
             'stock' => $profile['starter']['items'], 'tools' => [], 'stations' => [], 'objects' => [], 'budgets' => [], 'tax_reserved' => [], 'tax_carry' => [], 'receipts' => [],
             'placements' => [], 'orders' => $orders, 'daily' => [], 'goals' => [], 'crafted' => [], 'craft_times' => [], 'gathered' => [], 'action_counts' => [],
-            'extraction' => [], 'sales' => [], 'explored' => [], 'facts' => ['city_joined' => true], 'crop' => null, 'peak_slots' => 0, 'checkpoints' => [],
+            'extraction' => [], 'sales' => [], 'explored' => [], 'paid_cells' => [], 'cancelled_crops' => [], 'facts' => ['city_joined' => true], 'crop' => null, 'peak_slots' => 0, 'checkpoints' => [],
             'night_enabled' => $nightEnabled, 'health' => $health, 'night_history' => [], 'beds' => [], 'lodging' => []];
         foreach ($profile['starter']['items'] as $code => $quantity) if ($profile['items'][$code]['kind'] === 'tool') $self->state['tools'][$code] = array_fill(0, $quantity, $profile['operating_costs']['equipment_max_durability']);
         $trace = []; $failure = null;
@@ -362,6 +411,7 @@ final class EconomyScenario
                 'one_object_per_code_and_serial_labor_with_heartbeat_at_most_60_seconds', 'tax_reserved_unspendable_remittance_not_simulated',
                 'crop_labor_120_plus_60_seconds_is_a_conservative_allowance', 'backpack_stacks_compacted_after_each_operation',
                 'skills_above_level_one_and_general_repair_routes_require_separate_scenarios', 'night_penalty_affects_daily_and_crop_yield_source_work_matches_current_mining',
-                'constructed_lodging_only_no_equipment_shelter_or_retroactive_assignment', 'single_assignment_covers_whole_night_conservative']];
+                'constructed_lodging_only_no_equipment_shelter_or_retroactive_assignment', 'single_assignment_covers_whole_night_conservative',
+                'map_capacity_counts_rights_without_assigning_each_object_coordinates', 'only_starter_site_to_owned_child_garden_grants_modelled']];
     }
 }
