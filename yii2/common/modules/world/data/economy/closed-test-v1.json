@@ -3,7 +3,7 @@
   "code": "economy-closed-test-v1",
   "status": "candidate",
   "created_on": "2026-10-16",
-  "updated_on": "2026-10-17",
+  "updated_on": "2026-10-19",
   "effective_from": null,
   "activation": "explicit_versioned_publication",
   "currency": "Cr",
@@ -695,7 +695,7 @@
     },
     "starter-shelter": {
       "name": "Шалаш",
-      "price_cr": "60.0000",
+      "price_cr": "30.0000",
       "work_seconds": 60,
       "materials": {
         "classic-plank": 4,
@@ -738,12 +738,12 @@
     },
     "house": {
       "name": "Дом",
-      "price_cr": "40.0000",
+      "price_cr": "70.0000",
       "work_seconds": 7200,
       "materials": {
-        "classic-plank": 4,
-        "classic-stone": 2,
-        "classic-rope": 1
+        "classic-plank": 6,
+        "classic-stone": 3,
+        "classic-rope": 2
       }
     },
     "warehouse": {

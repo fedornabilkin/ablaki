@@ -69,6 +69,8 @@ final class WorldSources
             'workers' => $worker ? 1 : 0, 'produced_quantity' => (int)(new Query())->from('world_source_work')->where(['user_id' => $user, 'node_id' => $node, 'status' => 'completed'])->count('*', $db),
             'pending_quantity' => $work && $work['status'] === 'pending' ? 1 : 0, 'seconds_per_unit' => $definition ? $definition['work_seconds'] : ($choices[0]['work_seconds'] ?? 1),
             'worked_seconds' => $work ? (int)$work['worked_seconds'] : 0, 'action_code' => $work ? $work['action_code'] : null,
+            'work_id' => $work ? (int)$work['id'] : null, 'required_seconds' => $definition ? (int)$definition['work_seconds'] : 0,
+            'live_work' => $worker ? [['accounted_at' => (int)$worker['accounted_at'], 'last_seen_at' => (int)$worker['last_seen_at']]] : [],
             'status' => $work ? $work['status'] : 'idle', 'output_storage_id' => $work ? (int)$work['target_storage_id'] : null, 'actions' => $choices, 'blocked_code' => $work ? $work['blocked_code'] : null,
             'blocked_message' => $work ? $work['blocked_message'] : null, 'quota' => EconomyQuota::state($db, $user, 'extraction_daily'), 'server_time' => time()];
     }

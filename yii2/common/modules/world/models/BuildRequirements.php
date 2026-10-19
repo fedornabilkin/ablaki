@@ -11,19 +11,35 @@ final class BuildRequirements
 {
     public static function availability(int $user, int $parent, NodeTemplate $template): array
     {
+        return self::catalogAvailability($user, $parent, [$template])[(int)$template->id];
+    }
+    /** One inventory plan per catalog, rather than reopening every storage per tile. */
+    public static function catalogAvailability(int $user, int $parent, array $templates): array
+    {
         $store = new CraftStorage(Node::getDb()); $store->workspaceNodeId = $parent;
-        $quantities = []; foreach (BuildMaterials::plan($user, $parent, $template->materials())['materials'] as $material) $quantities[$material['item_id']] = $material['have'];
-        $resolver = new StationResolver($store);
-        $defaults = $template->defaults(); $missing = [];
-        foreach (['material' => $template->materials(), 'tool' => $defaults['build_tools'] ?? [], 'station' => $defaults['build_stations'] ?? []] as $kind => $entries) {
-            foreach ($entries as $code => $quantity) {
-                $item = CraftItem::find()->where(['code' => $code, 'active' => 1])->one();
-                $have = !$item ? 0 : ($kind === 'material' ? ($quantities[$item->id] ?? 0)
-                    : count($resolver->candidates($user, (int)$item->id, $kind === 'station', null, (int)$quantity)));
-                if ($have < $quantity) $missing[] = ($item ? $item->name : $code) . ': ' . $have . ' / ' . $quantity;
-            }
+        $materials = []; $codes = [];
+        foreach ($templates as $template) {
+            foreach ($template->materials() as $code => $quantity) $materials[$code] = max($quantity, $materials[$code] ?? 0);
+            $defaults = $template->defaults();
+            $codes += $template->materials() + ($defaults['build_tools'] ?? []) + ($defaults['build_stations'] ?? []);
         }
-        return ['available' => !$missing, 'unavailable_reason' => $missing ? 'Не хватает: ' . implode(', ', $missing) : ''];
+        $definitions = CraftItem::find()->where(['code' => array_keys($codes), 'active' => 1])->indexBy('code')->all();
+        $quantities = []; foreach (BuildMaterials::plan($user, $parent, $materials)['materials'] as $material) $quantities[$material['item_id']] = $material['have'];
+        $resolver = new StationResolver($store);
+        $result = []; $equipment = [];
+        foreach ($templates as $template) {
+            $defaults = $template->defaults(); $missing = [];
+            foreach (['material' => $template->materials(), 'tool' => $defaults['build_tools'] ?? [], 'station' => $defaults['build_stations'] ?? []] as $kind => $entries) {
+                foreach ($entries as $code => $quantity) {
+                    $item = $definitions[$code] ?? null; $key = $kind . ':' . $code . ':' . $quantity;
+                    if ($item && $kind !== 'material' && !isset($equipment[$key])) $equipment[$key] = count($resolver->candidates($user, (int)$item->id, $kind === 'station', null, (int)$quantity));
+                    $have = !$item ? 0 : ($kind === 'material' ? ($quantities[$item->id] ?? 0) : $equipment[$key]);
+                    if ($have < $quantity) $missing[] = ($item ? $item->name : $code) . ': ' . $have . ' / ' . $quantity;
+                }
+            }
+            $result[(int)$template->id] = ['available' => !$missing, 'unavailable_reason' => $missing ? 'Не хватает: ' . implode(', ', $missing) : ''];
+        }
+        return $result;
     }
     public static function check(int $user, int $parent, NodeTemplate $template): void
     {

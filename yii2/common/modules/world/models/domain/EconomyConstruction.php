@@ -11,7 +11,10 @@ final class EconomyConstruction
 {
     public static function terms(NodeTemplate $template): ?array
     {
-        $revision = EconomyRuntime::current(Node::getDb());
+        return self::catalogTerms($template, EconomyRuntime::current(Node::getDb()));
+    }
+    public static function catalogTerms(NodeTemplate $template, ?array $revision): ?array
+    {
         if (!$revision || !isset($revision['profile']['objects'][$template->code])) return null;
         $price = $revision['profile']['objects'][$template->code]['price_cr'];
         return ['profile_version' => $revision['version'], 'price_cr' => $price,

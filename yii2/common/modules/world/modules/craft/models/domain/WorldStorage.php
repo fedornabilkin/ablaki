@@ -104,6 +104,17 @@ class WorldStorage
             $position = ($cell['y'] - (int)$location['map_origin_y']) * (int)$location['map_width'] + $cell['x'] - (int)$location['map_origin_x'] + 1;
             $slots = array_filter($slots, static function ($slot) use ($position) { return (int)$slot['position'] === $position; });
         }
+        // Inspect only open, empty positions; command previews still repeat the full policy.
+        $open = []; $occupied = [];
+        foreach ((new Query())->select(['x', 'y'])->from('world_map_cell')->where(['parent_id' => $node, 'state' => 'open'])->all($this->db) as $point) $open[$point['x'] . ':' . $point['y']] = true;
+        foreach ((new Query())->select(['position_x', 'position_y', 'footprint_json'])->from('world_node')->where(['parent_id' => $node])->andWhere(['<>', 'status', 'archived'])->all($this->db) as $child)
+            foreach (\common\modules\world\models\domain\WorldMapGeometry::cells($child['footprint_json'], (int)$child['position_x'], (int)$child['position_y']) as $point) $occupied[$point['x'] . ':' . $point['y']] = true;
+        $used = $target ? (new Query())->select('slot')->from('craft_inventory')->where(['storage_id' => $target['id']])->andWhere(['>', 'item_quantity', 0])->column($this->db) : [];
+        $slots = array_filter($slots, static function ($slot) use ($location, $open, $occupied, $used) {
+            $index = (int)$slot['position'] - 1; $width = (int)$location['map_width'];
+            $key = ((int)$location['map_origin_x'] + $index % $width) . ':' . ((int)$location['map_origin_y'] + intdiv($index, $width));
+            return isset($open[$key]) && !isset($occupied[$key]) && !in_array($slot['position'], $used);
+        });
         $items = [];
         foreach ($catalog as $definition) {
             $inventory = array_filter($rows, static function ($row) use ($definition) { return (int)$row['item_id'] === (int)$definition['id']; });

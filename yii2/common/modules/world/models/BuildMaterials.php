@@ -23,8 +23,9 @@ final class BuildMaterials
         $store = new CraftStorage(Node::getDb()); $inventory = new CanonicalInventory($store); $required = []; $items = [];
         $backpack = $inventory->backpack($user);
         if (!$backpack) throw new \common\modules\world\support\GameError('BACKPACK_UNAVAILABLE', 'Сначала вступите в мир, чтобы получить рюкзак.', 422);
+        $definitions = CraftItem::find()->where(['code' => array_keys($materials), 'active' => 1, 'kind' => 'material', 'storage_kind' => 'none'])->indexBy('code')->asArray()->all();
         foreach ($materials as $code => $quantity) {
-            $item = CraftItem::find()->where(['code' => $code, 'active' => 1, 'kind' => 'material', 'storage_kind' => 'none'])->asArray()->one();
+            $item = $definitions[$code] ?? null;
             if (!$item || $quantity < 1 || $quantity > 10000) throw new \common\modules\world\support\GameError('INVALID_MATERIAL', 'Материал строительства недоступен.', 422);
             $required[$item['id']] = $quantity; $items[$item['id']] = $item;
         }
