@@ -10,7 +10,7 @@ class TemplateSearch extends \yii\base\Model
     public function search(array $params, ?int $parentId = null): \yii\data\ActiveDataProvider
     {
         $query = NodeTemplate::find()->andWhere(['not', ['hierarchy_level' => null]]);
-        $provider = new \yii\data\ActiveDataProvider(['query' => $query, 'pagination' => ['pageSize' => 30],
+        $provider = new \yii\data\ActiveDataProvider(['query' => $query, 'pagination' => ['defaultPageSize' => 30, 'pageSizeLimit' => [1, 100]],
             'sort' => ['defaultOrder' => ['id' => SORT_DESC], 'attributes' => ['id', 'name', 'code', 'hierarchy_level', 'build_seconds']]]);
         $this->load($params, isset($params[$this->formName()]) ? $this->formName() : '');
         if (!$this->validate()) { $query->andWhere('0=1'); return $provider; }

@@ -46,7 +46,7 @@ final class EconomyRuntime
     }
     public static function requireAccess(Connection $db, int $user, bool $admin = false): void
     {
-        if (!self::admission($db, $user, $admin)['allowed']) throw new GameError('CLOSED_TEST_ACCESS_REQUIRED', 'Мир открыт для участников закрытого тестирования.', 403);
+        if (!self::admission($db, $user, $admin)['allowed']) throw new GameError('CLOSED_TEST_ACCESS_REQUIRED', 'Мир открыт для участников закрытого тестирования. Можно сообщить на форуме о желании принять участие в тестировании.', 403);
     }
     public static function world(Connection $db): int
     {

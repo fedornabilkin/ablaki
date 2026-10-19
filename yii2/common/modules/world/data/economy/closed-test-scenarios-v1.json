@@ -3655,6 +3655,31 @@
         ]
       },
       {
+        "action": "source",
+        "code": "gather-log",
+        "quantity": 1
+      },
+      {
+        "action": "source",
+        "code": "mine-stone",
+        "quantity": 1
+      },
+      {
+        "action": "source",
+        "code": "gather-fibre",
+        "quantity": 2
+      },
+      {
+        "action": "craft",
+        "code": "classic-plank",
+        "quantity": 1
+      },
+      {
+        "action": "craft",
+        "code": "classic-rope",
+        "quantity": 1
+      },
+      {
         "action": "build",
         "code": "house",
         "parent": "starter-site"

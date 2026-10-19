@@ -28,6 +28,7 @@ final class Mining
         $workers = (new Query())->from('world_mining_worker')->where(['node_id' => $nodeId])->andWhere(['>', 'last_seen_at', $now - 60])->all($db);
         return ['node_id' => $nodeId, 'ready' => $config !== null, 'working' => in_array($user, array_map('intval', array_column($workers, 'user_id')), true),
             'workers' => count($workers), 'produced_quantity' => (int)($state['produced_quantity'] ?? 0), 'pending_quantity' => $state ? max(0, intdiv((int)$state['worked_seconds'], (int)$state['seconds_per_unit']) - (int)$state['produced_quantity']) : 0,
+            'worked_seconds' => (int)($state['worked_seconds'] ?? 0), 'live_work' => array_map(static function ($worker) { return ['accounted_at' => (int)$worker['accounted_at'], 'last_seen_at' => (int)$worker['last_seen_at']]; }, $workers),
             'seconds_per_unit' => (int)($state['seconds_per_unit'] ?? $config['seconds_per_unit'] ?? 60), 'server_time' => $now];
     }
     public static function start(int $nodeId, int $user, string $operation, ?string $action = null, ?int $target = null): array

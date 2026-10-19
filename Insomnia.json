@@ -10692,7 +10692,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/nodes/{{ _.world_node_id }}/placement-options",
       "name": "GET /world/nodes/{id}/placement-options",
-      "description": "Общий каталог станций, мебели и сундуков. Без вещи: quantity=0,requires_crafting=true,input=null. У чужих объектов личные количества и inventory IDs не раскрываются. Для установки нужна свободная открытая ячейка собственного действующего объекта.",
+      "description": "Contract: docs/architecture/simple-world-api.md. Optional x/y restrict the catalog to the selected cell. Open and unoccupied positions are filtered before full placement-policy inspection. Requires-crafting entries have quantity=0,input=null; owned items retain canonical inventory IDs. Preview and transfer repeat the complete authoritative checks.",
       "method": "GET",
       "body": {},
       "parameters": [
@@ -10872,9 +10872,9 @@
       "modified": 1791244800000,
       "created": 1791244800000,
       "name": "GET · Шаблоны для родителя",
-      "url": "{{ _.baseUrl }}/v1/world/templates?parent_id={{ _.simple_parent_id }}&envelope=1",
+      "url": "{{ _.baseUrl }}/v1/world/templates?parent_id={{ _.simple_parent_id }}&envelope=1&per-page=100",
       "method": "GET",
-      "description": "Общий каталог для всех типов и уровней родителя. available/unavailable_reason учитывают права, состояние, материалы, инструменты и станции. Уровень экземпляра определяется родителем; эквивалентные старые рецепты не дублируются.",
+      "description": "Contract: docs/architecture/simple-world-api.md. Material availability and equipment are checked in one catalog batch. Pagination accepts per-page=1..100, default 30. Preserve economy.terms_digest for POST /builds; available/unavailable_reason do not include personal funding consent.",
       "body": {},
       "parameters": [],
       "headers": [
@@ -11500,7 +11500,7 @@
       "name": "GET - Mining view",
       "url": "{{ _.baseUrl }}/v1/world/objects/{{ _.simple_node_id }}/mining",
       "method": "GET",
-      "description": "Contract: docs/architecture/simple-world-api.md. Set simple_node_id to a visible active mine containing a completed drilling rig. Workers produce ore for its owner; heartbeat every 10 seconds, maximum 60 seconds credited after disconnect. Commands require a new key per action; retries retain the key.",
+      "description": "Contract: docs/architecture/simple-world-api.md. Set simple_node_id to a visible active mine containing a completed drilling rig. Workers produce ore for its owner; heartbeat every 10 seconds, maximum 60 seconds credited after disconnect. Commands require a new key per action; retries retain the key. Progress DTO: worked_seconds, server_time, live_work[{accounted_at,last_seen_at}]; versioned sources also expose work_id (nullable) and required_seconds from accepted batch terms. Project no later than last_seen_at+60; check heartbeat at completion and every 10 seconds. Only server confirmation grants output.",
       "body": {},
       "parameters": [],
       "headers": [
@@ -11531,7 +11531,7 @@
       "name": "POST - Mining start",
       "url": "{{ _.baseUrl }}/v1/world/objects/{{ _.simple_node_id }}/mining/start",
       "method": "POST",
-      "description": "Contract: docs/architecture/simple-world-api.md. Set simple_node_id to a visible active mine containing a completed drilling rig. Workers produce ore for its owner; heartbeat every 10 seconds, maximum 60 seconds credited after disconnect. Commands require a new key per action; retries retain the key.",
+      "description": "Contract: docs/architecture/simple-world-api.md. Set simple_node_id to a visible active mine containing a completed drilling rig. Workers produce ore for its owner; heartbeat every 10 seconds, maximum 60 seconds credited after disconnect. Commands require a new key per action; retries retain the key. Progress DTO: worked_seconds, server_time, live_work[{accounted_at,last_seen_at}]; versioned sources also expose work_id (nullable) and required_seconds from accepted batch terms. Project no later than last_seen_at+60; check heartbeat at completion and every 10 seconds. Only server confirmation grants output.",
       "body": {
         "mimeType": "application/json",
         "text": "{}"
@@ -11573,7 +11573,7 @@
       "name": "POST - Mining heartbeat",
       "url": "{{ _.baseUrl }}/v1/world/objects/{{ _.simple_node_id }}/mining/heartbeat",
       "method": "POST",
-      "description": "Contract: docs/architecture/simple-world-api.md. Set simple_node_id to a visible active mine containing a completed drilling rig. Workers produce ore for its owner; heartbeat every 10 seconds, maximum 60 seconds credited after disconnect. Commands require a new key per action; retries retain the key.",
+      "description": "Contract: docs/architecture/simple-world-api.md. Set simple_node_id to a visible active mine containing a completed drilling rig. Workers produce ore for its owner; heartbeat every 10 seconds, maximum 60 seconds credited after disconnect. Commands require a new key per action; retries retain the key. Progress DTO: worked_seconds, server_time, live_work[{accounted_at,last_seen_at}]; versioned sources also expose work_id (nullable) and required_seconds from accepted batch terms. Project no later than last_seen_at+60; check heartbeat at completion and every 10 seconds. Only server confirmation grants output.",
       "body": {
         "mimeType": "application/json",
         "text": "{}"
@@ -11615,7 +11615,7 @@
       "name": "POST - Mining stop",
       "url": "{{ _.baseUrl }}/v1/world/objects/{{ _.simple_node_id }}/mining/stop",
       "method": "POST",
-      "description": "Contract: docs/architecture/simple-world-api.md. Set simple_node_id to a visible active mine containing a completed drilling rig. Workers produce ore for its owner; heartbeat every 10 seconds, maximum 60 seconds credited after disconnect. Commands require a new key per action; retries retain the key.",
+      "description": "Contract: docs/architecture/simple-world-api.md. Set simple_node_id to a visible active mine containing a completed drilling rig. Workers produce ore for its owner; heartbeat every 10 seconds, maximum 60 seconds credited after disconnect. Commands require a new key per action; retries retain the key. Progress DTO: worked_seconds, server_time, live_work[{accounted_at,last_seen_at}]; versioned sources also expose work_id (nullable) and required_seconds from accepted batch terms. Project no later than last_seen_at+60; check heartbeat at completion and every 10 seconds. Only server confirmation grants output.",
       "body": {
         "mimeType": "application/json",
         "text": "{}"
