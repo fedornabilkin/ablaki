@@ -67,6 +67,6 @@
 
 Локальный профиль опубликован как версия 5; `money_created_cr=0.0000`, хэши кошельков, счетов и инвентаря до/после совпали. Проверки с установкой схемы выполнялись только на allowlist-базах `ablakin_ci` (PostgreSQL 5432, MySQL 3306) и SQLite. Локальная игровая БД 55432 не сбрасывалась.
 
-Пакет подготовлен в `feature/09-worlds`. Удалённый test этим пакетом не обновлялся, профиль кухни на нём ещё не опубликован. Production не менялся. [Оптимизация выкладки](../2026-10-19-test-deployment-optimization.md) остаётся открытой; целевые 120 секунд этим пакетом не объявляются достигнутыми.
+По последующей команде владельца пакет опубликован на test: backend `76b6551`, frontend `bfbca53`, удалённый профиль 3. API и браузер 1440/390 px проверены; [отчёт выпуска и ограничения приёмки](../../operations/world-feedback-test-release-2026-10-21.md). Production не менялся. [Оптимизация выкладки](../2026-10-19-test-deployment-optimization.md) остаётся открытой: один пайплайн backend занял 7 мин 2 с; целевые 120 секунд не достигнуты.
 
 Артефакты вне Git: `temp/world-feedback/` — логи unit/build, PHP lint, profile, food-{sqlite,pgsql,mysql}, week/race-{pgsql,mysql}; `browser-report.json`, `kitchen-browser-report.json`, `local-publication.json` и снимки desktop/mobile. Токены и дампы не включаются в репозитории.
