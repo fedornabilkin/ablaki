@@ -26,6 +26,7 @@ class TemplateApiController extends CoreController
             $defaults = $template->defaults(); $parts = [];
             foreach ($template->materials() + ($defaults['build_tools'] ?? []) + ($defaults['build_stations'] ?? []) as $code => $quantity) $parts[] = ($names[$code]['name'] ?? $code) . ': ' . $quantity;
             $item = $template->getAttributes() + ['economy' => \common\modules\world\models\domain\EconomyConstruction::catalogTerms($template, $economy),
+                'description' => $defaults['description'] ?? '',
                 'world_time_rate' => $rate, 'world_build_seconds' => (int)$template->build_seconds * $rate, 'material_summary' => implode(', ', $parts)];
             $item += $owned ? $availability[(int)$template->id]
                 : ['available' => false, 'unavailable_reason' => $node->status !== 'active' ? 'Сначала завершите строительство.' : 'Требуются права владельца.'];

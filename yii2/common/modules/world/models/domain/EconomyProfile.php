@@ -64,6 +64,8 @@ final class EconomyProfile
             || !is_string($access['feedback_path'] ?? null) || !preg_match('~^/forum/read/[1-9][0-9]*$~D', $access['feedback_path'])) throw new \InvalidArgumentException('Closed-test admission requires built-in RBAC and an internal feedback topic.');
         if (isset($data['health']) && ($data['health']['maximum_hp'] !== 100 || $data['health']['unprotected_night_damage_hp'] !== 15
             || $data['health']['food_removes_night_illness'] !== false || $data['health']['zero_hp_destroys_items'] !== false)) throw new \InvalidArgumentException('Unsupported closed-test health contract.');
+        foreach (['hunger_after_seconds' => WorldFood::HUNGER_AFTER, 'hunger_period_seconds' => WorldFood::HUNGER_PERIOD, 'hunger_damage_hp' => WorldFood::HUNGER_DAMAGE] as $field => $expected)
+            if (isset($data['health'][$field]) && $data['health'][$field] !== $expected) throw new \InvalidArgumentException('Unsupported hunger contract: ' . $field);
         $costs = $data['operating_costs'];
         if ($costs['equipment_max_durability'] !== 100 || $costs['craft_base_work_wear'] !== 0
             || $costs['source_tool_wear_per_batch'] !== 1 || $costs['crop_dig_tool_wear_per_cycle'] !== 1
@@ -89,6 +91,7 @@ final class EconomyProfile
         self::references($data['bootstrap_targets'], $items, 'bootstrap_targets');
         self::references($data['first_day_objects'], $data['objects'], 'first_day_objects');
         foreach ($data['objects'] as $code => $row) {
+            if (isset($row['description']) && (!is_string($row['description']) || mb_strlen($row['description']) > 5000)) throw new \InvalidArgumentException('Invalid object description: ' . $code);
             if (!isset($row['price_cr']) || !is_int($row['work_seconds']) || $row['work_seconds'] < 1) throw new \InvalidArgumentException('Object needs a price and work duration: ' . $code);
             self::quantities($row['materials'], $items, $code);
             self::references($row['capability_requirements'] ?? [], $data['objects'], $code);

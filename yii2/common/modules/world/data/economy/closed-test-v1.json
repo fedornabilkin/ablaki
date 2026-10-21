@@ -3,7 +3,7 @@
   "code": "economy-closed-test-v1",
   "status": "candidate",
   "created_on": "2026-10-16",
-  "updated_on": "2026-10-19",
+  "updated_on": "2026-10-20",
   "effective_from": null,
   "activation": "explicit_versioned_publication",
   "currency": "Cr",
@@ -23,6 +23,9 @@
   "health": {
     "maximum_hp": 100,
     "unprotected_night_damage_hp": 15,
+    "hunger_after_seconds": 259200,
+    "hunger_period_seconds": 86400,
+    "hunger_damage_hp": 2,
     "food_removes_night_illness": false,
     "zero_hp_destroys_items": false
   },
@@ -683,7 +686,8 @@
       "name": "Стоянка",
       "price_cr": "0.0000",
       "work_seconds": 30,
-      "materials": {}
+      "materials": {},
+      "description": "Личная стоянка для начала жизни в мире: храните вещи, изготавливайте инструменты и развивайте территорию."
     },
     "estate": {
       "name": "Усадьба",
@@ -691,23 +695,26 @@
       "work_seconds": 120,
       "materials": {
         "classic-plank": 8
-      }
+      },
+      "description": "Усадьба расширяет возможности личного хозяйства. Размещайте постройки внутри её карты."
     },
     "starter-shelter": {
       "name": "Шалаш",
-      "price_cr": "30.0000",
+      "price_cr": "20.0000",
       "work_seconds": 60,
       "materials": {
         "classic-plank": 4,
         "classic-rope": 2
       },
-      "exposure_class": "covered"
+      "exposure_class": "covered",
+      "description": "Простой шалаш даёт место для ночлега и помогает защититься от последствий ночи. После постройки отдельно назначьте ночлег."
     },
     "garden": {
       "name": "Огород",
       "price_cr": "50.0000",
       "work_seconds": 60,
-      "materials": {}
+      "materials": {},
+      "description": "Огород для выращивания культур. Постройте грядки, подготовьте землю, затем посейте семена и следите за поливом."
     },
     "garden-bed": {
       "name": "Грядка",
@@ -716,7 +723,8 @@
       "materials": {},
       "capability_requirements": [
         "garden"
-      ]
+      ],
+      "description": "Место для одного посева. Для нового цикла подготовьте землю исправной лопатой, посейте семена и поливайте вовремя."
     },
     "mine": {
       "name": "Шахта",
@@ -725,7 +733,8 @@
       "materials": {
         "classic-plank": 8,
         "classic-stone": 6
-      }
+      },
+      "description": "Шахта открывает добычу камня, угля и руды партиями. Для выбранной работы нужен подходящий исправный инструмент."
     },
     "forge": {
       "name": "Кузница",
@@ -734,17 +743,19 @@
       "materials": {
         "classic-plank": 10,
         "classic-stone": 12
-      }
+      },
+      "description": "Кузница для работы с металлом. Установите необходимые станции и используйте рецепты изготовления."
     },
     "house": {
       "name": "Дом",
-      "price_cr": "70.0000",
+      "price_cr": "80.0000",
       "work_seconds": 7200,
       "materials": {
         "classic-plank": 6,
         "classic-stone": 3,
         "classic-rope": 2
-      }
+      },
+      "description": "Постоянный дом для ночлега. Требует больше материалов и кредитов, чем временный шалаш; ночлег назначается после завершения стройки."
     },
     "warehouse": {
       "name": "Склад",
@@ -755,7 +766,8 @@
         "classic-stone": 60,
         "classic-rope": 25
       },
-      "storage_slots": 100
+      "storage_slots": 100,
+      "description": "Склад для запасов хозяйства. Вместимость и доступные расширения показаны в разделе вещей."
     },
     "drilling-rig": {
       "name": "Буровая установка",
@@ -769,7 +781,8 @@
       },
       "capability_requirements": [
         "mine"
-      ]
+      ],
+      "description": "Буровая установка для работы в шахте. Размещается внутри подходящего объекта и используется для добычи руды."
     },
     "forest-plot": {
       "name": "Лесной участок",
@@ -777,7 +790,8 @@
       "work_seconds": 60,
       "materials": {
         "classic-plank": 2
-      }
+      },
+      "description": "Лесной участок даёт брёвна. Работайте над партиями с исправным молотком; добыча расходует общий дневной лимит."
     },
     "stone-plot": {
       "name": "Каменистый участок",
@@ -785,7 +799,8 @@
       "work_seconds": 60,
       "materials": {
         "classic-plank": 2
-      }
+      },
+      "description": "Каменистый участок для добычи камня. Подготовьте нужный инструмент и свободное место для результата."
     },
     "clay-plot": {
       "name": "Глиняный участок",
@@ -793,7 +808,8 @@
       "work_seconds": 60,
       "materials": {
         "classic-plank": 2
-      }
+      },
+      "description": "Глинистый участок для добычи глины. Ресурс поступает в выбранное хранилище после завершения партии."
     },
     "sand-plot": {
       "name": "Песчаный участок",
@@ -801,7 +817,8 @@
       "work_seconds": 60,
       "materials": {
         "classic-plank": 2
-      }
+      },
+      "description": "Песчаный участок для добычи песка. Полученные материалы подходят для дальнейшего изготовления."
     },
     "meadow-plot": {
       "name": "Луговой участок",
@@ -809,7 +826,8 @@
       "work_seconds": 60,
       "materials": {
         "classic-plank": 1
-      }
+      },
+      "description": "Луговой участок даёт растительное сырьё. Выберите нужный ресурс в блоке получения ресурсов."
     },
     "water-source": {
       "name": "Источник воды",
@@ -817,13 +835,15 @@
       "work_seconds": 120,
       "materials": {
         "classic-stone": 3
-      }
+      },
+      "description": "Источник воды для хозяйства, полива и приготовления еды. Освободите место в хранилище перед получением партии."
     },
     "campfire-place": {
       "name": "Место костра",
       "price_cr": "0.0000",
       "work_seconds": 10,
-      "materials": {}
+      "materials": {},
+      "description": "Площадка для костра и приготовления еды. Изготовьте и разместите необходимый предмет на её карте."
     },
     "cookfire": {
       "name": "Очаг",
@@ -832,7 +852,8 @@
       "materials": {
         "classic-stone": 4,
         "classic-log": 2
-      }
+      },
+      "description": "Очаг для приготовления пищи. Еда восстанавливает здоровье и позволяет поддерживать сытость."
     },
     "trap": {
       "name": "Ловушка",
@@ -841,7 +862,8 @@
       "materials": {
         "classic-plank": 3,
         "classic-rope": 2
-      }
+      },
+      "description": "Ловушка даёт добычу после восстановления источника. Время следующей доступной партии показывает сервер."
     },
     "workshop-building": {
       "name": "Ремесленная мастерская",
@@ -850,7 +872,8 @@
       "materials": {
         "classic-plank": 12,
         "classic-stone": 5
-      }
+      },
+      "description": "Ремесленная мастерская для размещения оборудования и изготовления предметов по доступным рецептам."
     },
     "storage-building": {
       "name": "Хозсклад",
@@ -861,7 +884,8 @@
         "classic-stone": 2,
         "classic-rope": 1
       },
-      "storage_slots": 50
+      "storage_slots": 50,
+      "description": "Кладовая для хранения запасов. Доступные ячейки и содержимое открываются в разделе вещей."
     },
     "small-greenhouse": {
       "name": "Малая теплица",
@@ -880,7 +904,8 @@
         "code": "light_crop_damage",
         "max_event_loss_bps": 2500,
         "loss_reduction_bps": 5000
-      }
+      },
+      "description": "Малая теплица ускоряет рост культур и полив на 20%, а также вдвое снижает лёгкие погодные повреждения посевов."
     }
   },
   "actions": {

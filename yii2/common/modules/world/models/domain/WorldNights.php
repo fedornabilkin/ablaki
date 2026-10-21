@@ -186,6 +186,7 @@ class WorldNights
             if ((int)$payload['cursor'] === 0 || (int)$payload['cursor'] < (int)$health['next_sequence']) return;
             if ((int)$payload['cursor'] !== (int)$health['next_sequence']) throw new \LogicException('Night sequence gap.');
         }
+        WorldFood::hunger($this->db, (int)$membership['user_id'], $now);
         for ($i = 0; $i < 32; $i++) {
             $night = NightCalendar::bounds($policy, (int)$health['next_sequence']);
             if ($night['ended_at'] > $now) break;

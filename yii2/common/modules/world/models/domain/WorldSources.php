@@ -52,9 +52,21 @@ final class WorldSources
     {
         $place = self::context($node, $user); $options = self::options($place); $db = Node::getDb();
         $work = self::work($node, $user); $worker = (new Query())->from('world_mining_worker')->where(['node_id' => $node, 'user_id' => $user])->one($db);
+        $codes = [];
+        foreach ($options as $row) $codes = array_merge($codes, array_keys($row['output']), $row['tools']);
+        $items = (new Query())->from('craft_item')->where(['code' => array_unique($codes)])->indexBy('code')->all($db);
+        $resolver = new StationResolver(new CraftStorage($db)); $toolAvailability = [];
+        $missing = static function (array $definition) use ($user, &$items, $resolver, &$toolAvailability): ?string {
+            $names = [];
+            foreach ($definition['tools'] as $code) {
+                if (!array_key_exists($code, $toolAvailability)) $toolAvailability[$code] = isset($items[$code]) && (int)$items[$code]['active'] === 1 && $resolver->select($user, (int)$items[$code]['id']) !== null;
+                if (!$toolAvailability[$code]) $names[] = $items[$code]['name'] ?? $code;
+            }
+            return $names ? 'Нужен исправный инструмент в рюкзаке: ' . implode(', ', $names) . '.' : null;
+        };
         $choices = []; foreach ($options as $code => $row) {
-            $output = []; foreach ($row['output'] as $item => $quantity) $output[] = ['code' => $item, 'name' => (string)(new Query())->select('name')->from('craft_item')->where(['code' => $item])->scalar($db), 'quantity' => $quantity];
-            $toolNames = []; foreach ($row['tools'] as $tool) $toolNames[] = (string)(new Query())->select('name')->from('craft_item')->where(['code' => $tool])->scalar($db);
+            $output = []; foreach ($row['output'] as $item => $quantity) $output[] = ['code' => $item, 'name' => $items[$item]['name'] ?? $item, 'quantity' => $quantity];
+            $toolNames = []; foreach ($row['tools'] as $tool) $toolNames[] = $items[$tool]['name'] ?? $tool;
             $availableAt = 0;
             if ($row['cooldown_seconds']) $availableAt = (int)(new Query())->select('completed_at')->from('world_source_work')
                 ->where(['user_id' => $user, 'node_id' => $node, 'action_code' => $code, 'status' => 'completed'])->orderBy(['id' => SORT_DESC])->scalar($db) + $row['cooldown_seconds'];
@@ -62,9 +74,13 @@ final class WorldSources
                 $period = (new \DateTimeImmutable('@' . time()))->setTimezone(new \DateTimeZone('Europe/Moscow'))->setTime(0, 0)->getTimestamp();
                 if (self::dailyUsed($user, $code, $period) >= $row['daily_limit']) $availableAt = max($availableAt, $period + 86400);
             }
-            $choices[] = ['code' => $code, 'work_seconds' => $row['work_seconds'], 'experience' => $row['experience'], 'cooldown_seconds' => $row['cooldown_seconds'], 'available_at' => max(time(), $availableAt), 'output' => $output, 'tools' => $row['tools'], 'tool_names' => $toolNames, 'daily_limit' => $row['daily_limit'] ?? null];
+            $choices[] = ['code' => $code, 'work_seconds' => $row['work_seconds'], 'experience' => $row['experience'], 'cooldown_seconds' => $row['cooldown_seconds'], 'available_at' => max(time(), $availableAt), 'output' => $output, 'tools' => $row['tools'], 'tool_names' => $toolNames, 'unavailable_reason' => $missing($row), 'daily_limit' => $row['daily_limit'] ?? null];
         }
         $definition = $work ? json_decode($work['definition_json'], true) : null;
+        // An accepted batch retains its published tools even after a profile update.
+        if ($definition) foreach ($definition['tools'] as $code) if (!isset($items[$code])) {
+            $items[$code] = (new Query())->from('craft_item')->where(['code' => $code])->one($db) ?: null;
+        }
         return ['node_id' => $node, 'ready' => (bool)$options, 'working' => $worker !== false && $worker !== null,
             'workers' => $worker ? 1 : 0, 'produced_quantity' => (int)(new Query())->from('world_source_work')->where(['user_id' => $user, 'node_id' => $node, 'status' => 'completed'])->count('*', $db),
             'pending_quantity' => $work && $work['status'] === 'pending' ? 1 : 0, 'seconds_per_unit' => $definition ? $definition['work_seconds'] : ($choices[0]['work_seconds'] ?? 1),
@@ -72,7 +88,8 @@ final class WorldSources
             'work_id' => $work ? (int)$work['id'] : null, 'required_seconds' => $definition ? (int)$definition['work_seconds'] : 0,
             'live_work' => $worker ? [['accounted_at' => (int)$worker['accounted_at'], 'last_seen_at' => (int)$worker['last_seen_at']]] : [],
             'status' => $work ? $work['status'] : 'idle', 'output_storage_id' => $work ? (int)$work['target_storage_id'] : null, 'actions' => $choices, 'blocked_code' => $work ? $work['blocked_code'] : null,
-            'blocked_message' => $work ? $work['blocked_message'] : null, 'quota' => EconomyQuota::state($db, $user, 'extraction_daily'), 'server_time' => time()];
+            'blocked_message' => $work ? $work['blocked_message'] : null, 'unavailable_reason' => $definition ? $missing($definition) : null,
+            'quota' => EconomyQuota::state($db, $user, 'extraction_daily'), 'server_time' => time()];
     }
     private static function tools(int $user, array $definition): array
     {

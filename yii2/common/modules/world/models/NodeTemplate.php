@@ -61,6 +61,7 @@ class NodeTemplate extends LockedRecord
                     || !modules\ItemLookup::exists($code, 'material')) throw new \InvalidArgumentException();
             }
             if ($attribute === 'defaults_json') {
+                if (isset($data['description']) && (!is_string($data['description']) || mb_strlen($data['description']) > 5000)) throw new \InvalidArgumentException();
                 foreach (['population', 'plot_limit', 'level', 'condition', 'max_condition', 'area', 'fertility', 'allow_building', 'unlocked'] as $field)
                     if (isset($data[$field]) && (!is_int($data[$field]) || $data[$field] < 0 || $data[$field] > 1000000)) throw new \InvalidArgumentException();
                 foreach (['climate', 'settlement_kind', 'building_kind', 'exposure_class', 'plot_kind'] as $field)
@@ -120,7 +121,8 @@ class NodeTemplate extends LockedRecord
     public function defaults(): array { return Json::decode($this->defaults_json); }
     public function fields(): array
     {
-        return array_merge(parent::fields(), ['economy' => function () { return domain\EconomyConstruction::terms($this); }, 'world_time_rate' => function () { return WorldTime::rate(); },
+        return array_merge(parent::fields(), ['description' => function () { return $this->defaults()['description'] ?? ''; },
+            'economy' => function () { return domain\EconomyConstruction::terms($this); }, 'world_time_rate' => function () { return WorldTime::rate(); },
             'world_build_seconds' => function () { return (int)$this->build_seconds * WorldTime::rate(); }, 'material_summary' => function () {
             $defaults = $this->defaults();
             $requirements = $this->materials() + ($defaults['build_tools'] ?? []) + ($defaults['build_stations'] ?? []);

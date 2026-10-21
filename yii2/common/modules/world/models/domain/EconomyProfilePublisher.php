@@ -84,6 +84,7 @@ final class EconomyProfilePublisher
                 $old = (new Query())->from('world_template')->where(['code' => $code])->one($this->db);
                 $defaults = $old ? (json_decode($old['defaults_json'], true) ?: []) : [];
                 $defaults['economy_profile_id'] = $id; $defaults['mandatory_price_cr'] = $object['price_cr'];
+                if (isset($object['description'])) $defaults['description'] = $object['description'];
                 $defaults['build_tools'] = []; $defaults['build_stations'] = [];
                 foreach ($profile['actions'] as $action) if ($action['quota'] === 'extraction_daily' && $action['node'] === $code) $defaults['production_enabled'] = true;
                 if (isset($object['exposure_class'])) $defaults['exposure_class'] = $object['exposure_class'];
