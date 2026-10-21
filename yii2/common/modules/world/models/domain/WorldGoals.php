@@ -97,6 +97,8 @@ final class WorldGoals
         $goals = []; $facts = $revision ? $this->facts($user) : [];
         $claims = $revision ? (new Query())->from('world_goal_claim')->where(['world_id' => EconomyRuntime::world($this->db), 'user_id' => $user])->indexBy('goal_code')->all($this->db) : [];
         $links = $member ? $this->actionLinks($user, (int)$member['starter_site_id']) : [];
+        $settlement = $member ? (int)(new Query())->select('n.id')->from(['n' => 'world_node'])->innerJoin(['c' => 'world_node_closure'], 'c.ancestor_id=n.id')
+            ->where(['c.descendant_id' => $member['starter_site_id'], 'n.hierarchy_level' => 3, 'n.status' => 'active'])->scalar($this->db) : null;
         if ($revision) foreach ($revision['profile']['goals'] as $code => $definition) {
             $pool = $member ? $this->pool((int)$member['starter_site_id'], $code) : null;
             $accepted = $pool ? json_decode($pool['definition_json'], true) : $definition;
@@ -105,7 +107,10 @@ final class WorldGoals
             unset($step);
             $ready = $member && !array_filter($steps, static function ($step) { return !$step['completed']; });
             if ($code === 'day-2' && !isset($claims['day-1'])) $ready = false;
+            $reason = isset($claims[$code]) ? null : (!$member ? 'Сначала вступите в мир.' : (!$ready ? 'Выполните все шаги и получите награду предыдущего этапа.' : (!$pool ? 'Все задания выполнены. Организатору нужно зарезервировать награду из бюджета поселения. После этого её можно будет получить.' : null)));
             $goals[] = ['code' => $code, 'steps' => $steps, 'claimed' => isset($claims[$code]), 'funded' => (bool)$pool,
+                'blocked_reason' => $reason, 'completed' => (bool)$ready,
+                'funding_settlement_id' => $settlement ?: null,
                 'can_claim' => (bool)$ready && $pool !== null && !isset($claims[$code]), 'credits_cr' => $accepted['credits_cr'],
                 'experience' => $accepted['experience'], 'items' => $accepted['items'], 'destination_node_id' => $member ? (int)$member['starter_site_id'] : null];
         }

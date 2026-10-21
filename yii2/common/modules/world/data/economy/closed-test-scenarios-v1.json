@@ -43,7 +43,7 @@
     {
       "action": "source",
       "code": "gather-log",
-      "quantity": 5
+      "quantity": 6
     },
     {
       "action": "source",
@@ -148,12 +148,12 @@
     {
       "action": "source",
       "code": "gather-log",
-      "quantity": 2
+      "quantity": 1
     },
     {
       "action": "craft",
       "code": "classic-plank",
-      "quantity": 2
+      "quantity": 1
     },
     {
       "action": "source",
@@ -844,11 +844,13 @@
       },
       {
         "action": "source",
-        "code": "gather-log"
+        "code": "gather-log",
+        "quantity": 2
       },
       {
         "action": "craft",
-        "code": "classic-plank"
+        "code": "classic-plank",
+        "quantity": 2
       },
       {
         "action": "craft",
@@ -866,7 +868,7 @@
       {
         "action": "source",
         "code": "gather-coal",
-        "quantity": 16
+        "quantity": 15
       },
       {
         "action": "deliver",
@@ -884,12 +886,6 @@
         "action": "deliver",
         "code": "classic-coal",
         "quantity": 10,
-        "destination": "starter-site"
-      },
-      {
-        "action": "deliver",
-        "code": "classic-coal",
-        "quantity": 2,
         "destination": "starter-site"
       },
       {
@@ -982,11 +978,13 @@
       },
       {
         "action": "source",
-        "code": "gather-log"
+        "code": "gather-log",
+        "quantity": 2
       },
       {
         "action": "craft",
-        "code": "classic-plank"
+        "code": "classic-plank",
+        "quantity": 2
       },
       {
         "action": "craft",
@@ -1000,7 +998,7 @@
       {
         "action": "source",
         "code": "gather-coal",
-        "quantity": 16
+        "quantity": 15
       },
       {
         "action": "deliver",
@@ -1018,12 +1016,6 @@
         "action": "deliver",
         "code": "classic-coal",
         "quantity": 10,
-        "destination": "starter-site"
-      },
-      {
-        "action": "deliver",
-        "code": "classic-coal",
-        "quantity": 2,
         "destination": "starter-site"
       },
       {
@@ -1116,11 +1108,13 @@
       },
       {
         "action": "source",
-        "code": "gather-log"
+        "code": "gather-log",
+        "quantity": 2
       },
       {
         "action": "craft",
-        "code": "classic-plank"
+        "code": "classic-plank",
+        "quantity": 2
       },
       {
         "action": "craft",
@@ -1134,7 +1128,7 @@
       {
         "action": "source",
         "code": "gather-coal",
-        "quantity": 16
+        "quantity": 15
       },
       {
         "action": "deliver",
@@ -1152,12 +1146,6 @@
         "action": "deliver",
         "code": "classic-coal",
         "quantity": 10,
-        "destination": "starter-site"
-      },
-      {
-        "action": "deliver",
-        "code": "classic-coal",
-        "quantity": 2,
         "destination": "starter-site"
       },
       {
@@ -1197,6 +1185,17 @@
       {
         "action": "day",
         "quantity": 5
+      },
+      {
+        "action": "source",
+        "code": "gather-coal",
+        "quantity": 1
+      },
+      {
+        "action": "deliver",
+        "code": "classic-coal",
+        "quantity": 2,
+        "destination": "starter-site"
       },
       {
         "action": "checkpoint",
@@ -1250,11 +1249,13 @@
       },
       {
         "action": "source",
-        "code": "gather-log"
+        "code": "gather-log",
+        "quantity": 2
       },
       {
         "action": "craft",
-        "code": "classic-plank"
+        "code": "classic-plank",
+        "quantity": 2
       },
       {
         "action": "craft",
@@ -1272,7 +1273,7 @@
       {
         "action": "source",
         "code": "gather-coal",
-        "quantity": 16
+        "quantity": 15
       },
       {
         "action": "deliver",
@@ -1290,12 +1291,6 @@
         "action": "deliver",
         "code": "classic-coal",
         "quantity": 10,
-        "destination": "starter-site"
-      },
-      {
-        "action": "deliver",
-        "code": "classic-coal",
-        "quantity": 2,
         "destination": "starter-site"
       },
       {
@@ -1509,6 +1504,17 @@
         "quantity": 5
       },
       {
+        "action": "source",
+        "code": "gather-coal",
+        "quantity": 1
+      },
+      {
+        "action": "deliver",
+        "code": "classic-coal",
+        "quantity": 2,
+        "destination": "starter-site"
+      },
+      {
         "action": "daily"
       },
       {
@@ -1643,11 +1649,13 @@
       },
       {
         "action": "source",
-        "code": "gather-log"
+        "code": "gather-log",
+        "quantity": 2
       },
       {
         "action": "craft",
-        "code": "classic-plank"
+        "code": "classic-plank",
+        "quantity": 2
       },
       {
         "action": "craft",
@@ -1665,7 +1673,7 @@
       {
         "action": "source",
         "code": "gather-coal",
-        "quantity": 16
+        "quantity": 15
       },
       {
         "action": "deliver",
@@ -1683,12 +1691,6 @@
         "action": "deliver",
         "code": "classic-coal",
         "quantity": 10,
-        "destination": "starter-site"
-      },
-      {
-        "action": "deliver",
-        "code": "classic-coal",
-        "quantity": 2,
         "destination": "starter-site"
       },
       {
@@ -1763,11 +1765,13 @@
       },
       {
         "action": "source",
-        "code": "gather-log"
+        "code": "gather-log",
+        "quantity": 2
       },
       {
         "action": "craft",
-        "code": "classic-plank"
+        "code": "classic-plank",
+        "quantity": 2
       },
       {
         "action": "craft",
@@ -1785,7 +1789,7 @@
       {
         "action": "source",
         "code": "gather-coal",
-        "quantity": 16
+        "quantity": 15
       },
       {
         "action": "deliver",
@@ -1803,12 +1807,6 @@
         "action": "deliver",
         "code": "classic-coal",
         "quantity": 10,
-        "destination": "starter-site"
-      },
-      {
-        "action": "deliver",
-        "code": "classic-coal",
-        "quantity": 2,
         "destination": "starter-site"
       },
       {
@@ -1889,11 +1887,13 @@
       },
       {
         "action": "source",
-        "code": "gather-log"
+        "code": "gather-log",
+        "quantity": 2
       },
       {
         "action": "craft",
-        "code": "classic-plank"
+        "code": "classic-plank",
+        "quantity": 2
       },
       {
         "action": "craft",
@@ -1911,7 +1911,7 @@
       {
         "action": "source",
         "code": "gather-coal",
-        "quantity": 16
+        "quantity": 15
       },
       {
         "action": "deliver",
@@ -1929,12 +1929,6 @@
         "action": "deliver",
         "code": "classic-coal",
         "quantity": 10,
-        "destination": "starter-site"
-      },
-      {
-        "action": "deliver",
-        "code": "classic-coal",
-        "quantity": 2,
         "destination": "starter-site"
       },
       {
@@ -2136,6 +2130,17 @@
         "quantity": 6
       },
       {
+        "action": "source",
+        "code": "gather-coal",
+        "quantity": 1
+      },
+      {
+        "action": "deliver",
+        "code": "classic-coal",
+        "quantity": 2,
+        "destination": "starter-site"
+      },
+      {
         "action": "daily"
       },
       {
@@ -2270,11 +2275,13 @@
       },
       {
         "action": "source",
-        "code": "gather-log"
+        "code": "gather-log",
+        "quantity": 2
       },
       {
         "action": "craft",
-        "code": "classic-plank"
+        "code": "classic-plank",
+        "quantity": 2
       },
       {
         "action": "craft",
@@ -2292,7 +2299,7 @@
       {
         "action": "source",
         "code": "gather-coal",
-        "quantity": 16
+        "quantity": 15
       },
       {
         "action": "deliver",
@@ -2310,12 +2317,6 @@
         "action": "deliver",
         "code": "classic-coal",
         "quantity": 10,
-        "destination": "starter-site"
-      },
-      {
-        "action": "deliver",
-        "code": "classic-coal",
-        "quantity": 2,
         "destination": "starter-site"
       },
       {
@@ -2527,6 +2528,17 @@
       {
         "action": "day",
         "quantity": 5
+      },
+      {
+        "action": "source",
+        "code": "gather-coal",
+        "quantity": 1
+      },
+      {
+        "action": "deliver",
+        "code": "classic-coal",
+        "quantity": 2,
+        "destination": "starter-site"
       },
       {
         "action": "daily"
@@ -2668,11 +2680,13 @@
       },
       {
         "action": "source",
-        "code": "gather-log"
+        "code": "gather-log",
+        "quantity": 2
       },
       {
         "action": "craft",
-        "code": "classic-plank"
+        "code": "classic-plank",
+        "quantity": 2
       },
       {
         "action": "craft",
@@ -2690,7 +2704,7 @@
       {
         "action": "source",
         "code": "gather-coal",
-        "quantity": 16
+        "quantity": 15
       },
       {
         "action": "deliver",
@@ -2708,12 +2722,6 @@
         "action": "deliver",
         "code": "classic-coal",
         "quantity": 10,
-        "destination": "starter-site"
-      },
-      {
-        "action": "deliver",
-        "code": "classic-coal",
-        "quantity": 2,
         "destination": "starter-site"
       },
       {
@@ -2925,6 +2933,17 @@
       {
         "action": "day",
         "quantity": 5
+      },
+      {
+        "action": "source",
+        "code": "gather-coal",
+        "quantity": 1
+      },
+      {
+        "action": "deliver",
+        "code": "classic-coal",
+        "quantity": 2,
+        "destination": "starter-site"
       },
       {
         "action": "daily"
@@ -3098,11 +3117,13 @@
       },
       {
         "action": "source",
-        "code": "gather-log"
+        "code": "gather-log",
+        "quantity": 2
       },
       {
         "action": "craft",
-        "code": "classic-plank"
+        "code": "classic-plank",
+        "quantity": 2
       },
       {
         "action": "craft",
@@ -3120,7 +3141,7 @@
       {
         "action": "source",
         "code": "gather-coal",
-        "quantity": 16
+        "quantity": 15
       },
       {
         "action": "deliver",
@@ -3138,12 +3159,6 @@
         "action": "deliver",
         "code": "classic-coal",
         "quantity": 10,
-        "destination": "starter-site"
-      },
-      {
-        "action": "deliver",
-        "code": "classic-coal",
-        "quantity": 2,
         "destination": "starter-site"
       },
       {
@@ -3556,7 +3571,7 @@
       },
       {
         "action": "craft",
-        "quantity": 2,
+        "quantity": 1,
         "code": "classic-plank"
       },
       {
@@ -3678,6 +3693,16 @@
         "action": "craft",
         "code": "classic-rope",
         "quantity": 1
+      },
+      {
+        "action": "deliver",
+        "code": "classic-coal",
+        "quantity": 2,
+        "destination": "starter-site"
+      },
+      {
+        "action": "collect",
+        "code": "starter-site"
       },
       {
         "action": "build",

@@ -164,7 +164,8 @@ class CraftWorkspace
             if (isset($terms['payment'])) \common\modules\world\models\domain\EconomyPayments::charge($this->db, $user, $terms['payment']['node_id'], \common\modules\world\modules\economy\value\Money::parse((string)$p['cost']), false, $operation, 'Изготовление: ' . $p['input']['output']['name']);
             $message = (new Crafting($p['store']))->completeRecipe($user, $p['input']['recipe'], $p['input']['output'], $input['quantity'], isset($terms['payment']) ? 0 : $p['cost']);
             $storages = array_merge(array_column($p['sources'], 'id'), [$p['target']['id']], array_column($p['selected'], 'storage_id'));
-            return ['message' => $message, 'changed_node_ids' => [$input['node_id']], 'changed_storage_ids' => array_values(array_unique(array_map('intval', $storages)))];
+            return ['message' => $message, 'craft_result' => ['output' => $terms['output'], 'materials' => array_map(static function ($material) { return array_intersect_key($material, array_flip(['item_id', 'name', 'quantity'])); }, $terms['materials']),
+                'price_cr' => $terms['price'], 'experience' => $terms['experience']], 'changed_node_ids' => [$input['node_id']], 'changed_storage_ids' => array_values(array_unique(array_map('intval', $storages)))];
         });
     }
 }

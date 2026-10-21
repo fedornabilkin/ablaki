@@ -3,7 +3,7 @@
   "code": "economy-closed-test-v1",
   "status": "candidate",
   "created_on": "2026-10-16",
-  "updated_on": "2026-10-20",
+  "updated_on": "2026-10-21",
   "effective_from": null,
   "activation": "explicit_versioned_publication",
   "currency": "Cr",
@@ -18,7 +18,7 @@
     "role": "world-tester",
     "verified_second_milestone_day": 5,
     "verified_with_one_missed_day": 6,
-    "feedback_path": "/forum/read/80"
+    "feedback_path": "/forum"
   },
   "health": {
     "maximum_hp": 100,
@@ -660,7 +660,10 @@
       "reference_price_cr": null,
       "sale_price_cr": "8.0000",
       "restore_health": 15,
-      "stack_size": 100
+      "stack_size": 100,
+      "backpack_restore_hp": 4,
+      "repeat_limit": 2,
+      "repeat_seconds": 21600
     },
     "world-vegetable-broth": {
       "name": "Овощной отвар",
@@ -669,7 +672,10 @@
       "reference_price_cr": null,
       "sale_price_cr": "18.0000",
       "restore_health": 30,
-      "stack_size": 100
+      "stack_size": 100,
+      "backpack_restore_hp": 8,
+      "repeat_limit": 1,
+      "repeat_seconds": 28800
     },
     "world-travel-ration": {
       "name": "Походный паёк",
@@ -678,7 +684,10 @@
       "reference_price_cr": null,
       "sale_price_cr": "12.0000",
       "restore_health": 20,
-      "stack_size": 100
+      "stack_size": 100,
+      "backpack_restore_hp": 6,
+      "repeat_limit": 3,
+      "repeat_seconds": 43200
     }
   },
   "objects": {
@@ -906,6 +915,17 @@
         "loss_reduction_bps": 5000
       },
       "description": "Малая теплица ускоряет рост культур и полив на 20%, а также вдвое снижает лёгкие погодные повреждения посевов."
+    },
+    "field-kitchen": {
+      "name": "Полевая кухня",
+      "price_cr": "40.0000",
+      "work_seconds": 180,
+      "materials": {
+        "classic-plank": 6,
+        "classic-stone": 4,
+        "classic-rope": 2
+      },
+      "description": "Хорошая еда по расписанию Москвы: завтрак 06–10, обед 12–16, ужин 18–22. Один приём в каждом окне; порция из вашего рюкзака даёт полное восстановление блюда."
     }
   },
   "actions": {
@@ -1790,12 +1810,10 @@
       "output": "classic-stick",
       "quantity": 4,
       "ingredients": {
-        "classic-plank": 1
+        "classic-log": 1
       },
       "tools": [],
-      "requires": [
-        "classic-plank"
-      ],
+      "requires": [],
       "station": null,
       "context": null,
       "fee_cr": "0.0000",

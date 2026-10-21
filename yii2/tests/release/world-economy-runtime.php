@@ -117,7 +117,8 @@ economyCheck(!$sourceResult['working'] && $sourceResult['produced_quantity'] ===
 economyCheck($freshStock->quantities($freshUser)[$logItem] === 4, 'one crafted-away log and one gathered log conserve actual inventory');
 $cooked = (new Query())->from('craft_item')->where(['code' => 'world-cooked-carrot'])->one($db);
 $db->transaction(function () use ($freshStock, $freshUser, $cooked) { $freshStock->move($freshUser, $cooked, 2); });
-economyReject(function () use ($db, $freshUser) { $db->transaction(function () use ($db, $freshUser) { \common\modules\world\models\domain\WorldFood::consume($db, $freshUser, 'world-cooked-carrot', 0, str_repeat('f', 32)); }); }, 'FOOD_NOT_NEEDED');
+$fullFood = \common\modules\world\models\domain\WorldFood::state($db, $freshUser);
+economyCheck($fullFood['can_eat'], 'available backpack food can maintain nutrition even at full health');
 $foodNightOp = bin2hex(random_bytes(16));
 \common\modules\world\models\Command::run($freshUser, bin2hex(random_bytes(16)), 'fixture.night', [], function ($operation) use ($db, $freshUser) {
     \common\modules\world\models\domain\WorldFood::night($db, $freshUser, false, $operation);
@@ -131,7 +132,7 @@ $ate = \common\modules\world\models\Command::run($freshUser, $foodKey, 'world.fo
     return \common\modules\world\models\domain\WorldFood::consume($db, $freshUser, 'world-cooked-carrot', 1, $operation);
 });
 $ateAgain = \common\modules\world\models\Command::run($freshUser, $foodKey, 'world.food.consume', $foodPayload, function () { throw new RuntimeException('Food replay ran.'); });
-economyCheck($ate === $ateAgain && $ate['health']['hp'] === 100 && $freshStock->quantities($freshUser)[$cooked['id']] === 1, 'food replay restores fifteen HP and consumes exactly one item');
+economyCheck($ate === $ateAgain && $ate['health']['hp'] === 89 && $freshStock->quantities($freshUser)[$cooked['id']] === 1, 'food replay restores four HP and consumes exactly one item');
 economyReject(function () use ($db, $freshUser) { $db->transaction(function () use ($db, $freshUser) { \common\modules\world\models\domain\WorldFood::consume($db, $freshUser, 'world-cooked-carrot', 1, str_repeat('f', 32)); }); }, 'HEALTH_CHANGED');
 $goals = new \common\modules\world\models\domain\WorldGoals($db);
 economyReject(function () use ($db, $goals, $freshUser) { $db->transaction(function () use ($goals, $freshUser) { $goals->claim($freshUser, 'day-1', str_repeat('f', 32)); }); }, 'GOAL_NOT_READY');
@@ -225,7 +226,7 @@ economySourceCommand($freshUser, $forestId, 'stop');
 $history = new \common\modules\world\models\domain\EconomyHistory($db);
 $healthHistory = $history->listing($freshUser, 'health', 1, '');
 economyCheck($healthHistory['_meta']['totalCount'] === 2 && count($healthHistory['items']) === 2 && $history->listing(9002, 'health', 1, '')['_meta']['totalCount'] === 0, 'history filters ownership before calculating totals and pages');
-economyCheck($history->listing($freshUser, 'health', 1, 'food:')['items'][0]['quantity'] === 15, 'history exposes actual food health delta');
+economyCheck($history->listing($freshUser, 'health', 1, 'food:')['items'][0]['quantity'] === 4, 'history exposes actual food health delta');
 foreach (['commands', 'credits', 'items', 'transfers', 'health'] as $source) {
     $historyPage = $history->listing($freshUser, $source, 1, '');
     economyCheck(count($historyPage['items']) <= 20 && strpos(json_encode($historyPage), 'password') === false, 'bounded private history: ' . $source);

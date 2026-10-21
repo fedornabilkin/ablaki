@@ -26,7 +26,7 @@ function rejectsProfile(array $data, string $message): void
 $profile = EconomyProfile::load();
 $original = serialize($profile);
 $report = EconomyProfile::report($profile);
-profileCheck($report['counts'] === ['items' => 57, 'objects' => 22, 'recipes' => 44, 'actions' => 14], 'candidate contains existing catalog and concrete additions');
+profileCheck($report['counts'] === ['items' => 57, 'objects' => 23, 'recipes' => 44, 'actions' => 14], 'candidate contains existing catalog and concrete additions');
 profileCheck($report['applied'] === false && $report['effective_from'] === null, 'audit does not activate candidate');
 profileCheck($report['starter_credits_cr'] === '250.0000' && $profile['starter']['credit_source'] === 'existing_transfer', 'start uses existing transfer, without minting');
 profileCheck($report['daily_grant'] === ['actual_credits_cr' => '0.0000', 'reference_value_cr' => '29.0000', 'sale_value_before_limits_cr' => '14.5000'], 'natural supply value is distinct from actual credits');
@@ -37,7 +37,8 @@ profileCheck(\common\modules\world\modules\economy\value\Money::parse($profile['
     && $profile['objects']['house']['materials']['classic-rope'] >= $profile['objects']['starter-shelter']['materials']['classic-rope'], 'house costs more than shelter and needs more building materials');
 profileCheck($report['reachability']['blocked_targets'] === [] && $report['reachability']['blocked_recipes'] === [], 'all target recipes have a physical bootstrap path');
 profileCheck($report['recipe_margins']['classic-plank']['batch_sale_value_cr'] === '3.0000' && $report['recipe_margins']['classic-plank']['margin_before_wear_cr'] === '1.0000', 'plank batch revenue is two unit prices');
-profileCheck($report['recipe_margins']['classic-stick']['quantity'] === 4 && $report['recipe_margins']['classic-stick']['margin_before_wear_cr'] === '0.5000', 'stick profile uses final four-unit output');
+profileCheck($report['recipe_margins']['classic-stick']['quantity'] === 4 && $report['recipe_margins']['classic-stick']['margin_before_wear_cr'] === '0.0000'
+    && $profile['recipes']['classic-stick']['ingredients'] === ['classic-log' => 1], 'four sticks use a log and preserve the raw-material valuation');
 profileCheck($report['recipe_margins']['classic-rope']['margin_before_wear_cr'] === '3.5000' && $report['recipe_margins']['classic-rope']['replacement_margin_before_wear_cr'] === '-1.0000', 'self-gathered and replacement margins remain separate');
 profileCheck($report['recipe_margins']['classic-nails']['batch_sale_value_cr'] === '40.0000', 'ten nails are valued per unit');
 profileCheck($report['recipe_margins']['classic-chest']['margin_before_wear_cr'] === '25.0000', 'chest margin includes the existing fixed fee');
@@ -164,7 +165,7 @@ profileCheck($mapQuote['total'] === '11.4000', 'purchasing three discovered cell
 profileCheck($twoDays['status'] === 'blocked' && $twoDays['failure']['input']['code'] === 'forge'
     && $twoDays['failure']['reason'] === 'INSUFFICIENT_FUNDS|need 150.0000, available 111.8000 at starter-site', 'two-day reference route exposes the funded cash shortfall before forge construction');
 profileCheck($twoDays['failure']['requirements']['shortfall_cr'] === '38.2000'
-    && $twoDays['failure']['requirements']['missing_materials'] === ['classic-plank' => 9, 'classic-stone' => 10], 'blocked build reports material deficits alongside the cash shortfall');
+    && $twoDays['failure']['requirements']['missing_materials'] === ['classic-plank' => 10, 'classic-stone' => 10], 'blocked build reports material deficits alongside the cash shortfall');
 profileCheck($twoDays['final']['claimed_goals'] === ['day-1'] && !isset($twoDays['final']['objects']['forge'])
     && $twoDays['final']['municipal_reserved_cr'] === '343.0000', 'blocked route does not spend the future hundred-credit reward');
 profileCheck($fourDays['status'] === 'completed' && $fourDays['final']['claimed_goals'] === ['day-1', 'day-2']
@@ -197,8 +198,10 @@ blockedRoute($badProfile, $routes, 'EXTRACTION_DAILY_LIMIT', 'one fewer extracti
 $badProfile = $profile; $badProfile['limits']['sales_daily']['gross_cr'] = '40.0000';
 blockedRoute($badProfile, $routes, 'SALES_DAILY_LIMIT', 'sales share the daily gross cap across orders');
 $badProfile = $profile; $badProfile['items']['classic-coal']['stack_size'] = 1;
-profileCheck(EconomyScenario::report($badProfile, $routes, 'first-day')['final']['peak_backpack_slots'] === 20, 'twenty slots remain usable at the exact full-capacity boundary');
+profileCheck(EconomyScenario::report($badProfile, $routes, 'first-day')['final']['peak_backpack_slots'] === 19, 'log-based stick route uses nineteen slots with single-unit coal stacks');
 $badProfile['storage']['backpack_slots'] = 19;
+profileCheck(EconomyScenario::report($badProfile, $routes, 'first-day')['status'] === 'completed', 'the exact active-slot boundary remains usable');
+$badProfile['storage']['backpack_slots'] = 18;
 blockedRoute($badProfile, $routes, 'BACKPACK_FULL', 'source results must fit actual stack capacities');
 $badRoutes = $routes; $badRoutes['scenarios']['first-day'][] = ['action' => 'goal', 'code' => 'day-1'];
 blockedRoute($profile, $badRoutes, 'GOAL_ALREADY_CLAIMED', 'milestone reward cannot be repeated');
@@ -260,7 +263,7 @@ profileCheck($unprotected['night_history'][0]['started_at'] === strtotime('2026-
     && count($unprotected['night_history']) === 1, 'one-day grace skips the first night and only completed eligible nights are settled');
 profileCheck($lodged['status'] === 'completed' && $lodged['final']['night_health']['severity'] === 0
     && $lodged['night_history'][0]['protected'], 'bed placed under cover and assigned before night preserves a healthy return');
-profileCheck($lodged['final']['wallet_cr'] === '41.8000' && $lodged['final']['budgets']['starter-site']['available_cr'] === '88.4000'
+profileCheck($lodged['final']['wallet_cr'] === '41.8000' && $lodged['final']['budgets']['starter-site']['available_cr'] === '83.0000'
     && $lodged['final']['budgets']['garden']['available_cr'] === '5.0000' && $lodged['final']['money_conserved'], 'healthy return pays for meadow bed materials and cultivation from existing funds');
 profileCheck($notAssigned['status'] === 'blocked' && $notAssigned['final']['night_health']['severity'] === 1
     && $notAssigned['final']['lodging_intervals'] === [], 'an installed bed without an explicit assignment does not protect a past night');
@@ -286,7 +289,7 @@ $reducedStart = $profile; $reducedStart['starter']['credits_cr'] = '210.0000';
 $unfunded = EconomyScenario::report($reducedStart, $routes, 'missed-day-unfunded-replant');
 $coalExhausted = EconomyScenario::report($profile, $routes, 'coal-order-exhausted');
 $stoneFallback = EconomyScenario::report($profile, $routes, 'after-coal-order-exhaustion');
-profileCheck($fiveDays['status'] === 'completed' && $fiveDays['final']['at'] === '2026-10-21T10:29:00+03:00'
+profileCheck($fiveDays['status'] === 'completed' && $fiveDays['final']['at'] === '2026-10-21T10:34:00+03:00'
     && $fiveDays['final']['claimed_goals'] === ['day-1', 'day-2'] && $fiveDays['final']['stock']['classic-ingot'] === 2, 'night-safe route crafts its first ingot before claiming the second milestone on day five');
 profileCheck(count($fiveDays['night_history']) === 3 && !array_filter($fiveDays['night_history'], static function ($night) { return !$night['protected']; })
     && $fiveDays['final']['night_health']['severity'] === 0, 'assigned lodging protects every eligible night through the complete early chain');
@@ -295,17 +298,17 @@ profileCheck($fiveDays['final']['placements']['starter-site'] === 10 && count($f
     && $fiveDays['final']['stock']['world-explorer-elixir'] === 1, 'tenth root placement requires one separately explored and paid ring-two cell');
 profileCheck($fiveDays['final']['wallet_cr'] === '41.8000' && $fiveDays['final']['budgets']['starter-site']['available_cr'] === '112.0000'
     && $fiveDays['final']['budgets']['garden']['available_cr'] === '6.0000', 'five-day balances include meadow map purchase crop costs and parent reserves');
-profileCheck(array_values($fiveDays['final']['extraction']) === [20, 20, 20, 20, 8] && $fiveDays['final']['peak_backpack_slots'] === 16
+profileCheck(array_values($fiveDays['final']['extraction']) === [20, 20, 20, 20, 9] && $fiveDays['final']['peak_backpack_slots'] === 16
     && $fiveDays['final']['tools']['world-stone-pickaxe'] === [41], 'complete lodging route fits daily work inventory and remaining tool durability');
 profileCheck($fiveDays['final']['remaining_orders'] === ['classic-stone' => 32, 'classic-coal' => 0, 'world-carrot' => 12]
     && $fiveDays['final']['municipal_reserved_cr'] === '78.0000', 'coal demand is finite and exhausted before the full route ends');
 profileCheck($expired['status'] === 'blocked' && $expired['failure']['reason'] === 'CROP_NOT_READY_OR_EXPIRED|'
     && $expired['final']['crop']['state'] === 'expired' && !isset($expired['final']['stock']['world-carrot']), 'returning after a missed day cannot harvest the expired crop');
 profileCheck($unfunded['failure']['reason'] === 'INSUFFICIENT_FUNDS|need 2.0000, available 0.3000 at garden'
-    && $unfunded['final']['budgets']['starter-site']['available_cr'] === '88.4000', 'with reduced starting funds a rich site budget does not automatically pay the garden watering bill');
+    && $unfunded['final']['budgets']['starter-site']['available_cr'] === '83.0000', 'with reduced starting funds a rich site budget does not automatically pay the garden watering bill');
 profileCheck($unfunded['final']['crop']['state'] === 'growing' && $unfunded['final']['stock']['classic-water'] === 5
     && $unfunded['final']['money_conserved'], 'failed watering rolls back the clock water and money for that operation');
-profileCheck($missed['status'] === 'completed' && $missed['final']['at'] === '2026-10-22T10:29:00+03:00'
+profileCheck($missed['status'] === 'completed' && $missed['final']['at'] === '2026-10-22T10:34:00+03:00'
     && $missed['final']['stock']['classic-ingot'] === 2 && $missed['final']['night_health']['severity'] === 0, 'missed-day route resumes using existing targeted funding and reaches the ingot on day six');
 profileCheck($missed['final']['claimed_daily_dates'] === ['2026-10-17', '2026-10-18', '2026-10-20', '2026-10-21', '2026-10-22']
     && !isset($missed['final']['extraction']['2026-10-19']) && count($missed['night_history']) === 4, 'offline days settle nights without accumulating supply claims or extraction quotas');

@@ -61,7 +61,12 @@ final class EconomyProfile
         self::moneyFields($data);
         $access = $data['closed_test'] ?? [];
         if (!is_bool($access['restricted'] ?? null) || ($access['permission'] ?? null) !== 'world-closed-test' || ($access['role'] ?? null) !== 'world-tester'
-            || !is_string($access['feedback_path'] ?? null) || !preg_match('~^/forum/read/[1-9][0-9]*$~D', $access['feedback_path'])) throw new \InvalidArgumentException('Closed-test admission requires built-in RBAC and an internal feedback topic.');
+            || !is_string($access['feedback_path'] ?? null) || !preg_match('~^/forum(?:/read/[1-9][0-9]*)?$~D', $access['feedback_path'])) throw new \InvalidArgumentException('Closed-test admission requires built-in RBAC and an internal forum path.');
+        foreach ($data['items'] as $food) if (isset($food['restore_health'])) {
+            if (!is_int($food['restore_health']) || $food['restore_health'] < 1 || $food['restore_health'] > 100) throw new \InvalidArgumentException('Invalid food restoration.');
+            foreach (['backpack_restore_hp' => [1, 8], 'repeat_limit' => [1, 10], 'repeat_seconds' => [3600, 86400]] as $key => $range)
+                if (isset($food[$key]) && (!is_int($food[$key]) || $food[$key] < $range[0] || $food[$key] > $range[1])) throw new \InvalidArgumentException('Invalid food rule: ' . $key);
+        }
         if (isset($data['health']) && ($data['health']['maximum_hp'] !== 100 || $data['health']['unprotected_night_damage_hp'] !== 15
             || $data['health']['food_removes_night_illness'] !== false || $data['health']['zero_hp_destroys_items'] !== false)) throw new \InvalidArgumentException('Unsupported closed-test health contract.');
         foreach (['hunger_after_seconds' => WorldFood::HUNGER_AFTER, 'hunger_period_seconds' => WorldFood::HUNGER_PERIOD, 'hunger_damage_hp' => WorldFood::HUNGER_DAMAGE] as $field => $expected)

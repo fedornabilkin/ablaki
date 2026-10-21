@@ -1,4 +1,9 @@
 <?php
+namespace common\modules\world\models\domain {
+    function time() { return \EconomyRaceClock::$at ?? \time(); }
+}
+namespace {
+final class EconomyRaceClock { public static $at; }
 // Strictly disposable loopback databases; worker mode never installs or resets schema.
 $raceDsn = getenv('ABL_TEST_DSN');
 if (!is_string($raceDsn) || !preg_match('/^(mysql|pgsql):host=127\.0\.0\.1;port=(3306|5432);dbname=ablakin_ci$/D', $raceDsn)) {
@@ -17,10 +22,12 @@ if (($argv[1] ?? '') === 'economy-worker') {
             'authManager' => ['class' => yii\rbac\DbManager::class]]]);
     $app->db->open();
     $action = $argv[2]; $key = $argv[3]; $payload = json_decode(base64_decode($argv[4]), true, 32, JSON_THROW_ON_ERROR);
+    if (isset($payload['clock'])) EconomyRaceClock::$at = $payload['clock'];
     workerReady();
     $started = microtime(true);
     try {
         $result = common\modules\world\models\Command::run(9004, $key, 'fixture.race.' . $action, $payload, function ($op) use ($app, $action, $payload) {
+            if ($action === 'kitchen') return common\modules\world\models\domain\WorldFood::consume($app->db, 9004, 'world-cooked-carrot', common\modules\world\models\domain\WorldFood::state($app->db, 9004)['revision'], $op, $payload['node_id']);
             if ($action === 'food') return common\modules\world\models\domain\WorldFood::consume($app->db, 9004, 'world-cooked-carrot', $payload['health_revision'], $op);
             if ($action === 'goal') return (new common\modules\world\models\domain\WorldGoals($app->db))->claim(9004, 'day-1', $op);
             common\modules\world\models\domain\EconomyQuota::consume($app->db, 9004, 'crafting_hourly', 1, $op);
@@ -43,7 +50,7 @@ function economyRace(string $action, bool $same, array $payload = []): array {
     try {
         for ($index = 0; $index < 6; $index++) {
             $command = [PHP_BINARY]; if (php_ini_loaded_file()) { $command[] = '-c'; $command[] = php_ini_loaded_file(); }
-            $command = array_merge($command, [__FILE__, 'economy-worker', $action, $same ? $shared : bin2hex(random_bytes(16)), base64_encode(json_encode($payload))]);
+            $command = array_merge($command, [__FILE__, 'economy-worker', $action, $same ? $shared : bin2hex(random_bytes(16)), base64_encode(json_encode($action === 'kitchen' ? array_merge($payload, ['node_id' => $payload['node_ids'][$index % count($payload['node_ids'])]]) : $payload))]);
             $pipes = []; $process = proc_open(implode(' ', array_map('escapeshellarg', $command)), [0 => ['pipe', 'r'], 1 => ['pipe', 'w'], 2 => ['pipe', 'w']], $pipes, null, null, ['bypass_shell' => true]);
             if (!is_resource($process)) throw new RuntimeException('Could not start economy worker.');
             $children[] = [$process, $pipes];
@@ -80,7 +87,26 @@ $db->transaction(function () use ($freshStock, $freshUser, $raceFood) { $freshSt
 $foodBefore = $freshStock->quantities($freshUser)[$raceFood['id']];
 $results = economyRace('food', false, ['health_revision' => $revision]);
 economyCheck(count(array_filter($results, static function ($r) { return $r['status'] === 'ok'; })) === 1
-    && WorldFood::state($db, $freshUser)['hp'] === 85 && $freshStock->quantities($freshUser)[$raceFood['id']] === $foodBefore - 1, 'parallel food requests consume one item and retain the expected health revision');
+    && WorldFood::state($db, $freshUser)['hp'] === 74 && $freshStock->quantities($freshUser)[$raceFood['id']] === $foodBefore - 1, 'parallel food requests consume one item and retain the expected health revision');
+
+// Shared meal windows serialize across different kitchens, even with a fresh health revision.
+$kitchenIds = [];
+$db->transaction(static function () use ($db, $freshUser, $siteId, &$kitchenIds) {
+foreach ([1, 2] as $number) {
+    $kitchen = common\modules\world\models\NodeFactory::create(common\modules\world\models\NodeTemplate::requireOne(['code' => 'field-kitchen']), common\modules\world\models\Node::requireOne($siteId), $freshUser, 'Meal race kitchen', 'race-kitchen-' . $number, null, 'constructing');
+    $db->createCommand()->update('world_node', ['status' => 'active', 'condition' => $kitchen->max_condition], ['id' => $kitchen->id])->execute(); $kitchenIds[] = (int)$kitchen->id;
+}
+});
+$db->transaction(static function () use ($freshStock, $freshUser, $raceFood) { $freshStock->move($freshUser, $raceFood, 4); });
+$mealAt = (new DateTimeImmutable('tomorrow 06:00:00', new DateTimeZone('Europe/Moscow')))->getTimestamp();
+$beforeFood = $freshStock->quantities($freshUser)[$raceFood['id']];
+$results = economyRace('kitchen', false, ['node_ids' => $kitchenIds, 'clock' => $mealAt]);
+economyCheck(count(array_filter($results, static function ($r) { return $r['status'] === 'ok'; })) === 1 && $freshStock->quantities($freshUser)[$raceFood['id']] === $beforeFood - 1,
+    'six fresh-revision requests across two kitchens share one breakfast and consume one portion');
+$beforeFood = $freshStock->quantities($freshUser)[$raceFood['id']];
+$results = economyRace('kitchen', true, ['node_ids' => [$kitchenIds[0]], 'clock' => $mealAt + 6 * 3600]);
+economyCheck(count(array_unique(array_column($results, 'operation_id'))) === 1 && $freshStock->quantities($freshUser)[$raceFood['id']] === $beforeFood - 1,
+    'six simultaneous meal retries return one result and consume one lunch');
 
 $db->createCommand()->delete('world_goal_claim', ['user_id' => $freshUser, 'goal_code' => 'day-1'])->execute();
 Command::run($freshUser, bin2hex(random_bytes(16)), 'fixture.race-goal-fund', [], function ($op) use ($goals, $city, $db, $freshUser) {
@@ -121,3 +147,5 @@ $found = false; foreach ($db->schema->getTableIndexes($table, true) as $candidat
 $restoredForeign = array_map(static function ($foreign) { return $foreign->name; }, $db->schema->getTableForeignKeys($table, true));
 economyCheck($found && !array_diff($removedForeign, $restoredForeign) && $beforeUsage === (new Query())->from($table)->orderBy('id')->all($db), 'partial DDL retry restores uniqueness and foreign keys while repeated migration preserves rows');
 echo 'Economy concurrency checks passed.' . PHP_EOL;
+
+}

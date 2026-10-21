@@ -94,18 +94,19 @@ $meal = Command::run($freshUser, $foodKey, 'world.food.consume', $payload, stati
     return WorldFood::consume($db, $freshUser, 'world-cooked-carrot', $caughtUp['revision'], $operation);
 });
 $replay = Command::run($freshUser, $foodKey, 'world.food.consume', $payload, static function () { throw new \RuntimeException('Food replay repeated.'); });
-economyCheck($meal === $replay && $meal['health']['hp'] === 100 && $freshStock->quantities($freshUser)[$food['id']] === $foodQuantity - 1, 'food resets hunger and replay consumes exactly one portion');
+economyCheck($meal === $replay && $meal['health']['hp'] === min(100, $caughtUp['hp'] + 4) && $freshStock->quantities($freshUser)[$food['id']] === $foodQuantity - 1, 'food resets hunger and replay consumes exactly one portion');
 economyCheck((new Query())->from('actor_night_health')->all($db) === $illness, 'food and hunger preserve the independent night illness state');
 $mealAt = Clock::$at;
-economyCheck($hunger($mealAt + 259200)['hp'] === 100 && $hunger($mealAt + 259201)['hp'] === 98, 'food restarts the full three-day grace period');
+economyCheck($hunger($mealAt + 259200)['hp'] === $meal['health']['hp'] && $hunger($mealAt + 259201)['hp'] === $meal['health']['hp'] - 2, 'food restarts the full three-day grace period');
 $fullMeal = Command::run($freshUser, bin2hex(random_bytes(16)), 'world.food.consume', ['fixture' => 'restore'], static function ($operation) use ($db, $freshUser) {
     return WorldFood::consume($db, $freshUser, 'world-cooked-carrot', WorldFood::state($db, $freshUser)['revision'], $operation);
 });
 Clock::$at += 86400;
+$db->createCommand()->update('world_player_health', ['hp' => 100], ['world_id' => $worldId, 'user_id' => $freshUser])->execute();
 $maintenance = Command::run($freshUser, bin2hex(random_bytes(16)), 'world.food.consume', ['fixture' => 'maintenance'], static function ($operation) use ($db, $freshUser) {
     return WorldFood::consume($db, $freshUser, 'world-cooked-carrot', WorldFood::state($db, $freshUser)['revision'], $operation);
 });
-economyCheck($maintenance['health']['hp'] === 100 && $maintenance['restored_hp'] === 0 && $maintenance['health']['last_food_at'] === Clock::$at, 'a full-health player may eat once per day to maintain nutrition');
+economyCheck($maintenance['health']['hp'] === 100 && $maintenance['restored_hp'] === 0 && $maintenance['health']['last_food_at'] === Clock::$at, 'a full-health player may eat within dish limits to maintain nutrition');
 $zero = $hunger(Clock::$at + 100 * 86400);
 economyCheck($zero['hp'] === 0 && $hunger(Clock::$at)['revision'] === $zero['revision'], 'long absence clamps health at zero without duplicate charges');
 echo 'World interaction checks passed.' . PHP_EOL;
