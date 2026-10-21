@@ -155,6 +155,7 @@ class WorldQuery
             if (!$owned) $detail = array_intersect_key($detail, array_flip(['building_kind', 'settlement_kind', 'population', 'climate', 'plot_kind', 'ordinal', 'unlocked']));
             $settings = json_decode($row['settings_json'] ?? '{}', true) ?: [];
             $detail['production_enabled'] = ($settings['production_enabled'] ?? false) === true;
+            $detail['field_kitchen'] = ($settings['field_kitchen'] ?? false) === true;
             $detail['storage_capacity'] = (int)($settings['storage_capacity'] ?? 0);
             if (isset($builds[$row['id']])) {
                 $build = $builds[$row['id']]; $worked = (int)$build->worked_seconds;

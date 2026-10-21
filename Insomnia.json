@@ -6427,7 +6427,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/workspace/craft",
       "name": "POST /world/workspace/craft",
-      "description": "Изготовление временно доступно только в собственной действующей стоянке PLOT/campsite. node_id — ID стоянки. Инструменты, станции и склады дочерних помещений входят в её область. Для других объектов WORKSPACE_UNAVAILABLE. Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело.",
+      "description": "Изготовление временно доступно только в собственной действующей стоянке PLOT/campsite. node_id — ID стоянки. Инструменты, станции и склады дочерних помещений входят в её область. Для других объектов WORKSPACE_UNAVAILABLE. Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело.\nConfirmed response includes craft_result: accepted output, materials, price_cr and experience. Exact replay returns the same result without a second expense.",
       "method": "POST",
       "body": {
         "mimeType": "application/json",
@@ -10692,7 +10692,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/nodes/{{ _.world_node_id }}/placement-options",
       "name": "GET /world/nodes/{id}/placement-options",
-      "description": "Contract: docs/architecture/simple-world-api.md. Optional x/y restrict the catalog to the selected cell. Open and unoccupied positions are filtered before full placement-policy inspection. Requires-crafting entries have quantity=0,input=null; owned items retain canonical inventory IDs. Preview and transfer repeat the complete authoritative checks.",
+      "description": "Contract: docs/architecture/simple-world-api.md. Optional x/y restrict the catalog to the selected cell. Open and unoccupied positions are filtered before full placement-policy inspection. Requires-crafting entries have quantity=0,input=null; owned items retain canonical inventory IDs. Preview and transfer repeat the complete authoritative checks. Since 2026-10-21 each item also exposes description (string, max 5000). Identical SQL reads are reused only within one service call; the next read and all preview/commit commands use fresh checks.",
       "method": "GET",
       "body": {},
       "parameters": [
@@ -10874,7 +10874,7 @@
       "name": "GET · Шаблоны для родителя",
       "url": "{{ _.baseUrl }}/v1/world/templates?parent_id={{ _.simple_parent_id }}&envelope=1&per-page=100",
       "method": "GET",
-      "description": "Contract: docs/architecture/simple-world-api.md. Material availability and equipment are checked in one catalog batch. Pagination accepts per-page=1..100, default 30. Preserve economy.terms_digest for POST /builds; available/unavailable_reason do not include personal funding consent.",
+      "description": "Contract: docs/architecture/simple-world-api.md. Material availability and equipment are checked in one catalog batch. Pagination accepts per-page=1..100, default 30. Preserve economy.terms_digest for POST /builds; available/unavailable_reason do not include personal funding consent. Since 2026-10-21 each Template also exposes description (string, max 5000, empty for legacy data); published profile object descriptions are included in both template API representations. Candidate prices: shelter 20 Cr, house 80 Cr; publish the profile explicitly per environment.",
       "body": {},
       "parameters": [],
       "headers": [
@@ -11500,7 +11500,7 @@
       "name": "GET - Mining view",
       "url": "{{ _.baseUrl }}/v1/world/objects/{{ _.simple_node_id }}/mining",
       "method": "GET",
-      "description": "Contract: docs/architecture/simple-world-api.md. Set simple_node_id to a visible active mine containing a completed drilling rig. Workers produce ore for its owner; heartbeat every 10 seconds, maximum 60 seconds credited after disconnect. Commands require a new key per action; retries retain the key. Progress DTO: worked_seconds, server_time, live_work[{accounted_at,last_seen_at}]; versioned sources also expose work_id (nullable) and required_seconds from accepted batch terms. Project no later than last_seen_at+60; check heartbeat at completion and every 10 seconds. Only server confirmation grants output.",
+      "description": "Contract: docs/architecture/simple-world-api.md. Set simple_node_id to a visible active mine containing a completed drilling rig. Workers produce ore for its owner; heartbeat every 10 seconds, maximum 60 seconds credited after disconnect. Commands require a new key per action; retries retain the key. Progress DTO: worked_seconds, server_time, live_work[{accounted_at,last_seen_at}]; versioned sources also expose work_id (nullable) and required_seconds from accepted batch terms. Project no later than last_seen_at+60; check heartbeat at completion and every 10 seconds. Only server confirmation grants output. Since 2026-10-21 actions[].unavailable_reason reports missing usable tools; root unavailable_reason refers to the accepted batch definition, including older profile tools. Null means this reason is absent, not that all quota/time/storage conditions pass. Commands revalidate availability.",
       "body": {},
       "parameters": [],
       "headers": [
@@ -11531,7 +11531,7 @@
       "name": "POST - Mining start",
       "url": "{{ _.baseUrl }}/v1/world/objects/{{ _.simple_node_id }}/mining/start",
       "method": "POST",
-      "description": "Contract: docs/architecture/simple-world-api.md. Set simple_node_id to a visible active mine containing a completed drilling rig. Workers produce ore for its owner; heartbeat every 10 seconds, maximum 60 seconds credited after disconnect. Commands require a new key per action; retries retain the key. Progress DTO: worked_seconds, server_time, live_work[{accounted_at,last_seen_at}]; versioned sources also expose work_id (nullable) and required_seconds from accepted batch terms. Project no later than last_seen_at+60; check heartbeat at completion and every 10 seconds. Only server confirmation grants output.",
+      "description": "Contract: docs/architecture/simple-world-api.md. Set simple_node_id to a visible active mine containing a completed drilling rig. Workers produce ore for its owner; heartbeat every 10 seconds, maximum 60 seconds credited after disconnect. Commands require a new key per action; retries retain the key. Progress DTO: worked_seconds, server_time, live_work[{accounted_at,last_seen_at}]; versioned sources also expose work_id (nullable) and required_seconds from accepted batch terms. Project no later than last_seen_at+60; check heartbeat at completion and every 10 seconds. Only server confirmation grants output. Since 2026-10-21 actions[].unavailable_reason reports missing usable tools; root unavailable_reason refers to the accepted batch definition, including older profile tools. Null means this reason is absent, not that all quota/time/storage conditions pass. Commands revalidate availability.",
       "body": {
         "mimeType": "application/json",
         "text": "{}"
@@ -11573,7 +11573,7 @@
       "name": "POST - Mining heartbeat",
       "url": "{{ _.baseUrl }}/v1/world/objects/{{ _.simple_node_id }}/mining/heartbeat",
       "method": "POST",
-      "description": "Contract: docs/architecture/simple-world-api.md. Set simple_node_id to a visible active mine containing a completed drilling rig. Workers produce ore for its owner; heartbeat every 10 seconds, maximum 60 seconds credited after disconnect. Commands require a new key per action; retries retain the key. Progress DTO: worked_seconds, server_time, live_work[{accounted_at,last_seen_at}]; versioned sources also expose work_id (nullable) and required_seconds from accepted batch terms. Project no later than last_seen_at+60; check heartbeat at completion and every 10 seconds. Only server confirmation grants output.",
+      "description": "Contract: docs/architecture/simple-world-api.md. Set simple_node_id to a visible active mine containing a completed drilling rig. Workers produce ore for its owner; heartbeat every 10 seconds, maximum 60 seconds credited after disconnect. Commands require a new key per action; retries retain the key. Progress DTO: worked_seconds, server_time, live_work[{accounted_at,last_seen_at}]; versioned sources also expose work_id (nullable) and required_seconds from accepted batch terms. Project no later than last_seen_at+60; check heartbeat at completion and every 10 seconds. Only server confirmation grants output. Since 2026-10-21 actions[].unavailable_reason reports missing usable tools; root unavailable_reason refers to the accepted batch definition, including older profile tools. Null means this reason is absent, not that all quota/time/storage conditions pass. Commands revalidate availability.",
       "body": {
         "mimeType": "application/json",
         "text": "{}"
@@ -11615,7 +11615,7 @@
       "name": "POST - Mining stop",
       "url": "{{ _.baseUrl }}/v1/world/objects/{{ _.simple_node_id }}/mining/stop",
       "method": "POST",
-      "description": "Contract: docs/architecture/simple-world-api.md. Set simple_node_id to a visible active mine containing a completed drilling rig. Workers produce ore for its owner; heartbeat every 10 seconds, maximum 60 seconds credited after disconnect. Commands require a new key per action; retries retain the key. Progress DTO: worked_seconds, server_time, live_work[{accounted_at,last_seen_at}]; versioned sources also expose work_id (nullable) and required_seconds from accepted batch terms. Project no later than last_seen_at+60; check heartbeat at completion and every 10 seconds. Only server confirmation grants output.",
+      "description": "Contract: docs/architecture/simple-world-api.md. Set simple_node_id to a visible active mine containing a completed drilling rig. Workers produce ore for its owner; heartbeat every 10 seconds, maximum 60 seconds credited after disconnect. Commands require a new key per action; retries retain the key. Progress DTO: worked_seconds, server_time, live_work[{accounted_at,last_seen_at}]; versioned sources also expose work_id (nullable) and required_seconds from accepted batch terms. Project no later than last_seen_at+60; check heartbeat at completion and every 10 seconds. Only server confirmation grants output. Since 2026-10-21 actions[].unavailable_reason reports missing usable tools; root unavailable_reason refers to the accepted batch definition, including older profile tools. Null means this reason is absent, not that all quota/time/storage conditions pass. Commands revalidate availability.",
       "body": {
         "mimeType": "application/json",
         "text": "{}"
@@ -11775,7 +11775,8 @@
         "economy_pack_code": "replace-from-storage-options",
         "economy_request_key": "insomnia-economy-command-0001",
         "economy_quote_id": "replace-from-preview",
-        "economy_expected_revisions": "{}"
+        "economy_expected_revisions": "{}",
+        "economy_kitchen_node_id": "1"
       },
       "environmentPropertyOrder": null,
       "metaSortKey": -99,
@@ -11789,7 +11790,7 @@
       "name": "GET - State",
       "url": "{{ _.baseUrl }}/v1/world/economy",
       "method": "GET",
-      "description": "Contract: docs/architecture/economy-runtime-api.md. Use a local or disposable acceptance environment. Read current state/options before supplying IDs, codes, health revision and preview revisions. A new command needs a new key; an uncertain result requires the same key and exact body.",
+      "description": "Contract: docs/architecture/economy-runtime-api.md. Read-only state with dish-specific backpack restore_hp (at most 8), kitchen_restore_hp, repeat_limit, repeat_remaining, repeat_seconds, restores_at, can_eat and disorder_until. Goals include completed, blocked_reason and funding_settlement_id; can_fund_goals requires world-manage. Completed goals still require an existing funded reserve. Feedback leads to /forum.",
       "body": {},
       "parameters": [],
       "headers": [
@@ -11865,7 +11866,7 @@
       "name": "POST - Consume food",
       "url": "{{ _.baseUrl }}/v1/world/economy/food",
       "method": "POST",
-      "description": "Contract: docs/architecture/economy-runtime-api.md. Use a local or disposable acceptance environment. Read current state/options before supplying IDs, codes, health revision and preview revisions. A new command needs a new key; an uncertain result requires the same key and exact body.",
+      "description": "Contract: docs/architecture/economy-runtime-api.md. Read fresh health_revision and per-dish can_eat before submitting. One accessible backpack portion is consumed atomically under the player lock. Full HP still permits nutrition within the dish repeat limit. An extra repeat causes -4 HP and temporary disorder; FOOD_DISORDER rejects further backpack eating without spending food. Hunger settlement and a meal are atomic; night illness remains. A new command needs a new key; replay the exact key and body after a lost response.",
       "body": {
         "mimeType": "application/json",
         "text": "{\"request_key\": \"{{ _.economy_request_key }}\", \"code\": \"{{ _.economy_food_code }}\", \"health_revision\": {{ _.economy_health_revision }}}"
@@ -11903,7 +11904,7 @@
       "name": "POST - Claim goal",
       "url": "{{ _.baseUrl }}/v1/world/economy/goals/claim",
       "method": "POST",
-      "description": "Contract: docs/architecture/economy-runtime-api.md. Use a local or disposable acceptance environment. Read current state/options before supplying IDs, codes, health revision and preview revisions. A new command needs a new key; an uncertain result requires the same key and exact body.",
+      "description": "Contract: docs/architecture/economy-runtime-api.md. Use a local or disposable acceptance environment. Read current state/options before supplying IDs, codes, health revision and preview revisions. A new command needs a new key; an uncertain result requires the same key and exact body. Since 2026-10-21 fact reconciliation includes existing members and possessions; stock/history quantities use max, not sum. A claimed goal remains completed after spending its ingredients. Initial 250 Cr come from an organizer-funded existing transfer, accepted with its number/code in /transfer.",
       "body": {
         "mimeType": "application/json",
         "text": "{\"request_key\": \"{{ _.economy_request_key }}\", \"code\": \"{{ _.economy_goal_code }}\"}"
@@ -12069,6 +12070,106 @@
         "token": "{{ _.bearer }}"
       },
       "metaSortKey": 8,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_e882d64caab0da0c228f80350e148100",
+      "parentId": "fld_e1a56479acb24b0fc1782280fd0c9402",
+      "modified": 1792604220303,
+      "created": 1792604220303,
+      "name": "GET - Character progression",
+      "url": "{{ _.baseUrl }}/v1/world/economy/progression",
+      "method": "GET",
+      "description": "Own craft levels and profession XP without inventory loading. Returns craft, professions and server_time.",
+      "body": {},
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Accept",
+          "value": "application/json"
+        }
+      ],
+      "authentication": {
+        "type": "bearer",
+        "token": "{{ _.bearer }}"
+      },
+      "metaSortKey": 395,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_35ca668ea2e973a8439700f28f60f9e6",
+      "parentId": "fld_e1a56479acb24b0fc1782280fd0c9402",
+      "modified": 1792604220303,
+      "created": 1792604220303,
+      "name": "GET - Kitchen meal state",
+      "url": "{{ _.baseUrl }}/v1/world/economy/kitchen/{{ _.economy_kitchen_node_id }}",
+      "method": "GET",
+      "description": "Current and next Moscow meal windows, per-player meal_used shared by all kitchens, and health with backpack quantities. Only an active visible field kitchen with active ancestors is accepted.",
+      "body": {},
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Accept",
+          "value": "application/json"
+        }
+      ],
+      "authentication": {
+        "type": "bearer",
+        "token": "{{ _.bearer }}"
+      },
+      "metaSortKey": 396,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_e3f6de7a856764ee91d32add229713b1",
+      "parentId": "fld_e1a56479acb24b0fc1782280fd0c9402",
+      "modified": 1792604220303,
+      "created": 1792604220303,
+      "name": "POST - Eat in kitchen",
+      "url": "{{ _.baseUrl }}/v1/world/economy/food",
+      "method": "POST",
+      "description": "Consume one existing backpack portion in the selected field kitchen. Breakfast 06-10, lunch 12-16, dinner 18-22 Europe/Moscow, one meal per window across all kitchens. Uses full dish restoration and preserves night illness/disorder. Read fresh health_revision; retain exact key and body on retry. MEAL_UNAVAILABLE means outside serving hours or the meal was already used.",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\"request_key\": \"{{ _.economy_request_key }}\", \"code\": \"{{ _.economy_food_code }}\", \"health_revision\": {{ _.economy_health_revision }}, \"kitchen_node_id\": {{ _.economy_kitchen_node_id }}}"
+      },
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Accept",
+          "value": "application/json"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "authentication": {
+        "type": "bearer",
+        "token": "{{ _.bearer }}"
+      },
+      "metaSortKey": 397,
       "isPrivate": false,
       "settingStoreCookies": true,
       "settingSendCookies": true,

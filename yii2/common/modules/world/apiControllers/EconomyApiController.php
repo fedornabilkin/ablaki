@@ -10,7 +10,18 @@ use Yii;
 
 class EconomyApiController extends CoreController
 {
-    protected function verbs() { return parent::verbs() + ['history' => ['GET'], 'goal' => ['POST'], 'food' => ['POST'], 'fund-goal' => ['POST'], 'storage' => ['GET'], 'storage-expand-preview' => ['POST'], 'storage-expand' => ['POST']]; }
+    protected function verbs() { return parent::verbs() + ['history' => ['GET'], 'progression' => ['GET'], 'kitchen' => ['GET'], 'goal' => ['POST'], 'food' => ['POST'], 'fund-goal' => ['POST'], 'storage' => ['GET'], 'storage-expand-preview' => ['POST'], 'storage-expand' => ['POST']]; }
+    public function actionKitchen($id): array { return WorldFood::kitchen(Yii::$app->db, (int)Yii::$app->user->id, $this->id($id)); }
+    public function actionProgression(): array
+    {
+        $user = (int)Yii::$app->user->id; $db = Yii::$app->db;
+        $skills = (new \yii\db\Query())->select(['c.name', 's.experience'])->from(['s' => 'craft_skill'])
+            ->innerJoin(['c' => 'craft_category'], 'c.id=s.category_id')->where(['s.user_id' => $user])->orderBy('c.id')->all($db);
+        $professions = (new \yii\db\Query())->select(['p.name', 't.level', 't.xp'])->from(['t' => 'actor_profession'])
+            ->innerJoin(['a' => 'game_actor'], 'a.id=t.actor_id')->innerJoin(['p' => 'profession'], 'p.id=t.profession_id')->where(['a.user_id' => $user, 'a.kind' => 'player'])->orderBy('p.id')->all($db);
+        return ['craft' => array_map(static function ($skill) { $xp = (int)$skill['experience']; return ['name' => trim($skill['name']), 'level' => 1 + intdiv($xp, 100), 'xp' => $xp]; }, $skills),
+            'professions' => array_map(static function ($track) { return ['name' => $track['name'], 'level' => (int)$track['level'], 'xp' => (int)$track['xp']]; }, $professions), 'server_time' => time()];
+    }
     private function storageService(): \common\modules\world\models\domain\EconomyStorage { return new \common\modules\world\models\domain\EconomyStorage(Yii::$app->db, $this->flags()); }
     public function actionStorage($id): array { return $this->storageService()->state((int)Yii::$app->user->id, $this->id($id)); }
     public function actionStorageExpandPreview($id): array { return $this->storageService()->preview((int)Yii::$app->user->id, $this->id($id), $this->code()); }
@@ -35,13 +46,14 @@ class EconomyApiController extends CoreController
         $user = (int)Yii::$app->user->id; $db = Yii::$app->db;
         $revision = EconomyRuntime::current($db);
         return ['enabled' => $revision !== null, 'profile_version' => $revision ? $revision['version'] : null,
+            'can_fund_goals' => Yii::$app->user->can('world-manage'),
             'personal_credit_cr' => \common\modules\world\modules\economy\value\Money::parse((string)((new \yii\db\Query())->select('credit')->from('persone')->where(['user_id' => $user])->scalar($db) ?: '0'))->decimal(),
             'target_start_credit_cr' => $revision['profile']['starter']['credits_cr'] ?? null,
             'second_milestone_day' => $revision['profile']['closed_test']['verified_second_milestone_day'] ?? null,
             'admission' => EconomyRuntime::admission($db, $user, Yii::$app->user->can('world-manage')),
             'health' => WorldFood::state($db, $user), 'goals' => (new WorldGoals($db))->state($user)['goals'],
             'quotas' => array_map(static function ($kind) use ($db, $user) { return EconomyQuota::state($db, $user, $kind); }, ['crafting_hourly', 'extraction_daily', 'sales_daily']),
-            'feedback_path' => $revision['profile']['closed_test']['feedback_path'] ?? '/forum/read/80', 'server_time' => time()];
+            'feedback_path' => '/forum', 'server_time' => time()];
     }
     private function code(): string
     {
@@ -53,8 +65,10 @@ class EconomyApiController extends CoreController
     {
         $code = $this->code(); $revision = Yii::$app->request->post('health_revision');
         if (!is_int($revision) || $revision < 0) throw new GameError('INVALID_HEALTH_REVISION', 'Обновите состояние здоровья.', 422);
-        return $this->command('world.food.consume', ['code' => $code, 'health_revision' => $revision], static function ($operation) use ($code, $revision) {
-            return WorldFood::consume(Yii::$app->db, (int)Yii::$app->user->id, $code, $revision, $operation);
+        $node = Yii::$app->request->post('kitchen_node_id'); $node = $node === null ? null : $this->id($node);
+        $payload = ['code' => $code, 'health_revision' => $revision]; if ($node !== null) $payload['kitchen_node_id'] = $node;
+        return $this->command('world.food.consume', $payload, static function ($operation) use ($code, $revision, $node) {
+            return WorldFood::consume(Yii::$app->db, (int)Yii::$app->user->id, $code, $revision, $operation, $node);
         });
     }
     public function actionGoal(): array

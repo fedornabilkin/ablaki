@@ -11,6 +11,7 @@ final class NodeFacilitiesDecorator extends NodePolicyDecorator
         if (($node['plot_kind'] ?? '') === 'garden') $result[] = 'garden';
         if (!empty($node['garden_node_id']) && !empty($node['unlocked'])) $result[] = 'cultivation';
         if (!empty($node['production_enabled'])) $result[] = 'mining';
+        if (!empty($node['field_kitchen'])) $result[] = 'kitchen';
         if (in_array($node['node_type'], ['ROOM', 'PLACE', 'BUILDING'], true) && empty($node['shelter_instance_id'])) $result[] = 'housing';
         if ($node['node_type'] === 'ROOM') $result[] = 'equipment_expansion';
         if (!empty($node['storage_capacity'])) $result[] = 'harvest';
