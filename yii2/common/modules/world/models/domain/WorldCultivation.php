@@ -21,6 +21,18 @@ class WorldCultivation
     private $access;
     public function __construct(Connection $db, WorldFlags $flags, WorldAccessPolicy $access) { $this->db = $db; $this->flags = $flags; $this->access = $access; }
     private function one(string $table, array $where): ?array { return (new Query())->from($table)->where($where)->one($this->db) ?: null; }
+    private function timedRules(array $rules, ?array $cycle): array
+    {
+        $keys = ['grow_seconds', 'water_interval_seconds', 'water_window_seconds', 'harvest_window_seconds'];
+        if ($cycle) {
+            $accepted = json_decode($cycle['terms_json'] ?? '{}', true) ?: [];
+            foreach ($keys as $key) if (isset($accepted[$key])) $rules[$key] = (int)$accepted[$key];
+        } else {
+            $rate = (int)(\common\modules\world\models\WorldTime::settings($this->db)['world_time_rate'] ?? 1);
+            foreach ($keys as $key) if (isset($rules[$key]) && (int)$rules[$key] > 0) $rules[$key] = \common\modules\world\models\WorldTime::realSeconds((int)$rules[$key], $rate);
+        }
+        return $rules;
+    }
     private function resource(int $id): array
     {
         $item = $this->one('craft_item', ['id' => $id, 'active' => 1]);
@@ -83,6 +95,7 @@ class WorldCultivation
             if ($cycle) {
                 $rules = $this->one('world_crop_revision', ['id' => $cycle['crop_revision_id']]);
                 $environment = CultivationEnvironment::accepted($cycle); $rules = CultivationEnvironment::rules($rules, $environment);
+                $rules = $this->timedRules($rules, $cycle);
                 $cycle['event_loss_bps'] = CultivationEnvironment::damage($this->db, $cycle, $environment, $now)['loss_bps'];
                 $result = ['id' => (int)$cycle['id'], 'crop_revision_id' => (int)$cycle['crop_revision_id'], 'revision' => (int)$cycle['revision']];
                 $result = array_merge($result, CultivationClock::project($cycle, $rules, $now));
@@ -128,9 +141,10 @@ class WorldCultivation
         if (!$rules) throw new GameError('CROP_UNAVAILABLE', 'Культура недоступна.', 404);
         $environment = $cycle ? CultivationEnvironment::accepted($cycle) : CultivationEnvironment::snapshot($this->db, $input['bed_id'], $user);
         $rules = CultivationEnvironment::rules($rules, $environment);
+        $rules = $this->timedRules($rules, $cycle);
         $weather = $cycle ? CultivationEnvironment::damage($this->db, $cycle, $environment, time()) : ['loss_bps' => 0, 'effects' => []];
         if ($cycle) $cycle['event_loss_bps'] = $weather['loss_bps'];
-        $terms = ['bed_id' => $input['bed_id'], 'cycle_id' => $cycle ? (int)$cycle['id'] : null, 'cycle_revision' => $cycle ? (int)$cycle['revision'] : null, 'crop_revision_id' => (int)$rules['id'], 'grow_seconds' => (int)$rules['grow_seconds'], 'water_interval_seconds' => (int)$rules['water_interval_seconds'], 'cancel_refund' => false];
+        $terms = ['bed_id' => $input['bed_id'], 'cycle_id' => $cycle ? (int)$cycle['id'] : null, 'cycle_revision' => $cycle ? (int)$cycle['revision'] : null, 'crop_revision_id' => (int)$rules['id'], 'grow_seconds' => (int)$rules['grow_seconds'], 'water_interval_seconds' => (int)$rules['water_interval_seconds'], 'water_window_seconds' => (int)$rules['water_window_seconds'], 'harvest_window_seconds' => (int)$rules['harvest_window_seconds'], 'cancel_refund' => false];
         $accepted = json_decode($rules['config_json'], true) ?: [];
         $terms += ['price_cr' => $action === 'cancel' ? '0.0000' : ($accepted['fees'][$action] ?? '0.0000'), 'payer_node_id' => (int)$c['bed']['garden_node_id']];
         $terms['environment'] = $environment; $terms['event_loss_bps'] = $cycle['event_loss_bps'] ?? 0;

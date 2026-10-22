@@ -94,6 +94,7 @@ final class EconomyProfilePublisher
                 if ($code === 'garden') $defaults['plot_kind'] = 'garden';
                 if ($code === 'field-kitchen') $defaults['field_kitchen'] = true;
                 $defaults['map_width'] = 5; $defaults['map_height'] = 5;
+                $defaults['world_work_seconds'] = $object['work_seconds'];
                 $values = ['build_seconds' => $object['work_seconds'], 'materials_json' => CanonicalJson::encode($object['materials']), 'defaults_json' => CanonicalJson::encode($defaults)];
                 if ($old) $this->db->createCommand()->update('world_template', $values, ['id' => $old['id']])->execute();
                 else {

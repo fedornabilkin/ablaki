@@ -33,7 +33,7 @@ if ($model instanceof NodeTemplate && $model->parentIds === null) $model->parent
 <?php if ($model instanceof \common\modules\world\models\Node): ?>
 <?php $worldRoot = (int)$model->hierarchy_level === 1;
 if ($model->worldTimeRate === null) $model->worldTimeRate = \common\modules\world\models\WorldTime::rate($worldRoot ? (int)$model->id : (int)$model->root_id); ?>
-<?= $form->field($model, 'worldTimeRate')->input('number', ['min' => 1, 'max' => 86400, 'disabled' => !$worldRoot])->hint('Общий коэффициент мира редактируется у корневого объекта. 1:60 — одна реальная секунда равна минуте мира. Принятые длительности строек сохраняются.') ?>
+<?= $form->field($model, 'worldTimeRate')->input('number', ['min' => 1, 'max' => 86400, 'disabled' => !$worldRoot])->hint('1 — обычное время 1:1; 60 — минута мира за реальную секунду. Коэффициент общий для новых игровых длительностей, календаря и квот. Принятые партии/стройки сохраняют сроки; новый темп ночей действует с ближайшей ещё не начавшейся ночи, история не пересчитывается.') ?>
 <?= $this->render('_node-cells', ['model' => $model, 'form' => $form]) ?>
 <?php endif; ?>
 <?php endif; ?>

@@ -14,7 +14,9 @@ final class EconomyQuota
         $revision = EconomyRuntime::current($db); if (!$revision) return null;
         $profile = $revision['profile']; $now = $now ?? time();
         if (!in_array($kind, ['crafting_hourly', 'extraction_daily', 'sales_daily'], true)) throw new \InvalidArgumentException('Unknown economy quota.');
-        $start = $kind === 'crafting_hourly' ? $now - 3600 : (new \DateTimeImmutable('@' . $now))->setTimezone(new \DateTimeZone('Europe/Moscow'))->setTime(0, 0)->getTimestamp();
+        $clock = \common\modules\world\models\WorldTime::class;
+        $period = $clock::dayWindow($db, $now);
+        $start = $kind === 'crafting_hourly' ? $clock::realAt($db, $clock::gameAt($db, $now) - 3600) : $period['start'];
         $rows = (new Query())->from('world_economy_usage')->where(['world_id' => EconomyRuntime::world($db), 'user_id' => $user, 'kind' => $kind])
             ->andWhere(['>', 'created_at', $kind === 'crafting_hourly' ? $start : $start - 1])->all($db);
         $used = 0; $gross = Money::parse('0');
@@ -22,7 +24,7 @@ final class EconomyQuota
         $maximum = $kind === 'sales_daily' ? $profile['limits'][$kind]['operations'] : $profile['limits'][$kind]['maximum'];
         return ['kind' => $kind, 'maximum' => $maximum, 'used' => $used, 'remaining' => max(0, $maximum - $used),
             'gross_cr' => $gross->decimal(), 'gross_remaining_cr' => $kind === 'sales_daily' ? ($gross->compare(Money::parse($profile['limits'][$kind]['gross_cr'])) >= 0 ? '0.0000' : Money::parse($profile['limits'][$kind]['gross_cr'])->subtract($gross)->decimal()) : null,
-            'restores_at' => $kind === 'crafting_hourly' ? ($rows ? min(array_column($rows, 'created_at')) + 3600 : $now) : $start + 86400,
+            'restores_at' => $kind === 'crafting_hourly' ? ($rows ? $clock::realAt($db, $clock::gameAt($db, min(array_column($rows, 'created_at'))) + 3600) : $now) : $period['end'],
             'server_time' => $now, 'profile_version' => $revision['version']];
     }
     public static function consume(Connection $db, int $user, string $kind, int $quantity, string $operation, string $gross = '0.0000'): void

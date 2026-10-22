@@ -27,6 +27,7 @@ if (($argv[1] ?? '') === 'economy-worker') {
     $started = microtime(true);
     try {
         $result = common\modules\world\models\Command::run(9004, $key, 'fixture.race.' . $action, $payload, function ($op) use ($app, $action, $payload) {
+            if ($action === 'supplies') return common\modules\world\models\Supplies::gather($payload['node_id'], 9004, $op);
             if ($action === 'kitchen') return common\modules\world\models\domain\WorldFood::consume($app->db, 9004, 'world-cooked-carrot', common\modules\world\models\domain\WorldFood::state($app->db, 9004)['revision'], $op, $payload['node_id']);
             if ($action === 'food') return common\modules\world\models\domain\WorldFood::consume($app->db, 9004, 'world-cooked-carrot', $payload['health_revision'], $op);
             if ($action === 'goal') return (new common\modules\world\models\domain\WorldGoals($app->db))->claim(9004, 'day-1', $op);
@@ -70,6 +71,21 @@ function economyRace(string $action, bool $same, array $payload = []): array {
     }
 }
 $where = ['user_id' => $freshUser, 'kind' => 'crafting_hourly'];
+$newSupply = static function (string $suffix) use ($db): string {
+    $row = (new Query())->from('craft_item')->where(['code' => 'classic-log'])->one($db); unset($row['id']);
+    $row['code'] = 'fixture-race-supply-' . $suffix; $row['name'] = 'Race supply ' . $suffix; $row['label'] = $row['name']; $row['gather_quantity'] = 1;
+    $db->createCommand()->insert('craft_item', $row)->execute(); return $row['code'];
+};
+$supplyCode = $newSupply('fresh');
+$supplyRace = economyRace('supplies', false, ['node_id' => $siteId]);
+economyCheck(count(array_filter($supplyRace, static function ($row) { return $row['status'] === 'ok'; })) === 1
+    && (int)(new Query())->from('world_supply_claim')->where(['user_id' => $freshUser, 'item_code' => $supplyCode])->count('*', $db) === 1,
+    'six competing daily gathers consume one allowance and credit one resource receipt');
+$replayCode = $newSupply('replay');
+$supplyReplay = economyRace('supplies', true, ['node_id' => $siteId]);
+economyCheck(count(array_unique(array_column($supplyReplay, 'operation_id'))) === 1
+    && (int)(new Query())->from('world_supply_claim')->where(['user_id' => $freshUser, 'item_code' => $replayCode])->count('*', $db) === 1,
+    'six simultaneous supply retries replay one committed grant without refilling the preceding resource');
 $db->createCommand()->delete('world_economy_usage', $where)->execute();
 Command::run($freshUser, bin2hex(random_bytes(16)), 'fixture.quota-prime', [], function ($op) use ($db, $freshUser) { EconomyQuota::consume($db, $freshUser, 'crafting_hourly', 29, $op); return []; });
 $beforeOperations = (int)(new Query())->from('game_operation')->count('*', $db);

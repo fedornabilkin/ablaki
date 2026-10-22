@@ -1,7 +1,7 @@
 {
   "_type": "export",
   "__export_format": 4,
-  "__export_date": "2026-10-03T06:39:54.000Z",
+  "__export_date": "2026-10-22T17:50:28.912Z",
   "__export_source": "insomnia.desktop.app:v2022.7.0",
   "resources": [
     {
@@ -2096,7 +2096,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/nodes/{{ _.world_node_id }}/campsite",
       "name": "GET /world/nodes/{id}/campsite",
-      "description": "Player's starter campsite and available actions",
+      "description": "Player's starter campsite and available actions\n2026-10-22: finite per-item supplies; gather_remaining/gather_limit/gather_exhausted. Exhaustion hides gathering until a NEW gatherable catalogue item is introduced. Production excludes its raw resource. Replays never refill old allowances; five decreasing claims in the current profile. Dates follow the continuous world clock, deadlines remain real timestamps.",
       "method": "GET",
       "body": {},
       "parameters": [],
@@ -2263,7 +2263,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/nodes/{{ _.world_node_id }}/supplies-gather-preview",
       "name": "POST /world/nodes/{id}/supplies-gather-preview",
-      "description": "Quote the daily gathering with current health modifier Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело.",
+      "description": "Quote the daily gathering with current health modifier Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело.\n2026-10-22: finite per-item supplies; gather_remaining/gather_limit/gather_exhausted. Exhaustion hides gathering until a NEW gatherable catalogue item is introduced. Production excludes its raw resource. Replays never refill old allowances; five decreasing claims in the current profile. Dates follow the continuous world clock, deadlines remain real timestamps.",
       "method": "POST",
       "body": {
         "mimeType": "application/json",
@@ -2298,7 +2298,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/nodes/{{ _.world_node_id }}/supplies-gather",
       "name": "POST /world/nodes/{id}/supplies-gather",
-      "description": "Collect today's materials Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело.",
+      "description": "Collect today's materials Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело.\n2026-10-22: finite per-item supplies; gather_remaining/gather_limit/gather_exhausted. Exhaustion hides gathering until a NEW gatherable catalogue item is introduced. Production excludes its raw resource. Replays never refill old allowances; five decreasing claims in the current profile. Dates follow the continuous world clock, deadlines remain real timestamps.",
       "method": "POST",
       "body": {
         "mimeType": "application/json",
@@ -11513,7 +11513,7 @@
         "type": "bearer",
         "token": "{{ _.bearer }}"
       },
-      "metaSortKey": 31.0,
+      "metaSortKey": 31,
       "isPrivate": false,
       "settingStoreCookies": true,
       "settingSendCookies": true,
@@ -11821,7 +11821,7 @@
       "name": "GET - History",
       "url": "{{ _.baseUrl }}/v1/world/economy/history",
       "method": "GET",
-      "description": "Contract: docs/architecture/economy-runtime-api.md. Use a local or disposable acceptance environment. Read current state/options before supplying IDs, codes, health revision and preview revisions. A new command needs a new key; an uncertain result requires the same key and exact body.\nJournal correlation: actor_user_id, node_id, profile_id/profile_version, from/to, item_id, exact balance_before_cr/balance_after_cr, transfer_ids and transfer_phase=create|claim|cancel. Missing historical fields are null; transfer passwords and foreign balances are never returned.",
+      "description": "Contract: docs/architecture/economy-runtime-api.md. Use a local or disposable acceptance environment. Read current state/options before supplying IDs, codes, health revision and preview revisions. A new command needs a new key; an uncertain result requires the same key and exact body.\nJournal correlation: actor_user_id, node_id, profile_id/profile_version, from/to, item_id, exact balance_before_cr/balance_after_cr, transfer_ids and transfer_phase=create|claim|cancel. Missing historical fields are null; transfer passwords and foreign balances are never returned.\n2026-10-22: items[] contains item_id, code, name, quantity, direction (collected/created/spent/received/moved/sold/bought), derived only from owned inventory movements. Empty for old rows without item details. Search supports item names/codes.",
       "body": {},
       "parameters": [
         {

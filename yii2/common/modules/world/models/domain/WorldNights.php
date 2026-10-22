@@ -17,7 +17,23 @@ class WorldNights
     private $flags;
     public function __construct(Connection $db, WorldFlags $flags) { $this->db = $db; $this->flags = $flags; }
     private function one(string $table, array $where): ?array { return (new Query())->from($table)->where($where)->one($this->db) ?: null; }
-    public function policy(int $world): ?array { return $this->one('world_night_policy', ['world_id' => $world, 'version' => 1]); }
+    public function policy(int $world): ?array
+    {
+        $policy = $this->one('world_night_policy', ['world_id' => $world, 'version' => 1]);
+        return $policy ? $this->decorate($policy) : null;
+    }
+    private function decorate(array $policy): array
+    {
+        $policy['time_segments'] = \common\modules\world\models\WorldTime::settings($this->db, (int)$policy['world_id'])['world_night_segments'] ?? [];
+        $policy['published_at'] = (int)(new Query())->select('created_at')->from('game_operation')->where(['id' => $policy['operation_id']])->scalar($this->db);
+        return $policy;
+    }
+    private function grace(array $policy, array $membership): int
+    {
+        $start = max((int)$membership['joined_at'], (int)($policy['published_at'] ?? $policy['activated_at']));
+        $clock = \common\modules\world\models\WorldTime::class; $settings = $clock::settings($this->db, (int)$policy['world_id']);
+        return $clock::realAt($this->db, $clock::gameAt($this->db, $start, null, $settings) + (int)$policy['day_seconds'], null, $settings);
+    }
     /** Read-only state/history. Opening a page never enrolls, heals or resolves a night. */
     public function state(int $user, int $node, int $page, string $outcome, int $size = 20): array
     {
@@ -37,13 +53,13 @@ class WorldNights
         $result['processing_available'] = $flags['world_write'] && $flags['storage_v2'] && (int)$registry['active_world_id'] === (int)$policy['world_id'];
         $result['policy'] = [];
         foreach (['id', 'version', 'activated_at', 'day_seconds', 'night_offset', 'night_seconds', 'max_severity', 'recovery_nights', 'mild_efficiency_bps', 'severe_efficiency_bps'] as $key) $result['policy'][$key] = (int)$policy[$key];
-        $grace = max((int)$membership['joined_at'], (int)$policy['activated_at']) + (int)$policy['day_seconds'];
+        $grace = $health ? (int)$health['grace_until'] : $this->grace($policy, $membership);
         $result['grace_until'] = $grace;
         $result['first_eligible_night'] = NightCalendar::bounds($policy, NightCalendar::firstStartingAt($policy, $grace));
         $result['current_or_next_night'] = NightCalendar::currentOrNext($policy, $now);
         $result['protection_forecast'] = $actor && $this->coverage((int)$actor['id'], $membership, $result['current_or_next_night'])['protected'];
         $result['enrollment_pending'] = !$health;
-        $sequence = $health ? (int)$health['next_sequence'] : $result['first_eligible_night']['sequence'];
+        $sequence = $health ? max((int)$health['next_sequence'], $result['first_eligible_night']['sequence']) : $result['first_eligible_night']['sequence'];
         $result['catching_up'] = NightCalendar::bounds($policy, $sequence)['ended_at'] <= $now;
         if ($health) {
             $result['health'] = ['severity' => (int)$health['severity'], 'recovery_progress' => (int)$health['recovery_progress'], 'exposure_nights' => (int)$health['exposure_nights'],
@@ -75,10 +91,10 @@ class WorldNights
         return $result;
     }
     /** Deliberate CLI publication only. Repeating the same rules never resets the epoch or grace. */
-    public function activate(int $world, array $input): array
+    public function activate(int $world, array $input, ?int $epoch = null): array
     {
         $rules = self::rules($input);
-        return $this->db->transaction(function () use ($world, $rules) {
+        return $this->db->transaction(function () use ($world, $rules, $epoch) {
             $locks = new Locks($this->db); $locks->row('craft_meta', ['id' => 1]); $registry = $locks->row('world_registry', ['id' => 1]);
             $this->flags->requireFlag('world_write'); $this->flags->requireFlag('storage_v2');
             if ((int)$registry['active_world_id'] !== $world) throw new GameError('NIGHT_WORLD_UNAVAILABLE', 'Календарь можно открыть только для действующего мира.');
@@ -92,11 +108,12 @@ class WorldNights
             (new ShelterRepair($this->db))->recipe();
             $operation = bin2hex(random_bytes(16)); $now = time();
             $this->db->createCommand()->insert('game_operation', ['id' => $operation, 'user_id' => null, 'type' => 'world.nights.activate', 'created_at' => $now])->execute();
-            $this->db->createCommand()->insert('world_night_policy', $rules + ['world_id' => $world, 'version' => 1, 'activated_at' => $now, 'operation_id' => $operation])->execute();
+            if ($epoch !== null && ($epoch > $now || $epoch < $now - 86400)) throw new \InvalidArgumentException('Initial night epoch must be within the previous real day.');
+            $this->db->createCommand()->insert('world_night_policy', $rules + ['world_id' => $world, 'version' => 1, 'activated_at' => $epoch ?? $now, 'operation_id' => $operation])->execute();
             $policy = $this->policy($world);
             $this->db->createCommand()->update('world_registry', ['content_revision' => new Expression('[[content_revision]]+1')], ['id' => 1])->execute();
             (new JobQueue($this->db))->enqueue('world.night.enroll', 'policy:' . $policy['id'] . ':after:0', ['policy_id' => (int)$policy['id'], 'after_id' => 0]);
-            (new CommandBus($this->db, $this->flags))->emit($operation, null, 'world.nights.activated', ['world_id' => $world, 'policy_id' => (int)$policy['id'], 'activated_at' => $now] + $rules);
+            (new CommandBus($this->db, $this->flags))->emit($operation, null, 'world.nights.activated', ['world_id' => $world, 'policy_id' => (int)$policy['id'], 'activated_at' => $epoch ?? $now, 'published_at' => $now] + $rules);
             return $policy;
         });
     }
@@ -105,7 +122,7 @@ class WorldNights
         $this->flags->requireFlag('world_write'); $this->flags->requireFlag('storage_v2');
         $policy = $this->one('world_night_policy', ['id' => $id]); $registry = $this->one('world_registry', ['id' => 1]);
         if (!$policy || (int)$policy['world_id'] !== (int)$registry['active_world_id']) throw new GameError('FEATURE_DISABLED', 'Расчёт ночей этого мира приостановлен.');
-        return $policy;
+        return $this->decorate($policy);
     }
     public function joined(array $membership): void
     {
@@ -178,7 +195,7 @@ class WorldNights
         $health = $this->one('actor_night_health', ['actor_id' => $id]);
         if (!$health) {
             if ((int)$payload['cursor'] !== 0) throw new \LogicException('Night enrollment missing.');
-            $baseline = max((int)$membership['joined_at'], (int)$policy['activated_at']); $grace = $baseline + (int)$policy['day_seconds'];
+            $baseline = max((int)$membership['joined_at'], (int)($policy['published_at'] ?? $policy['activated_at'])); $grace = $this->grace($policy, $membership);
             $this->db->createCommand()->insert('actor_night_health', ['actor_id' => $id, 'policy_id' => $policy['id'], 'membership_id' => $membership['id'], 'eligible_from' => $baseline, 'grace_until' => $grace, 'next_sequence' => NightCalendar::firstStartingAt($policy, $grace)])->execute();
             $health = $this->one('actor_night_health', ['actor_id' => $id]);
         } else {
@@ -187,6 +204,11 @@ class WorldNights
             if ((int)$payload['cursor'] !== (int)$health['next_sequence']) throw new \LogicException('Night sequence gap.');
         }
         WorldFood::hunger($this->db, (int)$membership['user_id'], $now);
+        $eligible = NightCalendar::firstStartingAt($policy, (int)$health['grace_until']);
+        if ((int)$health['next_sequence'] < $eligible) {
+            $health['next_sequence'] = $eligible;
+            $this->db->createCommand()->update('actor_night_health', ['next_sequence' => $eligible], ['actor_id' => $id])->execute();
+        }
         for ($i = 0; $i < 32; $i++) {
             $night = NightCalendar::bounds($policy, (int)$health['next_sequence']);
             if ($night['ended_at'] > $now) break;

@@ -3,7 +3,7 @@
   "code": "economy-closed-test-v1",
   "status": "candidate",
   "created_on": "2026-10-16",
-  "updated_on": "2026-10-21",
+  "updated_on": "2026-10-22",
   "effective_from": null,
   "activation": "explicit_versioned_publication",
   "currency": "Cr",
@@ -44,6 +44,15 @@
     "lifetime_claim": "world_start_claim"
   },
   "daily": {
+    "claim_limit": 5,
+    "initial_multiplier": 7,
+    "suppressed_by": {
+      "classic-log": ["forest-plot"],
+      "classic-stone": ["stone-plot", "mine"],
+      "classic-fibre": ["meadow-plot"],
+      "classic-herb": ["meadow-plot"],
+      "classic-water": ["water-source"]
+    },
     "items": {
       "classic-log": 2,
       "classic-stone": 2,

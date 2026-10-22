@@ -116,6 +116,8 @@ class Crafting
                 $this->event($user,$action,$qty,['item_id'=>$id]); $message=($action==='use'?'Использовано: ':'Удалено: ').trim($item['name']).' × '.$qty;
             }
             $result=['message'=>$message];
+            if ($this->s->operationId) $this->s->db->createCommand()->update('game_operation', ['type' => 'craft.' . $action],
+                ['id' => $this->s->operationId, 'user_id' => $user, 'type' => 'inventory.legacy'])->execute();
             $this->s->insert('craft_command',['user_id'=>$user,'request_key'=>$key,'fingerprint'=>$fingerprint,'result'=>json_encode($result,JSON_UNESCAPED_UNICODE),'created_at'=>time()]);
             return $result+['replayed'=>false];
         });
@@ -245,6 +247,8 @@ class Crafting
         $storage=(new CraftInventory($s))->state($user);
         $today=(new \DateTimeImmutable('@'.time()))->setTimezone(new \DateTimeZone('Europe/Moscow'))->setTime(0,0)->getTimestamp();
         $settings=['charge_credits'=>(new CraftSettings($s))->chargeCredits(),'gather_available_at'=>$today+86400];
+        $finite = (new \common\modules\world\models\domain\FiniteSupplies($s->db))->state($user);
+        if ($finite) $settings = array_intersect_key($finite, array_flip(['gather_available', 'gather_available_at', 'gather_remaining', 'gather_limit', 'gather_exhausted'])) + $settings;
         return $settings+$storage+['items'=>$items,'categories'=>$categories,'recipes'=>$recipes,'stations'=>$stations,'skills'=>$skills,'inventory'=>$inventory,'credit'=>(float)$person['credit'],'starter_available'=>!$this->one('craft_event',['user_id'=>$user,'action'=>'starter']),'gather_available'=>!(new Query())->from('craft_event')->where(['user_id'=>$user,'action'=>'gather'])->andWhere(['>=','created_at',$today])->exists($s->db)];
     }
     private function equipmentState(int $user, array $recipe): array

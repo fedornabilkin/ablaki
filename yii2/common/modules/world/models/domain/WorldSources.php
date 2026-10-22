@@ -71,8 +71,8 @@ final class WorldSources
             if ($row['cooldown_seconds']) $availableAt = (int)(new Query())->select('completed_at')->from('world_source_work')
                 ->where(['user_id' => $user, 'node_id' => $node, 'action_code' => $code, 'status' => 'completed'])->orderBy(['id' => SORT_DESC])->scalar($db) + $row['cooldown_seconds'];
             if (isset($row['daily_limit'])) {
-                $period = (new \DateTimeImmutable('@' . time()))->setTimezone(new \DateTimeZone('Europe/Moscow'))->setTime(0, 0)->getTimestamp();
-                if (self::dailyUsed($user, $code, $period) >= $row['daily_limit']) $availableAt = max($availableAt, $period + 86400);
+                $period = \common\modules\world\models\WorldTime::dayWindow($db, time());
+                if (self::dailyUsed($user, $code, $period['start']) >= $row['daily_limit']) $availableAt = max($availableAt, $period['end']);
             }
             $choices[] = ['code' => $code, 'work_seconds' => $row['work_seconds'], 'experience' => $row['experience'], 'cooldown_seconds' => $row['cooldown_seconds'], 'available_at' => max(time(), $availableAt), 'output' => $output, 'tools' => $row['tools'], 'tool_names' => $toolNames, 'unavailable_reason' => $missing($row), 'daily_limit' => $row['daily_limit'] ?? null];
         }
@@ -118,9 +118,9 @@ final class WorldSources
             if (!$quota['remaining']) throw new GameError('ECONOMY_QUOTA_EXHAUSTED', 'Дневной лимит добычи исчерпан.', 409, $quota);
             $last = (new Query())->from('world_source_work')->where(['user_id' => $user, 'node_id' => $node, 'action_code' => $action, 'status' => 'completed'])->orderBy(['id' => SORT_DESC])->one($db);
             if ($last && (int)$last['completed_at'] + $definition['cooldown_seconds'] > time()) throw new GameError('SOURCE_COOLDOWN', 'Источник восстанавливается.', 409, ['available_at' => (int)$last['completed_at'] + $definition['cooldown_seconds']]);
-            $period = (new \DateTimeImmutable('@' . time()))->setTimezone(new \DateTimeZone('Europe/Moscow'))->setTime(0, 0)->getTimestamp();
-            $used = self::dailyUsed($user, $action, $period);
-            if ($used >= ($definition['daily_limit'] ?? 10000)) throw new GameError('SOURCE_DAILY_LIMIT', 'Сегодня этот ресурс уже получен.', 409, ['available_at' => $period + 86400]);
+            $period = \common\modules\world\models\WorldTime::dayWindow($db, time());
+            $used = self::dailyUsed($user, $action, $period['start']);
+            if ($used >= ($definition['daily_limit'] ?? 10000)) throw new GameError('SOURCE_DAILY_LIMIT', 'Сегодня этот ресурс уже получен.', 409, ['available_at' => $period['end']]);
             $backpack = (new CanonicalInventory(new CraftStorage($db)))->backpack($user);
             $target = $target ?? ($backpack ? (int)$backpack['id'] : 0);
             (new StorageAccessPolicy($db))->storage($user, $target, true);
@@ -162,8 +162,8 @@ final class WorldSources
                 $transaction = $db->beginTransaction();
                 try {
                     self::context($node, $user); $units = self::tools($user, $definition);
-                    $period = (new \DateTimeImmutable('@' . time()))->setTimezone(new \DateTimeZone('Europe/Moscow'))->setTime(0, 0)->getTimestamp();
-                    $used = self::dailyUsed($user, $work['action_code'], $period);
+                    $period = \common\modules\world\models\WorldTime::dayWindow($db, time());
+                    $used = self::dailyUsed($user, $work['action_code'], $period['start']);
                     if ($used >= ($definition['daily_limit'] ?? 10000)) throw new GameError('SOURCE_DAILY_LIMIT', 'Дневной предел этого источника исчерпан.', 409);
                     $store = new CraftStorage($db); $store->operationId = $operation; $inventory = new CanonicalInventory($store);
                     $target = (new StorageAccessPolicy($db))->storage($user, (int)$work['target_storage_id'], true);

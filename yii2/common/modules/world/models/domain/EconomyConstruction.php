@@ -18,7 +18,7 @@ final class EconomyConstruction
         if (!$revision || !isset($revision['profile']['objects'][$template->code])) return null;
         $price = $revision['profile']['objects'][$template->code]['price_cr'];
         return ['profile_version' => $revision['version'], 'price_cr' => $price,
-            'terms_digest' => hash('sha256', CanonicalJson::encode([$revision['id'], $template->getAttributes(), $price]))];
+            'terms_digest' => hash('sha256', CanonicalJson::encode([$revision['id'], $template->getAttributes(), $price, $revision['clock_settings']['world_time_rate'] ?? 1]))];
     }
     public static function check(NodeTemplate $template, int $user, array $input, bool $onboarding): ?array
     {

@@ -36,7 +36,15 @@ final class EconomyHistory
                 if ($source === 'transfers') $query->andWhere(['type' => 'transfer']);
             } else { $query = (new Query())->from('world_health_event')->where(['user_id' => $user]); $field = 'kind'; }
             $labels = ['стройка' => 'build', 'строительство' => 'build', 'крафт' => 'craft', 'изготовление' => 'craft', 'перевод' => 'transfer', 'еда' => 'food', 'добыча' => 'mining', 'награда' => 'goal', 'расширение' => 'expand', 'снабжение' => 'supplies'];
-            if ($search !== '') $query->andWhere(['like', $field, $labels[mb_strtolower($search, 'UTF-8')] ?? $search]);
+            if ($search !== '') {
+                $match = ['like', $field, $labels[mb_strtolower($search, 'UTF-8')] ?? $search];
+                if ($source === 'commands' || $source === 'items') {
+                    $found = (new Query())->select($source === 'commands' ? 'm.operation_id' : 'm.id')->from(['m' => 'inventory_movement'])
+                        ->innerJoin(['i' => 'craft_item'], 'i.id=m.item_id')->where(['or', ['like', 'i.name', $search], ['like', 'i.code', $search]]);
+                    $match = ['or', $match, ['in', 'id', $found]];
+                }
+                $query->andWhere($match);
+            }
             $total = (int)(clone $query)->count('*', $db); $items = [];
             $ownedAccounts = $source === 'credits' ? array_map('intval', $this->ownedAccounts($user)->column($db)) : [];
             foreach ($query->orderBy(['created_at' => SORT_DESC, 'id' => SORT_DESC])->offset(($page - 1) * 20)->limit(20)->all($db) as $row) {
@@ -55,10 +63,37 @@ final class EconomyHistory
                 } elseif ($source === 'items') { $entry['quantity'] = (int)$row['quantity']; $entry['classification'] = 'item_movement'; }
                 elseif ($source === 'transfers' || $source === 'wallet') { $entry['classification'] = $row['type'] === 'transfer' ? 'internal_transfer' : (strpos((string)$row['credit_up'], '-') === 0 ? 'expense' : 'incoming'); $entry['amount_cr'] = (string)$row['credit_up']; $entry['balance_after_cr'] = (string)$row['credit']; }
                 elseif ($source === 'health') { $entry['classification'] = 'health'; $entry['quantity'] = (int)$row['hp_after'] - (int)$row['hp_before']; }
-                $items[] = $this->correlate($user, $entry, $row, $ownedAccounts);
+                $entry = $this->correlate($user, $entry, $row, $ownedAccounts);
+                $entry['items'] = $this->itemDetails($user, $entry, $row);
+                $items[] = $entry;
             }
             return ['items' => $items, '_meta' => ['totalCount' => $total, 'pageCount' => (int)ceil($total / 20), 'currentPage' => $page, 'perPage' => 20], 'server_time' => time()];
         });
+    }
+    private function itemDetails(int $user, array $entry, array $row): array
+    {
+        if (!$entry['operation_id'] && $entry['source'] !== 'items') return [];
+        $storages = (new Query())->select('id')->from('craft_storage')->where(['owner_user_id' => $user]);
+        $query = (new Query())->select(['m.item_id', 'quantity' => new \yii\db\Expression('SUM([[m.quantity]])'), 'item_name' => 'i.name', 'item_code' => 'i.code', 'source_owner' => 's.owner_user_id', 'destination_owner' => 'd.owner_user_id'])
+            ->from(['m' => 'inventory_movement'])->innerJoin(['i' => 'craft_item'], 'i.id=m.item_id')
+            ->leftJoin(['s' => 'craft_storage'], 's.id=m.source_storage_id')->leftJoin(['d' => 'craft_storage'], 'd.id=m.destination_storage_id')
+            ->where(['or', ['m.source_storage_id' => $storages], ['m.destination_storage_id' => clone $storages]]);
+        if ($entry['source'] === 'items') $query->andWhere(['m.id' => $row['id']]);
+        else $query->andWhere(['m.operation_id' => $entry['operation_id']]);
+        $result = [];
+        foreach ($query->groupBy(['m.item_id', 'i.name', 'i.code', 's.owner_user_id', 'd.owner_user_id'])->orderBy('m.item_id')->all($this->db) as $movement) {
+            $from = (int)$movement['source_owner'] === $user; $to = (int)$movement['destination_owner'] === $user;
+            $direction = $from && $to ? 'moved' : ($to ? 'received' : 'spent');
+            $kind = (string)$entry['kind'];
+            if ($direction === 'received' && (strpos($kind, 'gather') !== false || strpos($kind, 'supplies') !== false || strpos($kind, 'source') !== false || strpos($kind, 'mining') !== false)) $direction = 'collected';
+            elseif ($direction === 'received' && strpos($kind, 'craft') !== false) $direction = 'created';
+            elseif ($direction === 'spent' && (strpos($kind, 'order') !== false || strpos($kind, 'sell') !== false || strpos($kind, 'crop_purchase') !== false)) $direction = 'sold';
+            elseif ($direction === 'received' && strpos($kind, 'purchase') !== false) $direction = 'bought';
+            $key = $movement['item_id'] . ':' . $direction;
+            if (!isset($result[$key])) $result[$key] = ['item_id' => (int)$movement['item_id'], 'code' => trim($movement['item_code']), 'name' => trim($movement['item_name']), 'quantity' => 0, 'direction' => $direction];
+            $result[$key]['quantity'] += (int)$movement['quantity'];
+        }
+        return array_values($result);
     }
     private function endpoint(string $kind, $id, int $user): ?array
     {

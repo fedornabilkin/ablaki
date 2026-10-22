@@ -16,6 +16,15 @@ final class EconomyScenario
     {
         return json_decode(file_get_contents(dirname(__DIR__, 2) . '/data/economy/closed-test-scenarios-v1.json'), true, 64, JSON_THROW_ON_ERROR);
     }
+    public static function routeSteps(array $config, string $scenario, bool $finite = false): array
+    {
+        $common = $config['common_steps'];
+        if ($finite) {
+            $daily = null; foreach ($common as $step) if ($step['action'] === 'daily') { $daily = $step; break; }
+            if ($daily) { $common = array_values(array_filter($common, static function ($step) { return $step['action'] !== 'daily'; })); array_splice($common, 1, 0, [$daily]); }
+        }
+        return array_merge($common, $config['scenarios'][$scenario]);
+    }
 
     private static function need(bool $condition, string $code, string $detail = ''): void
     {
@@ -241,7 +250,18 @@ final class EconomyScenario
             foreach (array_keys($cells) as $i => $key) $this->state['paid_cells'][$code][$key] = $quote['unit_prices'][$i];
         } elseif ($action === 'daily') {
             self::need(!isset($this->state['daily'][$day]), 'DAILY_ALREADY_CLAIMED');
-            $grant = []; foreach ($this->profile['daily']['items'] as $item => $amount) $grant[$item] = max(1, intdiv($amount * $this->efficiency(), 10000));
+            $grant = [];
+            foreach ($this->profile['daily']['items'] as $item => $amount) {
+                if ($this->config['finite_supplies']) {
+                    $sources = $this->profile['daily']['suppressed_by'][$item] ?? [];
+                    if (array_intersect($sources, array_keys($this->state['objects']))) continue;
+                    $used = $this->state['supply_claims'][$item] ?? 0;
+                    if ($used >= $this->profile['daily']['claim_limit']) continue;
+                    $grant[$item] = max(1, intdiv($amount * $this->efficiency(), 10000)) * ($this->profile['daily']['initial_multiplier'] - $used);
+                    $this->state['supply_claims'][$item] = $used + 1;
+                } else $grant[$item] = max(1, intdiv($amount * $this->efficiency(), 10000));
+            }
+            if (!$grant) return; // The UI hides exhausted supplies; no command or quota is consumed.
             $this->stock($grant, 1); $this->state['daily'][$day] = true;
         } elseif ($action === 'grant') {
             // Direct owned children only; retain explicit movement and reserved parent funds.
@@ -351,6 +371,7 @@ final class EconomyScenario
             || !is_string($config['municipal_budget_cr']) || !is_string($config['starts_at'])
             || !preg_match('/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\+03:00$/D', $config['starts_at'])) throw new \InvalidArgumentException('Invalid economy scenario configuration.');
         $self = new self(); $self->profile = $profile; $self->config = $config;
+        $self->config['finite_supplies'] = in_array($scenario, $config['finite_supply_scenarios'] ?? [], true);
         $start = new \DateTimeImmutable($config['starts_at']);
         if ($start->format('c') !== $config['starts_at']) throw new \InvalidArgumentException('Invalid fixed scenario date.');
         $self->config['start'] = $start->getTimestamp();
@@ -380,14 +401,14 @@ final class EconomyScenario
         if ($municipal->isNegative()) throw new \InvalidArgumentException('Negative initial municipal funding.');
         $self->state = ['now' => $self->config['start'], 'wallet' => $wallet, 'municipal' => $municipal, 'municipal_reserved' => $reserve, 'loss_sink' => self::money('0'), 'craft_fee_sink' => self::money('0'), 'flows' => [], 'step' => 0,
             'stock' => $profile['starter']['items'], 'tools' => [], 'stations' => [], 'objects' => [], 'budgets' => [], 'tax_reserved' => [], 'tax_carry' => [], 'receipts' => [],
-            'placements' => [], 'orders' => $orders, 'daily' => [], 'goals' => [], 'crafted' => [], 'craft_times' => [], 'gathered' => [], 'action_counts' => [],
+            'placements' => [], 'orders' => $orders, 'daily' => [], 'supply_claims' => [], 'goals' => [], 'crafted' => [], 'craft_times' => [], 'gathered' => [], 'action_counts' => [],
             'extraction' => [], 'sales' => [], 'explored' => [], 'paid_cells' => [], 'cancelled_crops' => [], 'facts' => ['city_joined' => true], 'crop' => null, 'peak_slots' => 0, 'checkpoints' => [],
             'night_enabled' => $nightEnabled, 'health' => $health, 'night_history' => [], 'beds' => [], 'lodging' => []];
         foreach ($profile['starter']['items'] as $code => $quantity) if ($profile['items'][$code]['kind'] === 'tool') $self->state['tools'][$code] = array_fill(0, $quantity, $profile['operating_costs']['equipment_max_durability']);
         $trace = []; $failure = null;
         try { self::need($municipal->compare($reserve) >= 0, 'INSUFFICIENT_MUNICIPAL_RESERVE', $reserve->decimal()); $self->capacity(); }
         catch (\DomainException $exception) { $failure = ['step' => 0, 'reason' => $exception->getMessage()]; }
-        foreach (array_merge($config['common_steps'], $config['scenarios'][$scenario]) as $index => $step) {
+        foreach (self::routeSteps($config, $scenario, $self->config['finite_supplies']) as $index => $step) {
             if ($failure !== null) break;
             $before = $self->state;
             try { $self->state['step'] = $index + 1; $self->apply($step); self::need($self->summary()['money_conserved'], 'MONEY_NOT_CONSERVED'); }
@@ -403,7 +424,7 @@ final class EconomyScenario
             }
             $trace[] = ['step' => $index + 1, 'input' => $step, 'at' => $self->summary()['at'], 'wallet_cr' => $self->state['wallet']->decimal()];
         }
-        return ['profile' => $profile['code'], 'scenario' => $scenario, 'status' => $failure === null ? 'completed' : 'blocked', 'applied' => false,
+        return ['profile' => $profile['code'], 'scenario' => $scenario, 'supply_model' => $self->config['finite_supplies'] ? 'finite_current_runtime' : 'historical_daily_model', 'status' => $failure === null ? 'completed' : 'blocked', 'applied' => false,
             'initial_total_cr' => $self->initialMoney->decimal(), 'failure' => $failure, 'trace' => $trace, 'flows' => $self->state['flows'], 'checkpoints' => $self->state['checkpoints'], 'night_history' => $self->state['night_history'], 'final' => $self->summary(),
             'limitations' => ['candidate_not_live_game', $nightEnabled ? 'explicit_example_night_rules_not_a_live_policy' : 'full_health_efficiency_assumed_not_a_night_survival_test',
                 'initial_municipal_funding_and_uncompeted_orders_are_test_setup_prerequisites', 'no_market_or_additional_personal_transfers',

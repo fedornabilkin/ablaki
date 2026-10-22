@@ -15,6 +15,16 @@ class Node extends LockedRecord
     public function behaviors(): array { return [TimestampBehavior::class]; }
     public function optimisticLock() { return 'revision'; }
     public function transactions() { return [self::SCENARIO_DEFAULT => self::OP_ALL]; }
+    public function beforeSave($insert)
+    {
+        if (!parent::beforeSave($insert)) return false;
+        if (!$insert && (int)$this->hierarchy_level === 1 && $this->isAttributeChanged('settings_json')) {
+            $old = json_decode((string)$this->getOldAttribute('settings_json'), true) ?: [];
+            $settings = json_decode((string)$this->settings_json, true) ?: [];
+            $this->settings_json = json_encode(WorldTime::change($this, $old, $settings), JSON_THROW_ON_ERROR);
+        }
+        return true;
+    }
     public function afterSave($insert, $changedAttributes)
     {
         parent::afterSave($insert, $changedAttributes);

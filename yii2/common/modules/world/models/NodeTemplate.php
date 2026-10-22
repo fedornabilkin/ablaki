@@ -13,7 +13,11 @@ class NodeTemplate extends LockedRecord
         if (!parent::beforeValidate()) return false;
         if ((is_int($this->worldBuildSeconds) || is_string($this->worldBuildSeconds)) && ctype_digit((string)$this->worldBuildSeconds)
             && (float)$this->worldBuildSeconds >= 1 && (float)$this->worldBuildSeconds <= 52254720000)
+        {
             $this->build_seconds = WorldTime::realSeconds((int)$this->worldBuildSeconds, WorldTime::rate());
+            $defaults = json_decode($this->defaults_json ?: '{}', true);
+            if (is_array($defaults)) { $defaults['world_work_seconds'] = (int)$this->worldBuildSeconds; $this->defaults_json = Json::encode((object)$defaults); }
+        }
         if ($this->parentIds === '') $this->parentIds = [];
         if ($this->parentIds !== null) {
             if (!is_array($this->parentIds)) { $this->addError('parentIds', 'Выберите родителей из списка.'); return true; }
@@ -61,6 +65,7 @@ class NodeTemplate extends LockedRecord
                     || !modules\ItemLookup::exists($code, 'material')) throw new \InvalidArgumentException();
             }
             if ($attribute === 'defaults_json') {
+                if (isset($data['world_work_seconds']) && (!is_int($data['world_work_seconds']) || $data['world_work_seconds'] < 1 || $data['world_work_seconds'] > 52254720000)) throw new \InvalidArgumentException();
                 if (isset($data['description']) && (!is_string($data['description']) || mb_strlen($data['description']) > 5000)) throw new \InvalidArgumentException();
                 foreach (['population', 'plot_limit', 'level', 'condition', 'max_condition', 'area', 'fertility', 'allow_building', 'unlocked'] as $field)
                     if (isset($data[$field]) && (!is_int($data[$field]) || $data[$field] < 0 || $data[$field] > 1000000)) throw new \InvalidArgumentException();
@@ -118,12 +123,14 @@ class NodeTemplate extends LockedRecord
     }
     public function beforeDelete() { $this->addError('id', 'Отключите шаблон вместо удаления.'); return false; }
     public function materials(): array { return Json::decode($this->materials_json); }
-    public function defaults(): array { return Json::decode($this->defaults_json); }
+    public function defaults(): array { return Json::decode($this->defaults_json ?: '{}') ?: []; }
+    public function worldWorkSeconds(): int { return (int)($this->defaults()['world_work_seconds'] ?? $this->build_seconds); }
+    public function realWorkSeconds(?int $rate = null): int { return WorldTime::realSeconds($this->worldWorkSeconds(), $rate ?? WorldTime::rate()); }
     public function fields(): array
     {
-        return array_merge(parent::fields(), ['description' => function () { return $this->defaults()['description'] ?? ''; },
+        return array_merge(parent::fields(), ['build_seconds' => function () { return $this->realWorkSeconds(); }, 'description' => function () { return $this->defaults()['description'] ?? ''; },
             'economy' => function () { return domain\EconomyConstruction::terms($this); }, 'world_time_rate' => function () { return WorldTime::rate(); },
-            'world_build_seconds' => function () { return (int)$this->build_seconds * WorldTime::rate(); }, 'material_summary' => function () {
+            'world_build_seconds' => function () { return $this->worldWorkSeconds(); }, 'material_summary' => function () {
             $defaults = $this->defaults();
             $requirements = $this->materials() + ($defaults['build_tools'] ?? []) + ($defaults['build_stations'] ?? []);
             $items = \common\modules\world\modules\craft\models\CraftItem::find()->where(['code' => array_keys($requirements)])->indexBy('code')->all();

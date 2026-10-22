@@ -367,6 +367,12 @@ $noMapResult = EconomyScenario::report($profile, $noMap, 'first-five-days-with-l
 profileCheck($noMapResult['status'] === 'blocked' && $noMapResult['failure']['reason'] === 'PLACEMENT_FULL|starter-site', 'discovering the tenth root cell without buying it does not create a placement right');
 
 $week = EconomyScenario::report($profile, $routes, 'first-seven-days-with-lodging');
+$finiteWeek = EconomyScenario::report($profile, $routes, 'first-seven-days-finite-supplies');
+profileCheck($finiteWeek['status'] === 'completed' && $finiteWeek['supply_model'] === 'finite_current_runtime'
+    && $finiteWeek['final']['money_conserved'] && $finiteWeek['final']['money_total_with_sinks_cr'] === '810.0000'
+    && count($finiteWeek['final']['claimed_daily_dates']) === 5
+    && isset($finiteWeek['final']['objects']['house'], $finiteWeek['final']['objects']['storage-building'])
+    && max($finiteWeek['final']['extraction']) <= 20, 'finite five-claim supplies complete the funded week without refilling produced resources');
 profileCheck($week['status'] === 'completed' && $week['final']['money_conserved']
     && $week['final']['money_total_with_sinks_cr'] === '810.0000', 'seven-day route conserves original funds with explicit child-budget funding');
 profileCheck(($week['final']['stock']['classic-pickaxe'] ?? 0) === 1

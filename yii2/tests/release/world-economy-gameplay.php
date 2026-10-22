@@ -127,7 +127,10 @@ final class EconomyGameplay
             } elseif ($action === 'source') $this->source($code, $quantity);
             elseif ($action === 'place') $this->place($code, $step['node']);
             elseif (in_array($action, ['sow', 'water', 'harvest'], true)) $this->crop($action);
-            elseif ($action === 'daily') $this->run('world.supplies.gather', ['node_id' => $this->nodes['starter-site']], function ($op) { return Supplies::gather($this->nodes['starter-site'], $this->user, $op); });
+            elseif ($action === 'daily') {
+                $supply = Supplies::state($this->nodes['starter-site'], $this->user);
+                if (!$supply['gather_exhausted']) $this->run('world.supplies.gather', ['node_id' => $this->nodes['starter-site']], function ($op) { return Supplies::gather($this->nodes['starter-site'], $this->user, $op); });
+            }
             elseif ($action === 'goal') $this->run('world.goal.claim', ['code' => $code], function ($op) use ($code) { return (new WorldGoals($this->db))->claim($this->user, $code, $op); });
             elseif ($action === 'day') { Clock::$at = $this->start + ($quantity - 1) * 86400; $this->nightJobs(); }
             elseif ($action === 'lodge') { $service = new WorldHousing($this->db, $this->flags); $input = ['node_id' => $this->nodes[$code]]; $q = $service->preview($this->user, $input, 'lodge'); $service->execute($this->user, bin2hex(random_bytes(16)), $input, $q['quote_id'], (array)$q['expected_revisions'], 'lodge'); }
@@ -223,7 +226,7 @@ Command::run(9006, bin2hex(random_bytes(16)), 'fixture.municipal-funding', [], f
 $gameplay = new EconomyGameplay($db, 9005, $gameCity, $start, $scenario); $gameplay->fund();
 $scenarioName = getenv('ABL_ECONOMY_SCENARIO') ?: 'first-seven-days-with-lodging';
 if (!in_array($scenarioName, ['first-five-days-with-lodging', 'first-seven-days-with-lodging'], true)) throw new RuntimeException('Unknown acceptance route.');
-$gameplay->steps(array_merge($scenario['common_steps'], $scenario['scenarios'][$scenarioName]));
+$gameplay->steps(\common\modules\world\models\domain\EconomyScenario::routeSteps($scenario, $scenarioName, true));
 economyCheck((new Query())->from('world_goal_claim')->where(['world_id' => $gameWorld, 'user_id' => 9005, 'goal_code' => 'day-2'])->exists($db), 'actual command route reaches the second funded milestone on day five');
 $actor = (int)(new Query())->select('id')->from('game_actor')->where(['user_id' => 9005])->scalar($db);
 economyCheck((int)(new Query())->from('world_night_resolution')->where(['actor_id' => $actor, 'outcome' => 'protected'])->count('*', $db) === ($scenarioName === 'first-seven-days-with-lodging' ? 5 : 3)
@@ -235,6 +238,9 @@ economyCheck(!(new Query())->from('economy_account')->where(['or', ['<', 'amount
 $beforeReport = economyGameplayMoney($db)->decimal();
 $observation = (new \common\modules\world\models\domain\EconomyReport($db))->report('', 9004, 1);
 $observed = $observation['users'][0];
+$financial = (new \common\modules\world\models\domain\WorldBalanceOverview($db))->report(1);
+economyCheck($financial['paid_orders_cr'] === ($scenarioName === 'first-seven-days-with-lodging' ? '380.0000' : '332.0000')
+    && $financial['paid_goals_cr'] === '150.0000' && $financial['budget_shortfall_cr'] === '0.0000', 'administrative overview credits actual fulfilled demand and paid rewards without requesting the same funding twice');
 economyCheck($observed['user_id'] === 9005 && $observed['finances']['earned_cr'] === ($scenarioName === 'first-seven-days-with-lodging' ? '380.0000' : '332.0000')
     && $observed['finances']['rewards_cr'] === '150.0000', 'observation report separates earned sales and funded rewards from personal starting funds');
 economyCheck(isset($observed['retention']['D30']) && economyGameplayMoney($db)->decimal() === $beforeReport

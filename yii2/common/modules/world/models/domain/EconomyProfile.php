@@ -89,6 +89,14 @@ final class EconomyProfile
             }
         }
         foreach (['starter', 'daily'] as $section) self::quantities($data[$section]['items'], $items, $section);
+        if (isset($data['daily']['claim_limit']) && (!is_int($data['daily']['claim_limit']) || $data['daily']['claim_limit'] < 1 || $data['daily']['claim_limit'] > 30))
+            throw new \InvalidArgumentException('Daily allowance must contain 1–30 decreasing claims per item.');
+        if (isset($data['daily']['initial_multiplier']) && (!is_int($data['daily']['initial_multiplier']) || $data['daily']['initial_multiplier'] < ($data['daily']['claim_limit'] ?? 5) || $data['daily']['initial_multiplier'] > 30))
+            throw new \InvalidArgumentException('Initial supply multiplier must cover every decreasing claim.');
+        foreach ($data['daily']['suppressed_by'] ?? [] as $code => $objects) {
+            if (!isset($data['daily']['items'][$code]) || !is_array($objects)) throw new \InvalidArgumentException('Unknown supply resource.');
+            self::references($objects, $data['objects'], 'daily production');
+        }
         if ($data['starter']['credit_source'] !== 'existing_transfer' || !Money::parse($data['daily']['credits_cr'])->isZero()) throw new \InvalidArgumentException('Starter uses existing transfers; daily supplies contain items only.');
         foreach ($data['daily']['items'] as $code => $quantity) {
             if ($items[$code]['reference_price_cr'] === null || $items[$code]['sale_price_cr'] === null) throw new \InvalidArgumentException('Daily valuation is incomplete.');

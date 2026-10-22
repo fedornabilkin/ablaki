@@ -42,7 +42,7 @@ $kinds = ['WORLD' => 'Мир', 'REGION' => 'Регион', 'SETTLEMENT' => 'По
 <?= $form->field($model, 'code')->textInput(['readonly' => !$model->isNewRecord]) ?>
 <?= $form->field($model, 'name')->textInput() ?>
 <?php $rate = \common\modules\world\models\WorldTime::rate();
-if ($model->worldBuildSeconds === null) $model->worldBuildSeconds = (int)$model->build_seconds * $rate; ?>
+if ($model->worldBuildSeconds === null) $model->worldBuildSeconds = $model->worldWorkSeconds(); ?>
 <?= $form->field($model, 'worldBuildSeconds')->input('number', ['min' => 1, 'max' => 604800 * $rate])->hint('Скорость мира — 1:' . $rate . '. ' . $rate . ' секунд мира = 1 реальная секунда. Коэффициент меняется в редактировании мира. Длительность уже начатых строек сохраняется.') ?>
 <div class="admin-wide">Трудоёмкость: <output id="world-duration"><?= \common\modules\world\models\WorldTime::duration((int)$model->worldBuildSeconds) ?></output> времени мира (дни, чч:мм:сс).</div>
 <?php $this->registerJs("(function(){var input=document.getElementById('nodetemplate-worldbuildseconds'),output=document.getElementById('world-duration');if(!input||!output)return;function update(){var seconds=Math.max(0,Math.floor(Number(input.value)||0)),days=Math.floor(seconds/86400);seconds%=86400;var parts=[Math.floor(seconds/3600),Math.floor(seconds%3600/60),seconds%60];output.textContent=(days?days+' д. ':'')+parts.map(function(n){return n<10?'0'+n:String(n);}).join(':');}input.addEventListener('input',update);update();})();"); ?>

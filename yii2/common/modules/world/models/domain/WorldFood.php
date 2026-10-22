@@ -2,6 +2,7 @@
 namespace common\modules\world\models\domain;
 
 use common\modules\world\models\Node;
+use common\modules\world\models\WorldTime;
 use common\modules\world\modules\craft\models\domain\CraftStorage;
 use common\modules\world\modules\craft\models\domain\CanonicalInventory;
 use common\modules\world\support\GameError;
@@ -22,15 +23,17 @@ final class WorldFood
         return ['restore_hp' => min(8, (int)($food['backpack_restore_hp'] ?? $rule[0])),
             'repeat_limit' => (int)($food['repeat_limit'] ?? $rule[1]), 'repeat_seconds' => (int)($food['repeat_seconds'] ?? $rule[2])];
     }
-    public static function mealWindow(?int $now = null): array
+    public static function mealWindow(?int $now = null, ?Connection $db = null): array
     {
-        $now = $now ?? time(); $date = (new \DateTimeImmutable('@' . $now))->setTimezone(new \DateTimeZone('Europe/Moscow'));
+        $now = $now ?? time(); $settings = $db ? WorldTime::settings($db) : [];
+        $now = $db ? WorldTime::gameAt($db, $now, null, $settings) : $now;
+        $date = (new \DateTimeImmutable('@' . $now))->setTimezone(new \DateTimeZone('Europe/Moscow'));
         $windows = [['breakfast', 'Завтрак', 6, 10], ['lunch', 'Обед', 12, 16], ['dinner', 'Ужин', 18, 22]];
         $current = null; $next = null;
         foreach ([0, 1] as $day) foreach ($windows as $window) {
             $start = $date->modify('+' . $day . ' day')->setTime($window[2], 0)->getTimestamp();
             $end = $date->modify('+' . $day . ' day')->setTime($window[3], 0)->getTimestamp();
-            $entry = ['code' => $window[0], 'name' => $window[1], 'starts_at' => $start, 'ends_at' => $end];
+            $entry = ['code' => $window[0], 'name' => $window[1], 'starts_at' => $db ? WorldTime::realAt($db, $start, null, $settings) : $start, 'ends_at' => $db ? WorldTime::realAt($db, $end, null, $settings) : $end];
             if ($start <= $now && $now < $end) $current = $entry;
             if ($next === null && $start > $now) $next = $entry;
         }
@@ -64,13 +67,15 @@ final class WorldFood
                     ->where(['storage_id' => $backpack['id'], 'user_id' => $user])->andWhere(['between', 'slot', 1, min($active, (int)$backpack['capacity'])])->groupBy('item_id')->all($db) : [];
                 foreach ($rows as $row) $stock[(int)$row['item_id']] = (int)$row['quantity'];
             } else $stock = $store->quantities($user);
-            $events = self::events($db, $user)->andWhere(['like', 'kind', 'food:%', false])->andWhere(['>', 'created_at', time() - 86400])->all($db);
+            $clockSettings = $revision['clock_settings']; $gameNow = WorldTime::gameAt($db, time(), null, $clockSettings);
+            $events = self::events($db, $user)->andWhere(['like', 'kind', 'food:%', false])->andWhere(['>', 'created_at', WorldTime::realAt($db, $gameNow - 86400, null, $clockSettings)])->all($db);
             foreach ($revision['profile']['items'] as $code => $item) if (isset($item['restore_health'])) {
                 $id = (int)(new Query())->select('id')->from('craft_item')->where(['code' => $code, 'active' => 1])->scalar($db);
-                $rule = self::rules($code, $item); $times = [];
-                foreach ($events as $event) if (in_array($event['kind'], ['food:' . $code, 'food:disorder:' . $code], true) && (int)$event['created_at'] > time() - $rule['repeat_seconds']) $times[] = (int)$event['created_at'];
+                $worldRule = self::rules($code, $revision['raw_profile']['items'][$code]); $rule = self::rules($code, $item); $times = [];
+                $cutoff = WorldTime::realAt($db, $gameNow - $worldRule['repeat_seconds'], null, $clockSettings);
+                foreach ($events as $event) if (in_array($event['kind'], ['food:' . $code, 'food:disorder:' . $code], true) && (int)$event['created_at'] > $cutoff) $times[] = (int)$event['created_at'];
                 sort($times); $used = count($times); $remaining = max(0, $rule['repeat_limit'] - $used);
-                $restoreAt = $used >= $rule['repeat_limit'] ? $times[$used - $rule['repeat_limit']] + $rule['repeat_seconds'] : null;
+                $restoreAt = $used >= $rule['repeat_limit'] ? WorldTime::realAt($db, WorldTime::gameAt($db, $times[$used - $rule['repeat_limit']], null, $clockSettings) + $worldRule['repeat_seconds'], null, $clockSettings) : null;
                 $foods[] = ['code' => $code, 'name' => $item['name'], 'quantity' => $stock[$id] ?? 0, 'kitchen_restore_hp' => (int)$item['restore_health'],
                     'repeat_remaining' => $remaining, 'restores_at' => $restoreAt, 'can_eat' => $remaining > 0 && ($stock[$id] ?? 0) > 0] + $rule;
             }
@@ -80,7 +85,7 @@ final class WorldFood
         $disorderUntil = 0;
         foreach ($events ?? [] as $event) if (strpos($event['kind'], 'food:disorder:') === 0) {
             $code = substr($event['kind'], 14); $definition = $revision['profile']['items'][$code] ?? null;
-            if ($definition) $disorderUntil = max($disorderUntil, (int)$event['created_at'] + intdiv(self::rules($code, $definition)['repeat_seconds'], 2));
+            if ($definition) $disorderUntil = max($disorderUntil, WorldTime::realAt($db, WorldTime::gameAt($db, (int)$event['created_at'], null, $clockSettings) + intdiv(self::rules($code, $revision['raw_profile']['items'][$code])['repeat_seconds'], 2), null, $clockSettings));
         }
         if ($disorderUntil <= time()) $disorderUntil = null;
         if ($disorderUntil) foreach ($foods as &$food) $food['can_eat'] = false;
@@ -110,17 +115,20 @@ final class WorldFood
         if (!$db->getTransaction()) throw new \LogicException('Hunger requires the player transaction.');
         if (!EconomyRuntime::current($db)) return;
         $nutrition = self::nutrition($db, $user); $now = $now ?? time();
-        if (!$nutrition || $now <= $nutrition['anchor'] + self::HUNGER_AFTER) return;
-        $world = EconomyRuntime::world($db); $anchor = $nutrition['anchor'];
+        if (!$nutrition) return;
+        $realNow = $now; $world = EconomyRuntime::world($db); $settings = WorldTime::settings($db);
+        $now = WorldTime::gameAt($db, $now, null, $settings); $anchor = WorldTime::gameAt($db, $nutrition['anchor'], null, $settings);
+        if ($now <= $anchor + self::HUNGER_AFTER) return;
         $due = intdiv($now - $anchor - self::HUNGER_AFTER - 1, self::HUNGER_PERIOD) + 1;
         $last = (int)(new Query())->from('world_health_event')->where(['world_id' => $world, 'user_id' => $user, 'kind' => 'hunger'])
-            ->andWhere(['>', 'created_at', $anchor])->max('created_at', $db);
+            ->andWhere(['>', 'created_at', $nutrition['anchor']])->max('created_at', $db);
+        $last = $last ? WorldTime::gameAt($db, $last, null, $settings) : 0;
         $paid = $last > $anchor + self::HUNGER_AFTER ? intdiv($last - $anchor - self::HUNGER_AFTER - 1, self::HUNGER_PERIOD) + 1 : 0;
         if ($due <= $paid) return;
         $operation = bin2hex(random_bytes(16));
-        $db->createCommand()->insert('game_operation', ['id' => $operation, 'user_id' => $user, 'type' => 'world.health.hunger', 'created_at' => $now]
+        $db->createCommand()->insert('game_operation', ['id' => $operation, 'user_id' => $user, 'type' => 'world.health.hunger', 'created_at' => $realNow]
             + EconomyRuntime::operationContext($db, []))->execute();
-        self::change($db, $user, -self::HUNGER_DAMAGE * ($due - $paid), 'hunger', $operation, $anchor + self::HUNGER_AFTER + ($due - 1) * self::HUNGER_PERIOD + 1);
+        self::change($db, $user, -self::HUNGER_DAMAGE * ($due - $paid), 'hunger', $operation, WorldTime::realAt($db, $anchor + self::HUNGER_AFTER + ($due - 1) * self::HUNGER_PERIOD + 1, null, $settings));
     }
     public static function night(Connection $db, int $user, bool $protected, string $operation): void
     {
@@ -131,7 +139,7 @@ final class WorldFood
         $place = Node::visibleTo($user)->andWhere(['id' => $node, 'root_id' => EconomyRuntime::world($db), 'status' => 'active'])->asArray()->one($db);
         $isKitchen = $place && (new Query())->from('world_template')->where(['id' => $place['template_id'], 'code' => 'field-kitchen'])->exists($db);
         if (!$isKitchen || !NodeAvailability::activePath($db, $node)) throw new GameError('KITCHEN_UNAVAILABLE', 'Выберите действующую доступную полевую кухню.', 403);
-        $meal = self::mealWindow(); $current = $meal['current'];
+        $meal = self::mealWindow(null, $db); $current = $meal['current'];
         $used = $current && self::events($db, $user)->andWhere(['kind' => 'food:kitchen:' . $current['code']])
             ->andWhere(['>=', 'created_at', $current['starts_at']])->andWhere(['<', 'created_at', $current['ends_at']])->exists($db);
         return ['node_id' => $node, 'meal' => $meal, 'meal_used' => (bool)$used, 'health' => self::state($db, $user), 'server_time' => time()];

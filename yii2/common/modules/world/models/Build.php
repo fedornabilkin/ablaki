@@ -48,7 +48,7 @@ class Build extends Record
             $hold = (new BudgetSpending(self::getDb()))->reserve((int)$accounts['budget']['id'], $budget, 'Строительство: ' . $template->name, $operation);
         }
         $build = new self(); $build->setAttributes(['node_id' => $node->id, 'parent_id' => $parent->id, 'owner_user_id' => $user,
-            'required_seconds' => $template->build_seconds, 'worked_seconds' => 0, 'labor_budget' => $budget->decimal(), 'commitment_id' => $hold,
+            'required_seconds' => $template->realWorkSeconds(WorldTime::rate((int)$parent->root_id)), 'worked_seconds' => 0, 'labor_budget' => $budget->decimal(), 'commitment_id' => $hold,
             'materials_json' => Json::encode((object)$template->materials()), 'status' => 'building', 'revision' => 1, 'created_at' => time()], false);
         if ($build->hasAttribute('active_node_id')) $build->active_node_id = $node->id;
         if (!$build->save(false)) throw new \RuntimeException('Build write failed.');
@@ -73,7 +73,7 @@ class Build extends Record
         $missing = (int)$node->max_condition - (int)$node->condition;
         if ($missing <= 0) throw new GameError('REPAIR_NOT_NEEDED', 'Объект полностью исправен.', 422);
         $build = new self(); $build->setAttributes(['node_id'=>$nodeId,'active_node_id'=>$nodeId,'parent_id'=>$node->parent_id ?: $nodeId,'owner_user_id'=>$user,
-            'job_kind'=>'repair','initial_condition'=>(int)$node->condition,'required_seconds'=>max(1,(int)ceil($missing * 60 / 100)),
+            'job_kind'=>'repair','initial_condition'=>(int)$node->condition,'required_seconds'=>max(1,WorldTime::realSeconds((int)ceil($missing * 60 / 100), WorldTime::rate((int)$node->root_id))),
             'worked_seconds'=>0,'labor_budget'=>'0.0000','materials_json'=>'{}','status'=>'building','revision'=>1,'created_at'=>time()], false);
         if (!$build->save(false)) throw new \RuntimeException('Repair write failed.');
         return $build;
