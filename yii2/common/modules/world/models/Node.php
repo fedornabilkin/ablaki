@@ -88,7 +88,8 @@ class Node extends LockedRecord
     {
         $template = NodeTemplate::findOne($this->template_id);
         $parent = $this->parent_id ? self::findOne($this->parent_id) : null;
-        if (!$template || ($this->isNewRecord && !$template->enabled) || ($this->parent_id && !$parent) || !$template->permits($parent)) {
+        $samePlacement = !$this->isNewRecord && !$this->isAttributeChanged('parent_id') && !$this->isAttributeChanged('template_id');
+        if (!$template || ($this->isNewRecord && !$template->enabled) || ($this->parent_id && !$parent) || (!$samePlacement && !$template->permits($parent))) {
             $this->addError('parent_id', 'Шаблон нельзя построить в выбранном объекте.'); return;
         }
         if (!$this->isNewRecord && ($this->isAttributeChanged('code') || $this->isAttributeChanged('parent_id') || $this->isAttributeChanged('template_id') || $this->isAttributeChanged('owner_user_id')))

@@ -119,7 +119,7 @@ $claimFinite = static function ($key) use ($finiteUser, $finiteBuild) {
 $finite = new \common\modules\world\models\domain\FiniteSupplies($db);
 $tx = $db->beginTransaction();
 try {
-    $forest = NodeFactory::create(NodeTemplate::requireOne(['code' => 'forest-plot']), Node::requireOne($finiteCity), $finiteUser, 'Supply exclusion fixture', 'supply-forest', null, 'constructing');
+    $forest = NodeFactory::create(NodeTemplate::requireOne(['code' => 'forest-plot']), Node::requireOne($finiteBuild->node_id), $finiteUser, 'Supply exclusion fixture', 'supply-forest', null, 'constructing');
     $db->createCommand()->update('world_node', ['status' => 'active'], ['id' => $forest->id])->execute();
     economyCheck(!in_array('classic-log', array_column($finite->state($finiteUser)['items'], 'code'), true), 'a completed owned production source excludes its raw resource from daily supplies');
     EconomyRuntime::fact($db, $finiteUser, 'built:forest-plot', 1, $joined['operation_id']);
@@ -254,6 +254,8 @@ try {
 
     $mine = NodeFactory::create(NodeTemplate::requireOne(['code' => 'mine']), Node::requireOne($finiteBuild->node_id), $finiteUser, 'Paid mine fixture', 'paid-mine-fixture', null, 'constructing');
     $db->createCommand()->update('world_node', ['status' => 'active', 'condition' => $mine->max_condition], ['id' => $mine->id])->execute(); $mine->refresh();
+    // An explicit administrator edge tests custom placement depth independently of the built-in catalog.
+    $db->createCommand()->insert('world_template_parent', ['template_id' => NodeTemplate::requireOne(['code' => 'forest-plot'])->id, 'parent_template_id' => $mine->template_id])->execute();
     $nested = NodeFactory::create(NodeTemplate::requireOne(['code' => 'forest-plot']), $mine, $finiteUser, 'Hierarchy strength fixture', 'nested-strength-fixture', null, 'constructing');
     economyCheck($nested->max_condition < $mine->max_condition && $mine->max_condition < Node::requireOne($finiteBuild->node_id)->max_condition, 'strength follows actual placement depth even when the template permits different levels');
     (new \common\modules\world\modules\economy\models\domain\EconomyHierarchy($db))->provision((int)$mine->id, $joined['operation_id']);
@@ -418,3 +420,66 @@ try {
     economyCheck($edit($desired, true, $topUpKey) === $edited && \common\modules\world\modules\economy\value\Money::parse((string)(new Query())->select('credit')->from('persone')->where(['user_id' => $finiteUser])->scalar($db))->decimal() === '4.0000', 'checked top-up charges exactly the one-credit shortfall once when increasing the helper budget');
 } finally { $tx->rollBack(); }
 echo 'Settlement reserve and self-construction checks passed.' . PHP_EOL;
+
+$tx = $db->beginTransaction();
+try {
+    $catalogCodes = static function (int $parent) { return (new \common\modules\world\models\TemplateSearch())->search([], $parent)->query->select('code')->column(); };
+    $siteCodes = $catalogCodes($siteId);
+    economyCheck(in_array('house', $siteCodes, true) && in_array('forge', $siteCodes, true) && in_array('trap', $siteCodes, true) && !in_array('garden-bed', $siteCodes, true), 'campsite catalog includes its buildings and excludes beds for cultivation');
+    $fixtures = Command::run($freshUser, bin2hex(random_bytes(16)), 'fixture.node-context', [], static function ($op) use ($db, $freshUser, $siteId) {
+        $ids = [];
+        foreach (['shelter-a' => 'starter-shelter', 'shelter-b' => 'starter-shelter', 'forge' => 'forge', 'garden' => 'garden'] as $key => $code) {
+            $node = NodeFactory::create(NodeTemplate::requireOne(['code' => $code]), Node::requireOne($siteId), $freshUser, $key, 'context-' . $key, null, 'constructing');
+            $db->createCommand()->update('world_node', ['status' => 'active', 'operational_status' => 'active', 'condition' => $node->max_condition], ['id' => $node->id])->execute(); $node->refresh();
+            $storage = (new \common\modules\world\models\domain\PlacementProvisioner($db))->interior($node); $ids[$key] = (int)$node->id;
+            if (strpos($key, 'shelter-') !== 0) continue;
+            $db->createCommand()->insert('world_build', ['node_id' => $node->id, 'parent_id' => $siteId, 'owner_user_id' => $freshUser, 'required_seconds' => 60, 'worked_seconds' => 60, 'labor_budget' => '0.0000', 'materials_json' => '{}', 'status' => 'completed', 'revision' => 1, 'created_at' => time(), 'finished_at' => time()])->execute();
+            $bed = (new Query())->from('craft_item')->where(['code' => 'classic-bed'])->one($db);
+            $position = (0 - (int)$node->map_origin_y) * (int)$node->map_width - (int)$node->map_origin_x + 1;
+            $db->createCommand()->insert('craft_inventory', ['user_id' => $freshUser, 'item_id' => $bed['id'], 'item_quantity' => 1, 'storage_id' => $storage, 'slot' => $position, 'revision' => 1])->execute();
+            \common\modules\world\models\domain\FurnishingPlacement::synchronize($db, [$node->id], $op);
+        }
+        return $ids;
+    });
+    economyCheck(in_array('garden-bed', $catalogCodes($fixtures['garden']), true) && !in_array('house', $catalogCodes($fixtures['garden']), true) && !in_array('forge', $catalogCodes($fixtures['garden']), true), 'garden catalog contains cultivation beds and no campsite buildings');
+    economyCheck(!NodeTemplate::requireOne(['code' => 'house'])->permits(Node::requireOne($fixtures['garden'])) && !NodeTemplate::requireOne(['code' => 'garden-bed'])->permits(Node::requireOne($siteId)), 'the same parent restrictions protect direct build commands');
+    $edges = (new Query())->from('world_template_parent')->orderBy(['template_id' => SORT_ASC, 'parent_template_id' => SORT_ASC])->all($db);
+    \common\modules\world\models\domain\TemplateParents::seed($db); \common\modules\world\models\domain\TemplateParents::seed($db);
+    economyCheck($edges === (new Query())->from('world_template_parent')->orderBy(['template_id' => SORT_ASC, 'parent_template_id' => SORT_ASC])->all($db), 'parent-context backfill is repeatable and retains configured links');
+    $store = new \common\modules\world\modules\craft\models\domain\WorldStorage($db, new \common\modules\world\models\domain\WorldFlags($db, $app->getModule('world')));
+    $bedId = (int)(new Query())->select('id')->from('craft_item')->where(['code' => 'classic-bed'])->scalar($db);
+    $benchId = (int)(new Query())->select('id')->from('craft_item')->where(['code' => 'classic-bench'])->scalar($db);
+    $outdoor = $store->placementOptions($freshUser, $siteId)['items'];
+    $interior = $store->placementOptions($freshUser, $fixtures['shelter-a'])['items'];
+    $working = $store->placementOptions($freshUser, $fixtures['forge'])['items'];
+    $contains = static function (array $rows, string $name) { return (bool)array_filter($rows, static function ($row) use ($name) { return $row['name'] === $name; }); };
+    $bedName = trim((string)(new Query())->select('name')->from('craft_item')->where(['id' => $bedId])->scalar($db));
+    $benchName = trim((string)(new Query())->select('name')->from('craft_item')->where(['id' => $benchId])->scalar($db));
+    economyCheck(!$contains($outdoor, $bedName) && !$contains($outdoor, $benchName) && $contains($interior, $bedName) && $contains($working, $benchName), 'placement catalog filters exposure and workstation context even before crafting');
+    $walletBefore = (string)(new Query())->select('credit')->from('persone')->where(['user_id' => $freshUser])->scalar($db);
+    // Earlier fixture commands represent past play, outside this UI operation's rate window.
+    $db->createCommand()->update('game_command', ['created_at' => time() - 120], ['user_id' => $freshUser])->execute();
+    $housing = new \common\modules\world\models\domain\WorldHousing($db, new \common\modules\world\models\domain\WorldFlags($db, $app->getModule('world')));
+    $assign = static function (int $node) use ($housing, $freshUser) { $input = ['node_id' => $node, 'replace_current' => true]; $q = $housing->preview($freshUser, $input, 'lodge'); $key = bin2hex(random_bytes(16)); $result = $housing->execute($freshUser, $key, $input, $q['quote_id'], (array)$q['expected_revisions'], 'lodge'); return [$key, $input, $q, $result]; };
+    $assign($fixtures['shelter-a']); $firstLodging = $housing->state($freshUser, $fixtures['shelter-a'])['lodging'];
+    [$key, $input, $q, $assigned] = $assign($fixtures['shelter-b']);
+    economyCheck($housing->execute($freshUser, $key, $input, $q['quote_id'], (array)$q['expected_revisions'], 'lodge') === $assigned && $housing->state($freshUser, $fixtures['shelter-b'])['lodging'] !== null && $housing->state($freshUser, $fixtures['shelter-a'])['lodging'] === null
+        && (new Query())->select('ended_at')->from('world_housing_interval')->where(['id' => $firstLodging['id']])->scalar($db) !== null && (string)(new Query())->select('credit')->from('persone')->where(['user_id' => $freshUser])->scalar($db) === $walletBefore, 'one-click lodging replacement closes only the old interval, preserves history and replays without a debit');
+    $buildIds = [];
+    foreach (['shelter-a', 'shelter-b'] as $key) {
+        $id = $fixtures[$key]; $db->createCommand()->update('world_node', ['status' => 'constructing'], ['id' => $id])->execute();
+        $db->createCommand()->update('world_build', ['status' => 'building', 'worked_seconds' => 0, 'finished_at' => null], ['node_id' => $id])->execute();
+        $buildIds[] = (int)(new Query())->select('id')->from('world_build')->where(['node_id' => $id])->scalar($db);
+    }
+    $a = \common\modules\world\models\Build::requireOne($buildIds[0]); $b = \common\modules\world\models\Build::requireOne($buildIds[1]);
+    \common\modules\world\models\BuildWork::start($a, $freshUser);
+    economyReject(static function () use ($b, $freshUser) { \common\modules\world\models\BuildWork::start($b, $freshUser); }, 'BUILDER_BUSY');
+    $db->createCommand()->insert('world_build_work', ['build_id' => $b->id, 'user_id' => $freshUser, 'started_at' => time(), 'last_seen_at' => time(), 'accounted_at' => time(), 'seconds' => 0, 'paid_amount' => '0.0000'])->execute();
+    economyReject(static function () use ($b, $freshUser, $fixtures) { \common\modules\world\models\BuildWork::heartbeat($b, $freshUser, $fixtures['operation_id'], false); }, 'BUILDER_BUSY');
+    economyReject(static function () use ($freshUser, $siteId) { \common\modules\world\models\Build::requireAvailableProject($freshUser, (int)Node::requireOne($siteId)->root_id); }, 'CONSTRUCTION_LIMIT');
+    economyCheck((int)(new Query())->from('world_builder')->where(['user_id' => $freshUser])->count('*', $db) === 1 && (int)\common\modules\world\models\Build::requireOne($b->id)->worked_seconds === 0, 'legacy suspended work cannot renew a second construction session');
+    $price = \common\modules\world\models\domain\WorldMapCells::purchasePricing(['base_price' => '0.5000', 'outer_ring_multiplier' => 10, 'bulk_minimum' => 3, 'discount_bps' => 500], [['x' => 1, 'y' => 0], ['x' => 2, 'y' => 0]]);
+    economyCheck(array_column($price['unit_prices'], 'price') === ['0.5000', '10.0000'], 'distant rings cost twenty times the adjacent ring without changing starting cells');
+    economyCheck(\common\modules\world\models\domain\EconomyProfile::load()['objects']['forge']['price_cr'] === '40.0000' && 250 - (20 + 50 + 10 + 120 + 40 + 3.8 + 4) > 0, '250 starting credits cover shelter, garden, bed, mine, forge, eight adjacent cells and two waterings');
+} finally { $tx->rollBack(); }
+echo 'Node-context, single-builder and one-click lodging checks passed.' . PHP_EOL;

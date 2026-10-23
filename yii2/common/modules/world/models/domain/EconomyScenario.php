@@ -260,7 +260,7 @@ final class EconomyScenario
             self::need(!($step['use_elixir'] ?? false), 'INVALID_MAP_ACTION');
             foreach ($cells as $key => $point) self::need(isset($this->state['explored'][$key]) && !isset($this->state['paid_cells'][$code][$key]), 'MAP_CELL_NOT_DISCOVERED');
             $map = $this->profile['map'];
-            $quote = WorldMapCells::purchasePricing(['base_price' => $map['base_price_cr'], 'bulk_minimum' => $map['bulk_minimum'], 'discount_bps' => $map['discount_bps']], array_values($cells));
+            $quote = WorldMapCells::purchasePricing(['base_price' => $map['base_price_cr'], 'outer_ring_multiplier' => $map['outer_ring_multiplier'] ?? 1, 'bulk_minimum' => $map['bulk_minimum'], 'discount_bps' => $map['discount_bps']], array_values($cells));
             $this->spend($code, self::money($quote['total']));
             foreach (array_keys($cells) as $i => $key) $this->state['paid_cells'][$code][$key] = $quote['unit_prices'][$i];
         } elseif ($action === 'daily') {

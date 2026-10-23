@@ -37,7 +37,7 @@ final class EconomyConstruction
         }
         $active = (new Query())->from(['b' => 'world_build'])->innerJoin(['n' => 'world_node'], 'n.id=b.node_id')
             ->where(['b.owner_user_id' => $user, 'b.status' => 'building', 'n.root_id' => EconomyRuntime::world($db)])->count('*', $db);
-        if ((int)$active >= $revision['profile']['limits']['active_constructions']) throw new GameError('CONSTRUCTION_LIMIT', 'Сначала завершите или отмените одну из трёх строек.', 409);
+        if ((int)$active >= min(1, $revision['profile']['limits']['active_constructions'])) throw new GameError('CONSTRUCTION_LIMIT', 'Сначала завершите или отмените текущую стройку.', 409);
         $limit = $revision['profile']['limits']['objects'][$template->code] ?? null;
         if ($limit !== null) {
             $count = (new Query())->from('world_node')->where(['owner_user_id' => $user, 'root_id' => EconomyRuntime::world($db), 'template_id' => $template->id])->andWhere(['<>', 'status', 'archived'])->count('*', $db);

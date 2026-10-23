@@ -48,7 +48,13 @@ class BuildWork extends Record
         $build->assertOpen();
         $work = self::find()->where(['build_id' => $build->id, 'user_id' => $user, 'ended_at' => null])->one();
         if (!$work) throw new GameError('WORK_NOT_STARTED', 'Сначала начните работу.', 409);
-        if (!$stop) self::requireSlot($build, $user);
+        if (!$stop) {
+            $active = (new Query())->from('world_builder')->where(['user_id' => $user])->one(self::getDb());
+            if ($active && (int)$active['work_id'] !== (int)$work->id) throw new GameError('BUILDER_BUSY', 'Сначала остановите работу на другой стройке.', 409);
+            if ((new Query())->from('world_mining_worker')->where(['user_id' => $user])->exists(self::getDb())) throw new GameError('MINER_BUSY', 'Остановите добычу перед строительством.', 409);
+            self::requireSlot($build, $user);
+            if (!$active) self::getDb()->createCommand()->insert('world_builder', ['user_id' => $user, 'work_id' => $work->id])->execute();
+        }
         $now = time(); BuildClock::checkpoint($build, $now); $work->refresh();
         $work->last_seen_at = max((int)$work->last_seen_at, $now); $work->accounted_at = max((int)$work->accounted_at, $now);
         if ($stop) $work->ended_at = $now;

@@ -269,8 +269,8 @@ adminReject(400, function () use ($profile) { adminPage('world/craft/catalog/eco
 $app->authManager->revoke($adminPermission, 9001); $app->user->switchIdentity(new CraftIdentity());
 adminReject(403, function () { adminPage('world/craft/catalog/economy'); }, 'profile administration requires built-in administrator permission');
 
-$db->transaction(function () use ($db, $forestId, $freshUser, &$greenhouse, &$greenhouseBed) {
-    $greenhouse = \common\modules\world\models\NodeFactory::create(\common\modules\world\models\NodeTemplate::requireOne(['code' => 'small-greenhouse']), \common\modules\world\models\Node::requireOne($forestId), $freshUser, 'Existing fixture greenhouse', 'fixture-greenhouse', null, 'constructing');
+$db->transaction(function () use ($db, $siteId, $freshUser, &$greenhouse, &$greenhouseBed) {
+    $greenhouse = \common\modules\world\models\NodeFactory::create(\common\modules\world\models\NodeTemplate::requireOne(['code' => 'small-greenhouse']), \common\modules\world\models\Node::requireOne($siteId), $freshUser, 'Existing fixture greenhouse', 'fixture-greenhouse', null, 'constructing');
     $db->createCommand()->update('world_node', ['status' => 'active', 'condition' => $greenhouse->max_condition], ['id' => $greenhouse->id])->execute(); $greenhouse->refresh();
     $greenhouseBed = \common\modules\world\models\NodeFactory::create(\common\modules\world\models\NodeTemplate::requireOne(['code' => 'garden-bed']), $greenhouse, $freshUser, 'Existing fixture greenhouse bed', 'fixture-greenhouse-bed', null, 'constructing');
     $db->createCommand()->update('world_node', ['status' => 'active', 'condition' => $greenhouseBed->max_condition], ['id' => $greenhouseBed->id])->execute();

@@ -3187,6 +3187,10 @@
         "quantity": 3
       },
       {
+        "action": "source",
+        "code": "gather-magic-herb"
+      },
+      {
         "action": "daily"
       },
       {
@@ -3234,7 +3238,7 @@
       {
         "action": "source",
         "code": "gather-coal",
-        "quantity": 20
+        "quantity": 19
       },
       {
         "action": "deliver",
@@ -3294,6 +3298,10 @@
         "quantity": 4
       },
       {
+        "action": "source",
+        "code": "gather-magic-herb"
+      },
+      {
         "action": "daily"
       },
       {
@@ -3322,7 +3330,7 @@
       {
         "action": "source",
         "code": "gather-coal",
-        "quantity": 9
+        "quantity": 8
       },
       {
         "action": "deliver",
@@ -3521,14 +3529,29 @@
         "code": "classic-plank"
       },
       {
-        "action": "grant",
-        "source": "starter-site",
-        "destination": "stone-plot",
-        "amount_cr": "103.0000"
+        "action": "explore",
+        "code": "starter-site",
+        "cells": [
+          [
+            -2,
+            0
+          ]
+        ],
+        "use_elixir": true
+      },
+      {
+        "action": "buy",
+        "code": "starter-site",
+        "cells": [
+          [
+            -2,
+            0
+          ]
+        ]
       },
       {
         "action": "build",
-        "parent": "stone-plot",
+        "parent": "starter-site",
         "code": "workshop-building"
       },
       {
@@ -3545,6 +3568,10 @@
         "quantity": 7
       },
       {
+        "action": "source",
+        "code": "gather-magic-herb"
+      },
+      {
         "action": "daily"
       },
       {
@@ -3554,7 +3581,7 @@
       },
       {
         "action": "source",
-        "quantity": 5,
+        "quantity": 4,
         "code": "gather-coal"
       },
       {
@@ -3631,29 +3658,43 @@
         "quantity": 2
       },
       {
+        "action": "craft",
+        "code": "classic-glass"
+      },
+      {
+        "action": "craft",
+        "code": "classic-bottle"
+      },
+      {
+        "action": "craft",
+        "code": "world-explorer-elixir",
+        "quantity": 2
+      },
+      {
         "action": "explore",
-        "code": "stone-plot",
+        "code": "starter-site",
         "cells": [
           [
-            1,
-            0
+            0,
+            2
           ]
-        ]
+        ],
+        "use_elixir": true
       },
       {
         "action": "buy",
-        "code": "stone-plot",
+        "code": "starter-site",
         "cells": [
           [
-            1,
-            0
+            0,
+            2
           ]
         ]
       },
       {
         "action": "build",
         "code": "storage-building",
-        "parent": "stone-plot"
+        "parent": "starter-site"
       },
       {
         "action": "explore",
@@ -3831,6 +3872,10 @@
         "quantity": 3
       },
       {
+        "action": "source",
+        "code": "gather-magic-herb"
+      },
+      {
         "action": "daily"
       },
       {
@@ -3878,7 +3923,7 @@
       {
         "action": "source",
         "code": "gather-coal",
-        "quantity": 20
+        "quantity": 19
       },
       {
         "action": "deliver",
@@ -3938,6 +3983,10 @@
         "quantity": 4
       },
       {
+        "action": "source",
+        "code": "gather-magic-herb"
+      },
+      {
         "action": "daily"
       },
       {
@@ -3966,7 +4015,7 @@
       {
         "action": "source",
         "code": "gather-coal",
-        "quantity": 9
+        "quantity": 8
       },
       {
         "action": "deliver",
@@ -4165,14 +4214,29 @@
         "code": "classic-plank"
       },
       {
-        "action": "grant",
-        "source": "starter-site",
-        "destination": "stone-plot",
-        "amount_cr": "103.0000"
+        "action": "explore",
+        "code": "starter-site",
+        "cells": [
+          [
+            -2,
+            0
+          ]
+        ],
+        "use_elixir": true
+      },
+      {
+        "action": "buy",
+        "code": "starter-site",
+        "cells": [
+          [
+            -2,
+            0
+          ]
+        ]
       },
       {
         "action": "build",
-        "parent": "stone-plot",
+        "parent": "starter-site",
         "code": "workshop-building"
       },
       {
@@ -4189,6 +4253,10 @@
         "quantity": 7
       },
       {
+        "action": "source",
+        "code": "gather-magic-herb"
+      },
+      {
         "action": "daily"
       },
       {
@@ -4198,7 +4266,7 @@
       },
       {
         "action": "source",
-        "quantity": 5,
+        "quantity": 4,
         "code": "gather-coal"
       },
       {
@@ -4275,29 +4343,43 @@
         "quantity": 2
       },
       {
+        "action": "craft",
+        "code": "classic-glass"
+      },
+      {
+        "action": "craft",
+        "code": "classic-bottle"
+      },
+      {
+        "action": "craft",
+        "code": "world-explorer-elixir",
+        "quantity": 2
+      },
+      {
         "action": "explore",
-        "code": "stone-plot",
+        "code": "starter-site",
         "cells": [
           [
-            1,
-            0
+            0,
+            2
           ]
-        ]
+        ],
+        "use_elixir": true
       },
       {
         "action": "buy",
-        "code": "stone-plot",
+        "code": "starter-site",
         "cells": [
           [
-            1,
-            0
+            0,
+            2
           ]
         ]
       },
       {
         "action": "build",
         "code": "storage-building",
-        "parent": "stone-plot"
+        "parent": "starter-site"
       },
       {
         "action": "explore",

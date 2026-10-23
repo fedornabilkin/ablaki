@@ -154,6 +154,8 @@ rejectsProfile($broken, 'treasury example cannot claim unfunded recurring income
 $currentProfile = $profile; $currentRoutes = EconomyScenario::load();
 // Earlier accepted routes keep their original personal funding, nine open cells and fees.
 $profile['starter']['funding'] = 'personal_transfer'; $profile['crop']['dig_fee_cr'] = '2.0000'; $profile['actions']['harvest-carrot']['fee_cr'] = '4.0000';
+$profile['objects']['forge']['price_cr'] = '150.0000'; $profile['map']['outer_ring_multiplier'] = 1;
+$profile['actions']['gather-coal']['output']['classic-coal'] = 2; $profile['actions']['gather-sand']['output']['classic-sand'] = 2; $profile['actions']['gather-magic-herb']['output']['world-magic-herb'] = 1;
 $profile['map']['starter_open_cells'] = 9; $profile['map']['starter_open_square'] = [-1, 1]; $profile['map']['base_price_cr'] = '4.0000';
 $routes = $currentRoutes; $routes['initial_open_cells'] = 9; $routes['municipal_budget_cr'] = '560.0000';
 $routes['common_steps'] = array_values(array_filter($routes['common_steps'], static function ($step) { return $step['action'] !== 'grant'; }));

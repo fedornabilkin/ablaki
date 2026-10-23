@@ -274,12 +274,14 @@ if ($scenarioName === 'first-seven-days-with-lodging') {
     economyCheck((new Query())->from('craft_storage')->where(['owner_user_id' => 9005, 'kind' => 'chest', 'capacity' => 20])->exists($db), 'week route places a twenty-slot chest without destroying existing contents');
 }
 // With all remaining funded demand removed, no hidden buyer or daily Cr appears.
-$remainingOrder = (new Query())->from('economy_purchase_order')->where(['node_id' => $gameCity, 'status' => 'open'])->one($db);
+$remainingOrders = (new Query())->from('economy_purchase_order')->where(['node_id' => $gameCity, 'status' => 'open'])->all($db);
 $closedMoney = economyGameplayMoney($db)->decimal();
 $orderService = new StarterOrders($db, new WorldFlags($db, Yii::$app->getModule('world')), new WorldAccessPolicy(9001, true));
-$closeInput = ['node_id' => $gameCity, 'order_id' => (int)$remainingOrder['id']];
-$closeQuote = $orderService->preview(9001, $closeInput, 'cancel');
-$orderService->execute(9001, bin2hex(random_bytes(16)), $closeInput, $closeQuote['quote_id'], (array)$closeQuote['expected_revisions'], 'cancel');
+foreach ($remainingOrders as $remainingOrder) {
+    $closeInput = ['node_id' => $gameCity, 'order_id' => (int)$remainingOrder['id']];
+    $closeQuote = $orderService->preview(9001, $closeInput, 'cancel');
+    $orderService->execute(9001, bin2hex(random_bytes(16)), $closeInput, $closeQuote['quote_id'], (array)$closeQuote['expected_revisions'], 'cancel');
+}
 economyCheck(!(new Query())->from('economy_purchase_order')->where(['node_id' => $gameCity, 'status' => 'open'])->exists($db)
     && economyGameplayMoney($db)->decimal() === $closedMoney, 'zero funded demand releases only the unused reserve and does not issue credits');
 economyReject(function () use ($db, $gameCity, $remainingOrder) {

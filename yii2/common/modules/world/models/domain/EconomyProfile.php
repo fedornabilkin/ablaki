@@ -59,6 +59,7 @@ final class EconomyProfile
             }
         }
         self::moneyFields($data);
+        if (isset($data['map']['outer_ring_multiplier']) && (!is_int($data['map']['outer_ring_multiplier']) || $data['map']['outer_ring_multiplier'] < 1 || $data['map']['outer_ring_multiplier'] > 100)) throw new \InvalidArgumentException('Invalid outer map ring multiplier.');
         if (isset($data['starter']['funding']) && !in_array($data['starter']['funding'], ['parent_budget', 'personal_transfer'], true)) throw new \InvalidArgumentException('Unknown starter funding mode.');
         if (isset($data['closed_test']['all_templates']) && !is_bool($data['closed_test']['all_templates'])) throw new \InvalidArgumentException('Expected test catalogue flag.');
         if (isset($data['construction']) && (($data['construction']['minimum_budgets'] ?? null) !== true || ($data['construction']['credits_per_builder_cr'] ?? null) !== '2.0000')) throw new \InvalidArgumentException('Unsupported builder budget policy.');

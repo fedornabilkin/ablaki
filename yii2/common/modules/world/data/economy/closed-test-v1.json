@@ -93,7 +93,8 @@
     "base_price_cr": "0.5000",
     "bulk_minimum": 3,
     "discount_bps": 500,
-    "fee_receiver": "existing_settlement_budget"
+    "fee_receiver": "existing_settlement_budget",
+    "outer_ring_multiplier": 10
   },
   "construction": {
     "minimum_budgets": true,
@@ -151,7 +152,7 @@
       "unit": "successful_source_batches"
     },
     "daily_supply": 1,
-    "active_constructions": 3,
+    "active_constructions": 1,
     "active_labor_sessions": 1,
     "sales_daily": {
       "operations": 20,
@@ -765,7 +766,7 @@
     },
     "forge": {
       "name": "Кузница",
-      "price_cr": "150.0000",
+      "price_cr": "40.0000",
       "work_seconds": 300,
       "materials": {
         "classic-plank": 10,
@@ -870,7 +871,8 @@
       "price_cr": "0.0000",
       "work_seconds": 10,
       "materials": {},
-      "description": "Площадка для костра и приготовления еды. Изготовьте и разместите необходимый предмет на её карте."
+      "description": "Площадка для костра и приготовления еды. Изготовьте и разместите необходимый предмет на её карте.",
+      "exposure_class": "outdoor"
     },
     "cookfire": {
       "name": "Очаг",
@@ -880,7 +882,8 @@
         "classic-stone": 4,
         "classic-log": 2
       },
-      "description": "Очаг для приготовления пищи. Еда восстанавливает здоровье и позволяет поддерживать сытость."
+      "description": "Очаг для приготовления пищи. Еда восстанавливает здоровье и позволяет поддерживать сытость.",
+      "exposure_class": "outdoor"
     },
     "trap": {
       "name": "Ловушка",
@@ -999,7 +1002,7 @@
       "node": "sand-plot",
       "ingredients": {},
       "output": {
-        "classic-sand": 2
+        "classic-sand": 4
       },
       "tools": [
         "world-shovel"
@@ -1073,7 +1076,7 @@
       "node": "mine",
       "ingredients": {},
       "output": {
-        "classic-coal": 2
+        "classic-coal": 3
       },
       "tools": [
         "world-stone-pickaxe"
@@ -1136,7 +1139,7 @@
       "node": "meadow-plot",
       "ingredients": {},
       "output": {
-        "world-magic-herb": 1
+        "world-magic-herb": 2
       },
       "tools": [],
       "work_seconds": 600,

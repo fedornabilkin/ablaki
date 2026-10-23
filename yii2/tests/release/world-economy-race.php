@@ -21,6 +21,8 @@ if (($argv[1] ?? '') === 'economy-worker') {
         'components' => ['db' => ['class' => yii\db\Connection::class, 'dsn' => $raceDsn, 'username' => 'ablakin_ci', 'password' => 'ci-only-password', 'charset' => 'utf8'],
             'authManager' => ['class' => yii\rbac\DbManager::class]]]);
     $app->db->open();
+    $app->params['remote_db'] = $app->db;
+    $app->setModule('user', ['class' => dektrium\user\Module::class]);
     $action = $argv[2]; $key = $argv[3]; $payload = json_decode(base64_decode($argv[4]), true, 32, JSON_THROW_ON_ERROR);
     if (isset($payload['clock'])) EconomyRaceClock::$at = $payload['clock'];
     workerReady();
@@ -31,6 +33,7 @@ if (($argv[1] ?? '') === 'economy-worker') {
             if ($action === 'paid-start') return common\modules\world\models\Mining::start($payload['mining_node_id'], $user, $op, 'mine-stone');
             if ($action === 'paid-delivery') return common\modules\world\models\Mining::heartbeat($payload['mining_node_id'], $user, $op);
             if ($action === 'starter-reserve') return (new common\modules\world\models\domain\StarterReserve($app->db))->configure($user, $payload['node_id'], $payload['payout_cr'], $payload['add_amount_cr'], $op, true);
+            if ($action === 'construction') return ['build' => common\modules\world\models\Build::begin($user, $payload['input'], $op)->toArray()];
             if ($action === 'supplies') return common\modules\world\models\Supplies::gather($payload['node_id'], 9004, $op);
             if ($action === 'kitchen') return common\modules\world\models\domain\WorldFood::consume($app->db, 9004, 'world-cooked-carrot', common\modules\world\models\domain\WorldFood::state($app->db, 9004)['revision'], $op, $payload['node_id']);
             if ($action === 'food') return common\modules\world\models\domain\WorldFood::consume($app->db, 9004, 'world-cooked-carrot', $payload['health_revision'], $op);
@@ -160,7 +163,9 @@ $db->transaction(static function () use ($db, $city, $freshUser, &$paidMine, &$p
         Command::run($id, bin2hex(random_bytes(16)), 'world.start', ['city_id' => $city], static function ($op) use ($id, $city) { return common\modules\world\models\StarterPack::enter($id, $city, $op); });
         (new common\modules\world\modules\craft\models\domain\CraftStorage($db))->move($id, (new Query())->from('craft_item')->where(['code' => 'world-stone-pickaxe'])->one($db), 1);
     }
-    $paidMine = common\modules\world\models\NodeFactory::create(common\modules\world\models\NodeTemplate::requireOne(['code' => 'mine']), common\modules\world\models\Node::requireOne($city), 9001, 'Hired race mine', 'hired-race-mine', null, 'constructing');
+    $employerSite = common\modules\world\models\NodeFactory::create(common\modules\world\models\NodeTemplate::requireOne(['code' => 'starter-site']), common\modules\world\models\Node::requireOne($city), 9001, 'Employer campsite', 'employer-race-site', null, 'constructing');
+    $db->createCommand()->update('world_node', ['status' => 'active', 'condition' => $employerSite->max_condition], ['id' => $employerSite->id])->execute(); $employerSite->refresh();
+    $paidMine = common\modules\world\models\NodeFactory::create(common\modules\world\models\NodeTemplate::requireOne(['code' => 'mine']), $employerSite, 9001, 'Hired race mine', 'hired-race-mine', null, 'constructing');
     $db->createCommand()->update('world_node', ['status' => 'active', 'condition' => $paidMine->max_condition], ['id' => $paidMine->id])->execute(); $paidMine->refresh();
     $db->createCommand()->insert('craft_storage', ['identity_key' => 'stockpile:hired-race', 'kind' => 'stockpile', 'node_id' => $paidMine->id, 'owner_user_id' => 9001, 'capacity' => 5])->execute(); $paidStock = (int)$db->getLastInsertID();
     Command::run($freshUser, bin2hex(random_bytes(16)), 'fixture.hired-fund', [], static function ($op) use ($db, $freshUser, $paidMine) { return (new common\modules\world\modules\economy\models\domain\BudgetFunding($db))->contribute($freshUser, (int)$paidMine->id, common\modules\world\modules\economy\value\Money::parse('2'), 'Race wage', $op); });
@@ -195,6 +200,18 @@ economyCheck(count(array_unique(array_column($results, 'operation_id'))) === 1 &
 $beforeReserve = (new Query())->from('world_starter_reserve')->orderBy('id')->all($db);
 ob_start(); try { (new m261023_160000_world_starter_reserve(['db' => $db]))->up(); (new m261023_160000_world_starter_reserve(['db' => $db]))->up(); } finally { ob_end_clean(); }
 economyCheck($beforeReserve === (new Query())->from('world_starter_reserve')->orderBy('id')->all($db), 'repeating the starter-reserve migration preserves configured policy and earmarked money');
+
+$db->transaction(static function () use ($db, $siteId, &$constructionInput) {
+    $cell = (new common\modules\world\models\domain\WorldTree($db))->nextPosition($siteId);
+    $where = ['parent_id' => $siteId, 'x' => $cell['x'], 'y' => $cell['y']];
+    if ((new Query())->from('world_map_cell')->where($where)->exists($db)) $db->createCommand()->update('world_map_cell', ['state' => 'open'], $where)->execute();
+    else $db->createCommand()->insert('world_map_cell', $where + ['state' => 'open', 'price' => '0.0000', 'created_at' => time(), 'updated_at' => time()])->execute();
+    $template = common\modules\world\models\NodeTemplate::requireOne(['code' => 'campfire-place']);
+    $constructionInput = ['parent_id' => $siteId, 'template_id' => (int)$template->id, 'name' => 'Single construction race', 'labor_budget' => '0', 'top_up' => false, 'terms_digest' => common\modules\world\models\domain\EconomyConstruction::terms($template)['terms_digest']] + $cell;
+});
+$results = economyRace('construction', false, ['input' => $constructionInput]);
+economyCheck(count(array_filter($results, static function ($r) { return $r['status'] === 'ok'; })) === 1 && count(array_filter($results, static function ($r) { return $r['status'] === 'rejected' && $r['reason'] === 'CONSTRUCTION_LIMIT'; })) === 5
+    && (int)(new Query())->from('world_build')->where(['owner_user_id' => $freshUser, 'status' => 'building'])->count('*', $db) === 1, 'six competing placement commands create exactly one unfinished construction');
 
 // Simulate interrupted additive DDL by removing one constraint/index, retaining all data.
 $table = 'world_economy_usage';

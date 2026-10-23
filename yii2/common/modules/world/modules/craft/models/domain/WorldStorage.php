@@ -124,6 +124,8 @@ class WorldStorage
         $rows = $sourceIds ? (new Query())->from('craft_inventory')->where(['storage_id' => $sourceIds])->andWhere(['>', 'item_quantity', 0])->orderBy(['id' => SORT_ASC])->all($this->db) : [];
         $target = $owned ? (new Query())->from('craft_storage')->where(['node_id' => $node, 'owner_user_id' => $user, 'kind' => 'placement', 'status' => 'active'])->one($this->db) : null;
         $slots = $target ? (new Query())->from('world_slot')->where(['storage_id' => $target['id'], 'status' => 'active'])->orderBy(['position' => SORT_ASC])->all($this->db) : [];
+        $compatibleSlots = [];
+        foreach ($slots as $slot) $compatibleSlots[json_encode([$slot['slot_type'], $slot['size'], $slot['exposure_class'], $slot['compatibility_json']])] = $slot;
         if ($cell !== null) {
             \common\modules\world\models\domain\WorldLayout::assertCell($location, $cell['x'], $cell['y']);
             $position = ($cell['y'] - (int)$location['map_origin_y']) * (int)$location['map_width'] + $cell['x'] - (int)$location['map_origin_x'] + 1;
@@ -142,6 +144,12 @@ class WorldStorage
         });
         $items = [];
         foreach ($catalog as $definition) {
+            $compatible = false;
+            foreach ($compatibleSlots as $slot) {
+                try { (new EquipmentPlacementPolicy($this->db))->assertAllowed($definition, $target, $slot, false); $compatible = true; break; }
+                catch (\yii\web\ConflictHttpException $error) { continue; }
+            }
+            if (!$compatible) continue;
             $inventory = array_filter($rows, static function ($row) use ($definition) { return (int)$row['item_id'] === (int)$definition['id']; });
             if (!$inventory) {
                 $items[] = ['id' => (int)$definition['id'], 'name' => trim($definition['name']), 'description' => trim($definition['description'] ?? ''), 'icon' => trim($definition['icon']), 'quantity' => 0, 'available' => false, 'input' => null, 'requires_crafting' => true];

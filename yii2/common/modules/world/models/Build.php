@@ -25,6 +25,7 @@ class Build extends Record
         if (!$onboarding || $parent->owner_user_id !== null) $parent->requireOwner($user);
         $template = NodeTemplate::requireOne($input['template_id']);
         if (!$template->player_buildable || !$template->enabled || !$template->permits($parent)) throw new GameError('INVALID_TEMPLATE', 'Этот объект здесь строить нельзя.', 422);
+        self::requireAvailableProject($user, (int)$parent->root_id);
         $economyTerms = domain\EconomyConstruction::check($template, $user, $input, $onboarding);
         $cell = isset($input['x'], $input['y']) ? ['x' => $input['x'], 'y' => $input['y']]
             : ($onboarding ? null : (new \common\modules\world\models\domain\WorldTree(self::getDb()))->nextPosition((int)$parent->id));
@@ -62,6 +63,11 @@ class Build extends Record
         return $build;
     }
     public function isRepair(): bool { return $this->getAttribute('job_kind') === 'repair'; }
+    public static function requireAvailableProject(int $user, int $world): void
+    {
+        if (self::find()->alias('b')->innerJoin(['n' => 'world_node'], 'n.id=b.node_id')->where(['b.owner_user_id' => $user, 'b.status' => 'building', 'n.root_id' => $world])->exists())
+            throw new GameError('CONSTRUCTION_LIMIT', 'Сначала завершите или отмените текущую стройку или ремонт.', 409);
+    }
     public function minimumLaborBudget(): string { return (string)((json_decode($this->node->settings_json ?: '{}', true) ?: [])['accepted_build_minimum_cr'] ?? '0.0000'); }
     public function builderLimit(): ?int
     {
@@ -75,6 +81,7 @@ class Build extends Record
         $node = Node::readable($nodeId, $user); $node->requireOwner($user);
         if ($node->status !== 'active') throw new GameError('REPAIR_UNAVAILABLE', 'Ремонт доступен только завершённому объекту.', 422);
         if (self::find()->where(['active_node_id'=>$nodeId])->exists()) throw new GameError('REPAIR_ALREADY_STARTED', 'Ремонт уже запущен.', 409);
+        self::requireAvailableProject($user, (int)$node->root_id);
         if ((new \yii\db\Query())->from(['n'=>'world_node'])->innerJoin(['c'=>'world_node_closure'], 'c.ancestor_id=n.id')->where(['c.descendant_id'=>$nodeId])->andWhere(['<>','n.status','active'])->exists()) throw new GameError('REPAIR_UNAVAILABLE', 'Родительский объект недоступен.', 409);
         $instance = BuildStrength::shelterInstance($nodeId);
         if ($instance) {

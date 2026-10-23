@@ -103,6 +103,7 @@ final class EconomyProfilePublisher
                         'hierarchy_level' => $kind === 'BED' ? 6 : 5, 'enabled' => 1, 'player_buildable' => 1])->execute();
                 }
             }
+            TemplateParents::seed($this->db);
             $crop = $profile['crop'];
             $definition = (new Query())->from('world_crop')->where(['code' => 'carrot'])->one($this->db);
             if (!$definition) throw new GameError('CROP_NOT_READY', 'Сначала установите культуру моркови.', 503);

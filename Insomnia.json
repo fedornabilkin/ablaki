@@ -4162,11 +4162,11 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/nodes/{{ _.world_node_id }}/housing-lodge-preview",
       "name": "POST /world/nodes/{id}/housing-lodge-preview",
-      "description": "CommandBus owner/registry locks serialize shelter and house occupancy. One current assignment per player. No charge. Preview lasts 300 seconds; commit pins place/actor/interval and room revision, saves audit/outbox and exact replay. Protection requires the same place for the entire night; no retroactive healing. Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело.",
+      "description": "CommandBus owner/registry locks serialize shelter and house occupancy. One current assignment per player. No charge. Preview lasts 300 seconds; commit pins place/actor/interval and room revision, saves audit/outbox and exact replay. Protection requires the same place for the entire night; no retroactive healing. Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело. Schema 43: replace_current=true атомарно заменяет прежний ночлег, сохраняя историю. Тот же флаг нужен в preview и execute; операция бесплатна.",
       "method": "POST",
       "body": {
         "mimeType": "application/json",
-        "text": "{}"
+        "text": "{\n  \"replace_current\": true\n}"
       },
       "parameters": [],
       "headers": [
@@ -4197,11 +4197,11 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/nodes/{{ _.world_node_id }}/housing-lodge",
       "name": "POST /world/nodes/{id}/housing-lodge",
-      "description": "CommandBus owner/registry locks serialize shelter and house occupancy. One current assignment per player. No charge. Preview lasts 300 seconds; commit pins place/actor/interval and room revision, saves audit/outbox and exact replay. Protection requires the same place for the entire night; no retroactive healing. Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело.",
+      "description": "CommandBus owner/registry locks serialize shelter and house occupancy. One current assignment per player. No charge. Preview lasts 300 seconds; commit pins place/actor/interval and room revision, saves audit/outbox and exact replay. Protection requires the same place for the entire night; no retroactive healing. Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело. Schema 43: replace_current=true атомарно заменяет прежний ночлег, сохраняя историю. Тот же флаг нужен в preview и execute; операция бесплатна.",
       "method": "POST",
       "body": {
         "mimeType": "application/json",
-        "text": "{\n  \"request_key\": \"{{ _.world_request_key }}\",\n  \"quote_id\": \"{{ _.world_quote_id }}\",\n  \"expected_revisions\": {{ _.world_expected_revisions }}\n}"
+        "text": "{\n  \"replace_current\": true,\n  \"request_key\": \"{{ _.world_request_key }}\",\n  \"quote_id\": \"{{ _.world_quote_id }}\",\n  \"expected_revisions\": {{ _.world_expected_revisions }}\n}"
       },
       "parameters": [],
       "headers": [
@@ -10692,7 +10692,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/nodes/{{ _.world_node_id }}/placement-options",
       "name": "GET /world/nodes/{id}/placement-options",
-      "description": "Contract: docs/architecture/simple-world-api.md. Optional x/y restrict the catalog to the selected cell. Open and unoccupied positions are filtered before full placement-policy inspection. Requires-crafting entries have quantity=0,input=null; owned items retain canonical inventory IDs. Preview and transfer repeat the complete authoritative checks. Since 2026-10-21 each item also exposes description (string, max 5000). Identical SQL reads are reused only within one service call; the next read and all preview/commit commands use fresh checks.",
+      "description": "Схема 43: только совместимые с нодой/условиями предметы; до изготовления requires_crafting=true. Открытая пустая ячейка проверяется при переносе той же серверной политикой.",
       "method": "GET",
       "body": {},
       "parameters": [
@@ -10874,7 +10874,7 @@
       "name": "GET · Шаблоны для родителя",
       "url": "{{ _.baseUrl }}/v1/world/templates?parent_id={{ _.simple_parent_id }}&envelope=1&per-page=100",
       "method": "GET",
-      "description": "Contract: docs/architecture/simple-world-api.md. Material availability and equipment are checked in one catalog batch. Pagination accepts per-page=1..100, default 30. Preserve economy.terms_digest for POST /builds; available/unavailable_reason do not include personal funding consent. Since 2026-10-21 each Template also exposes description (string, max 5000, empty for legacy data); published profile object descriptions are included in both template API representations. Candidate prices: shelter 20 Cr, house 80 Cr; publish the profile explicitly per environment.",
+      "description": "Схема 43: только шаблоны с разрешённым родителем parent_id, корректные totalCount/pageCount после фильтрации. available отдельно отражает материалы и единственную незавершённую стройку. Контракт: docs/architecture/simple-world-api.md.",
       "body": {},
       "parameters": [],
       "headers": [
@@ -11119,7 +11119,7 @@
       "name": "POST · Начать стройку",
       "url": "{{ _.baseUrl }}/v1/world/builds",
       "method": "POST",
-      "description": "Contract: docs/architecture/simple-world-api.md. Existing budget is reserved first; top_up=true permits only the missing amount from the personal wallet. Funding, materials and construction are atomic. Retry with the same Idempotency-Key and body. Schema 42: labor_budget=0 permits self-construction; a positive amount must meet the accepted minimum. Decrease only before helpers accept/earn work (can_reduce_budget). top_up charges only the shortfall.",
+      "description": "Contract: docs/architecture/simple-world-api.md. Existing budget is reserved first; top_up=true permits only the missing amount from the personal wallet. Funding, materials and construction are atomic. Retry with the same Idempotency-Key and body. Schema 42: labor_budget=0 permits self-construction; a positive amount must meet the accepted minimum. Decrease only before helpers accept/earn work (can_reduce_budget). top_up charges only the shortfall. Schema 43: одна незавершённая стройка/ремонт на игрока, иначе CONSTRUCTION_LIMIT; неподходящий родитель INVALID_TEMPLATE.",
       "body": {
         "mimeType": "application/json",
         "text": "{\"parent_id\": {{ _.simple_parent_id }}, \"template_id\": {{ _.simple_template_id }}, \"name\": \"Мой дом\", \"labor_budget\": \"0\", \"x\": 0, \"y\": 0,\n  \"top_up\": false\n}"

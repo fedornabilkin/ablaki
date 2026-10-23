@@ -120,7 +120,8 @@ class NodeTemplate extends LockedRecord
     public function permits(?Node $parent): bool
     {
         if (!$parent) return (int)$this->hierarchy_level === 1;
-        if ($this->player_buildable) return (new domain\CommonNodePolicy())->permitsChild($parent->getAttributes());
+        if ($this->player_buildable) return (new domain\CommonNodePolicy())->permitsChild($parent->getAttributes())
+            && $this->getAllowedParents()->andWhere(['id' => $parent->template_id])->exists();
         return $parent->status === 'active' && (int)$parent->hierarchy_level + 1 === (int)$this->hierarchy_level
             && $this->getAllowedParents()->andWhere(['id' => $parent->template_id])->exists();
     }

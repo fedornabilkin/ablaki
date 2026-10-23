@@ -61,10 +61,12 @@ class WorldHousing
         if (!in_array($action, ['lodge', 'leave'], true)) throw new GameError('INVALID_HOUSING_ACTION', 'Некорректное действие с жильём.', 422);
         if (!$c['place'] || !$c['actor']) throw new GameError('HOUSING_REQUIRED', 'В этой комнате нет постоянного спального места.');
         if ($action === 'lodge' && !$c['active']) throw new GameError('HOUSING_UNAVAILABLE', 'Дом сейчас не защищает от непогоды.');
-        if ($action === 'lodge' && $c['current']) throw new GameError('LODGING_ALREADY_ASSIGNED', 'Сначала отмените текущее назначение ночлега.');
+        if (isset($input['replace_current']) && !is_bool($input['replace_current'])) throw new GameError('INVALID_HOUSING_ACTION', 'Некорректный способ смены ночлега.', 422);
+        if ($action === 'lodge' && $c['current'] && (empty($input['replace_current']) || $c['lodging'])) throw new GameError('LODGING_ALREADY_ASSIGNED', 'Сначала отмените текущее назначение ночлега.');
         if ($action === 'leave' && !$c['lodging']) throw new GameError('LODGING_NOT_ASSIGNED', 'Ночлег уже отменён.');
         $terms = $input + ['place_id' => (int)$c['place']['id'], 'plot_id' => (int)$c['place']['plot_id'], 'actor_id' => (int)$c['actor']['id'],
             'lodging_id' => $c['lodging'] ? (int)$c['lodging']['id'] : null, 'price' => '0.0000'];
+        if (!empty($input['replace_current']) && $action === 'lodge') $terms['previous_assignment'] = $c['current'];
         return $c + ['terms' => $terms, 'revisions' => ['node:' . $input['node_id'] => $c['room']['revision']]];
     }
     public function preview(int $user, array $input, string $action): array
@@ -79,6 +81,13 @@ class WorldHousing
             if (CanonicalJson::encode($p['terms']) !== CanonicalJson::encode($terms)) throw new GameError('HOUSING_CHANGED', 'Назначение изменилось. Повторите расчёт.');
             $now = time();
             if ($action === 'lodge') {
+                if (!empty($terms['previous_assignment'])) {
+                    $previous = $terms['previous_assignment'];
+                    $table = $previous['kind'] === 'shelter' ? 'world_lodging_interval' : 'world_housing_interval';
+                    $placeColumn = $previous['kind'] === 'shelter' ? 'active_deployment_id' : 'active_place_id';
+                    $now = max($now, $previous['started_at']);
+                    if ($this->db->createCommand()->update($table, ['ended_at' => $now, 'active_actor_id' => null, $placeColumn => null], ['id' => $previous['interval_id'], 'active_actor_id' => $terms['actor_id'], 'ended_at' => null])->execute() !== 1) throw new GameError('HOUSING_CHANGED', 'Назначение изменилось. Повторите действие.');
+                }
                 $now = max($now, (int)$p['place']['created_at']);
                 $this->db->createCommand()->insert('world_housing_interval', ['place_id' => $terms['place_id'], 'active_place_id' => $terms['place_id'], 'actor_id' => $terms['actor_id'], 'active_actor_id' => $terms['actor_id'], 'started_at' => $now, 'operation_id' => $operation])->execute();
             } else {
@@ -86,6 +95,7 @@ class WorldHousing
                 if ($this->db->createCommand()->update('world_housing_interval', ['ended_at' => $now, 'active_place_id' => null, 'active_actor_id' => null], ['id' => $terms['lodging_id'], 'ended_at' => null])->execute() !== 1) throw new \RuntimeException('Housing release failed.');
             }
             $ids = array_map('intval', (new Query())->select('ancestor_id')->from('world_node_closure')->where(['descendant_id' => $payload['node_id']])->column($this->db));
+            if (!empty($terms['previous_assignment'])) $ids = array_values(array_unique(array_merge($ids, array_map('intval', (new Query())->select('ancestor_id')->from('world_node_closure')->where(['descendant_id' => $terms['previous_assignment']['node_id']])->column($this->db)))));
             $this->db->createCommand()->update('world_node', ['revision' => new Expression('[[revision]]+1'), 'updated_at' => $now], ['id' => $ids])->execute();
             $result = ['changed_node_ids' => $ids, 'changed_storage_ids' => []];
             (new WorldTree($this->db))->audit($user, 'world.housing.' . $action, 'Назначение ночлега в доме', $terms, $result + ['id' => $payload['node_id']], $operation);
