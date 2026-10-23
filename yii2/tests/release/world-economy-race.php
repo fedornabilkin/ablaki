@@ -30,6 +30,7 @@ if (($argv[1] ?? '') === 'economy-worker') {
         $result = common\modules\world\models\Command::run($user, $key, 'fixture.race.' . $action, $payload, function ($op) use ($app, $action, $payload, $user) {
             if ($action === 'paid-start') return common\modules\world\models\Mining::start($payload['mining_node_id'], $user, $op, 'mine-stone');
             if ($action === 'paid-delivery') return common\modules\world\models\Mining::heartbeat($payload['mining_node_id'], $user, $op);
+            if ($action === 'starter-reserve') return (new common\modules\world\models\domain\StarterReserve($app->db))->configure($user, $payload['node_id'], $payload['payout_cr'], $payload['add_amount_cr'], $op, true);
             if ($action === 'supplies') return common\modules\world\models\Supplies::gather($payload['node_id'], 9004, $op);
             if ($action === 'kitchen') return common\modules\world\models\domain\WorldFood::consume($app->db, 9004, 'world-cooked-carrot', common\modules\world\models\domain\WorldFood::state($app->db, 9004)['revision'], $op, $payload['node_id']);
             if ($action === 'food') return common\modules\world\models\domain\WorldFood::consume($app->db, 9004, 'world-cooked-carrot', $payload['health_revision'], $op);
@@ -177,6 +178,23 @@ $paidAccount = (new common\modules\world\modules\economy\models\domain\EconomyHi
 economyCheck(count(array_filter($results, static function ($r) { return $r['status'] === 'ok'; })) === 6 && (int)(new Query())->from('economy_transfer')->where(['source_account_id' => $paidAccount['id'], 'kind' => 'resource_wage'])->count('*', $db) === 1
     && common\modules\world\modules\economy\value\Money::parse((string)$paidAccount['amount'])->isZero() && common\modules\world\modules\economy\value\Money::parse((string)$paidAccount['reserved'])->isZero()
     && (int)(new Query())->from('craft_inventory')->where(['storage_id' => $paidStock])->sum('item_quantity', $db) === array_sum($definition['output']), 'six competing delivery commands commit one resource batch and one wage, releasing the hold exactly once');
+
+// A separate city avoids mixing the funding policy with the already accepted queue above.
+$db->transaction(static function () use ($db, $freshUser, &$reserveCity) {
+    // Independent disposable wallet fixture; previous scenarios deliberately spent the first balance.
+    $db->createCommand()->update('persone', ['credit' => '60.0000'], ['user_id' => $freshUser])->execute();
+    $regionId = (int)(new Query())->select('id')->from('world_node')->where(['root_id' => common\modules\world\models\domain\EconomyRuntime::world($db), 'hierarchy_level' => 2, 'status' => 'active'])->scalar($db);
+    $city = common\modules\world\models\NodeFactory::create(common\modules\world\models\NodeTemplate::requireOne(['code' => 'city']), common\modules\world\models\Node::requireOne($regionId), null, 'Starter reserve race', 'starter-reserve-race'); $reserveCity = (int)$city->id;
+    Command::run($freshUser, bin2hex(random_bytes(16)), 'fixture.starter-reserve-fund', [], static function ($op) use ($db, $freshUser, $reserveCity) { return (new common\modules\world\modules\economy\models\domain\BudgetFunding($db))->contribute($freshUser, $reserveCity, common\modules\world\modules\economy\value\Money::parse('60'), 'Finite starter reserve fixture', $op); });
+});
+$results = economyRace('starter-reserve', false, ['node_id' => $reserveCity, 'payout_cr' => '20.0000', 'add_amount_cr' => '20.0000']);
+$reserve = new common\modules\world\models\domain\StarterReserve($db);
+economyCheck(count(array_filter($results, static function ($r) { return $r['status'] === 'ok'; })) === 3 && $reserve->state($reserveCity)['reserve_cr'] === '60.0000' && $reserve->state($reserveCity)['available_places'] === 3, 'six competing reserve additions cannot promise more than the three funded places');
+$results = economyRace('starter-reserve', true, ['node_id' => $reserveCity, 'payout_cr' => '30.0000', 'add_amount_cr' => '0.0000']);
+economyCheck(count(array_unique(array_column($results, 'operation_id'))) === 1 && $reserve->state($reserveCity)['reserve_cr'] === '60.0000' && $reserve->state($reserveCity)['available_places'] === 2, 'concurrent rate-update retries preserve the reserve and one policy update');
+$beforeReserve = (new Query())->from('world_starter_reserve')->orderBy('id')->all($db);
+ob_start(); try { (new m261023_160000_world_starter_reserve(['db' => $db]))->up(); (new m261023_160000_world_starter_reserve(['db' => $db]))->up(); } finally { ob_end_clean(); }
+economyCheck($beforeReserve === (new Query())->from('world_starter_reserve')->orderBy('id')->all($db), 'repeating the starter-reserve migration preserves configured policy and earmarked money');
 
 // Simulate interrupted additive DDL by removing one constraint/index, retaining all data.
 $table = 'world_economy_usage';

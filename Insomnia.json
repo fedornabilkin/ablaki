@@ -10993,16 +10993,16 @@
     {
       "_id": "req_a505a0b875f7feca1f1f5598f280b0dd",
       "parentId": "fld_6d6e271b7544c709bed8d6c70f1b90e0",
-      "modified": 1792736879544,
+      "modified": 1792776552897,
       "created": 1791244800000,
-      "name": "GET · Своя стоянка",
+      "name": "GET · Старт и обеспеченные места",
       "url": "{{ _.baseUrl }}/v1/world/start",
       "method": "GET",
-      "description": "Контракт: docs/architecture/simple-world-api.md. ID в окружении — примеры: сначала получите действительные ID из GET. Schema 41: optional city_id returns funding preview before joining; starter_funding tracks the one lifetime FIFO parent-budget obligation.",
+      "description": "Схема 42: optional node_id returns city/region funded places, payout per new settler, protected reserve and pending FIFO obligations. city_id is a compatible alias. No mutation. Контракт: docs/architecture/simple-world-api.md.",
       "body": {},
       "parameters": [
         {
-          "name": "city_id",
+          "name": "node_id",
           "value": "{{ _.world_node_id }}",
           "disabled": true
         }
@@ -11018,6 +11018,48 @@
         "token": "{{ _.bearer }}"
       },
       "metaSortKey": 8,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_0d37454b02784060b774d1c904170d42",
+      "parentId": "fld_6d6e271b7544c709bed8d6c70f1b90e0",
+      "modified": 1792776552897,
+      "created": 1792776552897,
+      "name": "POST · Стартовый резерв поселения",
+      "url": "{{ _.baseUrl }}/v1/world/objects/{{ _.simple_city_id }}/starter-reserve",
+      "method": "POST",
+      "description": "Схема 42. Владелец действующего поселения или world-manage. payout_cr>0 changes only future settlers; add_amount_cr>=0 earmarks existing free budget, then settles accepted FIFO amounts. Reserve is included in budget, never newly minted. New simple_request_key per action, same key and body on retry. Контракт: docs/architecture/simple-world-api.md.",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"payout_cr\": \"250.0000\",\n  \"add_amount_cr\": \"500.0000\"\n}"
+      },
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Accept",
+          "value": "application/json"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "name": "Idempotency-Key",
+          "value": "{{ _.simple_request_key }}"
+        }
+      ],
+      "authentication": {
+        "type": "bearer",
+        "token": "{{ _.bearer }}"
+      },
+      "metaSortKey": 8.5,
       "isPrivate": false,
       "settingStoreCookies": true,
       "settingSendCookies": true,
@@ -11072,12 +11114,12 @@
     {
       "_id": "req_57c57818437ba5339cb7b8199d94ddb2",
       "parentId": "fld_6d6e271b7544c709bed8d6c70f1b90e0",
-      "modified": 1791244800000,
+      "modified": 1792776552898,
       "created": 1791244800000,
       "name": "POST · Начать стройку",
       "url": "{{ _.baseUrl }}/v1/world/builds",
       "method": "POST",
-      "description": "Contract: docs/architecture/simple-world-api.md. Existing budget is reserved first; top_up=true permits only the missing amount from the personal wallet. Funding, materials and construction are atomic. Retry with the same Idempotency-Key and body.",
+      "description": "Contract: docs/architecture/simple-world-api.md. Existing budget is reserved first; top_up=true permits only the missing amount from the personal wallet. Funding, materials and construction are atomic. Retry with the same Idempotency-Key and body. Schema 42: labor_budget=0 permits self-construction; a positive amount must meet the accepted minimum. Decrease only before helpers accept/earn work (can_reduce_budget). top_up charges only the shortfall.",
       "body": {
         "mimeType": "application/json",
         "text": "{\"parent_id\": {{ _.simple_parent_id }}, \"template_id\": {{ _.simple_template_id }}, \"name\": \"Мой дом\", \"labor_budget\": \"0\", \"x\": 0, \"y\": 0,\n  \"top_up\": false\n}"
@@ -11459,12 +11501,12 @@
     {
       "_id": "req_0959e8a31d17579090141bb935fba924",
       "parentId": "fld_6d6e271b7544c709bed8d6c70f1b90e0",
-      "modified": 1791244800000,
+      "modified": 1792776552898,
       "created": 1791244800000,
       "name": "POST · Имя и бюджет стройки",
       "url": "{{ _.baseUrl }}/v1/world/builds/{{ _.simple_build_id }}/settings",
       "method": "POST",
-      "description": "Contract: docs/architecture/simple-world-api.md. Existing budget is reserved first; top_up=true permits only the missing amount from the personal wallet. Funding, materials and construction are atomic. Retry with the same Idempotency-Key and body.",
+      "description": "Contract: docs/architecture/simple-world-api.md. Existing budget is reserved first; top_up=true permits only the missing amount from the personal wallet. Funding, materials and construction are atomic. Retry with the same Idempotency-Key and body. Schema 42: labor_budget=0 permits self-construction; a positive amount must meet the accepted minimum. Decrease only before helpers accept/earn work (can_reduce_budget). top_up charges only the shortfall.",
       "body": {
         "mimeType": "application/json",
         "text": "{\"name\":\"Мой дом\", \"labor_budget\":\"0\",\n  \"top_up\": false\n}"

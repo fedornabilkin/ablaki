@@ -3,6 +3,21 @@ namespace common\modules\world\controllers;
 
 class NodeController extends CrudController
 {
+    public function behaviors(): array { $rules = parent::behaviors(); $rules['verbs']['actions']['starter-reserve'] = ['POST']; return $rules; }
+    public function allowAction(): array { return array_merge(parent::allowAction(), ['starter-reserve']); }
+    public function actionStarterReserve()
+    {
+        $request = \Yii::$app->request; $node = filter_var($request->post('node_id'), FILTER_VALIDATE_INT); $key = $request->post('request_key');
+        try {
+            if (!$node || !is_string($key) || !is_string($request->post('payout_cr')) || !is_string($request->post('add_amount_cr'))) throw new \common\modules\world\support\GameError('INVALID_STARTER_RESERVE', 'Проверьте поселение и суммы.', 422);
+            $user = (int)\Yii::$app->user->id; $payload = ['node_id' => $node, 'payout_cr' => $request->post('payout_cr'), 'add_amount_cr' => $request->post('add_amount_cr')];
+            $result = \common\modules\world\models\Command::run($user, $key, 'world.start.reserve', $payload, static function ($op) use ($user, $node, $payload) {
+                return (new \common\modules\world\models\domain\StarterReserve(\Yii::$app->db))->configure($user, $node, $payload['payout_cr'], $payload['add_amount_cr'], $op, true);
+            }, true);
+            \Yii::$app->session->setFlash('success', $result['message']);
+        } catch (\common\modules\world\support\GameError $error) { \Yii::$app->session->setFlash('error', $error->getMessage()); }
+        return $this->redirect(['index']);
+    }
     public function actionIndex()
     {
         $search = new $this->searchClass();

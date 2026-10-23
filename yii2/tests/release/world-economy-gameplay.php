@@ -233,7 +233,11 @@ $app->user->switchIdentity(new EconomyGameplayIdentity(9005));
 $returnTransfer = new \common\modules\exchange\models\CreditTransfer(); $returnTransfer->amount = 250; $transferService->create($returnTransfer);
 $returnRow = (new Query())->from('credit_transfer')->where(['user_id' => 9005, 'user_buyer' => 0])->one($db);
 $app->user->switchIdentity(new EconomyGameplayIdentity(9006)); $transferService->confirm(\common\modules\exchange\models\CreditTransfer::findOne($returnRow['id']), $returnRow['password']); unset($returnRow);
-Command::run(9006, bin2hex(random_bytes(16)), 'fixture.municipal-funding', [], function ($op) use ($db, $gameCity) { return (new BudgetFunding($db))->contribute(9006, $gameCity, Money::parse('810.0000'), 'Finite fixture budget including first campsite', $op); });
+Command::run(9006, bin2hex(random_bytes(16)), 'fixture.municipal-funding', [], function ($op) use ($db, $gameCity) {
+    $result = (new BudgetFunding($db))->contribute(9006, $gameCity, Money::parse('810.0000'), 'Finite fixture budget including first campsite', $op);
+    (new \common\modules\world\models\domain\StarterReserve($db))->configure(9006, $gameCity, '250.0000', '250.0000', $op, true);
+    return $result;
+});
 $gameplay = new EconomyGameplay($db, 9005, $gameCity, $start, $scenario); $gameplay->fund();
 $scenarioName = getenv('ABL_ECONOMY_SCENARIO') ?: 'first-seven-days-with-lodging';
 if (!in_array($scenarioName, ['first-five-days-with-lodging', 'first-seven-days-with-lodging'], true)) throw new RuntimeException('Unknown acceptance route.');

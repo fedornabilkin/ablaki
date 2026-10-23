@@ -235,9 +235,11 @@ try {
         return $money->decimal();
     };
     $initialTotal = $total();
-    $fund = static function (int $node, string $amount, ?string $key = null) use ($run, $db) {
-        return $run(9001, 'fixture.budget', ['node_id' => $node, 'amount' => $amount], static function ($op) use ($db, $node, $amount) {
-            return (new \common\modules\world\modules\economy\models\domain\BudgetFunding($db))->contribute(9001, $node, \common\modules\world\modules\economy\value\Money::parse($amount), 'Fixture funds', $op);
+    $fund = static function (int $node, string $amount, ?string $key = null) use ($run, $db, $finiteCity) {
+        return $run(9001, 'fixture.budget', ['node_id' => $node, 'amount' => $amount], static function ($op) use ($db, $node, $amount, $finiteCity) {
+            $result = (new \common\modules\world\modules\economy\models\domain\BudgetFunding($db))->contribute(9001, $node, \common\modules\world\modules\economy\value\Money::parse($amount), 'Fixture funds', $op);
+            if ($node === $finiteCity) (new \common\modules\world\models\domain\StarterReserve($db))->configure(9001, $node, '250.0000', $amount, $op, true);
+            return $result;
         }, $key);
     };
     $fundKey = bin2hex(random_bytes(16)); $fund($finiteCity, '499.9999', $fundKey);
@@ -356,3 +358,63 @@ try {
     economyCheck((new \common\modules\world\models\domain\WorldBalanceOverview($db))->report(2)['paid_starter_cr'] === '250.0000', 'administrative finance overview includes settled and cancelled starter obligations');
 } finally { if ($tx->isActive) $tx->rollBack(); }
 echo 'Topic 82 starter funding and hired extraction checks passed.' . PHP_EOL;
+
+$tx = $db->beginTransaction();
+try {
+    $reserve = new \common\modules\world\models\domain\StarterReserve($db);
+    $configure = static function (string $payout, string $addition, ?string $key = null) use ($db, $finiteCity) {
+        return Command::run(9001, $key ?? bin2hex(random_bytes(16)), 'world.start.reserve', ['node_id' => $finiteCity, 'payout_cr' => $payout, 'add_amount_cr' => $addition], static function ($op) use ($db, $finiteCity, $payout, $addition) {
+            return (new \common\modules\world\models\domain\StarterReserve($db))->configure(9001, $finiteCity, $payout, $addition, $op, true);
+        });
+    };
+    $before = $total(); $key = bin2hex(random_bytes(16)); $set = $configure('100.0000', '0', $key);
+    economyCheck($reserve->state($finiteCity)['available_places'] === 2 && $configure('100.0000', '0', $key) === $set && $total() === $before, 'per-settler rate changes available places without changing reserve or duplicating a command');
+    $region = (int)Node::requireOne($finiteCity)->parent_id;
+    economyCheck($reserve->availability($region, $finiteUser)['available_places'] === 2, 'region availability aggregates only funded settlement places');
+    economyReject(static function () use ($db, $finiteCity, $workerUser) { Command::run($workerUser, bin2hex(random_bytes(16)), 'fixture.forbidden-reserve', [], static function ($op) use ($db, $finiteCity, $workerUser) { return (new \common\modules\world\models\domain\StarterReserve($db))->configure($workerUser, $finiteCity, '1', '0', $op); }); }, 'OWNER_REQUIRED');
+    $account = (new \common\modules\world\modules\economy\models\domain\EconomyHierarchy($db))->accounts($finiteCity)['budget'];
+    economyCheck((new \common\modules\world\modules\economy\models\domain\BudgetSpending($db))->available((int)$account['id'])->isZero(), 'earmarked starter funds cannot be used by ordinary budget spending');
+    economyReject(static function () use ($configure) { $configure('0', '0'); }, 'INVALID_STARTER_RESERVE');
+    economyReject(static function () use ($configure) { $configure('100', '0.0001'); }, 'INSUFFICIENT_BUDGET');
+    foreach ([9022, 9023] as $id) {
+        $db->createCommand()->insert('user', ['id' => $id, 'username' => 'SettlementReserve' . $id])->execute();
+        $db->createCommand()->insert('persone', ['id' => $id, 'user_id' => $id, 'credit' => '0.0000', 'balance' => '0.0000'])->execute(); $app->authManager->assign($app->authManager->getRole('world-tester'), $id);
+    }
+    $join = static function (int $user) use ($finiteCity) { return Command::run($user, bin2hex(random_bytes(16)), 'world.start', ['city_id' => $finiteCity], static function ($op) use ($finiteCity, $user) { return \common\modules\world\models\StarterPack::enter($user, $finiteCity, $op); }); };
+    $join(9022); $join(9023);
+    economyCheck((new \common\modules\world\models\domain\StarterFunding($db))->forUser(9022)['amount_cr'] === '100.0000' && $reserve->state($finiteCity)['reserve_cr'] === '50.0000' && $reserve->state($finiteCity)['available_places'] === 0, 'two settlers receive their configured amount and the remaining reserve cannot promise another place');
+    $configure('80', '0'); $db->createCommand()->insert('user', ['id' => 9024, 'username' => 'QueuedReserve'])->execute();
+    $db->createCommand()->insert('persone', ['id' => 9024, 'user_id' => 9024, 'credit' => '0.0000', 'balance' => '0.0000'])->execute(); $app->authManager->assign($app->authManager->getRole('world-tester'), 9024); $join(9024);
+    $configure('25', '0');
+    Command::run(9001, bin2hex(random_bytes(16)), 'fixture.free-budget-only', [], static function ($op) use ($db, $finiteCity) { return (new \common\modules\world\modules\economy\models\domain\BudgetFunding($db))->contribute(9001, $finiteCity, \common\modules\world\modules\economy\value\Money::parse('30'), 'Not earmarked yet', $op); });
+    economyCheck((new \common\modules\world\models\domain\StarterFunding($db))->forUser(9024)['status'] === 'pending' && $reserve->state($finiteCity)['available_places'] === 0, 'unreserved budget inflow cannot pay or advertise an unfunded queued settler');
+    $configure('25', '30');
+    economyCheck((new \common\modules\world\models\domain\StarterFunding($db))->forUser(9024)['status'] === 'paid' && (new \common\modules\world\models\domain\StarterFunding($db))->forUser(9024)['amount_cr'] === '80.0000' && $total() === $before, 'earmarking funds pays the earlier accepted amount despite a later policy change and conserves all credits');
+
+    $project = \common\modules\world\models\Build::requireOne($limitedBuild->id); $project->refresh();
+    $db->createCommand()->delete('world_build_work', ['build_id' => $project->id])->execute();
+    $edit = static function (string $amount, bool $topUp = false, ?string $key = null) use ($limitedBuild, $finiteUser) {
+        return Command::run($finiteUser, $key ?? bin2hex(random_bytes(16)), 'world.build.settings', ['build_id' => (int)$limitedBuild->id, 'labor_budget' => $amount, 'top_up' => $topUp], static function ($op) use ($limitedBuild, $finiteUser, $amount, $topUp) { return \common\modules\world\models\Build::requireOne($limitedBuild->id)->configure($finiteUser, 'Budget fixture', $amount, $op, $topUp); });
+    };
+    $edit('0'); $project->refresh();
+    economyCheck(\common\modules\world\modules\economy\value\Money::parse((string)$project->labor_budget)->isZero() && $project->commitment_id === null && $project->builderLimit() === 0, 'zero budget permits self construction and releases a vacant helper reserve');
+    economyReject(static function () use ($project, $finiteUser, $joined) { $project->configure($finiteUser, 'Too small', '1.0000', $joined['operation_id']); }, 'MINIMUM_BUILD_BUDGET');
+    $source = (new \common\modules\world\modules\economy\models\domain\EconomyHierarchy($db))->accounts((int)$finiteBuild->node_id)['budget'];
+    $spending = new \common\modules\world\modules\economy\models\domain\BudgetSpending($db); $available = $spending->available((int)$source['id']);
+    $edit('4'); $edit('2');
+    economyCheck($spending->available((int)$source['id'])->decimal() === $available->subtract(\common\modules\world\modules\economy\value\Money::parse('2'))->decimal(), 'decreasing a vacant helper budget reserves only the new amount');
+    $edit('0');
+    economyCheck($spending->available((int)$source['id'])->decimal() === $available->decimal(), 'clearing a vacant helper budget releases every reserved credit');
+    $edit('2'); $project = \common\modules\world\models\Build::requireOne($limitedBuild->id);
+    Command::run($workerUser, bin2hex(random_bytes(16)), 'world.build.start', ['build_id' => (int)$project->id], static function () use ($project, $workerUser) { return \common\modules\world\models\BuildWork::start($project, $workerUser); });
+    economyReject(static function () use ($edit) { $edit('0'); }, 'BUILD_BUDGET_DECREASE');
+    $edit('4');
+    economyCheck(\common\modules\world\models\Build::requireOne($limitedBuild->id)->toArray()['can_reduce_budget'] === false, 'accepted helpers prevent a wage decrease while an increase remains possible');
+    $desired = $available->add(\common\modules\world\modules\economy\value\Money::parse('1'))->decimal();
+    economyReject(static function () use ($edit, $desired) { $edit($desired); }, 'INSUFFICIENT_BUDGET');
+    // Seed an independent wallet-control fixture after the conservation assertions above.
+    $db->createCommand()->update('persone', ['credit' => '5.0000'], ['user_id' => $finiteUser])->execute();
+    $topUpKey = bin2hex(random_bytes(16)); $edited = $edit($desired, true, $topUpKey);
+    economyCheck($edit($desired, true, $topUpKey) === $edited && \common\modules\world\modules\economy\value\Money::parse((string)(new Query())->select('credit')->from('persone')->where(['user_id' => $finiteUser])->scalar($db))->decimal() === '4.0000', 'checked top-up charges exactly the one-credit shortfall once when increasing the helper budget');
+} finally { $tx->rollBack(); }
+echo 'Settlement reserve and self-construction checks passed.' . PHP_EOL;

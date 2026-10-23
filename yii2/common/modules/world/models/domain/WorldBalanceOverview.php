@@ -62,12 +62,20 @@ final class WorldBalanceOverview
             $remainingBudget = $requiredBudget->subtract($paidOrders)->subtract($paidGoals);
             if ($parentFunding) $remainingBudget = $remainingBudget->subtract($paidStarter);
             if ($remainingBudget->isNegative()) $remainingBudget = Money::parse('0');
-            $shortfall = $remainingBudget->subtract($fundedOrders)->subtract($fundedGoals)->subtract($freeSettlement);
+            $settlements = []; $fundedStarter = Money::parse('0');
+            if ((new StarterReserve($db))->installed()) foreach ((new Query())->from('world_node')->where(['root_id' => $world, 'hierarchy_level' => 3, 'status' => 'active'])->orderBy('id')->all($db) as $city) {
+                $state = (new StarterReserve($db))->state((int)$city['id']);
+                $fundedStarter = $fundedStarter->add(Money::parse($state['reserve_cr']));
+                $budget = null; foreach ($accounts as $account) if ((int)$account['node_id'] === (int)$city['id'] && $account['role'] === 'budget') { $budget = $account; break; }
+                $settlements[] = $state + ['name' => $city['name'], 'available_budget_cr' => $budget['available_cr'] ?? '0.0000'];
+            }
+            $shortfall = $remainingBudget->subtract($fundedOrders)->subtract($fundedGoals)->subtract($fundedStarter)->subtract($freeSettlement);
             $open = ['or', ['user_buyer' => null], ['user_buyer' => 0]];
             $transit = $db->schema->getTableSchema('credit_transfer') ? (new Query())->select('amount')->from('credit_transfer')->where($open)->all($db) : [];
             $exchange = $db->schema->getTableSchema('credit_exchange') ? (new Query())->select('credit')->from('credit_exchange')->where($open)->andWhere(['in', 'type', ['buy', 'buy ']])->all($db) : [];
             $wallets = self::sum($users, 'credit'); $inTransit = self::sum($transit, 'amount'); $exchangeReserve = self::sum($exchange, 'credit'); $accountTotal = self::sum($accounts, 'amount');
             return ['world_id' => $world, 'participants' => $participants, 'profile_version' => $revision['version'] ?? null, 'users' => $users, 'accounts' => $accounts, 'roles' => $roles,
+                'starter_settlements' => $settlements, 'funded_starter_cr' => $fundedStarter->decimal(),
                 'wallets_cr' => $wallets->decimal(), 'accounts_cr' => $accountTotal->decimal(), 'transfer_reserve_cr' => $inTransit->decimal(), 'exchange_reserve_cr' => $exchangeReserve->decimal(),
                 'total_cr' => $wallets->add($accountTotal)->add($inTransit)->add($exchangeReserve)->decimal(),
                 'starter_per_user_cr' => $profile['starter']['credits_cr'], 'starter_total_cr' => $starter->decimal(), 'orders_per_user_cr' => $ordersPerUser->decimal(), 'orders_total_cr' => $orders->decimal(),

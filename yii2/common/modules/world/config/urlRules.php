@@ -1,5 +1,6 @@
 <?php
 return array_merge([
+    'POST v1/world/objects/<id:\d+>/starter-reserve' => 'world/start-api/reserve',
     'GET v1/world/economy' => 'world/economy-api/index',
     'GET v1/world/economy/progression' => 'world/economy-api/progression',
     'GET v1/world/economy/kitchen/<id:\d+>' => 'world/economy-api/kitchen',

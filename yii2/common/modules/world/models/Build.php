@@ -36,7 +36,7 @@ class Build extends Record
         $budget = Money::parse($input['labor_budget']);
         $minimumEnabled = (domain\EconomyRuntime::current(self::getDb())['profile']['construction']['minimum_budgets'] ?? false) === true;
         $minimum = $minimumEnabled && !$onboarding ? Money::parse($template->minimumLaborBudget((int)$parent->hierarchy_level + 1)) : Money::parse('0');
-        if ($budget->compare($minimum) < 0) throw new GameError('MINIMUM_BUILD_BUDGET', 'Минимальный бюджет строительства: ' . $minimum->display() . '.', 422, ['minimum_labor_budget' => $minimum->decimal()]);
+        if (!$budget->isZero() && $budget->compare($minimum) < 0) throw new GameError('MINIMUM_BUILD_BUDGET', 'Для найма нужен бюджет от ' . $minimum->display() . '; для самостоятельной стройки укажите 0.', 422, ['minimum_labor_budget' => $minimum->decimal()]);
         if ($budget->isNegative()) throw new GameError('INVALID_BUDGET', 'Бюджет не может быть отрицательным.', 422);
         $hold = null;
         BuildRequirements::check($user, (int)$parent->id, $template);
@@ -107,17 +107,20 @@ class Build extends Record
         $form = new BuildSettingsForm(); $form->setAttributes(['name'=>$name,'labor_budget'=>$budgetValue,'top_up'=>$topUp]);
         $validated = $form->input(); $name = $validated['name'];
         $budget = Money::parse($budgetValue); $old = Money::parse((string)$this->labor_budget);
-        if ($budget->compare(Money::parse($this->minimumLaborBudget())) < 0) throw new GameError('MINIMUM_BUILD_BUDGET', 'Бюджет меньше принятого минимального бюджета строительства.', 422);
+        if (!$budget->isZero() && $budget->compare(Money::parse($this->minimumLaborBudget())) < 0) throw new GameError('MINIMUM_BUILD_BUDGET', 'Для найма укажите принятый минимум или 0 для самостоятельной стройки.', 422);
         if ($budget->isNegative()) throw new GameError('INVALID_BUDGET', 'Бюджет не может быть отрицательным.', 422);
         if ($budget->compare($old) !== 0) {
-            if ($budget->compare($old) < 0) throw new GameError('BUILD_BUDGET_DECREASE', 'Бюджет строительства можно только пополнять.', 422);
+            if ($budget->compare($old) < 0) {
+                BuildClock::checkpoint($this, time());
+                if ($this->getWork()->andWhere(['<>', 'user_id', $this->owner_user_id])->andWhere(['or', ['ended_at' => null], ['>', 'seconds', 0]])->exists()) throw new GameError('BUILD_BUDGET_DECREASE', 'Помощники уже приняли работу. Их оплату нельзя уменьшить; бюджет можно увеличить.', 422);
+            }
             $spending = new BudgetSpending(self::getDb());
             // Preserve the accepted funding account; a new commitment uses the owned parent budget when possible.
             $source = $this->fundingNode();
             $account = $this->commitment_id ? $spending->commitment((int)$this->commitment_id)['account_id'] : (new EconomyHierarchy(self::getDb()))->provision((int)$source->id, $operation)['budget']['id'];
             $fundingNode = (int)(new \yii\db\Query())->select('s.node_id')->from(['a' => 'economy_account'])->innerJoin(['s' => 'economy_subject'], '[[s.id]]=[[a.subject_id]]')->where(['a.id' => $account])->scalar(self::getDb());
             Node::requireOne($fundingNode)->requireOwner($user);
-            self::fund($user, Node::requireOne($fundingNode), (int)$account, $budget->subtract($old), $topUp, $operation);
+            if ($budget->compare($old) > 0) self::fund($user, Node::requireOne($fundingNode), (int)$account, $budget->subtract($old), $topUp, $operation);
             if ($this->commitment_id) $spending->release((int)$this->commitment_id);
             $this->commitment_id = null;
             if (!$budget->isZero()) {
@@ -188,6 +191,7 @@ class Build extends Record
             'world_time_rate' => function () { return WorldTime::rate((int)$this->node->root_id); },
             'server_time' => function () { return time(); },
             'minimum_labor_budget' => function () { return $this->minimumLaborBudget(); },
+            'can_reduce_budget' => function () { return !$this->getWork()->andWhere(['<>', 'user_id', $this->owner_user_id])->andWhere(['or', ['ended_at' => null], ['>', 'seconds', 0]])->exists(); },
             'builder_limit' => function () { return $this->builderLimit(); },
             'job_kind' => function () { return $this->isRepair() ? 'repair' : 'construction'; },
             'initial_condition' => function () { return (int)$this->getAttribute('initial_condition'); },
