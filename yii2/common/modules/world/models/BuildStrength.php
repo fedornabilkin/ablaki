@@ -5,6 +5,13 @@ namespace common\modules\world\models;
 final class BuildStrength
 {
     public static function maximum(int $seconds): int { return max(1, (int)ceil($seconds * 100 / 60)); }
+    public static function forTemplate(NodeTemplate $template, ?int $hierarchyLevel = null): int
+    {
+        $explicit = $template->defaults()['max_condition'] ?? null;
+        if (is_int($explicit) && $explicit > 0) return $explicit;
+        $levels = [1 => 4000000, 2 => 2000000, 3 => 1000000, 4 => 200000, 5 => 100000, 6 => 50000, 7 => 10000];
+        return max(self::maximum($template->worldWorkSeconds()), $levels[$hierarchyLevel ?? (int)$template->hierarchy_level] ?? 10000);
+    }
     public static function current(int $worked, int $required, int $maximum): int
     { return min($maximum, (int)floor(max(0, $worked) * $maximum / max(1, $required))); }
     public static function synchronize(Build $build): void

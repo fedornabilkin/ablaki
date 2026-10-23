@@ -17,7 +17,7 @@ final class NodeFactory
             'parent_id' => $parent ? $parent->id : null, 'template_id' => $template->id, 'owner_user_id' => $owner,
             'status' => $status, 'visibility' => 'public']);
         self::initialize($node, $template);
-        $node->max_condition = BuildStrength::maximum($template->worldWorkSeconds());
+        $node->max_condition = BuildStrength::forTemplate($template, $parent ? (int)$parent->hierarchy_level + 1 : 1);
         $node->condition = $status === 'constructing' ? 0 : $node->max_condition;
         if ($parent) {
             $position = $cell ?? (new WorldTree($db))->nextPosition((int)$parent->id);

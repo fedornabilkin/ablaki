@@ -45,6 +45,7 @@ class StarterPack extends Record
         if (!$membership->save(false)) throw new \RuntimeException('Membership write failed.');
         domain\EconomyRuntime::fact(self::getDb(), $user, 'city_joined', 1, $operation);
         (new domain\WorldNights(self::getDb(), new domain\WorldFlags(self::getDb(), \Yii::$app->getModule('world'))))->joined($membership->getAttributes());
-        return ['node' => $build->node->toArray(), 'build' => $build->toArray()];
+        $funding = (new domain\StarterFunding(self::getDb()))->claim($user, $city, (int)$build->node_id, $operation);
+        return ['node' => $build->node->toArray(), 'build' => $build->toArray(), 'starter_funding' => $funding, 'changed_node_ids' => [$city, (int)$build->node_id]];
     }
 }

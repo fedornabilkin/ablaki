@@ -26,7 +26,10 @@ if (($argv[1] ?? '') === 'economy-worker') {
     workerReady();
     $started = microtime(true);
     try {
-        $result = common\modules\world\models\Command::run(9004, $key, 'fixture.race.' . $action, $payload, function ($op) use ($app, $action, $payload) {
+        $user = (int)($payload['user_id'] ?? 9004);
+        $result = common\modules\world\models\Command::run($user, $key, 'fixture.race.' . $action, $payload, function ($op) use ($app, $action, $payload, $user) {
+            if ($action === 'paid-start') return common\modules\world\models\Mining::start($payload['mining_node_id'], $user, $op, 'mine-stone');
+            if ($action === 'paid-delivery') return common\modules\world\models\Mining::heartbeat($payload['mining_node_id'], $user, $op);
             if ($action === 'supplies') return common\modules\world\models\Supplies::gather($payload['node_id'], 9004, $op);
             if ($action === 'kitchen') return common\modules\world\models\domain\WorldFood::consume($app->db, 9004, 'world-cooked-carrot', common\modules\world\models\domain\WorldFood::state($app->db, 9004)['revision'], $op, $payload['node_id']);
             if ($action === 'food') return common\modules\world\models\domain\WorldFood::consume($app->db, 9004, 'world-cooked-carrot', $payload['health_revision'], $op);
@@ -50,8 +53,10 @@ function economyRace(string $action, bool $same, array $payload = []): array {
     $children = []; $shared = bin2hex(random_bytes(16));
     try {
         for ($index = 0; $index < 6; $index++) {
+            $input = $payload;
+            if (isset($payload['user_ids'])) { $input['user_id'] = $payload['user_ids'][$index % count($payload['user_ids'])]; unset($input['user_ids']); }
             $command = [PHP_BINARY]; if (php_ini_loaded_file()) { $command[] = '-c'; $command[] = php_ini_loaded_file(); }
-            $command = array_merge($command, [__FILE__, 'economy-worker', $action, $same ? $shared : bin2hex(random_bytes(16)), base64_encode(json_encode($action === 'kitchen' ? array_merge($payload, ['node_id' => $payload['node_ids'][$index % count($payload['node_ids'])]]) : $payload))]);
+            $command = array_merge($command, [__FILE__, 'economy-worker', $action, $same ? $shared : bin2hex(random_bytes(16)), base64_encode(json_encode($action === 'kitchen' ? array_merge($input, ['node_id' => $payload['node_ids'][$index % count($payload['node_ids'])]]) : $input))]);
             $pipes = []; $process = proc_open(implode(' ', array_map('escapeshellarg', $command)), [0 => ['pipe', 'r'], 1 => ['pipe', 'w'], 2 => ['pipe', 'w']], $pipes, null, null, ['bypass_shell' => true]);
             if (!is_resource($process)) throw new RuntimeException('Could not start economy worker.');
             $children[] = [$process, $pipes];
@@ -144,6 +149,34 @@ try {
 economyCheck(EconomyQuota::state($db, $freshUser, 'crafting_hourly')['remaining'] === 30
     && (int)(new Query())->from('game_operation')->count('*', $db) === $beforeOperations
     && !(new Query())->from('game_command')->where(['user_id' => $freshUser, 'request_key' => $failedKey])->exists($db), 'failure after quota write rolls back quota, operation and idempotency record');
+
+// Two workers compete for one reserved wage, then six deliveries compete for that batch.
+$db->transaction(static function () use ($db, $city, $freshUser, &$paidMine, &$paidStock) {
+    foreach ([9020, 9021] as $id) {
+        $db->createCommand()->insert('user', ['id' => $id, 'username' => 'PaidRace' . $id])->execute();
+        $db->createCommand()->insert('persone', ['id' => $id, 'user_id' => $id, 'credit' => '0.0000', 'balance' => '0.0000'])->execute();
+        Yii::$app->authManager->assign(Yii::$app->authManager->getRole('world-tester'), $id);
+        Command::run($id, bin2hex(random_bytes(16)), 'world.start', ['city_id' => $city], static function ($op) use ($id, $city) { return common\modules\world\models\StarterPack::enter($id, $city, $op); });
+        (new common\modules\world\modules\craft\models\domain\CraftStorage($db))->move($id, (new Query())->from('craft_item')->where(['code' => 'world-stone-pickaxe'])->one($db), 1);
+    }
+    $paidMine = common\modules\world\models\NodeFactory::create(common\modules\world\models\NodeTemplate::requireOne(['code' => 'mine']), common\modules\world\models\Node::requireOne($city), 9001, 'Hired race mine', 'hired-race-mine', null, 'constructing');
+    $db->createCommand()->update('world_node', ['status' => 'active', 'condition' => $paidMine->max_condition], ['id' => $paidMine->id])->execute(); $paidMine->refresh();
+    $db->createCommand()->insert('craft_storage', ['identity_key' => 'stockpile:hired-race', 'kind' => 'stockpile', 'node_id' => $paidMine->id, 'owner_user_id' => 9001, 'capacity' => 5])->execute(); $paidStock = (int)$db->getLastInsertID();
+    Command::run($freshUser, bin2hex(random_bytes(16)), 'fixture.hired-fund', [], static function ($op) use ($db, $freshUser, $paidMine) { return (new common\modules\world\modules\economy\models\domain\BudgetFunding($db))->contribute($freshUser, (int)$paidMine->id, common\modules\world\modules\economy\value\Money::parse('2'), 'Race wage', $op); });
+    common\modules\world\models\domain\HiredExtraction::configure(common\modules\world\models\Node::requireOne($paidMine->id), 9001, true, '2', $paidStock);
+});
+$results = economyRace('paid-start', false, ['mining_node_id' => (int)$paidMine->id, 'user_ids' => [9020, 9021]]);
+$accepted = (new Query())->from('world_source_work')->where(['node_id' => $paidMine->id])->all($db);
+$paidAccount = (new common\modules\world\modules\economy\models\domain\EconomyHierarchy($db))->accounts((int)$paidMine->id)['budget'];
+economyCheck(count($accepted) === 1 && count(array_filter($results, static function ($r) { return $r['status'] === 'rejected' && $r['reason'] === 'INSUFFICIENT_WAGE_BUDGET'; })) === 3
+    && common\modules\world\modules\economy\value\Money::parse((string)$paidAccount['reserved'])->decimal() === '2.0000', 'two workers and six requests cannot overbook a single funded wage');
+$paidWork = $accepted[0]; $definition = json_decode($paidWork['definition_json'], true);
+$db->createCommand()->update('world_source_work', ['worked_seconds' => $definition['work_seconds']], ['id' => $paidWork['id']])->execute();
+$results = economyRace('paid-delivery', false, ['mining_node_id' => (int)$paidMine->id, 'user_id' => (int)$paidWork['user_id']]);
+$paidAccount = (new common\modules\world\modules\economy\models\domain\EconomyHierarchy($db))->accounts((int)$paidMine->id)['budget'];
+economyCheck(count(array_filter($results, static function ($r) { return $r['status'] === 'ok'; })) === 6 && (int)(new Query())->from('economy_transfer')->where(['source_account_id' => $paidAccount['id'], 'kind' => 'resource_wage'])->count('*', $db) === 1
+    && common\modules\world\modules\economy\value\Money::parse((string)$paidAccount['amount'])->isZero() && common\modules\world\modules\economy\value\Money::parse((string)$paidAccount['reserved'])->isZero()
+    && (int)(new Query())->from('craft_inventory')->where(['storage_id' => $paidStock])->sum('item_quantity', $db) === array_sum($definition['output']), 'six competing delivery commands commit one resource batch and one wage, releasing the hold exactly once');
 
 // Simulate interrupted additive DDL by removing one constraint/index, retaining all data.
 $table = 'world_economy_usage';

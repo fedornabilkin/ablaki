@@ -59,6 +59,9 @@ final class EconomyProfile
             }
         }
         self::moneyFields($data);
+        if (isset($data['starter']['funding']) && !in_array($data['starter']['funding'], ['parent_budget', 'personal_transfer'], true)) throw new \InvalidArgumentException('Unknown starter funding mode.');
+        if (isset($data['closed_test']['all_templates']) && !is_bool($data['closed_test']['all_templates'])) throw new \InvalidArgumentException('Expected test catalogue flag.');
+        if (isset($data['construction']) && (($data['construction']['minimum_budgets'] ?? null) !== true || ($data['construction']['credits_per_builder_cr'] ?? null) !== '2.0000')) throw new \InvalidArgumentException('Unsupported builder budget policy.');
         $access = $data['closed_test'] ?? [];
         if (!is_bool($access['restricted'] ?? null) || ($access['permission'] ?? null) !== 'world-closed-test' || ($access['role'] ?? null) !== 'world-tester'
             || !is_string($access['feedback_path'] ?? null) || !preg_match('~^/forum(?:/read/[1-9][0-9]*)?$~D', $access['feedback_path'])) throw new \InvalidArgumentException('Closed-test admission requires built-in RBAC and an internal forum path.');
@@ -148,8 +151,8 @@ final class EconomyProfile
             if ($row['credit_source'] !== 'reserved_existing_settlement_budget' || $row['credit_destination'] !== 'existing_starter_site_treasury') throw new \InvalidArgumentException('Goal rewards need an existing funded budget and explicit treasury destination.');
         }
         $map = $data['map'];
-        if ($map['starter_open_cells'] !== 9 || $map['max_cells'] !== 25 || $map['bounds'] !== [-2, 2]
-            || $map['starter_open_square'] !== [-1, 1]) throw new \InvalidArgumentException('Inconsistent starter map dimensions.');
+        if (!in_array($map['starter_open_cells'], [1, 9], true) || $map['max_cells'] !== 25 || $map['bounds'] !== [-2, 2]
+            || $map['starter_open_square'] !== ($map['starter_open_cells'] === 1 ? [0, 0] : [-1, 1])) throw new \InvalidArgumentException('Inconsistent starter map dimensions.');
         foreach (['bulk_minimum' => [1, 25], 'discount_bps' => [0, 10000]] as $field => $range) {
             if (!is_int($map[$field] ?? null) || $map[$field] < $range[0] || $map[$field] > $range[1]) throw new \InvalidArgumentException('Invalid map pricing: ' . $field);
         }

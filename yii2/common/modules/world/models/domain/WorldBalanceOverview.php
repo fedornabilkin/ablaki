@@ -45,6 +45,11 @@ final class WorldBalanceOverview
             $goalsPerUser = Money::parse('0'); foreach ($profile['goals'] as $goal) $goalsPerUser = $goalsPerUser->add(Money::parse($goal['credits_cr']));
             $starter = Money::parse($profile['starter']['credits_cr'])->multiply($participants);
             $orders = $ordersPerUser->multiply($participants); $goals = $goalsPerUser->multiply($participants); $requiredBudget = $orders->add($goals);
+            $parentFunding = ($profile['starter']['funding'] ?? '') === 'parent_budget';
+            if ($parentFunding) $requiredBudget = $requiredBudget->add($starter);
+            $starterRows = $db->schema->getTableSchema('world_starter_funding') ? (new Query())->from('world_starter_funding')->where(['world_id' => $world])->orderBy('id')->all($db) : [];
+            $paidStarter = self::sum(array_filter($starterRows, static function ($r) { return $r['status'] === 'paid'; }), 'amount');
+            $pendingStarter = self::sum(array_filter($starterRows, static function ($r) { return $r['status'] === 'pending'; }), 'amount');
             $orderHolds = (new Query())->select('c.remaining_amount')->from(['o' => 'economy_purchase_order'])->innerJoin(['c' => 'economy_spending_commitment'], 'c.id=o.commitment_id')
                 ->innerJoin(['n' => 'world_node'], 'n.id=o.node_id')->where(['n.root_id' => $world, 'o.status' => 'open', 'c.closed_at' => null])->andWhere(['>', 'o.expires_at', time()])->all($db);
             $goalHolds = (new Query())->select('c.remaining_amount')->from(['g' => 'world_goal_pool'])->innerJoin(['c' => 'economy_spending_commitment'], 'c.id=g.commitment_id')
@@ -55,6 +60,7 @@ final class WorldBalanceOverview
             $goalPayments = (new Query())->select('earned_cr')->from('world_goal_claim')->where(['world_id' => $world])->all($db);
             $paidOrders = self::sum($orderPayments, 'amount'); $paidGoals = self::sum($goalPayments, 'earned_cr');
             $remainingBudget = $requiredBudget->subtract($paidOrders)->subtract($paidGoals);
+            if ($parentFunding) $remainingBudget = $remainingBudget->subtract($paidStarter);
             if ($remainingBudget->isNegative()) $remainingBudget = Money::parse('0');
             $shortfall = $remainingBudget->subtract($fundedOrders)->subtract($fundedGoals)->subtract($freeSettlement);
             $open = ['or', ['user_buyer' => null], ['user_buyer' => 0]];
@@ -65,7 +71,8 @@ final class WorldBalanceOverview
                 'wallets_cr' => $wallets->decimal(), 'accounts_cr' => $accountTotal->decimal(), 'transfer_reserve_cr' => $inTransit->decimal(), 'exchange_reserve_cr' => $exchangeReserve->decimal(),
                 'total_cr' => $wallets->add($accountTotal)->add($inTransit)->add($exchangeReserve)->decimal(),
                 'starter_per_user_cr' => $profile['starter']['credits_cr'], 'starter_total_cr' => $starter->decimal(), 'orders_per_user_cr' => $ordersPerUser->decimal(), 'orders_total_cr' => $orders->decimal(),
-                'goals_per_user_cr' => $goalsPerUser->decimal(), 'goals_total_cr' => $goals->decimal(), 'required_budget_cr' => $requiredBudget->decimal(), 'required_total_cr' => $starter->add($requiredBudget)->decimal(),
+                'goals_per_user_cr' => $goalsPerUser->decimal(), 'goals_total_cr' => $goals->decimal(), 'required_budget_cr' => $requiredBudget->decimal(), 'required_total_cr' => ($parentFunding ? $requiredBudget : $starter->add($requiredBudget))->decimal(),
+                'starter_funding_mode' => $parentFunding ? 'parent_budget' : 'personal_transfer', 'paid_starter_cr' => $paidStarter->decimal(), 'pending_starter_cr' => $pendingStarter->decimal(), 'starter_obligations' => $starterRows,
                 'free_settlement_cr' => $freeSettlement->decimal(), 'funded_orders_cr' => $fundedOrders->decimal(), 'funded_goals_cr' => $fundedGoals->decimal(),
                 'paid_orders_cr' => $paidOrders->decimal(), 'paid_goals_cr' => $paidGoals->decimal(), 'remaining_budget_cr' => $remainingBudget->decimal(),
                 'budget_shortfall_cr' => $shortfall->isNegative() ? '0.0000' : $shortfall->decimal(), 'order_details' => $orderDetails, 'generated_at' => time()];

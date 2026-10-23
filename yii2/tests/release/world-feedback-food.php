@@ -87,7 +87,7 @@ echo 'World feedback and food checks passed.' . PHP_EOL;
 
 $overview = (new \common\modules\world\models\domain\WorldBalanceOverview($db))->report(2);
 economyCheck($overview['starter_total_cr'] === '500.0000' && $overview['orders_total_cr'] === '820.0000'
-    && $overview['goals_total_cr'] === '300.0000' && $overview['required_budget_cr'] === '1120.0000'
+    && $overview['goals_total_cr'] === '300.0000' && $overview['required_budget_cr'] === '1620.0000'
     && $overview['required_total_cr'] === '1620.0000', 'administrative overview exactly separates two-player starter transfers, finite orders and rewards');
 
 $finiteUser = 9010;
@@ -209,3 +209,150 @@ try {
         && $clock::gameAt($db, $restored['real_at'] + 60, $worldId) === $restored['game_at'] + 60, 'returning to 1:1 preserves the clock origin');
 } finally { $tx->rollBack(); }
 echo 'Local MVP clock, finite supplies, administrative finances and history checks passed.' . PHP_EOL;
+
+// Topic 82: all money comes from existing budgets. Isolated fixture, rolled back as a whole.
+$tx = $db->beginTransaction();
+try {
+    $db->createCommand()->update('world_registry', ['active_world_id' => Node::requireOne($finiteCity)->root_id], ['id' => 1])->execute();
+    $workerUser = 9011;
+    $db->createCommand()->insert('user', ['id' => $workerUser, 'username' => 'HiredWorkerFixture'])->execute();
+    $db->createCommand()->insert('persone', ['id' => $workerUser, 'user_id' => $workerUser, 'credit' => '0.0000', 'balance' => '0.0000'])->execute();
+    $app->authManager->assign($app->authManager->getRole('world-tester'), $workerUser);
+    $db->createCommand()->update('persone', ['credit' => '10000.0000'], ['user_id' => 9001])->execute();
+    $run = static function (int $user, string $type, array $payload, callable $action, ?string $key = null) {
+        return Command::run($user, $key ?? bin2hex(random_bytes(16)), $type, $payload, $action);
+    };
+    $joinKey = bin2hex(random_bytes(16));
+    $joinWorker = static function ($op) use ($workerUser, $finiteCity) { return \common\modules\world\models\StarterPack::enter($workerUser, $finiteCity, $op); };
+    $workerStart = $run($workerUser, 'world.start', ['city_id' => $finiteCity], $joinWorker, $joinKey);
+    $db->createCommand()->insert('world_player_health', ['world_id' => Node::requireOne($finiteCity)->root_id, 'user_id' => $workerUser, 'hp' => 100, 'revision' => 1])->execute();
+    $funding = new \common\modules\world\models\domain\StarterFunding($db);
+    economyCheck($funding->forUser($finiteUser)['status'] === 'pending' && $funding->forUser($workerUser)['status'] === 'pending' && !$funding->preview($finiteCity)['available'], 'unfunded starts disclose a FIFO budget obligation before joining');
+    economyCheck($run($workerUser, 'world.start', ['city_id' => $finiteCity], $joinWorker, $joinKey) === $workerStart && (int)(new Query())->from('world_starter_funding')->where(['user_id' => $workerUser])->count('*', $db) === 1, 'first placement and its retry create one lifetime starter obligation');
+    $total = static function () use ($db) {
+        $money = \common\modules\world\modules\economy\value\Money::parse('0');
+        foreach ([['persone', 'credit'], ['economy_account', 'amount']] as $source) foreach ((new Query())->select($source[1])->from($source[0])->column($db) as $value) $money = $money->add(\common\modules\world\modules\economy\value\Money::parse((string)$value));
+        return $money->decimal();
+    };
+    $initialTotal = $total();
+    $fund = static function (int $node, string $amount, ?string $key = null) use ($run, $db) {
+        return $run(9001, 'fixture.budget', ['node_id' => $node, 'amount' => $amount], static function ($op) use ($db, $node, $amount) {
+            return (new \common\modules\world\modules\economy\models\domain\BudgetFunding($db))->contribute(9001, $node, \common\modules\world\modules\economy\value\Money::parse($amount), 'Fixture funds', $op);
+        }, $key);
+    };
+    $fundKey = bin2hex(random_bytes(16)); $fund($finiteCity, '499.9999', $fundKey);
+    economyCheck($funding->forUser($finiteUser)['status'] === 'paid' && $funding->forUser($workerUser)['status'] === 'pending', 'FIFO pays the first full starter amount and never partially funds the second');
+    $fund($finiteCity, '499.9999', $fundKey); $fund($finiteCity, '0.0001');
+    economyCheck($funding->forUser($workerUser)['status'] === 'paid' && $total() === $initialTotal, 'fourth decimal completes the second starter budget; contribution replay preserves total funds');
+    $siteBudget = (new \common\modules\world\modules\economy\models\domain\EconomyHierarchy($db))->accounts((int)$workerStart['node']['id'])['budget'];
+    economyCheck(\common\modules\world\modules\economy\value\Money::parse((string)$siteBudget['amount'])->decimal() === '250.0000' && (float)(new Query())->select('credit')->from('persone')->where(['user_id' => $workerUser])->scalar($db) === 0.0, 'starter funding belongs to the campsite budget, not the personal wallet');
+    $cancel = \common\modules\world\models\Build::requireOne($workerStart['build']['id']);
+    $run($workerUser, 'fixture.cancel', ['build_id' => (int)$cancel->id], static function ($op) use ($cancel) { $cancel->finish($op, true); return []; });
+    economyCheck($funding->forUser($workerUser)['status'] === 'cancelled' && $total() === $initialTotal && (float)(new Query())->select('credit')->from('persone')->where(['user_id' => $workerUser])->scalar($db) === 0.0, 'cancelling a financed campsite returns the parent grant without cashing it out');
+
+    $mine = NodeFactory::create(NodeTemplate::requireOne(['code' => 'mine']), Node::requireOne($finiteBuild->node_id), $finiteUser, 'Paid mine fixture', 'paid-mine-fixture', null, 'constructing');
+    $db->createCommand()->update('world_node', ['status' => 'active', 'condition' => $mine->max_condition], ['id' => $mine->id])->execute(); $mine->refresh();
+    $nested = NodeFactory::create(NodeTemplate::requireOne(['code' => 'forest-plot']), $mine, $finiteUser, 'Hierarchy strength fixture', 'nested-strength-fixture', null, 'constructing');
+    economyCheck($nested->max_condition < $mine->max_condition && $mine->max_condition < Node::requireOne($finiteBuild->node_id)->max_condition, 'strength follows actual placement depth even when the template permits different levels');
+    (new \common\modules\world\modules\economy\models\domain\EconomyHierarchy($db))->provision((int)$mine->id, $joined['operation_id']);
+    $db->createCommand()->insert('craft_storage', ['identity_key' => 'stockpile:fixture:paid-mine', 'kind' => 'stockpile', 'node_id' => $mine->id, 'owner_user_id' => $finiteUser, 'capacity' => 5])->execute();
+    $stockId = (int)$db->getLastInsertID();
+    $workerStock = new \common\modules\world\modules\craft\models\domain\CraftStorage($db);
+    $stoneId = (int)(new Query())->select('id')->from('craft_item')->where(['code' => 'classic-stone'])->scalar($db);
+    $workerStoneBefore = $workerStock->quantities($workerUser)[$stoneId] ?? 0;
+    $pickaxe = (new Query())->from('craft_item')->where(['code' => 'world-stone-pickaxe'])->one($db); $workerStock->move($workerUser, $pickaxe, 1);
+    $settings = static function (bool $enabled, string $wage, ?int $target = null) use ($run, $mine, $finiteUser, $stockId) {
+        return $run($finiteUser, 'world.mining.settings', ['mining_node_id' => (int)$mine->id, 'enabled' => $enabled, 'reward_cr' => $wage, 'storage_id' => $target ?? $stockId], static function () use ($mine, $finiteUser, $enabled, $wage, $target, $stockId) {
+            return \common\modules\world\models\domain\HiredExtraction::configure(Node::requireOne($mine->id), $finiteUser, $enabled, $wage, $target ?? $stockId);
+        });
+    };
+    $settings(true, '2.0000');
+    foreach (['NaN', '0', '-1', '1.00001', '900000000000001'] as $badWage) economyReject(static function () use ($settings, $badWage) { $settings(true, $badWage); }, 'INVALID_WAGE');
+    $startHired = static function (?string $key = null) use ($run, $mine, $workerUser) {
+        return $run($workerUser, 'world.mining.start', ['mining_node_id' => (int)$mine->id, 'action_code' => 'mine-stone'], static function ($op) use ($mine, $workerUser) {
+            return \common\modules\world\models\Mining::start((int)$mine->id, $workerUser, $op, 'mine-stone', null);
+        }, $key);
+    };
+    economyReject($startHired, 'INSUFFICIENT_WAGE_BUDGET'); $fund((int)$mine->id, '6.0000');
+    $db->createCommand()->update('world_player_health', ['hp' => 59], ['user_id' => $workerUser])->execute();
+    economyReject($startHired, 'WORKER_HEALTH_REQUIRED');
+    $db->createCommand()->update('world_player_health', ['hp' => 100], ['user_id' => $workerUser])->execute();
+    $db->createCommand()->update('world_node', ['condition' => (int)floor($mine->max_condition * 0.49)], ['id' => $mine->id])->execute();
+    economyReject($startHired, 'MINE_REPAIR_REQUIRED');
+    $db->createCommand()->update('world_node', ['condition' => $mine->max_condition], ['id' => $mine->id])->execute(); $mine->refresh();
+    $key = bin2hex(random_bytes(16)); $accepted = $startHired($key);
+    $mineAccount = (new \common\modules\world\modules\economy\models\domain\EconomyHierarchy($db))->accounts((int)$mine->id)['budget'];
+    economyCheck($accepted['output_storage_id'] === $stockId && \common\modules\world\modules\economy\value\Money::parse((string)$mineAccount['reserved'])->decimal() === '2.0000' && $startHired($key) === $accepted, 'hired acceptance fixes employer stockpile and reserves exactly one batch wage');
+    $settings(false, '5.0000');
+    $heartbeat = static function (?string $key = null) use ($run, $mine, $workerUser) {
+        return $run($workerUser, 'world.mining.heartbeat', ['mining_node_id' => (int)$mine->id], static function ($op) use ($mine, $workerUser) { return \common\modules\world\models\Mining::heartbeat((int)$mine->id, $workerUser, $op); }, $key);
+    };
+    $db->createCommand()->update('craft_storage', ['capacity' => 0], ['id' => $stockId])->execute();
+    for ($i = 0; $i < 10; $i++) {
+        $db->createCommand()->update('world_mining_worker', ['accounted_at' => time() - 60, 'last_seen_at' => time()], ['user_id' => $workerUser])->execute();
+        $delivered = $heartbeat(); if ($delivered['pending_quantity']) break;
+    }
+    economyCheck($delivered['pending_quantity'] === 1 && (float)(new Query())->select('credit')->from('persone')->where(['user_id' => $workerUser])->scalar($db) === 0.0 && !(new Query())->from('craft_inventory')->where(['storage_id' => $stockId])->exists($db), 'full employer stockpile keeps earned work and reserved wage with no partial delivery or payout');
+    $db->createCommand()->update('craft_storage', ['capacity' => 5], ['id' => $stockId])->execute();
+    $failedKey = bin2hex(random_bytes(16));
+    try {
+        $run($workerUser, 'fixture.fail-after-wage', ['mining_node_id' => (int)$mine->id], static function ($op) use ($mine, $workerUser) {
+            \common\modules\world\models\Mining::heartbeat((int)$mine->id, $workerUser, $op); throw new \RuntimeException('Injected failure after wage');
+        }, $failedKey);
+        throw new \LogicException('Missing injected wage failure.');
+    } catch (\RuntimeException $error) { if ($error->getMessage() !== 'Injected failure after wage') throw $error; }
+    economyCheck((float)(new Query())->select('credit')->from('persone')->where(['user_id' => $workerUser])->scalar($db) === 0.0 && !(new Query())->from('craft_inventory')->where(['storage_id' => $stockId])->exists($db)
+        && !(new Query())->from('game_command')->where(['user_id' => $workerUser, 'request_key' => $failedKey])->exists($db), 'failure after inventory and wage rolls both back with the idempotency record');
+    $payKey = bin2hex(random_bytes(16)); $result = $heartbeat($payKey);
+    $stoneId = (int)(new Query())->select('id')->from('craft_item')->where(['code' => 'classic-stone'])->scalar($db);
+    economyCheck($result['produced_quantity'] === 1 && (int)(new Query())->from('craft_inventory')->where(['storage_id' => $stockId, 'item_id' => $stoneId])->sum('item_quantity', $db) > 0
+        && \common\modules\world\modules\economy\value\Money::parse((string)(new Query())->select('credit')->from('persone')->where(['user_id' => $workerUser])->scalar($db))->decimal() === '2.0000', 'delivery pays the accepted wage after hiring was disabled and the next wage changed');
+    economyCheck($heartbeat($payKey) === $result && $total() === $initialTotal && ($workerStock->quantities($workerUser)[$stoneId] ?? 0) === $workerStoneBefore, 'paid batch replay preserves credits and resources remain solely in employer stock');
+    $helper = 9012;
+    $db->createCommand()->insert('user', ['id' => $helper, 'username' => 'BuilderCapFixture'])->execute();
+    $db->createCommand()->insert('persone', ['id' => $helper, 'user_id' => $helper, 'credit' => '0.0000', 'balance' => '0.0000'])->execute();
+    $app->authManager->assign($app->authManager->getRole('world-tester'), $helper);
+    $projectNode = NodeFactory::create(NodeTemplate::requireOne(['code' => 'forest-plot']), Node::requireOne($finiteBuild->node_id), $finiteUser, 'Builder slots fixture', 'builder-slots-fixture', null, 'constructing');
+    $nodeSettings = json_decode($projectNode->settings_json, true); $nodeSettings['builder_limit_enabled'] = true; $nodeSettings['accepted_build_minimum_cr'] = '2.0000';
+    $db->createCommand()->update('world_node', ['settings_json' => json_encode($nodeSettings)], ['id' => $projectNode->id])->execute();
+    $limitedBuild = new \common\modules\world\models\Build();
+    $limitedBuild->setAttributes(['node_id' => $projectNode->id, 'parent_id' => $finiteBuild->node_id, 'owner_user_id' => $finiteUser, 'required_seconds' => 3600, 'worked_seconds' => 0, 'labor_budget' => '2.0000', 'materials_json' => '{}', 'status' => 'building', 'revision' => 1, 'created_at' => time()], false);
+    if (!$limitedBuild->save(false)) throw new RuntimeException('Builder fixture failed.');
+    $startBuilder = static function (int $user) use ($run, $limitedBuild) { return $run($user, 'world.build.start', ['build_id' => (int)$limitedBuild->id], static function () use ($limitedBuild, $user) { return \common\modules\world\models\BuildWork::start($limitedBuild, $user); }); };
+    $startBuilder($workerUser); economyReject(static function () use ($startBuilder, $helper) { $startBuilder($helper); }, 'BUILDERS_LIMIT');
+    $db->createCommand()->update('world_build_work', ['last_seen_at' => time() - 61, 'accounted_at' => time()], ['build_id' => $limitedBuild->id, 'user_id' => $workerUser])->execute();
+    $startBuilder($helper);
+    economyReject(static function () use ($run, $limitedBuild, $workerUser) { $run($workerUser, 'world.build.heartbeat', ['build_id' => (int)$limitedBuild->id], static function ($op) use ($limitedBuild, $workerUser) { return \common\modules\world\models\BuildWork::heartbeat($limitedBuild, $workerUser, $op, false); }); }, 'BUILDERS_LIMIT');
+    economyCheck($limitedBuild->builderLimit() === 1 && \common\modules\world\models\BuildStrength::forTemplate(NodeTemplate::requireOne(['code' => 'starter-site'])) > \common\modules\world\models\BuildStrength::forTemplate(NodeTemplate::requireOne(['code' => 'house'])), 'two-credit builder cap also protects expired heartbeat resumption and campsite is stronger than its children');
+    \common\modules\world\models\BuildWork::closeAll((int)$limitedBuild->id);
+    $garden = NodeFactory::create(NodeTemplate::requireOne(['code' => 'garden']), Node::requireOne($finiteBuild->node_id), $finiteUser, 'Digging fixture', 'digging-fixture', null, 'constructing');
+    $db->createCommand()->update('world_node', ['status' => 'active', 'condition' => $garden->max_condition], ['id' => $garden->id])->execute();
+    (new \common\modules\world\modules\economy\models\domain\EconomyHierarchy($db))->provision((int)$garden->id, $joined['operation_id']);
+    $bedFixture = static function (string $code) use ($db, $garden, $finiteUser) {
+        $bed = NodeFactory::create(NodeTemplate::requireOne(['code' => 'garden-bed']), Node::requireOne($garden->id), $finiteUser, $code, $code, null, 'constructing');
+        $db->createCommand()->update('world_node', ['status' => 'active', 'condition' => $bed->max_condition, 'unlocked' => 1], ['id' => $bed->id])->execute();
+        $db->createCommand()->insert('world_build', ['node_id' => $bed->id, 'parent_id' => $garden->id, 'owner_user_id' => $finiteUser, 'required_seconds' => 30, 'worked_seconds' => 30, 'labor_budget' => '0.0000', 'materials_json' => '{}', 'status' => 'completed', 'revision' => 1, 'created_at' => time(), 'finished_at' => time()])->execute();
+        return (int)$bed->id;
+    };
+    $ownBed = $bedFixture('free-dig-bed'); $hiredBed = $bedFixture('paid-dig-bed');
+    $shovel = (new Query())->from('craft_item')->where(['code' => 'world-shovel'])->one($db);
+    $finiteStore->move($finiteUser, $shovel, 1); $workerStock->move($workerUser, $shovel, 1);
+    $flags = new \common\modules\world\models\domain\WorldFlags($db, $app->getModule('world'));
+    $ownerCrop = new \common\modules\world\models\domain\WorldCultivation($db, $flags, new \common\modules\world\models\domain\WorldAccessPolicy($finiteUser));
+    $workerCrop = new \common\modules\world\models\domain\WorldCultivation($db, $flags, new \common\modules\world\models\domain\WorldAccessPolicy($workerUser));
+    $input = ['bed_id' => $ownBed, 'top_up' => false]; $q = $ownerCrop->preview($finiteUser, 'dig', $input);
+    economyCheck($q['terms']['price_cr'] === '0.0000' && $q['terms']['worker_reward_cr'] === '0.0000', 'owner digging quote costs no credits and promises no wage');
+    $ownerCrop->execute($finiteUser, 'dig', $input, bin2hex(random_bytes(16)), $q['quote_id'], (array)$q['expected_revisions']);
+    $input = ['bed_id' => $hiredBed, 'top_up' => false];
+    economyReject(static function () use ($workerCrop, $workerUser, $input) { $workerCrop->preview($workerUser, 'dig', $input); }, 'GARDEN_WAGE_UNAVAILABLE');
+    $fund((int)$garden->id, '5'); $q = $workerCrop->preview($workerUser, 'dig', $input); $digKey = bin2hex(random_bytes(16));
+    $dig = $workerCrop->execute($workerUser, 'dig', $input, $digKey, $q['quote_id'], (array)$q['expected_revisions']);
+    economyCheck($q['terms']['worker_reward_cr'] === '1.0000' && $workerCrop->execute($workerUser, 'dig', $input, $digKey, $q['quote_id'], (array)$q['expected_revisions']) === $dig
+        && \common\modules\world\modules\economy\value\Money::parse((string)(new Query())->select('credit')->from('persone')->where(['user_id' => $workerUser])->scalar($db))->decimal() === '3.0000' && $total() === $initialTotal, 'hired digging transfers one garden-funded wage and replay cannot pay it twice');
+    economyReject(static function () use ($workerCrop, $workerUser, $input) { $workerCrop->preview($workerUser, 'sow', $input); }, 'BED_UNAVAILABLE');
+    $tx->commit();
+    $dugState = $workerCrop->state($workerUser, $hiredBed);
+    economyCheck(!$dugState['owner'] && $dugState['dug'] && !$dugState['writable'] && $dugState['cycle'] === null, 'after hired digging the worker sees completion without access to owner crop operations');
+    economyCheck((new \common\modules\world\models\domain\WorldBalanceOverview($db))->report(2)['paid_starter_cr'] === '250.0000', 'administrative finance overview includes settled and cancelled starter obligations');
+} finally { if ($tx->isActive) $tx->rollBack(); }
+echo 'Topic 82 starter funding and hired extraction checks passed.' . PHP_EOL;

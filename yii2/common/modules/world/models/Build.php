@@ -34,12 +34,19 @@ class Build extends Record
                 throw new GameError('MAP_CELL_CLOSED', 'Сначала исследуйте и откройте выбранную ячейку.', 422);
         }
         $budget = Money::parse($input['labor_budget']);
+        $minimumEnabled = (domain\EconomyRuntime::current(self::getDb())['profile']['construction']['minimum_budgets'] ?? false) === true;
+        $minimum = $minimumEnabled && !$onboarding ? Money::parse($template->minimumLaborBudget((int)$parent->hierarchy_level + 1)) : Money::parse('0');
+        if ($budget->compare($minimum) < 0) throw new GameError('MINIMUM_BUILD_BUDGET', 'Минимальный бюджет строительства: ' . $minimum->display() . '.', 422, ['minimum_labor_budget' => $minimum->decimal()]);
         if ($budget->isNegative()) throw new GameError('INVALID_BUDGET', 'Бюджет не может быть отрицательным.', 422);
         $hold = null;
         BuildRequirements::check($user, (int)$parent->id, $template);
         BuildMaterials::consume($user, $template->materials(), $operation, (int)$parent->id);
         if ($economyTerms) domain\EconomyPayments::charge(self::getDb(), $user, (int)$parent->id, Money::parse($economyTerms['price_cr']), (bool)($input['top_up'] ?? false), $operation, 'Постройка: ' . $template->name);
         $node = NodeFactory::create($template, $parent, $user, $input['name'], 'build-' . $operation, $cell, 'constructing');
+        $settings = json_decode($node->settings_json ?: '{}', true) ?: [];
+        $settings['accepted_build_minimum_cr'] = $minimum->decimal(); $settings['builder_limit_enabled'] = $minimumEnabled;
+        $node->settings_json = Json::encode((object)$settings);
+        if (!$node->save(false)) throw new \RuntimeException('Construction terms write failed.');
         $accounts = (new EconomyHierarchy(self::getDb()))->provision((int)$node->id, $operation);
         if (!$budget->isZero()) {
             $source = $parent->owner_user_id == $user ? $parent : $node;
@@ -55,6 +62,12 @@ class Build extends Record
         return $build;
     }
     public function isRepair(): bool { return $this->getAttribute('job_kind') === 'repair'; }
+    public function minimumLaborBudget(): string { return (string)((json_decode($this->node->settings_json ?: '{}', true) ?: [])['accepted_build_minimum_cr'] ?? '0.0000'); }
+    public function builderLimit(): ?int
+    {
+        $settings = json_decode($this->node->settings_json ?: '{}', true) ?: [];
+        return ($settings['builder_limit_enabled'] ?? false) ? intdiv((int)explode('.', (string)$this->labor_budget)[0], 2) : null;
+    }
     public static function repair(int $user, int $nodeId, string $operation): self
     {
         self::requireTransaction();
@@ -94,6 +107,7 @@ class Build extends Record
         $form = new BuildSettingsForm(); $form->setAttributes(['name'=>$name,'labor_budget'=>$budgetValue,'top_up'=>$topUp]);
         $validated = $form->input(); $name = $validated['name'];
         $budget = Money::parse($budgetValue); $old = Money::parse((string)$this->labor_budget);
+        if ($budget->compare(Money::parse($this->minimumLaborBudget())) < 0) throw new GameError('MINIMUM_BUILD_BUDGET', 'Бюджет меньше принятого минимального бюджета строительства.', 422);
         if ($budget->isNegative()) throw new GameError('INVALID_BUDGET', 'Бюджет не может быть отрицательным.', 422);
         if ($budget->compare($old) !== 0) {
             if ($budget->compare($old) < 0) throw new GameError('BUILD_BUDGET_DECREASE', 'Бюджет строительства можно только пополнять.', 422);
@@ -142,6 +156,7 @@ class Build extends Record
         if (!$cancel && (int)$this->worked_seconds < (int)$this->required_seconds) return;
         BuildPayment::settle($this, $operation);
         if ($cancel && !$this->isRepair()) BuildPayment::refundCancelled($this, $operation);
+        if ($cancel && !$this->isRepair()) (new domain\StarterFunding(self::getDb()))->cancel((int)$this->node_id, $operation);
         if ($cancel && !$this->isRepair()) BuildMaterials::refund((int)$this->owner_user_id, Json::decode($this->materials_json), $operation, (int)$this->parent_id);
         BuildWork::closeAll((int)$this->id);
         $this->status = $cancel ? 'cancelled' : 'completed'; $this->finished_at = time(); $this->revision++;
@@ -172,6 +187,8 @@ class Build extends Record
         return ['id', 'node_id', 'parent_id', 'owner_user_id', 'required_seconds', 'worked_seconds', 'labor_budget', 'status', 'revision', 'created_at',
             'world_time_rate' => function () { return WorldTime::rate((int)$this->node->root_id); },
             'server_time' => function () { return time(); },
+            'minimum_labor_budget' => function () { return $this->minimumLaborBudget(); },
+            'builder_limit' => function () { return $this->builderLimit(); },
             'job_kind' => function () { return $this->isRepair() ? 'repair' : 'construction'; },
             'initial_condition' => function () { return (int)$this->getAttribute('initial_condition'); },
             'max_condition' => function () { return (int)$this->node->max_condition; },

@@ -20,7 +20,10 @@ class Command extends Record
             $locks->row('craft_meta', ['id' => 1]);
             $owners = [$user];
             if (isset($payload['build_id'])) $owners = array_merge($owners, BuildWork::participants((int)$payload['build_id']));
-            if (isset($payload['mining_node_id'])) $owners[] = (int)Node::requireOne($payload['mining_node_id'])->owner_user_id;
+            if (isset($payload['mining_node_id'])) {
+                $owners[] = (int)Node::requireOne($payload['mining_node_id'])->owner_user_id;
+                $owners = array_merge($owners, (new \yii\db\Query())->select('user_id')->from('world_source_work')->where(['node_id' => $payload['mining_node_id']])->andWhere(['not', ['active_key' => null]])->column($db));
+            }
             $locks->owners($owners, false); $locks->owners([$user]); $locks->row('world_registry', ['id' => 1]);
             $previous = self::findOne(['user_id' => $user, 'request_key' => $key]);
             if ($previous) {

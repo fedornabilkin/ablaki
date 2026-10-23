@@ -49,6 +49,8 @@ class EconomyApiController extends CoreController
             'can_fund_goals' => Yii::$app->user->can('world-manage'),
             'personal_credit_cr' => \common\modules\world\modules\economy\value\Money::parse((string)((new \yii\db\Query())->select('credit')->from('persone')->where(['user_id' => $user])->scalar($db) ?: '0'))->decimal(),
             'target_start_credit_cr' => $revision['profile']['starter']['credits_cr'] ?? null,
+            'starter_funding' => (new \common\modules\world\models\domain\StarterFunding($db))->forUser($user),
+            'starter_funding_mode' => $revision['profile']['starter']['funding'] ?? 'personal_transfer',
             'second_milestone_day' => $revision['profile']['closed_test']['verified_second_milestone_day'] ?? null,
             'admission' => EconomyRuntime::admission($db, $user, Yii::$app->user->can('world-manage')),
             'health' => WorldFood::state($db, $user), 'goals' => (new WorldGoals($db))->state($user)['goals'],

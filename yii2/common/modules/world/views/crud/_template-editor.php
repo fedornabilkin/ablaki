@@ -44,6 +44,8 @@ $kinds = ['WORLD' => 'Мир', 'REGION' => 'Регион', 'SETTLEMENT' => 'По
 <?php $rate = \common\modules\world\models\WorldTime::rate();
 if ($model->worldBuildSeconds === null) $model->worldBuildSeconds = $model->worldWorkSeconds(); ?>
 <?= $form->field($model, 'worldBuildSeconds')->input('number', ['min' => 1, 'max' => 604800 * $rate])->hint('Скорость мира — 1:' . $rate . '. ' . $rate . ' секунд мира = 1 реальная секунда. Коэффициент меняется в редактировании мира. Длительность уже начатых строек сохраняется.') ?>
+<?php if ($model->minimumBuildBudget === null) $model->minimumBuildBudget = $model->minimumLaborBudget(); ?>
+<?= $form->field($model, 'minimumBuildBudget')->textInput(['inputmode' => 'decimal'])->label('Минимальный бюджет строительства')->hint('По умолчанию 2 кредита на каждые 100 000 единиц прочности, с округлением вверх. Каждые 2 кредита бюджета дают место одному помощнику; владелец строит без оплаты.') ?>
 <div class="admin-wide">Трудоёмкость: <output id="world-duration"><?= \common\modules\world\models\WorldTime::duration((int)$model->worldBuildSeconds) ?></output> времени мира (дни, чч:мм:сс).</div>
 <?php $this->registerJs("(function(){var input=document.getElementById('nodetemplate-worldbuildseconds'),output=document.getElementById('world-duration');if(!input||!output)return;function update(){var seconds=Math.max(0,Math.floor(Number(input.value)||0)),days=Math.floor(seconds/86400);seconds%=86400;var parts=[Math.floor(seconds/3600),Math.floor(seconds%3600/60),seconds%60];output.textContent=(days?days+' д. ':'')+parts.map(function(n){return n<10?'0'+n:String(n);}).join(':');}input.addEventListener('input',update);update();})();"); ?>
 <div class="admin-wide"><?= $form->field($model, 'kind')->radioList($kinds) ?></div>

@@ -19,6 +19,10 @@ final class EconomyScenario
     public static function routeSteps(array $config, string $scenario, bool $finite = false): array
     {
         $common = $config['common_steps'];
+        if (($config['initial_open_cells'] ?? 9) === 1) {
+            $cells = [[-1, -1], [0, -1], [1, -1], [-1, 0], [1, 0], [-1, 1], [0, 1], [1, 1]];
+            array_splice($common, 1, 0, [['action' => 'explore', 'code' => 'starter-site', 'cells' => $cells], ['action' => 'buy', 'code' => 'starter-site', 'cells' => $cells]]);
+        }
         if ($finite) {
             $daily = null; foreach ($common as $step) if ($step['action'] === 'daily') { $daily = $step; break; }
             if ($daily) { $common = array_values(array_filter($common, static function ($step) { return $step['action'] !== 'daily'; })); array_splice($common, 1, 0, [$daily]); }
@@ -166,6 +170,11 @@ final class EconomyScenario
             $this->stock($row['materials'], -1); $this->state['now'] += $row['work_seconds'];
             $this->state['objects'][$code] = $parent;
             $this->state['budgets'][$code] = self::money('0'); $this->state['tax_reserved'][$code] = self::money('0'); $this->state['tax_carry'][$code] = 0;
+            if ($code === 'starter-site' && ($this->profile['starter']['funding'] ?? '') === 'parent_budget') {
+                $amount = self::money($this->profile['starter']['credits_cr']);
+                self::need($this->state['municipal']->subtract($this->state['municipal_reserved'])->compare($amount) >= 0, 'STARTER_FUNDING_PENDING');
+                $this->state['municipal'] = $this->state['municipal']->subtract($amount); $this->state['budgets'][$code] = $amount;
+            }
             foreach (['starter-site' => 'starter_site_active', 'starter-shelter' => 'shelter_built', 'garden' => 'garden_built', 'mine' => 'mine_built', 'forge' => 'forge_built'] as $object => $fact) if ($code === $object) $this->state['facts'][$fact] = true;
         } elseif ($action === 'craft') {
             self::need(isset($this->profile['recipes'][$code]), 'UNKNOWN_RECIPE', $code);
@@ -176,9 +185,15 @@ final class EconomyScenario
             $recent = array_filter($this->state['craft_times'], function ($at) { return $at > $this->state['now'] - 3600; });
             self::need(count($recent) + $quantity <= $this->profile['limits']['crafting_hourly']['maximum'], 'CRAFT_HOURLY_LIMIT');
             $fee = self::money($row['fee_cr'])->multiply($quantity);
-            self::need($this->state['wallet']->compare($fee) >= 0, 'INSUFFICIENT_CRAFT_WALLET');
-            $this->state['wallet'] = $this->state['wallet']->subtract($fee); $this->state['craft_fee_sink'] = $this->state['craft_fee_sink']->add($fee);
-            $this->flow('wallet', 'craft_fee_sink', $fee, 'existing_craft_debit');
+            if (($this->profile['starter']['funding'] ?? '') === 'parent_budget') {
+                self::need($this->available('starter-site')->compare($fee) >= 0, 'INSUFFICIENT_CRAFT_BUDGET');
+                $this->state['budgets']['starter-site'] = $this->state['budgets']['starter-site']->subtract($fee);
+                $this->flow('starter-site:budget', 'craft_fee_sink', $fee, 'existing_craft_debit');
+            } else {
+                self::need($this->state['wallet']->compare($fee) >= 0, 'INSUFFICIENT_CRAFT_WALLET');
+                $this->state['wallet'] = $this->state['wallet']->subtract($fee); $this->flow('wallet', 'craft_fee_sink', $fee, 'existing_craft_debit');
+            }
+            $this->state['craft_fee_sink'] = $this->state['craft_fee_sink']->add($fee);
             for ($i = 0; $i < $quantity; $i++) {
                 foreach ($row['tools'] as $tool) if ($tool !== $row['station']) $this->tool($tool, $this->profile['operating_costs']['craft_base_work_wear']);
                 if ($row['station'] !== null) $this->station($row['station']);
@@ -235,7 +250,7 @@ final class EconomyScenario
                 $level = MapExploration::requiredLevel($point['x'], $point['y']);
                 self::need($level === 1 || ($step['use_elixir'] ?? false), 'EXPLORER_LEVEL_REQUIRED');
                 if ($level > 1) $elixirs++;
-                $initial = $code === 'starter-site' ? max(abs($point['x']), abs($point['y'])) <= 1 : $point === ['x' => 0, 'y' => 0];
+                $initial = $code === 'starter-site' && $this->profile['map']['starter_open_cells'] === 9 ? max(abs($point['x']), abs($point['y'])) <= 1 : $point === ['x' => 0, 'y' => 0];
                 self::need(!$initial && !isset($this->state['explored'][$key]), 'MAP_CELL_EXPLORED');
                 $this->state['explored'][$key] = true;
             }
@@ -396,7 +411,7 @@ final class EconomyScenario
             $reserve = $reserve->add(self::money($order['unit_price_cr'])->multiply($order['quantity'])); $orders[$code] = $order['quantity'];
         }
         foreach ($profile['goals'] as $goal) $reserve = $reserve->add(self::money($goal['credits_cr']));
-        $wallet = self::money($profile['starter']['credits_cr']); $municipal = self::money($config['municipal_budget_cr']);
+        $wallet = self::money(($profile['starter']['funding'] ?? '') === 'parent_budget' ? '0' : $profile['starter']['credits_cr']); $municipal = self::money($config['municipal_budget_cr']);
         $self->initialMoney = $wallet->add($municipal);
         if ($municipal->isNegative()) throw new \InvalidArgumentException('Negative initial municipal funding.');
         $self->state = ['now' => $self->config['start'], 'wallet' => $wallet, 'municipal' => $municipal, 'municipal_reserved' => $reserve, 'loss_sink' => self::money('0'), 'craft_fee_sink' => self::money('0'), 'flows' => [], 'step' => 0,

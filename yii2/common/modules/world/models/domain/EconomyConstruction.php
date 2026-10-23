@@ -15,8 +15,10 @@ final class EconomyConstruction
     }
     public static function catalogTerms(NodeTemplate $template, ?array $revision): ?array
     {
-        if (!$revision || !isset($revision['profile']['objects'][$template->code])) return null;
-        $price = $revision['profile']['objects'][$template->code]['price_cr'];
+        if (!$revision) return null;
+        $all = ($revision['profile']['closed_test']['all_templates'] ?? false) && getenv('WORLD_TEST_MODE') === '1';
+        if (!isset($revision['profile']['objects'][$template->code]) && !$all) return null;
+        $price = $revision['profile']['objects'][$template->code]['price_cr'] ?? (string)($template->defaults()['price_cr'] ?? '0.0000');
         return ['profile_version' => $revision['version'], 'price_cr' => $price,
             'terms_digest' => hash('sha256', CanonicalJson::encode([$revision['id'], $template->getAttributes(), $price, $revision['clock_settings']['world_time_rate'] ?? 1]))];
     }

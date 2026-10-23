@@ -83,14 +83,6 @@ class PlacementProvisioner
     public function openObjectMap(\common\modules\world\models\Node $node, ?string $operation = null): void
     {
         if (!$this->db->getTransaction()) throw new \LogicException('Map provisioning requires a transaction.');
-        if ($node->status === 'active' && EconomyRuntime::current($this->db) && $node->template && $node->template->code === 'starter-site') {
-            for ($y = -1; $y <= 1; $y++) for ($x = -1; $x <= 1; $x++) {
-                $where = ['parent_id' => $node->id, 'x' => $x, 'y' => $y];
-                $cell = (new Query())->from('world_map_cell')->where($where)->one($this->db);
-                if (!$cell) $this->db->createCommand()->insert('world_map_cell', $where + ['state' => 'open', 'price' => '0.0000', 'operation_id' => $operation, 'created_at' => time(), 'updated_at' => time()])->execute();
-                elseif ($cell['state'] === 'discovered') $this->db->createCommand()->update('world_map_cell', ['state' => 'open', 'updated_at' => time()], $where)->execute();
-            }
-        }
         if ($node->status !== 'active' || (new Query())->from('world_map_cell')->where(['parent_id' => $node->id])->exists($this->db)) return;
         $x = max((int)$node->map_origin_x, min(0, (int)$node->map_origin_x + (int)$node->map_width - 1));
         $y = max((int)$node->map_origin_y, min(0, (int)$node->map_origin_y + (int)$node->map_height - 1));

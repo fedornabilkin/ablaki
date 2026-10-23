@@ -20,7 +20,14 @@ final class Supplies
     {
         self::campsite($nodeId, $user);
         $finite = (new domain\FiniteSupplies(Node::getDb()))->state($user);
-        if ($finite) return $finite;
+        if ($finite) {
+            $finite['gather_can_claim'] = false; $finite['gather_reason'] = null;
+            if ($finite['gather_available']) {
+                try { $plan = (new SupplyGrant(Node::getDb()))->plan($user, 'gather'); $finite['gather_can_claim'] = true; $finite['gather_items'] = $plan['items']; }
+                catch (GameError $error) { $finite['gather_reason'] = $error->getMessage(); }
+            }
+            return $finite;
+        }
         $period = (new \DateTimeImmutable('@' . time()))->setTimezone(new \DateTimeZone('Europe/Moscow'))->setTime(0, 0)->getTimestamp();
         return ['gather_available' => !(new Query())->from('craft_event')->where(['user_id' => $user, 'action' => 'gather'])->andWhere(['>=', 'created_at', $period])->exists(Node::getDb()),
             'gather_available_at' => $period + 86400, 'server_time' => time()];
@@ -29,6 +36,7 @@ final class Supplies
     {
         $node = self::campsite($nodeId, $user);
         $db = Node::getDb(); $store = new CraftStorage($db); $store->operationId = $operation;
-        return ['message' => (new SupplyGrant($db))->grant($store, $user, 'gather')] + self::state($nodeId, $user);
+        $grant = new SupplyGrant($db); $plan = $grant->plan($user, 'gather');
+        return ['message' => $grant->grant($store, $user, 'gather'), 'gathered_items' => $plan['items']] + self::state($nodeId, $user);
     }
 }

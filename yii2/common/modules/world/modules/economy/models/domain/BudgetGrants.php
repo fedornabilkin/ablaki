@@ -98,6 +98,8 @@ class BudgetGrants
                 $result = ['changed_node_ids' => [$terms['source_node_id'], $terms['destination_node_id']], 'amount' => $terms['amount'],
                     'source_available_after' => $terms['source_available_after'], 'destination_budget_after' => $terms['destination_after'],
                     'transfer_id' => $transfer, 'grant_id' => $grant, 'currency' => 'Cr'];
+                $started = (new \common\modules\world\models\domain\StarterFunding($this->db))->settle($terms['destination_node_id'], $operation);
+                $result['changed_node_ids'] = array_values(array_unique(array_merge($result['changed_node_ids'], $started)));
                 $bus->emit($operation, $user, 'world.economy.granted', $result);
                 return $result;
             });

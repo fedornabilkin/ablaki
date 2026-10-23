@@ -3,7 +3,8 @@
   "profile": "economy-closed-test-v1",
   "starts_at": "2026-10-17T10:00:00+03:00",
   "timezone": "Europe/Moscow",
-  "municipal_budget_cr": "560.0000",
+  "municipal_budget_cr": "810.0000",
+  "initial_open_cells": 1,
   "orders": {
     "classic-stone": {
       "quantity": 40,
@@ -99,6 +100,12 @@
       "action": "build",
       "code": "garden",
       "parent": "starter-site"
+    },
+    {
+      "action": "grant",
+      "source": "starter-site",
+      "destination": "garden",
+      "amount_cr": "12.0000"
     },
     {
       "action": "build",
@@ -3517,7 +3524,7 @@
         "action": "grant",
         "source": "starter-site",
         "destination": "stone-plot",
-        "amount_cr": "104.0000"
+        "amount_cr": "103.0000"
       },
       {
         "action": "build",
@@ -4161,7 +4168,7 @@
         "action": "grant",
         "source": "starter-site",
         "destination": "stone-plot",
-        "amount_cr": "104.0000"
+        "amount_cr": "103.0000"
       },
       {
         "action": "build",

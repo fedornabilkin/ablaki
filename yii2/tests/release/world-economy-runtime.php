@@ -14,6 +14,9 @@ foreach (['m261008_120000_world_mvp_facilities', 'm261008_160000_world_construct
     ob_start(); try { (new $migrationClass(['db' => $db]))->up(); } finally { ob_end_clean(); }
 }
 $db->schema->refresh();
+require_once $yiiRoot . '/console/world-migrations/m261023_120000_world_starter_funding.php';
+ob_start(); try { (new m261023_120000_world_starter_funding(['db' => $db]))->up(); } finally { ob_end_clean(); }
+$db->schema->refresh();
 require_once $yiiRoot . '/vendor/yiisoft/yii2/rbac/migrations/m140506_102106_rbac_init.php';
 $app->set('authManager', ['class' => \yii\rbac\DbManager::class, 'db' => $db]);
 ob_start(); try { (new m140506_102106_rbac_init(['db' => $db]))->up(); } finally { ob_end_clean(); }
@@ -85,7 +88,7 @@ $startProject = \common\modules\world\models\Build::requireOne($start['build']['
 $db->createCommand()->update('world_build_work', ['accounted_at' => time() - 30, 'last_seen_at' => time()], ['build_id' => $startProject->id, 'ended_at' => null])->execute();
 \common\modules\world\models\Command::run($freshUser, bin2hex(random_bytes(16)), 'world.build.heartbeat', ['build_id' => (int)$startProject->id], function ($operation) use ($startProject, $freshUser) { return \common\modules\world\models\BuildWork::heartbeat($startProject, $freshUser, $operation, false); });
 $siteId = (int)$startProject->node_id;
-economyCheck((int)(new Query())->from('world_map_cell')->where(['parent_id' => $siteId, 'state' => 'open'])->count('*', $db) === 9, 'completed starter site opens exactly nine free cells');
+economyCheck((int)(new Query())->from('world_map_cell')->where(['parent_id' => $siteId, 'state' => 'open'])->count('*', $db) === 1, 'completed starter site opens only the initial cell and keeps exploration meaningful');
 $freshStock = new \common\modules\world\modules\craft\models\domain\CraftStorage($db); $freshStock->workspaceNodeId = $siteId;
 $logItem = (int)(new Query())->select('id')->from('craft_item')->where(['code' => 'classic-log'])->scalar($db);
 economyCheck($freshStock->quantities($freshUser)[$logItem] === 4, 'new starter grant has four logs rather than the old oversized set');
@@ -93,12 +96,12 @@ $plankRecipe = (int)(new Query())->select('id')->from('craft_recipe')->where(['c
 (new \common\modules\world\modules\craft\models\domain\Crafting($freshStock))->command($freshUser, bin2hex(random_bytes(16)), 'craft', ['id' => $plankRecipe, 'quantity' => 1]);
 economyCheck(EconomyQuota::state($db, $freshUser, 'crafting_hourly')['remaining'] === 29, 'legacy crafting consumes the same recipe-batch quota');
 $forestTemplate = \common\modules\world\models\NodeTemplate::requireOne(['code' => 'forest-plot']);
-$forestInput = ['parent_id' => $siteId, 'template_id' => (int)$forestTemplate->id, 'name' => 'Fixture forest', 'labor_budget' => '0', 'top_up' => true,
+$forestInput = ['parent_id' => $siteId, 'template_id' => (int)$forestTemplate->id, 'name' => 'Fixture forest', 'labor_budget' => $forestTemplate->minimumLaborBudget(), 'top_up' => true,
     'terms_digest' => \common\modules\world\models\domain\EconomyConstruction::terms($forestTemplate)['terms_digest']];
 $forestBuild = \common\modules\world\models\Command::run($freshUser, bin2hex(random_bytes(16)), 'world.build.create', $forestInput, function ($operation) use ($freshUser, $forestInput) {
     $build = \common\modules\world\models\Build::begin($freshUser, $forestInput, $operation); return ['id' => (int)$build->id];
 });
-economyCheck(\common\modules\world\modules\economy\value\Money::parse((string)(new Query())->select('credit')->from('persone')->where(['user_id' => $freshUser])->scalar($db))->decimal() === '220.0000', 'construction separately pays thirty credits after consuming materials');
+economyCheck(\common\modules\world\modules\economy\value\Money::parse((string)(new Query())->select('credit')->from('persone')->where(['user_id' => $freshUser])->scalar($db))->decimal() === '218.0000', 'construction pays thirty credits and holds the two-credit minimum helper budget');
 $forestProject = \common\modules\world\models\Build::requireOne($forestBuild['id']);
 \common\modules\world\models\Command::run($freshUser, bin2hex(random_bytes(16)), 'world.build.fixture-finish', ['build_id' => (int)$forestProject->id], function ($operation) use ($forestProject) {
     $forestProject->worked_seconds = $forestProject->required_seconds; $forestProject->finish($operation); return ['completed' => true];

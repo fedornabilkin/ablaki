@@ -51,7 +51,7 @@ final class EconomyGameplay
             $project = Build::requireOne($result['build']['id']);
         } else {
             $template = NodeTemplate::requireOne(['code' => $code]);
-            $input = ['parent_id' => $this->nodes[$parent], 'template_id' => (int)$template->id, 'name' => $template->name, 'labor_budget' => '0.0000', 'top_up' => true, 'terms_digest' => EconomyConstruction::terms($template)['terms_digest']];
+            $input = ['parent_id' => $this->nodes[$parent], 'template_id' => (int)$template->id, 'name' => $template->name, 'labor_budget' => $template->minimumLaborBudget(), 'top_up' => true, 'terms_digest' => EconomyConstruction::terms($template)['terms_digest']];
             $result = $this->run('world.build.create', $input, function ($op) use ($input) { return ['id' => (int)Build::begin($this->user, $input, $op)->id]; });
             $project = Build::requireOne($result['id']);
         }
@@ -123,7 +123,13 @@ final class EconomyGameplay
             if ($action === 'build') $this->build($code, $step['parent']);
             elseif ($action === 'craft') {
                 $recipe = (int)(new Query())->select('id')->from('craft_recipe')->where(['code' => $code])->scalar($this->db);
-                (new Crafting($this->store))->command($this->user, bin2hex(random_bytes(16)), 'craft', ['id' => $recipe, 'quantity' => $quantity]);
+                $workspace = new \common\modules\world\modules\craft\models\domain\CraftWorkspace($this->db, $this->flags);
+                $choices = $workspace->state($this->user, $this->nodes['starter-site'], $recipe);
+                $backpack = (new CanonicalInventory($this->store))->backpack($this->user);
+                $payload = ['node_id' => $this->nodes['starter-site'], 'recipe_id' => $recipe, 'quantity' => $quantity,
+                    'source_storage_ids' => array_column($choices['storages'], 'id'), 'output_storage_id' => (int)$backpack['id'],
+                    'equipment_instance_ids' => array_map(static function ($row) { return (int)$row['candidates'][0]['instance_id']; }, $choices['equipment']), 'use_object_budget' => true];
+                $q = $workspace->preview($this->user, $payload); $workspace->craft($this->user, bin2hex(random_bytes(16)), $payload, $q['quote_id'], (array)$q['expected_revisions']);
             } elseif ($action === 'source') $this->source($code, $quantity);
             elseif ($action === 'place') $this->place($code, $step['node']);
             elseif (in_array($action, ['sow', 'water', 'harvest'], true)) $this->crop($action);
@@ -222,7 +228,12 @@ try {
 economyCheck(economyGameplayMoney($db)->decimal() === $beforeFailure
     && (int)(new Query())->from('credit_transfer')->count('*', $db) === $transferCount
     && (int)(new Query())->from('history_balance')->count('*', $db) === $balanceCount, 'failed transfer correlation rolls back funds, transfer and balance history together');
-Command::run(9006, bin2hex(random_bytes(16)), 'fixture.municipal-funding', [], function ($op) use ($db, $gameCity) { return (new BudgetFunding($db))->contribute(9006, $gameCity, Money::parse('560.0000'), 'Finite fixture budget', $op); });
+// Legacy transfer coverage above is independent of the current parent-budget starter route.
+$app->user->switchIdentity(new EconomyGameplayIdentity(9005));
+$returnTransfer = new \common\modules\exchange\models\CreditTransfer(); $returnTransfer->amount = 250; $transferService->create($returnTransfer);
+$returnRow = (new Query())->from('credit_transfer')->where(['user_id' => 9005, 'user_buyer' => 0])->one($db);
+$app->user->switchIdentity(new EconomyGameplayIdentity(9006)); $transferService->confirm(\common\modules\exchange\models\CreditTransfer::findOne($returnRow['id']), $returnRow['password']); unset($returnRow);
+Command::run(9006, bin2hex(random_bytes(16)), 'fixture.municipal-funding', [], function ($op) use ($db, $gameCity) { return (new BudgetFunding($db))->contribute(9006, $gameCity, Money::parse('810.0000'), 'Finite fixture budget including first campsite', $op); });
 $gameplay = new EconomyGameplay($db, 9005, $gameCity, $start, $scenario); $gameplay->fund();
 $scenarioName = getenv('ABL_ECONOMY_SCENARIO') ?: 'first-seven-days-with-lodging';
 if (!in_array($scenarioName, ['first-five-days-with-lodging', 'first-seven-days-with-lodging'], true)) throw new RuntimeException('Unknown acceptance route.');

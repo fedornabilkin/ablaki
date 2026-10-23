@@ -39,6 +39,7 @@ final class BuildMaterials
     }
     public static function refund(int $user, array $materials, string $operation, int $parent): void
     {
+        if (!$materials) return;
         $store = new CraftStorage(Node::getDb()); $store->operationId = $operation;
         $inventory = new CanonicalInventory($store); $targets = self::sources($user, $parent);
         ksort($materials);

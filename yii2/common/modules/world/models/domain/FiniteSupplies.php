@@ -31,7 +31,7 @@ final class FiniteSupplies
         $used = []; $today = []; $accepted = [];
         foreach ($claims as $claim) { $id = (int)$claim['item_id']; if (!isset($accepted[$id]) || (int)$claim['ordinal'] > (int)$accepted[$id]['ordinal']) $accepted[$id] = $claim; $used[$id] = max($used[$id] ?? 0, (int)$claim['ordinal']); if ($claim['period_key'] === $period['key']) $today[$id] = true; }
         $rows = (new Query())->from('craft_item')->where(['active' => 1])->orderBy('id')->all($db);
-        $items = []; $remaining = 0; $future = false;
+        $items = []; $display = []; $remaining = 0; $future = false;
         foreach ($rows as $item) {
             $code = trim($item['code']); $id = (int)$item['id'];
             // Newly introduced gatherable catalogue entries get their own allowance only.
@@ -44,13 +44,14 @@ final class FiniteSupplies
             $left = max(0, $cap - ($used[$id] ?? 0));
             if ($excluded || !$left || (isset($accepted[$id]) && (int)$accepted[$id]['quantity'] <= 1)) continue;
             $remaining = max($remaining, $left); $future = true;
+            $display[] = ['item_id' => $id, 'code' => $code, 'name' => trim($item['name']), 'quantity' => (int)$base * ($initial - $cap + $left), 'remaining' => $left, 'limit' => $cap];
             if (isset($today[$id])) continue;
             $items[] = ['item_id' => (int)$item['id'], 'code' => $code, 'name' => trim($item['name']),
                 'quantity' => (int)$base * ($initial - $cap + $left), 'base_quantity' => (int)$base, 'grant_limit' => $cap, 'initial_multiplier' => $initial, 'ordinal' => $cap - $left + 1, 'remaining_after' => $left - 1, 'previous_quantity' => isset($accepted[$id]) ? (int)$accepted[$id]['quantity'] : null];
         }
         return ['world_id' => $world, 'period_key' => $period['key'], 'period_started_at' => $period['start'], 'items' => $items,
             'gather_available' => (bool)$items, 'gather_available_at' => $future ? $period['end'] : 0,
-            'gather_remaining' => $remaining, 'gather_limit' => $limit, 'gather_exhausted' => !$future, 'server_time' => time()];
+            'gather_remaining' => $remaining, 'gather_limit' => $limit, 'gather_exhausted' => !$future, 'gather_items' => $display, 'server_time' => time()];
     }
     public function record(int $user, int $event, array $items): void
     {

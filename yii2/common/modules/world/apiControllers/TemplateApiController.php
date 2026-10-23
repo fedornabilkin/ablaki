@@ -29,6 +29,7 @@ class TemplateApiController extends CoreController
                 'description' => $defaults['description'] ?? '',
                 'world_time_rate' => $rate, 'world_build_seconds' => $template->worldWorkSeconds(), 'material_summary' => implode(', ', $parts)];
             $item['build_seconds'] = $template->realWorkSeconds($rate);
+            $item['minimum_labor_budget'] = $template->minimumLaborBudget((int)$node->hierarchy_level + 1);
             $item += $owned ? $availability[(int)$template->id]
                 : ['available' => false, 'unavailable_reason' => $node->status !== 'active' ? 'Сначала завершите строительство.' : 'Требуются права владельца.'];
             $items[] = $item;

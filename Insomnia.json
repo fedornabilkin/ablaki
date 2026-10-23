@@ -1,7 +1,7 @@
 {
   "_type": "export",
   "__export_format": 4,
-  "__export_date": "2026-10-22T17:50:28.912Z",
+  "__export_date": "2026-10-23T06:27:59.544Z",
   "__export_source": "insomnia.desktop.app:v2022.7.0",
   "resources": [
     {
@@ -10993,14 +10993,20 @@
     {
       "_id": "req_a505a0b875f7feca1f1f5598f280b0dd",
       "parentId": "fld_6d6e271b7544c709bed8d6c70f1b90e0",
-      "modified": 1791244800000,
+      "modified": 1792736879544,
       "created": 1791244800000,
       "name": "GET · Своя стоянка",
       "url": "{{ _.baseUrl }}/v1/world/start",
       "method": "GET",
-      "description": "Контракт: docs/architecture/simple-world-api.md. ID в окружении — примеры: сначала получите действительные ID из GET.",
+      "description": "Контракт: docs/architecture/simple-world-api.md. ID в окружении — примеры: сначала получите действительные ID из GET. Schema 41: optional city_id returns funding preview before joining; starter_funding tracks the one lifetime FIFO parent-budget obligation.",
       "body": {},
-      "parameters": [],
+      "parameters": [
+        {
+          "name": "city_id",
+          "value": "{{ _.world_node_id }}",
+          "disabled": true
+        }
+      ],
       "headers": [
         {
           "name": "Accept",
@@ -11422,12 +11428,12 @@
     {
       "_id": "req_c33e1bcfb09a59f39a4d1a44094049fc",
       "parentId": "fld_6d6e271b7544c709bed8d6c70f1b90e0",
-      "modified": 1791244800000,
+      "modified": 1792736879544,
       "created": 1791244800000,
       "name": "GET · Таймер сбора",
       "url": "{{ _.baseUrl }}/v1/world/objects/{{ _.simple_node_id }}/gather",
       "method": "GET",
-      "description": "{gather_available,gather_available_at,server_time}. Только своя действующая стоянка; GET ничего не списывает.",
+      "description": "{gather_available,gather_available_at,server_time}. Только своя действующая стоянка; GET ничего не списывает. Schema 41: gather_items, gather_remaining/gather_limit, gather_can_claim and gather_reason prepare the modal and explain backpack capacity before POST.",
       "body": {},
       "parameters": [],
       "headers": [
@@ -11524,14 +11530,56 @@
       "_type": "request"
     },
     {
+      "_id": "req_world_mining_employment_20261023",
+      "parentId": "fld_6d6e271b7544c709bed8d6c70f1b90e0",
+      "modified": 1792736879544,
+      "created": 1792736879544,
+      "name": "POST - Mine employment settings",
+      "url": "{{ _.baseUrl }}/v1/world/objects/{{ _.simple_node_id }}/mining/settings",
+      "method": "POST",
+      "description": "Owner only. Active mine, fixed wage per accepted batch, own mine/direct-child stockpile. enabled controls new batches; existing accepted wages remain reserved and payable. See docs/architecture/simple-world-api.md, topic 82 addition.",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"enabled\": true,\n  \"reward_cr\": \"2.0000\",\n  \"storage_id\": null\n}"
+      },
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Accept",
+          "value": "application/json"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "name": "Idempotency-Key",
+          "value": "{{ _.simple_request_key }}"
+        }
+      ],
+      "authentication": {
+        "type": "bearer",
+        "token": "{{ _.bearer }}"
+      },
+      "metaSortKey": 31.05,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
       "_id": "req_ddbf1e379ea7df92f9c58c4cc62f4a5f",
       "parentId": "fld_6d6e271b7544c709bed8d6c70f1b90e0",
-      "modified": 1791244800000,
+      "modified": 1792736879544,
       "created": 1791244800000,
       "name": "POST - Mining start",
       "url": "{{ _.baseUrl }}/v1/world/objects/{{ _.simple_node_id }}/mining/start",
       "method": "POST",
-      "description": "Contract: docs/architecture/simple-world-api.md. Set simple_node_id to a visible active mine containing a completed drilling rig. Workers produce ore for its owner; heartbeat every 10 seconds, maximum 60 seconds credited after disconnect. Commands require a new key per action; retries retain the key. Progress DTO: worked_seconds, server_time, live_work[{accounted_at,last_seen_at}]; versioned sources also expose work_id (nullable) and required_seconds from accepted batch terms. Project no later than last_seen_at+60; check heartbeat at completion and every 10 seconds. Only server confirmation grants output. Since 2026-10-21 actions[].unavailable_reason reports missing usable tools; root unavailable_reason refers to the accepted batch definition, including older profile tools. Null means this reason is absent, not that all quota/time/storage conditions pass. Commands revalidate availability.",
+      "description": "Contract: docs/architecture/simple-world-api.md. Set simple_node_id to a visible active mine containing a completed drilling rig. Workers produce ore for its owner; heartbeat every 10 seconds, maximum 60 seconds credited after disconnect. Commands require a new key per action; retries retain the key. Progress DTO: worked_seconds, server_time, live_work[{accounted_at,last_seen_at}]; versioned sources also expose work_id (nullable) and required_seconds from accepted batch terms. Project no later than last_seen_at+60; check heartbeat at completion and every 10 seconds. Only server confirmation grants output. Since 2026-10-21 actions[].unavailable_reason reports missing usable tools; root unavailable_reason refers to the accepted batch definition, including older profile tools. Null means this reason is absent, not that all quota/time/storage conditions pass. Commands revalidate availability. Topic 82: an invited foreign worker needs HP >= 60, personal tools, mine condition >= 50%, free employer stockpile and a fully reserved batch wage. Employer storage is mandatory for the result. employment exposes accepted_reward_cr separately from the new rate.",
       "body": {
         "mimeType": "application/json",
         "text": "{}"

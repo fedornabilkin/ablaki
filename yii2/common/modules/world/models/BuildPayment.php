@@ -52,12 +52,19 @@ final class BuildPayment
         $accounts = (new \common\modules\world\modules\economy\models\domain\EconomyHierarchy($db))->accounts((int)$build->node_id);
         if (empty($accounts['budget'])) return;
         $account = (new BudgetSpending($db))->account((int)$accounts['budget']['id']); $amount = Money::parse((string)$account['amount']);
+        $starter = $db->schema->getTableSchema('world_starter_funding') && (new \yii\db\Query())->from('world_starter_funding')->where(['destination_node_id' => $build->node_id])->exists($db);
+        if ($starter) {
+            $personal = Money::parse('0');
+            foreach ((new \yii\db\Query())->select('remaining_amount')->from('economy_funding_lot')->where(['budget_account_id' => $account['id'], 'investor_user_id' => $build->owner_user_id])->column($db) as $lot) $personal = $personal->add(Money::parse((string)$lot));
+            if ($amount->compare($personal) > 0) $amount = $personal;
+        }
         if ($amount->isZero()) return;
         if (!Money::parse((string)$account['reserved'])->isZero()) throw new \RuntimeException('Cancelled construction still has reserved funds.');
         $wallet = (new CreditLedger($db))->changeExact((int)$build->owner_user_id, $amount->decimal(), 'world_build_refund', 'Возврат остатка стройки #' . $build->id);
-        $db->createCommand()->update('economy_account', ['amount' => '0.0000', 'revision' => new Expression('[[revision]]+1')], ['id' => $account['id']])->execute();
-        $db->createCommand()->update('economy_funding_lot', ['remaining_amount' => '0.0000'], ['budget_account_id' => $account['id']])->execute();
+        $after = Money::parse((string)$account['amount'])->subtract($amount)->decimal();
+        $db->createCommand()->update('economy_account', ['amount' => $after, 'revision' => new Expression('[[revision]]+1')], ['id' => $account['id']])->execute();
+        $db->createCommand()->update('economy_funding_lot', ['remaining_amount' => '0.0000'], ['budget_account_id' => $account['id']] + ($starter ? ['investor_user_id' => $build->owner_user_id] : []))->execute();
         $db->createCommand()->insert('economy_transfer', ['operation_id' => $operation, 'line_code' => 'construction-refund', 'kind' => 'construction_refund', 'source_account_id' => $account['id'], 'destination_user_id' => $build->owner_user_id,
-            'destination_account_id' => null, 'amount' => $amount->decimal(), 'source_after' => '0.0000', 'destination_after' => $wallet, 'purpose' => 'Возврат остатка отменённой стройки', 'created_at' => time()])->execute();
+            'destination_account_id' => null, 'amount' => $amount->decimal(), 'source_after' => $after, 'destination_after' => $wallet, 'purpose' => 'Возврат остатка отменённой стройки', 'created_at' => time()])->execute();
     }
 }
