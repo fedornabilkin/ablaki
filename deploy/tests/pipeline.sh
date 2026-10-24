@@ -231,18 +231,23 @@ printf 'compose %s\n' "$*" >> "$TEST_LOG"
 case "$1" in
   ps) echo "$3-id" ;;
   build) [[ "$TEST_FAIL" != runtime_build ]] || exit 41 ;;
-  stop|up|exec) ;;
+  stop|up) ;;
+  exec) [[ "$TEST_FAIL" != runtime_start ]] || exit 43 ;;
   run)
     if [[ "$*" = *' composer php install '* ]]; then
-      mkdir -p yii2/vendor
-      printf 'new vendor\n' > yii2/vendor/autoload.php
+      args=("$@")
+      for ((i=0; i<${#args[@]}; i++)); do
+        if [[ "${args[i]}" = -v ]]; then vendor_path=${args[i+1]%:/web/yii2/vendor}; break; fi
+      done
+      mkdir -p "$vendor_path"
+      printf 'new vendor\n' > "$vendor_path/autoload.php"
       [[ "$TEST_FAIL" != runtime_install ]] || exit 42
     fi ;;
   *) exit 1 ;;
 esac
 MOCK
 chmod +x "$test_root/bin/"*
-for scenario in runtime_warm runtime_build runtime_install runtime_production runtime_test; do
+for scenario in runtime_warm runtime_build runtime_install runtime_start runtime_production runtime_test; do
   TEST_FAIL=$scenario
   TEST_REPO="$test_root/$scenario"
   mkdir -p "$TEST_REPO/.git" "$TEST_REPO/yii2/vendor" "$TEST_REPO/.php-runtime-upgrade" "$TEST_REPO/docker"
@@ -271,6 +276,10 @@ for scenario in runtime_warm runtime_build runtime_install runtime_production ru
       ;;
     runtime_install)
       [[ "$status" = 42 ]] || { cat "$TEST_REPO/output.log"; exit 1; }
+      ! grep -q '^compose stop\|^docker stop' "$TEST_LOG"
+      ;;
+    runtime_start)
+      [[ "$status" = 43 ]] || { cat "$TEST_REPO/output.log"; exit 1; }
       grep -Fxq 'docker tag sha256:previous fixture_php' "$TEST_LOG"
       grep -Fxq 'compose up -d --no-deps nginx' "$TEST_LOG"
       ;;
@@ -286,7 +295,7 @@ for scenario in runtime_warm runtime_build runtime_install runtime_production ru
       fi
       ;;
   esac
-  if [[ "$scenario" = runtime_warm || "$scenario" = runtime_build || "$scenario" = runtime_install ]]; then
+  if [[ "$scenario" = runtime_warm || "$scenario" = runtime_build || "$scenario" = runtime_install || "$scenario" = runtime_start ]]; then
     [[ "$(cat "$TEST_REPO/yii2/vendor/autoload.php")" = 'existing vendor' ]]
   fi
   [[ "$(cat "$TEST_REPO/.env")" = 'local environment' ]]
