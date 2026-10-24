@@ -217,6 +217,8 @@ case "$1" in
       '{{.Image}}') echo sha256:previous ;;
       '{{.Config.Image}}') echo fixture_php ;;
       '{{.State.Running}}') echo true ;;
+      '{{index .Config.Labels "com.docker.compose.oneoff"}}')
+        if [[ "$4" = worker-id ]]; then echo True; else echo False; fi ;;
       *) echo test ;;
     esac ;;
   run) if [[ "$TEST_FAIL" = runtime_warm ]]; then echo 8.3.36; else echo 7.3.2; fi ;;
@@ -229,7 +231,10 @@ cat > "$test_root/bin/docker-compose" <<'MOCK'
 set -eu
 printf 'compose %s\n' "$*" >> "$TEST_LOG"
 case "$1" in
-  ps) echo "$3-id" ;;
+  ps)
+    echo "$3-id"
+    if [[ "$TEST_FAIL" = runtime_multiple && "$3" = php ]]; then echo worker-id; fi
+    ;;
   build) [[ "$TEST_FAIL" != runtime_build ]] || exit 41 ;;
   stop|up) ;;
   exec) [[ "$TEST_FAIL" != runtime_start ]] || exit 43 ;;
@@ -247,7 +252,7 @@ case "$1" in
 esac
 MOCK
 chmod +x "$test_root/bin/"*
-for scenario in runtime_warm runtime_build runtime_install runtime_start runtime_production runtime_test; do
+for scenario in runtime_warm runtime_build runtime_install runtime_start runtime_production runtime_test runtime_multiple; do
   TEST_FAIL=$scenario
   TEST_REPO="$test_root/$scenario"
   mkdir -p "$TEST_REPO/.git" "$TEST_REPO/yii2/vendor" "$TEST_REPO/.php-runtime-upgrade" "$TEST_REPO/docker"
