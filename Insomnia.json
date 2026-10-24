@@ -11579,7 +11579,7 @@
       "name": "POST - Mine employment settings",
       "url": "{{ _.baseUrl }}/v1/world/objects/{{ _.simple_node_id }}/mining/settings",
       "method": "POST",
-      "description": "Owner only. A new paid batch always targets the first active mini-storage (CHEST child) inside the mine; there is no destination selector. Build a mini-storage before enabling work. Accepted destinations and wages remain pinned.",
+      "description": "Owner only. A new paid batch always targets the first active mini-storage (CHEST child) inside the mine; there is no destination selector. Build a mini-storage before enabling work. Accepted destinations and wages remain pinned. Positive exact reward_cr is configured independently of available wage funds; budget and free storage capacity are rechecked when accepting each batch. No destination selector.",
       "body": {
         "mimeType": "application/json",
         "text": "{\n  \"enabled\": true,\n  \"reward_cr\": \"2.0000\"\n}"
@@ -12260,6 +12260,48 @@
         "token": "{{ _.bearer }}"
       },
       "metaSortKey": 397,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_world_mining_nearest_20261024",
+      "parentId": "fld_6d6e271b7544c709bed8d6c70f1b90e0",
+      "modified": 1792838491363,
+      "created": 1792838491363,
+      "name": "POST - Mining start with nearest mini-storage",
+      "url": "{{ _.baseUrl }}/v1/world/objects/{{ _.simple_node_id }}/mining/start",
+      "method": "POST",
+      "description": "Owner: automatic nearest available mini-storage inside this object. Order: Manhattan distance from map origin, then storage ID. Require room for the whole batch; reselect at delivery for this new automatic batch. Never combine output_destination with output_storage_id. Hired workers always use automatic employer storage. Preserve the accepted wage; fixed historical batches remain fixed.",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"action_code\": \"mine-stone\",\n  \"output_destination\": \"mini_storage\"\n}"
+      },
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Accept",
+          "value": "application/json"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "name": "Idempotency-Key",
+          "value": "{{ _.simple_request_key }}"
+        }
+      ],
+      "authentication": {
+        "type": "bearer",
+        "token": "{{ _.bearer }}"
+      },
+      "metaSortKey": 31.1,
       "isPrivate": false,
       "settingStoreCookies": true,
       "settingSendCookies": true,

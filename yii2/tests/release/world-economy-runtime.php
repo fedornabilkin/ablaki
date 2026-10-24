@@ -159,7 +159,7 @@ function economySourceCommand(int $user, int $node, string $action, array $extra
 {
     $payload = ['mining_node_id' => $node] + $extra;
     return \common\modules\world\models\Command::run($user, bin2hex(random_bytes(16)), 'world.mining.' . $action, $payload, function ($operation) use ($user, $node, $action, $extra) {
-        if ($action === 'start') return \common\modules\world\models\Mining::start($node, $user, $operation, $extra['action_code'] ?? null, $extra['output_storage_id'] ?? null);
+        if ($action === 'start') return \common\modules\world\models\Mining::start($node, $user, $operation, $extra['action_code'] ?? null, $extra['output_storage_id'] ?? null, $extra['output_destination'] ?? null);
         return \common\modules\world\models\Mining::heartbeat($node, $user, $operation, $action === 'stop');
     });
 }

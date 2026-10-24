@@ -496,4 +496,55 @@ try {
     economyCheck(array_column($price['unit_prices'], 'price') === ['0.5000', '10.0000'], 'distant rings cost twenty times the adjacent ring without changing starting cells');
     economyCheck(\common\modules\world\models\domain\EconomyProfile::load()['objects']['forge']['price_cr'] === '40.0000' && 250 - (20 + 50 + 10 + 120 + 40 + 3.8 + 4) > 0, '250 starting credits cover shelter, garden, bed, mine, forge, eight adjacent cells and two waterings');
 } finally { $tx->rollBack(); }
+$tx = $db->beginTransaction();
+try {
+    $mine = Node::requireOne($mine->id);
+    $db->createCommand()->update('world_registry', ['active_world_id' => $mine->root_id], ['id' => 1])->execute();
+    $db->createCommand()->update('game_command', ['created_at' => time() - 120], ['user_id' => [$finiteUser, $workerUser]])->execute();
+    $db->createCommand()->update('world_node', ['position_x' => 2, 'position_y' => 2], ['id' => $mini->id])->execute();
+    $db->createCommand()->update('craft_storage', ['capacity' => 1], ['id' => $stockId])->execute();
+    $clear = static function (int $storage) use ($db) { $db->createCommand()->update('craft_inventory', ['item_id' => null, 'item_quantity' => 0, 'slot' => null], ['storage_id' => $storage])->execute(); };
+    $clear($stockId);
+    $nearNode = NodeFactory::create(NodeTemplate::requireOne(['code' => 'mini-storage-level-' . ((int)$mine->hierarchy_level + 1)]), $mine, $finiteUser, 'Nearest free mini-storage', 'nearest-free-mini', ['x' => 1, 'y' => 0], 'constructing');
+    $db->createCommand()->update('world_node', ['status' => 'active', 'condition' => $nearNode->max_condition], ['id' => $nearNode->id])->execute();
+    $db->createCommand()->insert('craft_storage', ['identity_key' => 'stockpile:fixture:nearest-free', 'kind' => 'stockpile', 'node_id' => $nearNode->id, 'owner_user_id' => $finiteUser, 'capacity' => 1])->execute();
+    $nearId = (int)$db->getLastInsertID();
+    $definition = \common\modules\world\models\domain\WorldSources::options($mine)['mine-stone'];
+    $nearest = static function (array $batch) use ($mine) { return \common\modules\world\models\domain\ExtractionStorage::nearest($mine, $batch); };
+    economyCheck((int)$nearest($definition)['id'] === $nearId, 'nearest storage uses map distance before storage creation order');
+    economyCheck(!\common\modules\world\models\domain\ExtractionStorage::fits(['output' => ['classic-stone' => 1, 'classic-log' => 1]], $nearest($definition)), 'automatic storage requires room for the whole multi-item batch');
+    $putLog = static function (int $storage) use ($db, $finiteUser) {
+        $inventory = new \common\modules\world\modules\craft\models\domain\CanonicalInventory(new \common\modules\world\modules\craft\models\domain\CraftStorage($db));
+        $target = (new Query())->from('craft_storage')->where(['id' => $storage])->one($db); $log = (new Query())->from('craft_item')->where(['code' => 'classic-log'])->one($db);
+        $inventory->applyCraft($finiteUser, $inventory->planCraft([], $target, [], [], $log, 1), $target, [], $log, 'fixture.fill-mini');
+    };
+    $putLog($nearId);
+    economyCheck((int)$nearest($definition)['id'] === $stockId, 'automatic storage skips the closer full mini-storage');
+    $ownerStock = new \common\modules\world\modules\craft\models\domain\CraftStorage($db);
+    $ownerStock->move($finiteUser, (new Query())->from('craft_item')->where(['code' => 'world-stone-pickaxe'])->one($db), 1);
+    $ownerStart = $run($finiteUser, 'world.mining.start', ['mining_node_id' => (int)$mine->id, 'action_code' => 'mine-stone', 'output_destination' => 'mini_storage'], static function ($op) use ($mine, $finiteUser) {
+        return \common\modules\world\models\Mining::start((int)$mine->id, $finiteUser, $op, 'mine-stone', null, 'mini_storage');
+    });
+    economyCheck($ownerStart['output_storage_id'] === $stockId && $ownerStart['output_destination'] === 'mini_storage', 'owner accepts automatic storage mode without choosing a warehouse ID');
+    $putLog($stockId); $db->createCommand()->update('world_source_work', ['worked_seconds' => $definition['work_seconds']], ['id' => $ownerStart['work_id']])->execute();
+    $ownerBeat = static function (?string $key = null) use ($run, $mine, $finiteUser) { return $run($finiteUser, 'fixture.auto-heartbeat', ['mining_node_id' => (int)$mine->id], static function ($op) use ($mine, $finiteUser) { return \common\modules\world\models\Mining::heartbeat((int)$mine->id, $finiteUser, $op); }, $key); };
+    $quotaBefore = \common\modules\world\models\domain\EconomyQuota::state($db, $finiteUser, 'extraction_daily')['remaining'];
+    $blocked = $ownerBeat();
+    economyCheck($blocked['pending_quantity'] === 1 && $blocked['blocked_code'] === 'SOURCE_STORAGE_FULL' && \common\modules\world\models\domain\EconomyQuota::state($db, $finiteUser, 'extraction_daily')['remaining'] === $quotaBefore, 'all full mini-storages preserve earned work without consuming extraction quota');
+    $clear($nearId); $ownerKey = bin2hex(random_bytes(16)); $ownerDone = $ownerBeat($ownerKey);
+    economyCheck($ownerBeat($ownerKey) === $ownerDone && (int)(new Query())->select('target_storage_id')->from('world_source_work')->where(['id' => $ownerStart['work_id']])->scalar($db) === $nearId
+        && (int)(new Query())->from('craft_inventory')->where(['storage_id' => $nearId, 'item_id' => $stoneId])->sum('item_quantity', $db) === array_sum($definition['output']), 'owner delivery reselects the nearest free mini-storage and replay never duplicates output');
+    $db->createCommand()->update('world_player_health', ['hp' => 100], ['user_id' => $workerUser])->execute();
+    $settings(true, '2'); $workerBefore = (float)(new Query())->select('credit')->from('persone')->where(['user_id' => $workerUser])->scalar($db);
+    $hired = $startHired();
+    economyCheck($hired['output_storage_id'] === $nearId, 'hired batches also choose the nearest storage with enough stack space');
+    $db->createCommand()->update('craft_storage', ['capacity' => 0], ['id' => $nearId])->execute(); $clear($stockId);
+    $db->createCommand()->update('world_source_work', ['worked_seconds' => $definition['work_seconds']], ['id' => $hired['work_id']])->execute();
+    $hiredKey = bin2hex(random_bytes(16)); $paid = $heartbeat($hiredKey);
+    economyCheck($heartbeat($hiredKey) === $paid && (int)(new Query())->select('target_storage_id')->from('world_source_work')->where(['id' => $hired['work_id']])->scalar($db) === $stockId
+        && (float)(new Query())->select('credit')->from('persone')->where(['user_id' => $workerUser])->scalar($db) === $workerBefore + 2, 'hired delivery changes a full target and pays the accepted wage once');
+    $legacy = $definition + ['employment' => ['storage_id' => $stockId]];
+    economyCheck((int)\common\modules\world\models\domain\HiredExtraction::target($mine, $workerUser, $legacy)['id'] === $stockId, 'historical fixed storage assignments remain fixed');
+} finally { $tx->rollBack(); }
+
 echo 'Node-context, single-builder and one-click lodging checks passed.' . PHP_EOL;

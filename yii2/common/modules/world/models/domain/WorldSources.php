@@ -76,7 +76,7 @@ final class WorldSources
                 if (self::dailyUsed($user, $code, $period['start']) >= $row['daily_limit']) $availableAt = max($availableAt, $period['end']);
             }
             $reason = $missing($row);
-            if ((int)$place->owner_user_id !== $user && !$reason) try { $hired = HiredExtraction::context($place, $user, $work !== null); HiredExtraction::capacity($row, $hired['storage']); } catch (GameError $error) { $reason = $error->getMessage(); }
+            if ((int)$place->owner_user_id !== $user && !$reason) try { HiredExtraction::context($place, $user, $work !== null, $work ? null : $row); } catch (GameError $error) { $reason = $error->getMessage(); }
             $choices[] = ['code' => $code, 'work_seconds' => $row['work_seconds'], 'experience' => $row['experience'], 'cooldown_seconds' => $row['cooldown_seconds'], 'available_at' => max(time(), $availableAt), 'output' => $output, 'tools' => $row['tools'], 'tool_names' => $toolNames, 'unavailable_reason' => $reason, 'daily_limit' => $row['daily_limit'] ?? null];
         }
         $definition = $work ? json_decode($work['definition_json'], true) : null;
@@ -90,7 +90,7 @@ final class WorldSources
             'worked_seconds' => $work ? (int)$work['worked_seconds'] : 0, 'action_code' => $work ? $work['action_code'] : null,
             'work_id' => $work ? (int)$work['id'] : null, 'required_seconds' => $definition ? (int)$definition['work_seconds'] : 0,
             'live_work' => $worker ? [['accounted_at' => (int)$worker['accounted_at'], 'last_seen_at' => (int)$worker['last_seen_at']]] : [],
-            'status' => $work ? $work['status'] : 'idle', 'output_storage_id' => $work ? (int)$work['target_storage_id'] : null, 'output_storages' => ExtractionStorage::choices($place, $user), 'actions' => $choices, 'blocked_code' => $work ? $work['blocked_code'] : null,
+            'status' => $work ? $work['status'] : 'idle', 'output_storage_id' => $work ? (int)$work['target_storage_id'] : null, 'output_destination' => $definition['output_destination'] ?? (isset($definition['employment']) ? 'mini_storage' : null), 'output_storages' => ExtractionStorage::choices($place, $user), 'actions' => $choices, 'blocked_code' => $work ? $work['blocked_code'] : null,
             'blocked_message' => $work ? $work['blocked_message'] : null, 'unavailable_reason' => $definition ? $missing($definition) : null,
             'employment' => $place->template && $place->template->code === 'mine' ? HiredExtraction::state($place, $user, $work) : null,
             'quota' => EconomyQuota::state($db, $user, 'extraction_daily'), 'server_time' => time()];
@@ -106,7 +106,7 @@ final class WorldSources
         }
         return $units;
     }
-    public static function start(int $node, int $user, string $operation, ?string $action, ?int $target): array
+    public static function start(int $node, int $user, string $operation, ?string $action, ?int $target, ?string $destination = null): array
     {
         $db = Node::getDb(); $place = self::context($node, $user); $options = self::options($place);
         $work = self::work($node, $user);
@@ -129,7 +129,9 @@ final class WorldSources
                 $definition = HiredExtraction::accept($place, $user, $definition, $operation);
                 $target = (int)$definition['employment']['storage_id'];
             } else {
-                $target = ExtractionStorage::ownerTarget($place, $user, $target);
+                if ($destination === 'mini_storage') {
+                    $target = (int)ExtractionStorage::nearest($place, $definition)['id']; $definition['output_destination'] = 'mini_storage';
+                } else $target = ExtractionStorage::ownerTarget($place, $user, $destination === 'backpack' ? null : $target);
             }
             $revision = EconomyRuntime::current($db);
             $db->createCommand()->insert('world_source_work', ['user_id' => $user, 'node_id' => $node, 'active_key' => $user . ':' . $node,
@@ -174,7 +176,8 @@ final class WorldSources
                     $used = self::dailyUsed($user, $work['action_code'], $period['start']);
                     if ($used >= ($definition['daily_limit'] ?? 10000)) throw new GameError('SOURCE_DAILY_LIMIT', 'Дневной предел этого источника исчерпан.', 409);
                     $store = new CraftStorage($db); $store->operationId = $operation; $inventory = new CanonicalInventory($store);
-                    $target = isset($definition['employment']) ? HiredExtraction::target($place, $user, $definition) : (new StorageAccessPolicy($db))->storage($user, (int)$work['target_storage_id'], true);
+                    $target = isset($definition['employment']) ? HiredExtraction::target($place, $user, $definition)
+                        : (($definition['output_destination'] ?? null) === 'mini_storage' ? ExtractionStorage::nearest($place, $definition) : (new StorageAccessPolicy($db))->storage($user, (int)$work['target_storage_id'], true));
                     foreach ($definition['output'] as $code => $quantity) {
                         $item = (new Query())->from('craft_item')->where(['code' => $code, 'active' => 1])->one($db);
                         if (!$item) throw new GameError('SOURCE_OUTPUT_UNAVAILABLE', 'Ресурс временно отключён.', 409);
@@ -194,7 +197,7 @@ final class WorldSources
                         else $db->createCommand()->insert('craft_skill', $where + ['experience' => min(9900, $xp)])->execute();
                     }
                     $db->createCommand()->insert('craft_event', ['user_id' => $user, 'action' => 'source', 'item_id' => $item['id'], 'quantity' => array_sum($definition['output']), 'credit_change' => 0, 'created_at' => time()])->execute();
-                    $db->createCommand()->update('world_source_work', ['status' => 'completed', 'active_key' => null, 'blocked_code' => null, 'blocked_message' => null, 'completed_at' => time(), 'operation_id' => $operation], ['id' => $work['id']])->execute();
+                    $db->createCommand()->update('world_source_work', ['status' => 'completed', 'target_storage_id' => (int)$target['id'], 'active_key' => null, 'blocked_code' => null, 'blocked_message' => null, 'completed_at' => time(), 'operation_id' => $operation], ['id' => $work['id']])->execute();
                     $transaction->commit();
                 } catch (GameError $error) {
                     $transaction->rollBack();
