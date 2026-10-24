@@ -107,6 +107,100 @@ for scenario in production test dirty pull make wrong_branch invalid_branch prod
   printf 'PASS deployment scenario: %s\n' "$scenario"
 done
 
+# Exercise test-world activation with temporary paths and command fixtures only.
+# In particular, no PostgreSQL dump, restore or database creation is permitted.
+mkdir -p "$test_root/world-bin"
+export TEST_DEPLOY_ROOT TEST_WORLD_FAIL
+cat > "$test_root/world-bin/git" <<'MOCK'
+#!/usr/bin/env bash
+set -eu
+[[ "$*" = 'symbolic-ref --quiet --short HEAD' ]]
+printf 'test\n'
+MOCK
+cat > "$test_root/world-bin/flock" <<'MOCK'
+#!/usr/bin/env bash
+[[ "$*" = '-n 9' && "$TEST_WORLD_FAIL" != lock ]]
+MOCK
+cat > "$test_root/world-bin/docker" <<'MOCK'
+#!/usr/bin/env bash
+set -eu
+printf 'docker %s\n' "$*" >> "$TEST_LOG"
+case "$1 $2" in
+  'container inspect') exit 0 ;;
+  'inspect -f')
+    if [[ "$3" = *State.Running* ]]; then
+      if [[ "$TEST_WORLD_FAIL" = worker ]]; then printf 'false\n'; else printf 'true\n'; fi
+    elif [[ "$TEST_WORLD_FAIL" = label ]]; then printf 'unexpected\n'; else printf 'test\n'; fi
+    ;;
+  'stop --time'|'rm ablaki-world-worker-test'|'update --restart') ;;
+  *) echo "Unexpected Docker command: $*" >&2; exit 1 ;;
+esac
+MOCK
+cat > "$test_root/world-bin/docker-compose" <<'MOCK'
+#!/usr/bin/env bash
+set -eu
+printf 'compose %s\n' "$*" >> "$TEST_LOG"
+case "$*" in
+  'stop -t 60 nginx php') ;;
+  'run --rm --no-deps -T --entrypoint php -e WORLD_INSTALL=confirmed-world-install -e WORLD_TEST_SETUP=confirmed-test-checkout php /web/yii2/yii world-setup/test-ready')
+    [[ -f "$TEST_DEPLOY_ROOT/world-activation.pending" ]]
+    [[ "$TEST_WORLD_FAIL" != setup ]] || exit 23
+    ;;
+  'run --rm --no-deps -T --entrypoint php php /web/yii2/yii world-worker/run 200')
+    [[ "$TEST_WORLD_FAIL" != handlers ]] || exit 24
+    ;;
+  'up -d --no-deps php nginx') ;;
+  'run -d --no-deps --name ablaki-world-worker-test --label ablaki.world.worker=test --entrypoint /bin/sh php -c '*) ;;
+  *) echo "Unexpected Compose command (including any database backup/restore): $*" >&2; exit 1 ;;
+esac
+MOCK
+chmod +x "$test_root/world-bin/"*
+export PATH="$test_root/world-bin:$PATH"
+
+for scenario in ready resume setup handlers worker label lock; do
+  TEST_WORLD_FAIL=$scenario
+  TEST_REPO="$test_root/world-$scenario/repo"
+  TEST_DEPLOY_ROOT="$test_root/world-$scenario/deploy"
+  mkdir -p "$TEST_REPO" "$TEST_DEPLOY_ROOT/backups"
+  TEST_REPO=$(cd "$TEST_REPO" && pwd -P)
+  TEST_DEPLOY_ROOT=$(cd "$TEST_DEPLOY_ROOT" && pwd -P)
+  printf 'existing backup\n' > "$TEST_DEPLOY_ROOT/backups/previous.dump"
+  printf '# Existing settings\nDB_FIXTURE=preserved\nWORLD_READ=0\n' > "$TEST_REPO/.env"
+  TEST_LOG="$TEST_REPO/commands.log"
+  : > "$TEST_LOG"
+  [[ "$scenario" != resume ]] || touch "$TEST_DEPLOY_ROOT/world-activation.pending"
+  sed -e "s@/var/code/ablaki@$TEST_REPO@g" -e "s@/opt/ablaki-backend-test@$TEST_DEPLOY_ROOT@g" \
+    "$source_root/deploy/world-open-test.sh" > "$TEST_REPO/activate.sh"
+  status=0
+  bash "$TEST_REPO/activate.sh" > "$TEST_REPO/output.log" 2>&1 || status=$?
+  if [[ "$scenario" = ready || "$scenario" = resume ]]; then
+    [[ "$status" = 0 ]] || { cat "$TEST_REPO/output.log"; exit 1; }
+    [[ ! -e "$TEST_DEPLOY_ROOT/world-activation.pending" ]]
+    grep -Fxq 'compose up -d --no-deps php nginx' "$TEST_LOG"
+    grep -Fq 'docker update --restart unless-stopped' "$TEST_LOG"
+    for flag in WORLD_READ WORLD_WRITE STORAGE_V2 ECONOMY_TICK WORLD_WORKER WORLD_TEST_MODE; do
+      [[ "$(grep -c "^$flag=1$" "$TEST_REPO/.env")" = 1 ]]
+    done
+  else
+    [[ "$status" != 0 ]]
+    if [[ "$scenario" = setup || "$scenario" = handlers || "$scenario" = worker ]]; then
+      [[ -f "$TEST_DEPLOY_ROOT/world-activation.pending" ]]
+      grep -Fq 'rollout checkpoints are retained' "$TEST_REPO/output.log"
+    fi
+    if [[ "$scenario" != worker ]]; then ! grep -q '^compose up' "$TEST_LOG"; fi
+    if [[ "$scenario" = label || "$scenario" = lock ]]; then
+      [[ ! -e "$TEST_DEPLOY_ROOT/world-activation.pending" ]]
+      ! grep -q '^compose\|^docker stop' "$TEST_LOG"
+    fi
+  fi
+  grep -Fxq 'DB_FIXTURE=preserved' "$TEST_REPO/.env"
+  [[ "$(cat "$TEST_DEPLOY_ROOT/backups/previous.dump")" = 'existing backup' ]]
+  [[ "$(find "$TEST_DEPLOY_ROOT/backups" -type f | wc -l)" -eq 1 ]]
+  ! grep -Eq 'pg_dump|pg_restore|createdb|dropdb|world-verify-test' "$TEST_LOG"
+  printf 'PASS world activation without database backup: %s\n' "$scenario"
+done
+
+export PATH="$test_root/bin:$PATH"
 # The runtime transition keeps the old vendor/image until the new FPM is ready.
 cat > "$test_root/bin/flock" <<'MOCK'
 #!/usr/bin/env bash

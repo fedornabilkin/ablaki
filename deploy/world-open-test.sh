@@ -18,33 +18,12 @@ if docker container inspect "$worker" >/dev/null 2>&1; then
   docker rm "$worker"
 fi
 touch "$pending"
-trap 'printf "Test activation interrupted. Resume by deploying test again; checkpoints and backup are retained.\n" >&2' ERR
+trap 'printf "Test activation interrupted. Resume by deploying test again; rollout checkpoints are retained.\n" >&2' ERR
 
 # Stop FPM, legacy cron and in-flight writers before converting property or money.
 docker-compose stop -t 60 nginx php
-mkdir -p "$deploy_root/backups"
-backup="$deploy_root/backups/world-$(date -u +%Y%m%dT%H%M%S)-$$.dump"
-# The established test uses the compose PostgreSQL service, unlike production MySQL/MariaDB.
-docker-compose exec -T postgres sh -c 'exec pg_dump -U "$POSTGRES_USER" -d "$POSTGRES_DB" -Fc' > "$backup.partial"
-test -s "$backup.partial"
-mv -- "$backup.partial" "$backup"
-printf 'Test database backup saved: %s\n' "$backup"
-
-# Verify both backup restoration and the new schema against an isolated copy first.
-validation_db="ablaki_world_verify_$(date -u +%Y%m%d%H%M%S)_$$"
-cleanup_validation() {
-  [[ "$validation_db" =~ ^ablaki_world_verify_[0-9]+_[0-9]+$ ]] || return 1
-  docker-compose exec -T postgres sh -c 'exec dropdb --if-exists -U "$POSTGRES_USER" "$1"' sh "$validation_db"
-}
-trap cleanup_validation EXIT
-docker-compose exec -T postgres sh -c 'exec createdb -U "$POSTGRES_USER" -T template0 "$1"' sh "$validation_db"
-docker-compose exec -T postgres sh -c 'exec pg_restore --exit-on-error -U "$POSTGRES_USER" -d "$1"' sh "$validation_db" < "$backup"
-docker-compose run --rm --no-deps -T --entrypoint php \
-  -e WORLD_INSTALL=confirmed-world-install -e WORLD_TEST_SETUP=confirmed-test-checkout \
-  -e WORLD_TEST_MODE=1 -e WORLD_VERIFY_DATABASE="$validation_db" \
-  php /web/yii2/console/world-verify-test.php
-cleanup_validation
-trap - EXIT
+# Test deployment deliberately does not dump or restore the database (owner, 2026-10-21).
+# The resumable rollouts below retain their own baselines and verification.
 
 # No operator switches after deployment. Preserve unrelated application settings.
 for name in WORLD_READ WORLD_WRITE STORAGE_V2 ECONOMY_TICK WORLD_WORKER WORLD_TEST_MODE; do
