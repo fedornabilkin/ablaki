@@ -1,6 +1,7 @@
 .idea
 
 .env
+.php-runtime-upgrade/
 *.lock
 postgresdata
 redisData
