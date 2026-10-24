@@ -138,7 +138,7 @@ jobs:
         shell: bash
         run: |
           if [[ "$GITHUB_EVENT_NAME" = push && "$PREVIOUS_SHA" =~ ^[0-9a-f]{40}$ && "$PREVIOUS_SHA" != 0000000000000000000000000000000000000000 ]]; then
-            if git cat-file -e "$PREVIOUS_SHA^{commit}" && git diff --quiet "$PREVIOUS_SHA" HEAD -- docker/php docker/composer; then
+            if git cat-file -e "$PREVIOUS_SHA^{commit}" && git diff --quiet "$PREVIOUS_SHA" HEAD -- docker/php docker/composer .github/workflows/backend.yml; then
               echo 'Runtime files unchanged; the existing verified image is reused.'
               exit 0
             fi
@@ -163,7 +163,11 @@ jobs:
           trap 'docker rm -f php83-http php83-fpm >/dev/null 2>&1 || true; docker network rm php83-ci >/dev/null 2>&1 || true' EXIT
           docker run -d --name php83-fpm --network php83-ci --network-alias php -v "$probe:/probe:ro" --entrypoint php-fpm ablaki-php83-ci
           docker run -d --name php83-http --network php83-ci -p 127.0.0.1:18083:80 -v "$probe/nginx.conf:/etc/nginx/conf.d/default.conf:ro" nginx:stable
-          curl --fail --retry 15 --retry-connrefused --retry-delay 1 http://127.0.0.1:18083/
+          if ! curl --fail --max-time 5 --retry 15 --retry-all-errors --retry-delay 1 http://127.0.0.1:18083/; then
+            docker logs php83-fpm
+            docker logs php83-http
+            exit 1
+          fi
           docker stop --time 10 php83-fpm
           test "$(docker inspect -f '{{.State.ExitCode}}' php83-fpm)" = 0
 

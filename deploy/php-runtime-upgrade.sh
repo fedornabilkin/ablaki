@@ -60,15 +60,19 @@ rollback() {
   exit "$code"
 }
 trap rollback ERR
+mkdir -p "$backup/staged-vendor"
+staged_mount="$backup/staged-vendor:/web/yii2/vendor"
+options=(install --no-interaction --prefer-dist --no-progress --optimize-autoloader)
+if [[ "$target" = production ]]; then options+=(--no-dev); fi
+# Prepare the complete vendor in a private mount while the old application runs.
+docker-compose run --rm --no-deps -T -v "$staged_mount" -e COMPOSER_ALLOW_SUPERUSER=1 --entrypoint composer php "${options[@]}"
+docker-compose run --rm --no-deps -T -v "$staged_mount" --entrypoint composer php check-platform-reqs
+docker-compose run --rm --no-deps -T -v "$staged_mount" --entrypoint php php -r 'require "/web/yii2/vendor/autoload.php"; if (PHP_VERSION !== "8.3.36" || ini_get("session.upload_progress.enabled") !== "0") exit(1); foreach (["pdo_mysql","pdo_pgsql","intl","gd","mbstring","zip"] as $extension) if (!extension_loaded($extension)) exit(1);'
 writers_stopped=true
 if [[ "$worker_running" = true ]]; then docker stop --time 60 "$worker"; fi
 docker-compose stop -t 60 nginx php composer
 if [[ -d yii2/vendor ]]; then mv -- yii2/vendor "$backup/vendor"; vendor_moved=true; fi
-options=(install --no-interaction --prefer-dist --no-progress --optimize-autoloader)
-if [[ "$target" = production ]]; then options+=(--no-dev); fi
-docker-compose run --rm --no-deps -T -e COMPOSER_ALLOW_SUPERUSER=1 --entrypoint composer php "${options[@]}"
-docker-compose run --rm --no-deps -T --entrypoint composer php check-platform-reqs
-docker-compose run --rm --no-deps -T --entrypoint php php -r 'if (PHP_VERSION !== "8.3.36" || ini_get("session.upload_progress.enabled") !== "0") exit(1); foreach (["pdo_mysql","pdo_pgsql","intl","gd","mbstring","zip"] as $extension) if (!extension_loaded($extension)) exit(1);'
+mv -- "$backup/staged-vendor" yii2/vendor
 if [[ "$target" = test && "$repo" = /var/code/ablaki && -f /opt/ablaki-backend-test/world-activation.pending ]]; then
   printf '[php-runtime] Keeping application writers stopped until world activation resumes\n'
 else
