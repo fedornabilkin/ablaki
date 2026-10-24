@@ -13,7 +13,18 @@ mkdir -p "$state"
 exec 8>"$state/upgrade.lock"
 flock -n 8
 fingerprint=$(sha256sum docker/php/Dockerfile docker/php/runtime.ini docker/php/security-fpm.conf docker/php/entrypoint.sh docker/composer/Dockerfile docker/composer/entrypoint.sh yii2/composer.json yii2/composer.lock | sha256sum | cut -d' ' -f1)
-php_id=$(docker-compose ps -q php)
+service_container() {
+  local ids candidate oneoff selected=''
+  ids=$(docker-compose ps -q "$1") || return
+  for candidate in $ids; do
+    oneoff=$(docker inspect -f '{{index .Config.Labels "com.docker.compose.oneoff"}}' "$candidate") || return
+    [[ "$oneoff" != True && "$oneoff" != true ]] || continue
+    [[ -z "$selected" ]] || { printf 'Multiple primary containers for service %s\n' "$1" >&2; return 1; }
+    selected=$candidate
+  done
+  printf '%s\n' "$selected"
+}
+php_id=$(service_container php)
 old_image=''; old_ref=''; old_running=false; nginx_running=false; worker_running=false
 if [[ -n "$php_id" ]]; then
   old_image=$(docker inspect -f '{{.Image}}' "$php_id")
@@ -26,7 +37,7 @@ if [[ -n "$php_id" ]]; then
     exit 0
   fi
 fi
-nginx_id=$(docker-compose ps -q nginx)
+nginx_id=$(service_container nginx)
 if [[ -n "$nginx_id" ]]; then nginx_running=$(docker inspect -f '{{.State.Running}}' "$nginx_id"); fi
 worker='ablaki-world-worker-test'
 if [[ "$target" = test ]] && docker container inspect "$worker" >/dev/null 2>&1; then
