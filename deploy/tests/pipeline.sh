@@ -199,3 +199,97 @@ for scenario in ready resume setup handlers worker label lock; do
   ! grep -Eq 'pg_dump|pg_restore|createdb|dropdb|world-verify-test' "$TEST_LOG"
   printf 'PASS world activation without database backup: %s\n' "$scenario"
 done
+
+export PATH="$test_root/bin:$PATH"
+# The runtime transition keeps the old vendor/image until the new FPM is ready.
+cat > "$test_root/bin/flock" <<'MOCK'
+#!/usr/bin/env bash
+exit 0
+MOCK
+cat > "$test_root/bin/docker" <<'MOCK'
+#!/usr/bin/env bash
+set -eu
+printf 'docker %s\n' "$*" >> "$TEST_LOG"
+case "$1" in
+  container) [[ "$TEST_FAIL" = runtime_test ]] ;;
+  inspect)
+    case "$3" in
+      '{{.Image}}') echo sha256:previous ;;
+      '{{.Config.Image}}') echo fixture_php ;;
+      '{{.State.Running}}') echo true ;;
+      *) echo test ;;
+    esac ;;
+  run) if [[ "$TEST_FAIL" = runtime_warm ]]; then echo 8.3.36; else echo 7.3.2; fi ;;
+  tag|start|stop) ;;
+  *) exit 1 ;;
+esac
+MOCK
+cat > "$test_root/bin/docker-compose" <<'MOCK'
+#!/usr/bin/env bash
+set -eu
+printf 'compose %s\n' "$*" >> "$TEST_LOG"
+case "$1" in
+  ps) echo "$3-id" ;;
+  build) [[ "$TEST_FAIL" != runtime_build ]] || exit 41 ;;
+  stop|up|exec) ;;
+  run)
+    if [[ "$*" = *' composer php install '* ]]; then
+      mkdir -p yii2/vendor
+      printf 'new vendor\n' > yii2/vendor/autoload.php
+      [[ "$TEST_FAIL" != runtime_install ]] || exit 42
+    fi ;;
+  *) exit 1 ;;
+esac
+MOCK
+chmod +x "$test_root/bin/"*
+for scenario in runtime_warm runtime_build runtime_install runtime_production runtime_test; do
+  TEST_FAIL=$scenario
+  TEST_REPO="$test_root/$scenario"
+  mkdir -p "$TEST_REPO/.git" "$TEST_REPO/yii2/vendor" "$TEST_REPO/.php-runtime-upgrade" "$TEST_REPO/docker"
+  TEST_REPO=$(cd "$TEST_REPO" && pwd -P)
+  TEST_LOG="$TEST_REPO/commands.log"
+  cp -R "$source_root/docker/php" "$source_root/docker/composer" "$TEST_REPO/docker/"
+  cp "$source_root/yii2/composer.json" "$source_root/yii2/composer.lock" "$TEST_REPO/yii2/"
+  printf 'existing vendor\n' > "$TEST_REPO/yii2/vendor/autoload.php"
+  printf 'local environment\n' > "$TEST_REPO/.env"
+  (
+    cd "$TEST_REPO"
+    sha256sum docker/php/Dockerfile docker/php/runtime.ini docker/php/security-fpm.conf docker/php/entrypoint.sh docker/composer/Dockerfile docker/composer/entrypoint.sh yii2/composer.json yii2/composer.lock | sha256sum | cut -d' ' -f1 > .php-runtime-upgrade/active
+  )
+  target=production
+  [[ "$scenario" != runtime_test ]] || target=test
+  status=0
+  bash "$source_root/deploy/php-runtime-upgrade.sh" "$TEST_REPO" "$target" > "$TEST_REPO/output.log" 2>&1 || status=$?
+  case "$scenario" in
+    runtime_warm)
+      [[ "$status" = 0 ]]
+      ! grep -q '^compose build\|^compose stop\|^compose run' "$TEST_LOG"
+      ;;
+    runtime_build)
+      [[ "$status" = 41 ]]
+      ! grep -q '^compose stop\|^compose run' "$TEST_LOG"
+      ;;
+    runtime_install)
+      [[ "$status" = 42 ]] || { cat "$TEST_REPO/output.log"; exit 1; }
+      grep -Fxq 'docker tag sha256:previous fixture_php' "$TEST_LOG"
+      grep -Fxq 'compose up -d --no-deps nginx' "$TEST_LOG"
+      ;;
+    *)
+      [[ "$status" = 0 ]] || { cat "$TEST_REPO/output.log"; exit 1; }
+      [[ "$(cat "$TEST_REPO/yii2/vendor/autoload.php")" = 'new vendor' ]]
+      grep -Fxq 'compose stop -t 60 nginx php composer' "$TEST_LOG"
+      if [[ "$target" = production ]]; then
+        grep -q 'composer php install .*--no-dev' "$TEST_LOG"
+      else
+        ! grep -q -- '--no-dev' "$TEST_LOG"
+        grep -Fxq 'docker stop --time 60 ablaki-world-worker-test' "$TEST_LOG"
+      fi
+      ;;
+  esac
+  if [[ "$scenario" = runtime_warm || "$scenario" = runtime_build || "$scenario" = runtime_install ]]; then
+    [[ "$(cat "$TEST_REPO/yii2/vendor/autoload.php")" = 'existing vendor' ]]
+  fi
+  [[ "$(cat "$TEST_REPO/.env")" = 'local environment' ]]
+  ! grep -Eq 'pg_dump|mysqldump|pg_restore|down |reset|stop.*postgres|stop.*mysql' "$TEST_LOG"
+  printf 'PASS deployment scenario: %s\n' "$scenario"
+done
