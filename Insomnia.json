@@ -11548,7 +11548,7 @@
       "name": "GET - Mining view",
       "url": "{{ _.baseUrl }}/v1/world/objects/{{ _.simple_node_id }}/mining",
       "method": "GET",
-      "description": "Contract: docs/architecture/simple-world-api.md. Set simple_node_id to a visible active mine containing a completed drilling rig. Workers produce ore for its owner; heartbeat every 10 seconds, maximum 60 seconds credited after disconnect. Commands require a new key per action; retries retain the key. Progress DTO: worked_seconds, server_time, live_work[{accounted_at,last_seen_at}]; versioned sources also expose work_id (nullable) and required_seconds from accepted batch terms. Project no later than last_seen_at+60; check heartbeat at completion and every 10 seconds. Only server confirmation grants output. Since 2026-10-21 actions[].unavailable_reason reports missing usable tools; root unavailable_reason refers to the accepted batch definition, including older profile tools. Null means this reason is absent, not that all quota/time/storage conditions pass. Commands revalidate availability.",
+      "description": "Contract: docs/architecture/simple-world-api.md. Set simple_node_id to a visible active mine containing a completed drilling rig. Workers produce ore for its owner; heartbeat every 10 seconds, maximum 60 seconds credited after disconnect. Commands require a new key per action; retries retain the key. Progress DTO: worked_seconds, server_time, live_work[{accounted_at,last_seen_at}]; versioned sources also expose work_id (nullable) and required_seconds from accepted batch terms. Project no later than last_seen_at+60; check heartbeat at completion and every 10 seconds. Only server confirmation grants output. Since 2026-10-21 actions[].unavailable_reason reports missing usable tools; root unavailable_reason refers to the accepted batch definition, including older profile tools. Null means this reason is absent, not that all quota/time/storage conditions pass. Commands revalidate availability. Mining state returns output_storages for the owner: backpack (default) and local child mini-storages only. Hired workers always use the employer mini-storage.",
       "body": {},
       "parameters": [],
       "headers": [
@@ -11579,10 +11579,10 @@
       "name": "POST - Mine employment settings",
       "url": "{{ _.baseUrl }}/v1/world/objects/{{ _.simple_node_id }}/mining/settings",
       "method": "POST",
-      "description": "Owner only. Active mine, fixed wage per accepted batch, own mine/direct-child stockpile. enabled controls new batches; existing accepted wages remain reserved and payable. See docs/architecture/simple-world-api.md, topic 82 addition.",
+      "description": "Owner only. A new paid batch always targets the first active mini-storage (CHEST child) inside the mine; there is no destination selector. Build a mini-storage before enabling work. Accepted destinations and wages remain pinned.",
       "body": {
         "mimeType": "application/json",
-        "text": "{\n  \"enabled\": true,\n  \"reward_cr\": \"2.0000\",\n  \"storage_id\": null\n}"
+        "text": "{\n  \"enabled\": true,\n  \"reward_cr\": \"2.0000\"\n}"
       },
       "parameters": [],
       "headers": [
@@ -11621,7 +11621,7 @@
       "name": "POST - Mining start",
       "url": "{{ _.baseUrl }}/v1/world/objects/{{ _.simple_node_id }}/mining/start",
       "method": "POST",
-      "description": "Contract: docs/architecture/simple-world-api.md. Set simple_node_id to a visible active mine containing a completed drilling rig. Workers produce ore for its owner; heartbeat every 10 seconds, maximum 60 seconds credited after disconnect. Commands require a new key per action; retries retain the key. Progress DTO: worked_seconds, server_time, live_work[{accounted_at,last_seen_at}]; versioned sources also expose work_id (nullable) and required_seconds from accepted batch terms. Project no later than last_seen_at+60; check heartbeat at completion and every 10 seconds. Only server confirmation grants output. Since 2026-10-21 actions[].unavailable_reason reports missing usable tools; root unavailable_reason refers to the accepted batch definition, including older profile tools. Null means this reason is absent, not that all quota/time/storage conditions pass. Commands revalidate availability. Topic 82: an invited foreign worker needs HP >= 60, personal tools, mine condition >= 50%, free employer stockpile and a fully reserved batch wage. Employer storage is mandatory for the result. employment exposes accepted_reward_cr separately from the new rate.",
+      "description": "Contract: docs/architecture/simple-world-api.md. Set simple_node_id to a visible active mine containing a completed drilling rig. Workers produce ore for its owner; heartbeat every 10 seconds, maximum 60 seconds credited after disconnect. Commands require a new key per action; retries retain the key. Progress DTO: worked_seconds, server_time, live_work[{accounted_at,last_seen_at}]; versioned sources also expose work_id (nullable) and required_seconds from accepted batch terms. Project no later than last_seen_at+60; check heartbeat at completion and every 10 seconds. Only server confirmation grants output. Since 2026-10-21 actions[].unavailable_reason reports missing usable tools; root unavailable_reason refers to the accepted batch definition, including older profile tools. Null means this reason is absent, not that all quota/time/storage conditions pass. Commands revalidate availability. Topic 82: an invited foreign worker needs HP >= 60, personal tools, mine condition >= 50%, free employer stockpile and a fully reserved batch wage. Employer storage is mandatory for the result. employment exposes accepted_reward_cr separately from the new rate. Mining state returns output_storages for the owner: backpack (default) and local child mini-storages only. Hired workers always use the employer mini-storage.",
       "body": {
         "mimeType": "application/json",
         "text": "{}"
@@ -12070,7 +12070,7 @@
       "name": "GET - Storage options",
       "url": "{{ _.baseUrl }}/v1/world/economy/storage/{{ _.economy_storage_id }}",
       "method": "GET",
-      "description": "Contract: docs/architecture/economy-runtime-api.md. Use a local or disposable acceptance environment. Read current state/options before supplying IDs, codes, health revision and preview revisions. A new command needs a new key; an uncertain result requires the same key and exact body.",
+      "description": "Contract: docs/architecture/economy-runtime-api.md. Use a local or disposable acceptance environment. Read current state/options before supplying IDs, codes, health revision and preview revisions. A new command needs a new key; an uncertain result requires the same key and exact body. Backpack codes backpack-N use the same progressive price as inventory (10 first slots cost 550 at base 10). Read current options; profile flat backpack packages do not apply. This is the shared purchase endpoint for both inventory and placement.",
       "body": {},
       "parameters": [],
       "headers": [
@@ -12101,7 +12101,7 @@
       "name": "POST - Preview storage expansion",
       "url": "{{ _.baseUrl }}/v1/world/economy/storage/{{ _.economy_storage_id }}/expand-preview",
       "method": "POST",
-      "description": "Contract: docs/architecture/economy-runtime-api.md. Use a local or disposable acceptance environment. Read current state/options before supplying IDs, codes, health revision and preview revisions. A new command needs a new key; an uncertain result requires the same key and exact body.",
+      "description": "Contract: docs/architecture/economy-runtime-api.md. Use a local or disposable acceptance environment. Read current state/options before supplying IDs, codes, health revision and preview revisions. A new command needs a new key; an uncertain result requires the same key and exact body. Backpack codes backpack-N use the same progressive price as inventory (10 first slots cost 550 at base 10). Read current options; profile flat backpack packages do not apply. This is the shared purchase endpoint for both inventory and placement.",
       "body": {
         "mimeType": "application/json",
         "text": "{\"code\": \"{{ _.economy_pack_code }}\"}"
@@ -12139,7 +12139,7 @@
       "name": "POST - Confirm storage expansion",
       "url": "{{ _.baseUrl }}/v1/world/economy/storage/{{ _.economy_storage_id }}/expand",
       "method": "POST",
-      "description": "Contract: docs/architecture/economy-runtime-api.md. Use a local or disposable acceptance environment. Read current state/options before supplying IDs, codes, health revision and preview revisions. A new command needs a new key; an uncertain result requires the same key and exact body.",
+      "description": "Contract: docs/architecture/economy-runtime-api.md. Use a local or disposable acceptance environment. Read current state/options before supplying IDs, codes, health revision and preview revisions. A new command needs a new key; an uncertain result requires the same key and exact body. Backpack codes backpack-N use the same progressive price as inventory (10 first slots cost 550 at base 10). Read current options; profile flat backpack packages do not apply. This is the shared purchase endpoint for both inventory and placement.",
       "body": {
         "mimeType": "application/json",
         "text": "{\"request_key\": \"{{ _.economy_request_key }}\", \"code\": \"{{ _.economy_pack_code }}\", \"quote_id\": \"{{ _.economy_quote_id }}\", \"expected_revisions\": {{ _.economy_expected_revisions }}}"

@@ -90,7 +90,7 @@ final class WorldSources
             'worked_seconds' => $work ? (int)$work['worked_seconds'] : 0, 'action_code' => $work ? $work['action_code'] : null,
             'work_id' => $work ? (int)$work['id'] : null, 'required_seconds' => $definition ? (int)$definition['work_seconds'] : 0,
             'live_work' => $worker ? [['accounted_at' => (int)$worker['accounted_at'], 'last_seen_at' => (int)$worker['last_seen_at']]] : [],
-            'status' => $work ? $work['status'] : 'idle', 'output_storage_id' => $work ? (int)$work['target_storage_id'] : null, 'actions' => $choices, 'blocked_code' => $work ? $work['blocked_code'] : null,
+            'status' => $work ? $work['status'] : 'idle', 'output_storage_id' => $work ? (int)$work['target_storage_id'] : null, 'output_storages' => ExtractionStorage::choices($place, $user), 'actions' => $choices, 'blocked_code' => $work ? $work['blocked_code'] : null,
             'blocked_message' => $work ? $work['blocked_message'] : null, 'unavailable_reason' => $definition ? $missing($definition) : null,
             'employment' => $place->template && $place->template->code === 'mine' ? HiredExtraction::state($place, $user, $work) : null,
             'quota' => EconomyQuota::state($db, $user, 'extraction_daily'), 'server_time' => time()];
@@ -129,9 +129,7 @@ final class WorldSources
                 $definition = HiredExtraction::accept($place, $user, $definition, $operation);
                 $target = (int)$definition['employment']['storage_id'];
             } else {
-                $backpack = (new CanonicalInventory(new CraftStorage($db)))->backpack($user);
-                $target = $target ?? ($backpack ? (int)$backpack['id'] : 0);
-                (new StorageAccessPolicy($db))->storage($user, $target, true);
+                $target = ExtractionStorage::ownerTarget($place, $user, $target);
             }
             $revision = EconomyRuntime::current($db);
             $db->createCommand()->insert('world_source_work', ['user_id' => $user, 'node_id' => $node, 'active_key' => $user . ':' . $node,

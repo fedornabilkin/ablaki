@@ -32,9 +32,8 @@ class SupplyGrant
             $base = $quantities !== null ? $quantities[$item['code']] : (int)$item['gather_quantity'] * ($action === 'starter' ? 3 : 1);
             $entry = ['item_id' => (int)$item['id'], 'name' => (string)$item['name'], 'quantity' => max(1, intdiv($base * $efficiency, 10000))];
             if ($finite) foreach ($finite['items'] as $planned) if ($planned['item_id'] === $entry['item_id']) {
-                $entry += ['code' => $planned['code'], 'ordinal' => $planned['ordinal'], 'base_quantity' => $planned['base_quantity'], 'grant_limit' => $planned['grant_limit'], 'initial_multiplier' => $planned['initial_multiplier']];
-                $entry['quantity'] = max(1, intdiv($planned['base_quantity'] * $efficiency, 10000)) * ($planned['initial_multiplier'] - $planned['ordinal'] + 1);
-                if ($planned['previous_quantity'] !== null) $entry['quantity'] = min($entry['quantity'], $planned['previous_quantity'] - 1);
+                $entry += ['code' => $planned['code'], 'ordinal' => $planned['ordinal'], 'base_quantity' => $planned['base_quantity'], 'grant_limit' => $planned['grant_limit'], 'initial_multiplier' => $planned['initial_multiplier'], 'production_reduction_bps' => $planned['production_reduction_bps']];
+                $entry['quantity'] = $planned['quantity'];
             }
             $items[] = $entry;
             $sizes[(int)$item['id']] = (int)$item['stack_size'];

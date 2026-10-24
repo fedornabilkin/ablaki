@@ -119,12 +119,18 @@ $claimFinite = static function ($key) use ($finiteUser, $finiteBuild) {
 $finite = new \common\modules\world\models\domain\FiniteSupplies($db);
 $tx = $db->beginTransaction();
 try {
+    $ordinary = array_column($finite->state($finiteUser)['items'], 'quantity', 'code');
     $forest = NodeFactory::create(NodeTemplate::requireOne(['code' => 'forest-plot']), Node::requireOne($finiteBuild->node_id), $finiteUser, 'Supply exclusion fixture', 'supply-forest', null, 'constructing');
     $db->createCommand()->update('world_node', ['status' => 'active'], ['id' => $forest->id])->execute();
-    economyCheck(!in_array('classic-log', array_column($finite->state($finiteUser)['items'], 'code'), true), 'a completed owned production source excludes its raw resource from daily supplies');
+    $reduced = array_column($finite->state($finiteUser)['items'], 'quantity', 'code');
+    economyCheck($reduced['classic-log'] === intdiv($ordinary['classic-log'] + 1, 2), 'a completed source halves daily raw supplies instead of removing them');
     EconomyRuntime::fact($db, $finiteUser, 'built:forest-plot', 1, $joined['operation_id']);
     $db->createCommand()->update('world_node', ['status' => 'archived'], ['id' => $forest->id])->execute();
-    economyCheck(!in_array('classic-log', array_column($finite->state($finiteUser)['items'], 'code'), true), 'archiving production does not reopen the previously replaced daily resource');
+    economyCheck(array_column($finite->state($finiteUser)['items'], 'quantity', 'code')['classic-log'] === $reduced['classic-log'], 'archiving a source does not restore the full daily grant');
+    $stoneMine = NodeFactory::create(NodeTemplate::requireOne(['code' => 'mine']), Node::requireOne($finiteBuild->node_id), $finiteUser, 'Daily stone source', 'daily-stone-source', null, 'constructing');
+    $db->createCommand()->update('world_node', ['status' => 'active'], ['id' => $stoneMine->id])->execute();
+    $stonePlan = (new \common\modules\world\models\domain\SupplyGrant($db))->plan($finiteUser, 'gather');
+    economyCheck(array_column($stonePlan['items'], 'quantity', 'code')['classic-stone'] === intdiv($ordinary['classic-stone'] + 1, 2), 'a built mine retains half the daily stone needed to make its first pickaxe');
 } finally { $tx->rollBack(); }
 $counts = [];
 try {
@@ -259,8 +265,16 @@ try {
     $nested = NodeFactory::create(NodeTemplate::requireOne(['code' => 'forest-plot']), $mine, $finiteUser, 'Hierarchy strength fixture', 'nested-strength-fixture', null, 'constructing');
     economyCheck($nested->max_condition < $mine->max_condition && $mine->max_condition < Node::requireOne($finiteBuild->node_id)->max_condition, 'strength follows actual placement depth even when the template permits different levels');
     (new \common\modules\world\modules\economy\models\domain\EconomyHierarchy($db))->provision((int)$mine->id, $joined['operation_id']);
-    $db->createCommand()->insert('craft_storage', ['identity_key' => 'stockpile:fixture:paid-mine', 'kind' => 'stockpile', 'node_id' => $mine->id, 'owner_user_id' => $finiteUser, 'capacity' => 5])->execute();
+    economyReject(static function () use ($mine, $finiteUser) { \common\modules\world\models\domain\HiredExtraction::configure($mine, $finiteUser, true, '2'); }, 'EMPLOYER_STORAGE_REQUIRED');
+    $mini = NodeFactory::create(NodeTemplate::requireOne(['code' => 'mini-storage-level-' . ((int)$mine->hierarchy_level + 1)]), $mine, $finiteUser, 'Mine mini-storage', 'mine-mini-storage', null, 'constructing');
+    $db->createCommand()->update('world_node', ['status' => 'active', 'condition' => $mini->max_condition], ['id' => $mini->id])->execute();
+    $db->createCommand()->insert('craft_storage', ['identity_key' => 'stockpile:fixture:paid-mine', 'kind' => 'stockpile', 'node_id' => $mini->id, 'owner_user_id' => $finiteUser, 'capacity' => 5])->execute();
     $stockId = (int)$db->getLastInsertID();
+    $destinations = \common\modules\world\models\domain\ExtractionStorage::choices($mine, $finiteUser);
+    economyCheck(array_column($destinations, 'kind') === ['backpack', 'stockpile'] && $destinations[1]['id'] === $stockId
+        && \common\modules\world\models\domain\ExtractionStorage::ownerTarget($mine, $finiteUser, null) === $destinations[0]['id'], 'owner extraction defaults to backpack and offers only its own local mini-storage');
+    economyCheck(\common\modules\world\models\domain\ExtractionStorage::ownerTarget($mine, $finiteUser, $stockId) === $stockId, 'owner can explicitly route extraction to the local mini-storage');
+    economyReject(static function () use ($mine, $finiteUser) { \common\modules\world\models\domain\ExtractionStorage::ownerTarget($mine, $finiteUser, 2147483647); }, 'SOURCE_STORAGE_UNAVAILABLE');
     $workerStock = new \common\modules\world\modules\craft\models\domain\CraftStorage($db);
     $stoneId = (int)(new Query())->select('id')->from('craft_item')->where(['code' => 'classic-stone'])->scalar($db);
     $workerStoneBefore = $workerStock->quantities($workerUser)[$stoneId] ?? 0;

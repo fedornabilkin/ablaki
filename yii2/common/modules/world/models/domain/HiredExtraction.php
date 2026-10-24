@@ -15,25 +15,24 @@ final class HiredExtraction
     {
         $settings = json_decode($node->settings_json ?: '{}', true) ?: [];
         $rule = $settings['hired_extraction'] ?? [];
-        return ['enabled' => ($rule['enabled'] ?? false) === true, 'reward_cr' => (string)($rule['reward_cr'] ?? '1.0000'), 'storage_id' => isset($rule['storage_id']) ? (int)$rule['storage_id'] : null];
+        $local = self::storages($node);
+        return ['enabled' => ($rule['enabled'] ?? false) === true, 'reward_cr' => (string)($rule['reward_cr'] ?? '1.0000'), 'storage_id' => $local ? (int)$local[0]['id'] : null];
     }
-    public static function storages(Node $node): array
+    public static function storages(Node $node, bool $accepted = false): array
     {
-        return (new Query())->select('s.*')->from(['s' => 'craft_storage'])->innerJoin(['n' => 'world_node'], 'n.id=s.node_id')
-            ->innerJoin(['c' => 'world_node_closure'], 'c.descendant_id=n.id')->where(['c.ancestor_id' => $node->id, 's.owner_user_id' => $node->owner_user_id, 's.kind' => 'stockpile', 's.status' => 'active', 'n.status' => 'active'])
-            ->andWhere(['<=', 'c.distance', 1])->orderBy('s.id')->all(Node::getDb());
+        return ExtractionStorage::local($node, $accepted);
     }
-    public static function configure(Node $node, int $user, bool $enabled, string $reward, ?int $storage): array
+    public static function configure(Node $node, int $user, bool $enabled, string $reward, ?int $storage = null): array
     {
         $node->requireOwner($user);
         if (!$node->template || $node->template->code !== 'mine' || $node->status !== 'active') throw new GameError('HIRED_MINE_REQUIRED', 'Оплачиваемая добыча доступна в действующей шахте.', 422);
         try { $amount = Money::parse($reward); }
         catch (\InvalidArgumentException | \OverflowException $error) { throw new GameError('INVALID_WAGE', 'Укажите положительную оплату за партию, до четырёх знаков после точки.', 422); }
         if ($amount->isZero() || $amount->isNegative()) throw new GameError('INVALID_WAGE', 'Укажите положительную оплату за партию.', 422);
-        $ids = array_map('intval', array_column(self::storages($node), 'id'));
-        if ($storage !== null && !in_array($storage, $ids, true)) throw new GameError('EMPLOYER_STORAGE_REQUIRED', 'Выберите собственный склад шахты или её мини-склада.', 422);
+        if ($enabled && !self::storages($node)) throw new GameError('EMPLOYER_STORAGE_REQUIRED', 'Постройте действующий мини-склад внутри шахты.', 422);
         $settings = json_decode($node->settings_json ?: '{}', true) ?: [];
-        $settings['hired_extraction'] = ['enabled' => $enabled, 'reward_cr' => $amount->decimal(), 'storage_id' => $storage];
+        // storage_id from older clients is ignored: the destination is selected by the server.
+        $settings['hired_extraction'] = ['enabled' => $enabled, 'reward_cr' => $amount->decimal()];
         $node->settings_json = json_encode($settings, JSON_THROW_ON_ERROR);
         if (!$node->save(false)) throw new \RuntimeException('Mine employment settings write failed.');
         return ['changed_node_ids' => [(int)$node->id], 'employment' => self::configuration($node)];
@@ -44,9 +43,9 @@ final class HiredExtraction
         if (!$node->template || $node->template->code !== 'mine' || (!$accepted && !$rule['enabled'])) throw new GameError('HIRED_WORK_CLOSED', 'Владелец шахты пока не разрешил оплачиваемую работу.', 403);
         if ((int)$node->max_condition < 1 || (int)$node->condition * 2 < (int)$node->max_condition) throw new GameError('MINE_REPAIR_REQUIRED', 'Для работы прочность шахты должна быть не ниже 50%.');
         if (!$accepted && WorldFood::state($db, $user)['hp'] < 60) throw new GameError('WORKER_HEALTH_REQUIRED', 'Для начала оплачиваемой работы нужно не менее 60% здоровья.');
-        $storages = self::storages($node); $target = null;
+        $storages = self::storages($node, $accepted); $target = null;
         foreach ($storages as $row) if ($accepted || $rule['storage_id'] === null || (int)$row['id'] === $rule['storage_id']) { $target = $row; break; }
-        if (!$target) throw new GameError('EMPLOYER_STORAGE_REQUIRED', 'В шахте нужен собственный действующий склад или мини-склад.');
+        if (!$target) throw new GameError('EMPLOYER_STORAGE_REQUIRED', 'Постройте действующий мини-склад внутри шахты.');
         $accounts = (new EconomyHierarchy($db))->accounts((int)$node->id);
         if (!isset($accounts['budget'])) throw new GameError('BUDGET_UNAVAILABLE', 'Бюджет шахты ещё не подготовлен.');
         if (!$accepted && (new BudgetSpending($db))->available((int)$accounts['budget']['id'])->compare(Money::parse($rule['reward_cr'])) < 0) throw new GameError('INSUFFICIENT_WAGE_BUDGET', 'В бюджете шахты нет свободных средств на следующую партию.');
@@ -71,7 +70,7 @@ final class HiredExtraction
     public static function target(Node $node, int $user, array $definition): array
     {
         self::context($node, $user, true);
-        foreach (self::storages($node) as $row) if ((int)$row['id'] === (int)$definition['employment']['storage_id']) return $row;
+        foreach (self::storages($node, true) as $row) if ((int)$row['id'] === (int)$definition['employment']['storage_id']) return $row;
         throw new GameError('EMPLOYER_STORAGE_REQUIRED', 'Принятый склад партии временно недоступен.');
     }
     public static function pay(int $user, int $work, array $definition, string $operation): void

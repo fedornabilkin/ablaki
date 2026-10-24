@@ -29,7 +29,8 @@ if (($argv[1] ?? '') === 'economy-worker') {
     $started = microtime(true);
     try {
         $user = (int)($payload['user_id'] ?? 9004);
-        $result = common\modules\world\models\Command::run($user, $key, 'fixture.race.' . $action, $payload, function ($op) use ($app, $action, $payload, $user) {
+        if ($action === 'slots') $result = (new common\modules\world\models\domain\EconomyStorage($app->db, new common\modules\world\models\domain\WorldFlags($app->db, $app->getModule('world'))))->execute($user, $payload['storage_id'], $payload['code'], $key, $payload['quote_id'], $payload['expected_revisions']);
+        else $result = common\modules\world\models\Command::run($user, $key, 'fixture.race.' . $action, $payload, function ($op) use ($app, $action, $payload, $user) {
             if ($action === 'paid-start') return common\modules\world\models\Mining::start($payload['mining_node_id'], $user, $op, 'mine-stone');
             if ($action === 'paid-delivery') return common\modules\world\models\Mining::heartbeat($payload['mining_node_id'], $user, $op);
             if ($action === 'starter-reserve') return (new common\modules\world\models\domain\StarterReserve($app->db))->configure($user, $payload['node_id'], $payload['payout_cr'], $payload['add_amount_cr'], $op, true);
@@ -167,7 +168,9 @@ $db->transaction(static function () use ($db, $city, $freshUser, &$paidMine, &$p
     $db->createCommand()->update('world_node', ['status' => 'active', 'condition' => $employerSite->max_condition], ['id' => $employerSite->id])->execute(); $employerSite->refresh();
     $paidMine = common\modules\world\models\NodeFactory::create(common\modules\world\models\NodeTemplate::requireOne(['code' => 'mine']), $employerSite, 9001, 'Hired race mine', 'hired-race-mine', null, 'constructing');
     $db->createCommand()->update('world_node', ['status' => 'active', 'condition' => $paidMine->max_condition], ['id' => $paidMine->id])->execute(); $paidMine->refresh();
-    $db->createCommand()->insert('craft_storage', ['identity_key' => 'stockpile:hired-race', 'kind' => 'stockpile', 'node_id' => $paidMine->id, 'owner_user_id' => 9001, 'capacity' => 5])->execute(); $paidStock = (int)$db->getLastInsertID();
+    $mini = common\modules\world\models\NodeFactory::create(common\modules\world\models\NodeTemplate::requireOne(['code' => 'mini-storage-level-' . ((int)$paidMine->hierarchy_level + 1)]), $paidMine, 9001, 'Hired race mini-storage', 'hired-race-mini-storage', null, 'constructing');
+    $db->createCommand()->update('world_node', ['status' => 'active', 'condition' => $mini->max_condition], ['id' => $mini->id])->execute();
+    $db->createCommand()->insert('craft_storage', ['identity_key' => 'stockpile:hired-race', 'kind' => 'stockpile', 'node_id' => $mini->id, 'owner_user_id' => 9001, 'capacity' => 5])->execute(); $paidStock = (int)$db->getLastInsertID();
     Command::run($freshUser, bin2hex(random_bytes(16)), 'fixture.hired-fund', [], static function ($op) use ($db, $freshUser, $paidMine) { return (new common\modules\world\modules\economy\models\domain\BudgetFunding($db))->contribute($freshUser, (int)$paidMine->id, common\modules\world\modules\economy\value\Money::parse('2'), 'Race wage', $op); });
     common\modules\world\models\domain\HiredExtraction::configure(common\modules\world\models\Node::requireOne($paidMine->id), 9001, true, '2', $paidStock);
 });
@@ -212,6 +215,17 @@ $db->transaction(static function () use ($db, $siteId, &$constructionInput) {
 $results = economyRace('construction', false, ['input' => $constructionInput]);
 economyCheck(count(array_filter($results, static function ($r) { return $r['status'] === 'ok'; })) === 1 && count(array_filter($results, static function ($r) { return $r['status'] === 'rejected' && $r['reason'] === 'CONSTRUCTION_LIMIT'; })) === 5
     && (int)(new Query())->from('world_build')->where(['owner_user_id' => $freshUser, 'status' => 'building'])->count('*', $db) === 1, 'six competing placement commands create exactly one unfinished construction');
+
+$storageService = new common\modules\world\models\domain\EconomyStorage($db, $flags);
+$slotId = (int)(new common\modules\world\modules\craft\models\domain\CanonicalInventory($freshStock))->backpack($freshUser)['id'];
+$slotPreview = $storageService->preview($freshUser, $slotId, 'backpack-1');
+// Dedicated disposable fixture funds, independent of earlier wage/reserve races.
+$db->createCommand()->update('persone', ['credit' => '1000.0000'], ['user_id' => $freshUser])->execute();
+$slotWallet = (float)(new Query())->select('credit')->from('persone')->where(['user_id' => $freshUser])->scalar($db);
+$results = economyRace('slots', false, ['storage_id' => $slotId, 'code' => 'backpack-1', 'quote_id' => $slotPreview['quote_id'], 'expected_revisions' => $slotPreview['expected_revisions']]);
+economyCheck(count(array_filter($results, static function ($r) { return $r['status'] === 'ok'; })) === 1
+    && $storageService->state($freshUser, $slotId)['capacity'] === $slotPreview['terms']['capacity_after']
+    && (float)(new Query())->select('credit')->from('persone')->where(['user_id' => $freshUser])->scalar($db) === $slotWallet - (float)$slotPreview['terms']['price_cr'], 'six competing slot purchases expand and debit exactly once at the progressive price');
 
 // Simulate interrupted additive DDL by removing one constraint/index, retaining all data.
 $table = 'world_economy_usage';

@@ -195,8 +195,13 @@ economyCheck($delivered['pending_quantity'] === 0 && $delivered['quota']['remain
 $rollbackPreview = $publisher->preview($profile);
 $publisher->publish($profile, $rollbackPreview['digest'], 9001, 'Fixture: restore prior profile as a new revision');
 economyCheck(EconomyRuntime::current($db)['version'] === 3 && (int)(new Query())->from('world_economy_profile')->count('*', $db) === 3, 'rollback creates a new immutable publication without deleting history');
-$db->createCommand()->insert('craft_storage', ['identity_key' => 'fixture-full-source', 'kind' => 'stockpile', 'owner_user_id' => $freshUser, 'node_id' => $forestId, 'capacity' => 1])->execute();
-$fullStorage = (int)$db->getLastInsertID();
+$fullStorage = $db->transaction(static function () use ($db, $forestId, $freshUser) {
+$sourceNode = \common\modules\world\models\Node::requireOne($forestId);
+$sourceMini = \common\modules\world\models\NodeFactory::create(\common\modules\world\models\NodeTemplate::requireOne(['code' => 'mini-storage-level-' . ((int)$sourceNode->hierarchy_level + 1)]), $sourceNode, $freshUser, 'Source mini-storage', 'source-mini-storage', null, 'constructing');
+$db->createCommand()->update('world_node', ['status' => 'active', 'condition' => $sourceMini->max_condition], ['id' => $sourceMini->id])->execute();
+$db->createCommand()->insert('craft_storage', ['identity_key' => 'fixture-full-source', 'kind' => 'stockpile', 'owner_user_id' => $freshUser, 'node_id' => $sourceMini->id, 'capacity' => 1])->execute();
+return (int)$db->getLastInsertID();
+});
 $db->transaction(function () use ($db, $freshUser, $fullStorage, $freshStock) {
     $inventory = new \common\modules\world\modules\craft\models\domain\CanonicalInventory($freshStock);
     $target = (new Query())->from('craft_storage')->where(['id' => $fullStorage])->one($db);
@@ -249,15 +254,23 @@ economyCheck($claimed === \common\modules\world\models\Command::run($freshUser, 
 $app->authManager->assign($testRole, $freshUser);
 
 $expansions = new \common\modules\world\models\domain\EconomyStorage($db, $flags);
+// Disposable fixture funds cover the progressive ten-slot price.
+$db->createCommand()->update('persone', ['credit' => '1000.0000'], ['user_id' => $freshUser])->execute();
 $backpackId = (int)(new \common\modules\world\modules\craft\models\domain\CanonicalInventory($freshStock))->backpack($freshUser)['id'];
 $expandedPreview = $expansions->preview($freshUser, $backpackId, 'backpack-10');
-economyCheck($expandedPreview['terms']['capacity_before'] === 20 && $expandedPreview['terms']['capacity_after'] === 30 && $expandedPreview['terms']['price_cr'] === '90.0000', 'storage package preview binds permanent capacity and exact total');
+economyCheck($expandedPreview['terms']['capacity_before'] === 20 && $expandedPreview['terms']['capacity_after'] === 30 && $expandedPreview['terms']['price_cr'] === '550.0000', 'both inventory and placement use the progressive ten-slot price instead of a discounted package');
+$sharedPurchase = new \common\modules\world\modules\craft\models\domain\CraftInventory($freshStock);
+economyCheck($sharedPurchase->purchaseQuote($freshUser, 10)['total_price'] === 550, 'legacy purchase adapter shares the same slot quotation');
+try { $sharedPurchase->buy($freshUser, 10, 10, 90); throw new LogicException('Cheap slot purchase accepted.'); }
+catch (\yii\web\ConflictHttpException $error) { economyCheck(true, 'old discounted slot totals cannot bypass progressive pricing'); }
 $expandedKey = bin2hex(random_bytes(16));
 $expanded = $expansions->execute($freshUser, $backpackId, 'backpack-10', $expandedKey, $expandedPreview['quote_id'], (array)$expandedPreview['expected_revisions']);
 economyCheck($expanded['capacity_after'] === 30 && $expansions->state($freshUser, $backpackId)['capacity'] === 30, 'storage package adds permanent slots without replacing existing rights');
 economyCheck($expanded === $expansions->execute($freshUser, $backpackId, 'backpack-10', $expandedKey, $expandedPreview['quote_id'], (array)$expandedPreview['expected_revisions'])
     && (int)(new Query())->from('world_storage_expansion')->where(['user_id' => $freshUser])->count('*', $db) === 1, 'storage expansion replay debits and expands exactly once');
 economyReject(function () use ($expansions, $freshUser, $backpackId, $expandedPreview) { $expansions->execute($freshUser, $backpackId, 'backpack-10', bin2hex(random_bytes(16)), $expandedPreview['quote_id'], (array)$expandedPreview['expected_revisions']); }, 'QUOTE_ALREADY_USED');
+economyCheck($expansions->preview($freshUser, $backpackId, 'backpack-1')['terms']['price_cr'] === '110.0000'
+    && (float)(new Query())->select('credit')->from('persone')->where(['user_id' => $freshUser])->scalar($db) === 450.0, 'next slot price follows purchased capacity and ten slots debit exactly once');
 
 $adminPermission = $app->authManager->createPermission('p-admin'); $app->authManager->add($adminPermission); $app->authManager->assign($adminPermission, 9001);
 $app->user->switchIdentity(new CraftIdentity());
