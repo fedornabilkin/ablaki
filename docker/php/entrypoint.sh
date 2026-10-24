@@ -21,4 +21,4 @@ for runtime in /web/yii2/api/runtime /web/yii2/backend/runtime /web/yii2/fronten
     find "$runtime" -type f -exec chmod 0666 {} +
 done
 
-php-fpm
+exec php-fpm

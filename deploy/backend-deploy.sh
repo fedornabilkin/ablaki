@@ -38,6 +38,11 @@ phase='git pull'
 printf '[backend-deploy] git pull (%s, %s)\n' "$target" "$branch"
 git pull --ff-only origin "$branch"
 
+if [[ -f deploy/php-runtime-upgrade.sh ]]; then
+  phase='Installing the verified PHP runtime'
+  bash deploy/php-runtime-upgrade.sh "$repo" "$target"
+fi
+
 phase='make up'
 printf '[backend-deploy] make up\n'
 make up

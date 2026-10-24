@@ -1,13 +1,14 @@
-FROM php:7.3.2-fpm
+FROM composer:2.10.3 AS composer
+FROM php:8.3.36-fpm-bookworm
 
 RUN apt-get update \
-&& apt-get install -y libpq-dev libicu-dev libpng-dev libjpeg62-turbo-dev cron \
+&& apt-get install -y --no-install-recommends libpq-dev libicu-dev libpng-dev libjpeg62-turbo-dev libfreetype6-dev libzip-dev cron rsyslog git unzip ca-certificates \
 && apt-get clean \
 && apt-get autoclean \
-&& apt-get autoremove -y --force-yes \
+&& apt-get autoremove -y \
 && rm -rf /var/lib/apt/lists/* \
-&& docker-php-ext-configure gd --with-gd --with-jpeg-dir=/usr/lib64 \
-&& docker-php-ext-install pdo pdo_pgsql pdo_mysql intl gd \
+&& docker-php-ext-configure gd --with-jpeg --with-freetype \
+&& docker-php-ext-install -j"$(nproc)" pdo_pgsql pdo_mysql intl gd zip opcache \
 && docker-php-ext-enable gd
 
 #ARG ENV
@@ -25,8 +26,12 @@ RUN export XDEBUG_INI=/usr/local/etc/php/conf.d/docker-php-ext-xdebug.ini \
 
 COPY ./cron /var/spool/cron/crontabs/root
 COPY ./entrypoint.sh /entrypoint.sh
+COPY --from=composer /usr/bin/composer /usr/local/bin/composer
+COPY ./runtime.ini /usr/local/etc/php/conf.d/zz-ablaki.ini
+COPY ./security-fpm.conf /usr/local/etc/php-fpm.d/zz-ablaki-security.conf
+WORKDIR /web/yii2
 
 RUN chmod a+x /entrypoint.sh && \
     chmod 600 /var/spool/cron/crontabs/root
 
-CMD /entrypoint.sh
+CMD ["/entrypoint.sh"]
