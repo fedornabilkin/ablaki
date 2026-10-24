@@ -69,14 +69,18 @@ if [[ "$target" = production ]]; then options+=(--no-dev); fi
 docker-compose run --rm --no-deps -T -e COMPOSER_ALLOW_SUPERUSER=1 --entrypoint composer php "${options[@]}"
 docker-compose run --rm --no-deps -T --entrypoint composer php check-platform-reqs
 docker-compose run --rm --no-deps -T --entrypoint php php -r 'if (PHP_VERSION !== "8.3.36" || ini_get("session.upload_progress.enabled") !== "0") exit(1); foreach (["pdo_mysql","pdo_pgsql","intl","gd","mbstring","zip"] as $extension) if (!extension_loaded($extension)) exit(1);'
-docker-compose up -d --no-deps php
-docker-compose exec -T php php -r 'exit(PHP_VERSION === "8.3.36" ? 0 : 1);'
-ready=false
-for attempt in {1..60}; do
-  if docker-compose exec -T php php -r '$socket = @fsockopen("127.0.0.1", 9000); if (!$socket) exit(1); fclose($socket);'; then ready=true; break; fi
-  sleep 2
-done
-[[ "$ready" = true ]]
+if [[ "$target" = test && "$repo" = /var/code/ablaki && -f /opt/ablaki-backend-test/world-activation.pending ]]; then
+  printf '[php-runtime] Keeping application writers stopped until world activation resumes\n'
+else
+  docker-compose up -d --no-deps php
+  docker-compose exec -T php php -r 'exit(PHP_VERSION === "8.3.36" ? 0 : 1);'
+  ready=false
+  for attempt in {1..60}; do
+    if docker-compose exec -T php php -r '$socket = @fsockopen("127.0.0.1", 9000); if (!$socket) exit(1); fclose($socket);'; then ready=true; break; fi
+    sleep 2
+  done
+  [[ "$ready" = true ]]
+fi
 printf '%s\n' "$fingerprint" > "$state/active.new"
 mv -- "$state/active.new" "$state/active"
 trap - ERR
