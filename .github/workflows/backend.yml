@@ -314,7 +314,7 @@ jobs:
           set -Eeuo pipefail
           cd "$1"
           test "$(pwd -P)" = "$1"
-          docker-compose exec -T php php -r 'require "/web/yii2/vendor/autoload.php"; require "/web/yii2/vendor/yiisoft/yii2/Yii.php"; if (PHP_VERSION !== "8.3.36" || ini_get("session.upload_progress.enabled") !== "0") exit(1); $socket = @fsockopen("127.0.0.1", 9000); if (!$socket) exit(1); fclose($socket); echo json_encode(["php" => PHP_VERSION, "yii" => Yii::getVersion(), "upload_progress" => false, "fpm_ready" => true]), PHP_EOL;'
-          docker-compose exec -T php service cron status
-          docker-compose exec -T php composer check-platform-reqs
+          docker-compose exec -T php php -r 'require "/web/yii2/vendor/autoload.php"; require "/web/yii2/vendor/yiisoft/yii2/Yii.php"; if (PHP_VERSION !== "8.3.36" || ini_get("session.upload_progress.enabled") !== "0") exit(1); $socket = @fsockopen("127.0.0.1", 9000); if (!$socket) exit(1); fclose($socket); echo json_encode(["php" => PHP_VERSION, "yii" => Yii::getVersion(), "upload_progress" => false, "fpm_ready" => true]), PHP_EOL;' </dev/null
+          docker-compose exec -T php service cron status </dev/null
+          docker-compose exec -T php composer check-platform-reqs </dev/null
           VERIFY
