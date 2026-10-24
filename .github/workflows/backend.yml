@@ -130,9 +130,19 @@ jobs:
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v7
+        with:
+          fetch-depth: 2
       - name: Build and check the real Linux images
+        env:
+          PREVIOUS_SHA: ${{ github.event.before }}
         shell: bash
         run: |
+          if [[ "$GITHUB_EVENT_NAME" = push && "$PREVIOUS_SHA" =~ ^[0-9a-f]{40}$ && "$PREVIOUS_SHA" != 0000000000000000000000000000000000000000 ]]; then
+            if git cat-file -e "$PREVIOUS_SHA^{commit}" && git diff --quiet "$PREVIOUS_SHA" HEAD -- docker/php docker/composer; then
+              echo 'Runtime files unchanged; the existing verified image is reused.'
+              exit 0
+            fi
+          fi
           docker build --pull -t ablaki-php83-ci docker/php
           docker build --pull -t ablaki-composer83-ci docker/composer
           docker run --rm --entrypoint php ablaki-php83-ci -r 'if (PHP_VERSION !== "8.3.36" || ini_get("session.upload_progress.enabled") !== "0") exit(1); foreach (["pdo_mysql","pdo_pgsql","pdo_sqlite","intl","gd","mbstring","zip","curl"] as $extension) if (!extension_loaded($extension)) throw new RuntimeException($extension);'
