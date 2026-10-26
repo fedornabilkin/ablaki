@@ -15,6 +15,9 @@ printf 'git %s\n' "$*" >> "$TEST_LOG"
 case "$1 $2" in
   'check-ref-format --branch') [[ "$TEST_FAIL" != invalid_branch ]] ;;
   'rev-parse --show-toplevel') printf '%s\n' "$TEST_REPO" ;;
+  'rev-parse FETCH_HEAD'|'rev-parse HEAD')
+    if [[ "$TEST_FAIL" = unchecked_commit ]]; then printf '%040d\n' 2; else printf '%040d\n' 1; fi
+    ;;
   'status --porcelain')
     [[ "$TEST_FAIL" != dirty ]] || printf ' M local.php\n'
     ;;
@@ -30,6 +33,7 @@ case "$1 $2" in
   'pull --ff-only')
     expected_branch="$TEST_BRANCH"
     [[ ! -f "$TEST_REPO/current-branch" ]] || expected_branch="$(cat "$TEST_REPO/current-branch")"
+    [[ "$TEST_FAIL" != checked_commit ]] || expected_branch=$(printf '%040d' 1)
     [[ "$3" = origin && "$4" = "$expected_branch" ]]
     [[ "$(umask)" = 0022 ]]
     [[ "$TEST_FAIL" != pull ]] || exit 23
@@ -57,7 +61,7 @@ MOCK
 chmod +x "$test_root/bin/"*
 export PATH="$test_root/bin:$PATH"
 
-for scenario in production test dirty pull make wrong_branch invalid_branch production_branch; do
+for scenario in production test dirty pull make wrong_branch invalid_branch production_branch checked_commit unchecked_commit; do
   TEST_FAIL=$scenario
   TEST_REPO="$test_root/$scenario"
   mkdir -p "$TEST_REPO/.git" "$TEST_REPO/yii2/vendor"
@@ -74,11 +78,13 @@ for scenario in production test dirty pull make wrong_branch invalid_branch prod
   printf 'existing vendor\n' > "$TEST_REPO/yii2/vendor/autoload.php"
   : > "$TEST_LOG"
   status=0
-  bash "$source_root/deploy/backend-deploy.sh" "$TEST_REPO" "$branch" "$target" > "$TEST_REPO/output.log" 2>&1 || status=$?
+  expected_sha=''
+  [[ "$scenario" != checked_commit && "$scenario" != unchecked_commit ]] || expected_sha=$(printf '%040d' 1)
+  bash "$source_root/deploy/backend-deploy.sh" "$TEST_REPO" "$branch" "$target" "$expected_sha" > "$TEST_REPO/output.log" 2>&1 || status=$?
   case "$scenario" in
-    production|test|dirty)
+    production|test|dirty|checked_commit)
       [[ "$status" = 0 ]] || { cat "$TEST_REPO/output.log"; exit 1; }
-      grep -Fxq "git pull --ff-only origin $branch" "$TEST_LOG"
+      grep -Fxq "git pull --ff-only origin ${expected_sha:-$branch}" "$TEST_LOG"
       grep -Fxq 'make up' "$TEST_LOG"
       if [[ "$scenario" = dirty ]]; then grep -Eq '^git stash push -m deploy: production/master ' "$TEST_LOG"; fi
       ! grep -q '^docker' "$TEST_LOG"
@@ -91,7 +97,7 @@ for scenario in production test dirty pull make wrong_branch invalid_branch prod
       [[ "$status" = 31 ]]
       ! grep -q '^docker' "$TEST_LOG"
       ;;
-    invalid_branch|production_branch)
+    invalid_branch|production_branch|unchecked_commit)
       [[ "$status" != 0 ]]
       ! grep -q '^git pull\|^make\|^docker' "$TEST_LOG"
       ;;
