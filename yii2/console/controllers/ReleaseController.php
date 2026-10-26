@@ -29,17 +29,13 @@ class ReleaseController extends \yii\console\Controller
     {
         $db = Yii::$app->db;
         $done = $db->schema->getTableSchema('{{%migration}}') ? (new Query())->select('version')->from('{{%migration}}')->column($db) : [];
-        $paths = ['@console/migrations', '@vendor/dektrium/yii2-user/migrations', '@fedornabilkin/binds/migrations', '@fedornabilkin/redirect/migrations', '@yii/rbac/migrations'];
-        if ($this->world()) $paths[] = '@console/world-migrations';
-        $pending = [];
-        foreach ($paths as $alias) {
-            $path = Yii::getAlias($alias, false);
-            if (!$path || !is_dir($path)) continue;
-            foreach (glob($path . '/m*.php') as $file) {
-                $version = basename($file, '.php');
-                if (preg_match('/^m\d{6}_\d{6}_\w+$/D', $version) && !in_array($version, $done, true)) $pending[] = $version;
-            }
-        }
+        // Match the existing additive deployment installers. Historical migrations
+        // outside this contract are not replayed by a routine world release.
+        $required = ['m260924_120000_user_activity', 'm260920_190000_extend_classic_craft',
+            'm260921_100000_craft_credit_switch', 'm260924_160000_craft_storage', 'm260926_100000_craft_repair',
+            'm260926_110000_forum_privacy', 'm260930_120000_forum_theme_closed', 'm260930_130000_wall_description_approval'];
+        if ($this->world()) foreach (glob(Yii::getAlias('@console/world-migrations/m*.php')) as $file) $required[] = basename($file, '.php');
+        $pending = array_values(array_diff($required, $done));
         return $pending;
     }
 
@@ -71,29 +67,10 @@ class ReleaseController extends \yii\console\Controller
         return $state['ready'] ? 0 : 2;
     }
 
-    private function migrate(string $path): int
-    {
-        // Historical application migrations contain both global and namespaced
-        // classes. Keep their existing history identifiers and execute the real up().
-        $migration = new class('release-migration', Yii::$app, ['migrationPath' => $path, 'migrationNamespaces' => [], 'interactive' => false]) extends \yii\console\controllers\MigrateController {
-            protected function createMigration($class)
-            {
-                $this->includeMigrationFile($class);
-                if (!class_exists($class, false) && class_exists('console\\migrations\\' . $class)) $class = 'console\\migrations\\' . $class;
-                return Yii::createObject(['class' => $class, 'db' => $this->db, 'compact' => $this->compact]);
-            }
-        };
-        return $migration->runAction('up');
-    }
-
     public function actionTestInstall(): int
     {
         $this->context();
         putenv('WORLD_INSTALL=confirmed-world-install');
-        foreach (['@vendor/dektrium/yii2-user/migrations', '@fedornabilkin/binds/migrations', '@fedornabilkin/redirect/migrations', '@yii/rbac/migrations', '@console/migrations'] as $path) {
-            $exit = $this->migrate($path);
-            if ($exit !== 0) return $exit;
-        }
         putenv('USER_ACTIVITY_INSTALL=confirmed-test-checkout');
         putenv('CRAFT_TEST_INSTALL=confirmed-test-checkout');
         putenv('FORUM_INSTALL=confirmed-test-checkout');
