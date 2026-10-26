@@ -1,5 +1,6 @@
 <?php
-// Only the restored disposable PostgreSQL copy created by world-open-test.sh.
+// Optional manual check of a separately restored disposable PostgreSQL copy.
+// This is not called by test deployment; automatic dump/restore was removed on 2026-10-21.
 $database = getenv('WORLD_VERIFY_DATABASE');
 if (!preg_match('/^ablaki_world_verify_[0-9]+_[0-9]+$/D', $database ?: '')
     || getenv('WORLD_TEST_SETUP') !== 'confirmed-test-checkout'

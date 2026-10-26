@@ -75,7 +75,11 @@ class TestWorldSetup
         });
         $world = (int)(new Query())->select('active_world_id')->from('world_registry')->where(['id' => 1])->scalar($this->db);
         $nights = new WorldNights($this->db, $flags);
-        if (!$nights->policy($world)) $nights->activate($world, ['day_seconds' => 3600, 'night_offset' => 2700, 'night_seconds' => 900, 'max_severity' => 3, 'recovery_nights' => 1, 'mild_efficiency_bps' => 9000, 'severe_efficiency_bps' => 7500]);
+        if (!$nights->policy($world)) {
+            $now = time(); $epoch = (new \DateTimeImmutable('@' . $now))->setTimezone(new \DateTimeZone('Europe/Moscow'))->setTime(6, 0)->getTimestamp();
+            if ($epoch > $now) $epoch -= 86400;
+            $nights->activate($world, ['day_seconds' => 86400, 'night_offset' => 57600, 'night_seconds' => 28800, 'max_severity' => 3, 'recovery_nights' => 2, 'mild_efficiency_bps' => 8000, 'severe_efficiency_bps' => 5000], $epoch);
+        }
         return ['ready' => true, 'schema_version' => WorldFlags::SCHEMA_VERSION, 'storage' => 'active', 'wallet' => 'active', 'world_id' => $world, 'flags' => $flags->capabilities()];
     }
 }

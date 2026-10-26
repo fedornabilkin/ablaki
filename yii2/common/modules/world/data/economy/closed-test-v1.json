@@ -3,7 +3,7 @@
   "code": "economy-closed-test-v1",
   "status": "candidate",
   "created_on": "2026-10-16",
-  "updated_on": "2026-10-21",
+  "updated_on": "2026-10-23",
   "effective_from": null,
   "activation": "explicit_versioned_publication",
   "currency": "Cr",
@@ -18,7 +18,8 @@
     "role": "world-tester",
     "verified_second_milestone_day": 5,
     "verified_with_one_missed_day": 6,
-    "feedback_path": "/forum"
+    "feedback_path": "/forum",
+    "all_templates": true
   },
   "health": {
     "maximum_hp": 100,
@@ -41,9 +42,30 @@
       "classic-hammer": 1,
       "world-explorer-elixir": 1
     },
-    "lifetime_claim": "world_start_claim"
+    "lifetime_claim": "world_start_claim",
+    "funding": "parent_budget"
   },
   "daily": {
+    "claim_limit": 5,
+    "initial_multiplier": 7,
+    "suppressed_by": {
+      "classic-log": [
+        "forest-plot"
+      ],
+      "classic-stone": [
+        "stone-plot",
+        "mine"
+      ],
+      "classic-fibre": [
+        "meadow-plot"
+      ],
+      "classic-herb": [
+        "meadow-plot"
+      ],
+      "classic-water": [
+        "water-source"
+      ]
+    },
     "items": {
       "classic-log": 2,
       "classic-stone": 2,
@@ -57,10 +79,10 @@
   },
   "map": {
     "starter_open_square": [
-      -1,
-      1
+      0,
+      0
     ],
-    "starter_open_cells": 9,
+    "starter_open_cells": 1,
     "bounds": [
       -2,
       2
@@ -68,19 +90,15 @@
     "max_cells": 25,
     "other_nodes_initial_open": 1,
     "curve": "rings",
-    "base_price_cr": "4.0000",
+    "base_price_cr": "0.5000",
     "bulk_minimum": 3,
     "discount_bps": 500,
-    "fee_receiver": "existing_settlement_budget"
+    "fee_receiver": "existing_settlement_budget",
+    "outer_ring_multiplier": 10
   },
   "construction": {
-    "owner_work_fee_cr": "0.0000",
-    "helper_pay": "accepted_budget_reservation",
-    "cancel_material_refund_bps": 7000,
-    "debit": "existing_object_budget",
-    "fee_receiver": "existing_settlement_budget",
-    "repair_policy": "existing_published_terms",
-    "placement_policy": "enabled_template_owned_active_parent_depth_lt_32"
+    "minimum_budgets": true,
+    "credits_per_builder_cr": "2.0000"
   },
   "craft_fees": {
     "object_budget_payment": true,
@@ -134,7 +152,7 @@
       "unit": "successful_source_batches"
     },
     "daily_supply": 1,
-    "active_constructions": 3,
+    "active_constructions": 1,
     "active_labor_sessions": 1,
     "sales_daily": {
       "operations": 20,
@@ -214,11 +232,12 @@
     "water_interval_seconds": 900,
     "water_window_seconds": 900,
     "harvest_window_seconds": 86400,
-    "dig_fee_cr": "2.0000",
+    "dig_fee_cr": "0.0000",
     "water_fee_cr": "2.0000",
     "sow_fee_cr": "0.0000",
     "harvest_fee_cr": "0.0000",
-    "fee_receiver": "existing_settlement_budget"
+    "fee_receiver": "existing_settlement_budget",
+    "dig_wage_cr": "1.0000"
   },
   "items": {
     "classic-alchemy": {
@@ -747,7 +766,7 @@
     },
     "forge": {
       "name": "Кузница",
-      "price_cr": "150.0000",
+      "price_cr": "40.0000",
       "work_seconds": 300,
       "materials": {
         "classic-plank": 10,
@@ -852,7 +871,8 @@
       "price_cr": "0.0000",
       "work_seconds": 10,
       "materials": {},
-      "description": "Площадка для костра и приготовления еды. Изготовьте и разместите необходимый предмет на её карте."
+      "description": "Площадка для костра и приготовления еды. Изготовьте и разместите необходимый предмет на её карте.",
+      "exposure_class": "outdoor"
     },
     "cookfire": {
       "name": "Очаг",
@@ -862,7 +882,8 @@
         "classic-stone": 4,
         "classic-log": 2
       },
-      "description": "Очаг для приготовления пищи. Еда восстанавливает здоровье и позволяет поддерживать сытость."
+      "description": "Очаг для приготовления пищи. Еда восстанавливает здоровье и позволяет поддерживать сытость.",
+      "exposure_class": "outdoor"
     },
     "trap": {
       "name": "Ловушка",
@@ -981,7 +1002,7 @@
       "node": "sand-plot",
       "ingredients": {},
       "output": {
-        "classic-sand": 2
+        "classic-sand": 4
       },
       "tools": [
         "world-shovel"
@@ -1055,7 +1076,7 @@
       "node": "mine",
       "ingredients": {},
       "output": {
-        "classic-coal": 2
+        "classic-coal": 3
       },
       "tools": [
         "world-stone-pickaxe"
@@ -1118,7 +1139,7 @@
       "node": "meadow-plot",
       "ingredients": {},
       "output": {
-        "world-magic-herb": 1
+        "world-magic-herb": 2
       },
       "tools": [],
       "work_seconds": 600,
@@ -1143,7 +1164,7 @@
       ],
       "work_seconds": 180,
       "cooldown_seconds": 1800,
-      "fee_cr": "4.0000",
+      "fee_cr": "2.0000",
       "experience": 5,
       "quota": null,
       "delivery": "canonical_storage",

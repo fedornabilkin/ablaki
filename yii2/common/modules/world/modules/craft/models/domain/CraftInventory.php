@@ -27,7 +27,9 @@ class CraftInventory
             foreach($this->s->rows('craft_inventory',$where) as $row)if($row['item_id']&&(int)$row['item_quantity']>0)$contents[]=$dto($row);
             $containers[]=['id'=>(int)$slot['id'],'capacity'=>(int)$container['capacity'],'durability'=>(int)$container['durability'],'max_durability'=>(int)$container['max_durability'],'slots'=>$contents,'repair'=>(new ChestRepair($this->s))->quote($user,(int)$slot['id'])];
         }
-        return $capacity+['slot_limit'=>self::LIMIT,'slots_used'=>count($slots),'inventory_slots'=>$slots,'containers'=>$containers,'inventory_settings'=>$this->settings(),'slot_pricing'=>'linear','server_time'=>time()];
+        $backpack = $this->s->isCanonical() ? (new CanonicalInventory($this->s))->backpack($user) : null;
+        return $capacity+['slot_limit'=>self::LIMIT,'slots_used'=>count($slots),'inventory_slots'=>$slots,'containers'=>$containers,'inventory_settings'=>$this->settings(),'slot_pricing'=>'linear','server_time'=>time()]
+            + ($backpack ? ['backpack_storage_id' => (int)$backpack['id']] : []);
     }
     public function capacity(int $user): array
     {
@@ -104,21 +106,35 @@ class CraftInventory
         if ($this->s->isCanonical()) return (new CanonicalInventory($this->s))->nonempty($id);
         return (new Query())->from('craft_inventory')->where(['container_id'=>$id])->andWhere(['>','item_quantity',0])->exists($this->s->db);
     }
-    public function buy(int $user,int $quantity,int $quotedPrice,?int $quotedTotal=null): int
+    public function purchaseQuote(int $user, int $quantity): array
+    {
+        return $this->slotsQuote($this->capacity($user)['permanent_slots'], $quantity, $this->settings()['slot_price']);
+    }
+    public function purchaseQuotes(int $user): array
+    {
+        $permanent = $this->capacity($user)['permanent_slots']; $base = $this->settings()['slot_price']; $quotes = [];
+        for ($quantity = 1; $quantity <= self::LIMIT - $permanent; $quantity++) $quotes[$quantity] = $this->slotsQuote($permanent, $quantity, $base);
+        return $quotes;
+    }
+    private function slotsQuote(int $permanent, int $quantity, int $basePrice): array
     {
         if($quantity<1||$quantity>self::LIMIT)throw new ConflictHttpException('Некорректное количество слотов.');
-        $capacity=$this->capacity($user);$next=$capacity['permanent_slots']+$quantity;
+        $next=$permanent+$quantity;
         if($next>self::LIMIT)throw new ConflictHttpException('Все постоянные слоты уже открыты.');
-        $basePrice=$this->settings()['slot_price'];$ordinal=$capacity['permanent_slots']-self::BASE+1;
-        $price=$basePrice*$ordinal;
-        $cost=$basePrice*intdiv($quantity*(2*$ordinal+$quantity-1),2);
+        $ordinal=$permanent-self::BASE+1;
+        return ['unit_price' => $basePrice*$ordinal, 'total_price' => $basePrice*intdiv($quantity*(2*$ordinal+$quantity-1),2),
+            'capacity_before' => $permanent, 'capacity_after' => $next];
+    }
+    public function buy(int $user,int $quantity,int $quotedPrice,?int $quotedTotal=null): int
+    {
+        $quote = $this->purchaseQuote($user, $quantity); $price = $quote['unit_price']; $cost = $quote['total_price'];
         // Old clients only confirm a flat total; never debit more than the amount they displayed.
         if($quotedPrice!==$price||($quotedTotal??$quotedPrice*$quantity)!==$cost)throw new ConflictHttpException('Цена слотов изменилась. Обновите мастерскую и подтвердите сумму.');
         if($cost) {
             $this->requireTransactionalBalance();
             (new \common\services\user\CreditLedger($this->s->db))->change($user,-$cost,'craft_slots','Покупка слотов инвентаря: '.$quantity);
         }
-        if($this->s->db->createCommand()->update('craft_capacity',['permanent_slots'=>$next],['user_id'=>$user])->execute()!==1)throw new \RuntimeException('Capacity write failed.');
+        if($this->s->db->createCommand()->update('craft_capacity',['permanent_slots'=>$quote['capacity_after']],['user_id'=>$user,'permanent_slots'=>$quote['capacity_before']])->execute()!==1)throw new \RuntimeException('Capacity write failed.');
         return $cost;
     }
     public function requireTransactionalBalance(): void

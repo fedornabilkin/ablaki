@@ -21,6 +21,10 @@ try {
     $db->createCommand()->insert('forum_comment', ['theme_id' => 6, 'user_id' => 1, 'active' => 0, 'created_at' => 999, 'comment' => 'Hidden'])->execute();
     $latest = dispatch('GET', 'v1/forum-theme', false, ['envelope' => '1', 'per-page' => '5', 'sort' => '-last_comment_created_at']);
     routeCheck($latest[0] === 200 && array_map('intval', array_column($latest[1]['items'], 'id')) === [1, 2, 3, 4, 5], 'homepage selects five topics by newest visible reply, not topic id or hidden reply');
+    foreach ([['v1/forum-theme', false], ['v1/forum-theme/my', true]] as $listing) {
+        $default = dispatch('GET', $listing[0], $listing[1], ['envelope' => 1, 'per-page' => 5]);
+        routeCheck($default[0] === 200 && array_map('intval', array_column($default[1]['items'], 'id')) === [1, 2, 3, 4, 5], 'topic 82 default latest visible reply order: ' . $listing[0]);
+    }
     foreach (['orel', 'saper', 'duel', 'five'] as $kind) {
         $table = 'game_' . $kind;
         $db->createCommand()->delete($table)->execute();

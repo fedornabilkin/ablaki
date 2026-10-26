@@ -51,7 +51,7 @@ final class EconomyGameplay
             $project = Build::requireOne($result['build']['id']);
         } else {
             $template = NodeTemplate::requireOne(['code' => $code]);
-            $input = ['parent_id' => $this->nodes[$parent], 'template_id' => (int)$template->id, 'name' => $template->name, 'labor_budget' => '0.0000', 'top_up' => true, 'terms_digest' => EconomyConstruction::terms($template)['terms_digest']];
+            $input = ['parent_id' => $this->nodes[$parent], 'template_id' => (int)$template->id, 'name' => $template->name, 'labor_budget' => $template->minimumLaborBudget(), 'top_up' => true, 'terms_digest' => EconomyConstruction::terms($template)['terms_digest']];
             $result = $this->run('world.build.create', $input, function ($op) use ($input) { return ['id' => (int)Build::begin($this->user, $input, $op)->id]; });
             $project = Build::requireOne($result['id']);
         }
@@ -123,11 +123,20 @@ final class EconomyGameplay
             if ($action === 'build') $this->build($code, $step['parent']);
             elseif ($action === 'craft') {
                 $recipe = (int)(new Query())->select('id')->from('craft_recipe')->where(['code' => $code])->scalar($this->db);
-                (new Crafting($this->store))->command($this->user, bin2hex(random_bytes(16)), 'craft', ['id' => $recipe, 'quantity' => $quantity]);
+                $workspace = new \common\modules\world\modules\craft\models\domain\CraftWorkspace($this->db, $this->flags);
+                $choices = $workspace->state($this->user, $this->nodes['starter-site'], $recipe);
+                $backpack = (new CanonicalInventory($this->store))->backpack($this->user);
+                $payload = ['node_id' => $this->nodes['starter-site'], 'recipe_id' => $recipe, 'quantity' => $quantity,
+                    'source_storage_ids' => array_column($choices['storages'], 'id'), 'output_storage_id' => (int)$backpack['id'],
+                    'equipment_instance_ids' => array_map(static function ($row) { return (int)$row['candidates'][0]['instance_id']; }, $choices['equipment']), 'use_object_budget' => true];
+                $q = $workspace->preview($this->user, $payload); $workspace->craft($this->user, bin2hex(random_bytes(16)), $payload, $q['quote_id'], (array)$q['expected_revisions']);
             } elseif ($action === 'source') $this->source($code, $quantity);
             elseif ($action === 'place') $this->place($code, $step['node']);
             elseif (in_array($action, ['sow', 'water', 'harvest'], true)) $this->crop($action);
-            elseif ($action === 'daily') $this->run('world.supplies.gather', ['node_id' => $this->nodes['starter-site']], function ($op) { return Supplies::gather($this->nodes['starter-site'], $this->user, $op); });
+            elseif ($action === 'daily') {
+                $supply = Supplies::state($this->nodes['starter-site'], $this->user);
+                if (!$supply['gather_exhausted']) $this->run('world.supplies.gather', ['node_id' => $this->nodes['starter-site']], function ($op) { return Supplies::gather($this->nodes['starter-site'], $this->user, $op); });
+            }
             elseif ($action === 'goal') $this->run('world.goal.claim', ['code' => $code], function ($op) use ($code) { return (new WorldGoals($this->db))->claim($this->user, $code, $op); });
             elseif ($action === 'day') { Clock::$at = $this->start + ($quantity - 1) * 86400; $this->nightJobs(); }
             elseif ($action === 'lodge') { $service = new WorldHousing($this->db, $this->flags); $input = ['node_id' => $this->nodes[$code]]; $q = $service->preview($this->user, $input, 'lodge'); $service->execute($this->user, bin2hex(random_bytes(16)), $input, $q['quote_id'], (array)$q['expected_revisions'], 'lodge'); }
@@ -219,11 +228,20 @@ try {
 economyCheck(economyGameplayMoney($db)->decimal() === $beforeFailure
     && (int)(new Query())->from('credit_transfer')->count('*', $db) === $transferCount
     && (int)(new Query())->from('history_balance')->count('*', $db) === $balanceCount, 'failed transfer correlation rolls back funds, transfer and balance history together');
-Command::run(9006, bin2hex(random_bytes(16)), 'fixture.municipal-funding', [], function ($op) use ($db, $gameCity) { return (new BudgetFunding($db))->contribute(9006, $gameCity, Money::parse('560.0000'), 'Finite fixture budget', $op); });
+// Legacy transfer coverage above is independent of the current parent-budget starter route.
+$app->user->switchIdentity(new EconomyGameplayIdentity(9005));
+$returnTransfer = new \common\modules\exchange\models\CreditTransfer(); $returnTransfer->amount = 250; $transferService->create($returnTransfer);
+$returnRow = (new Query())->from('credit_transfer')->where(['user_id' => 9005, 'user_buyer' => 0])->one($db);
+$app->user->switchIdentity(new EconomyGameplayIdentity(9006)); $transferService->confirm(\common\modules\exchange\models\CreditTransfer::findOne($returnRow['id']), $returnRow['password']); unset($returnRow);
+Command::run(9006, bin2hex(random_bytes(16)), 'fixture.municipal-funding', [], function ($op) use ($db, $gameCity) {
+    $result = (new BudgetFunding($db))->contribute(9006, $gameCity, Money::parse('810.0000'), 'Finite fixture budget including first campsite', $op);
+    (new \common\modules\world\models\domain\StarterReserve($db))->configure(9006, $gameCity, '250.0000', '250.0000', $op, true);
+    return $result;
+});
 $gameplay = new EconomyGameplay($db, 9005, $gameCity, $start, $scenario); $gameplay->fund();
 $scenarioName = getenv('ABL_ECONOMY_SCENARIO') ?: 'first-seven-days-with-lodging';
 if (!in_array($scenarioName, ['first-five-days-with-lodging', 'first-seven-days-with-lodging'], true)) throw new RuntimeException('Unknown acceptance route.');
-$gameplay->steps(array_merge($scenario['common_steps'], $scenario['scenarios'][$scenarioName]));
+$gameplay->steps(\common\modules\world\models\domain\EconomyScenario::routeSteps($scenario, $scenarioName, true));
 economyCheck((new Query())->from('world_goal_claim')->where(['world_id' => $gameWorld, 'user_id' => 9005, 'goal_code' => 'day-2'])->exists($db), 'actual command route reaches the second funded milestone on day five');
 $actor = (int)(new Query())->select('id')->from('game_actor')->where(['user_id' => 9005])->scalar($db);
 economyCheck((int)(new Query())->from('world_night_resolution')->where(['actor_id' => $actor, 'outcome' => 'protected'])->count('*', $db) === ($scenarioName === 'first-seven-days-with-lodging' ? 5 : 3)
@@ -235,6 +253,9 @@ economyCheck(!(new Query())->from('economy_account')->where(['or', ['<', 'amount
 $beforeReport = economyGameplayMoney($db)->decimal();
 $observation = (new \common\modules\world\models\domain\EconomyReport($db))->report('', 9004, 1);
 $observed = $observation['users'][0];
+$financial = (new \common\modules\world\models\domain\WorldBalanceOverview($db))->report(1);
+economyCheck($financial['paid_orders_cr'] === ($scenarioName === 'first-seven-days-with-lodging' ? '380.0000' : '332.0000')
+    && $financial['paid_goals_cr'] === '150.0000' && $financial['budget_shortfall_cr'] === '0.0000', 'administrative overview credits actual fulfilled demand and paid rewards without requesting the same funding twice');
 economyCheck($observed['user_id'] === 9005 && $observed['finances']['earned_cr'] === ($scenarioName === 'first-seven-days-with-lodging' ? '380.0000' : '332.0000')
     && $observed['finances']['rewards_cr'] === '150.0000', 'observation report separates earned sales and funded rewards from personal starting funds');
 economyCheck(isset($observed['retention']['D30']) && economyGameplayMoney($db)->decimal() === $beforeReport
@@ -253,12 +274,14 @@ if ($scenarioName === 'first-seven-days-with-lodging') {
     economyCheck((new Query())->from('craft_storage')->where(['owner_user_id' => 9005, 'kind' => 'chest', 'capacity' => 20])->exists($db), 'week route places a twenty-slot chest without destroying existing contents');
 }
 // With all remaining funded demand removed, no hidden buyer or daily Cr appears.
-$remainingOrder = (new Query())->from('economy_purchase_order')->where(['node_id' => $gameCity, 'status' => 'open'])->one($db);
+$remainingOrders = (new Query())->from('economy_purchase_order')->where(['node_id' => $gameCity, 'status' => 'open'])->all($db);
 $closedMoney = economyGameplayMoney($db)->decimal();
 $orderService = new StarterOrders($db, new WorldFlags($db, Yii::$app->getModule('world')), new WorldAccessPolicy(9001, true));
-$closeInput = ['node_id' => $gameCity, 'order_id' => (int)$remainingOrder['id']];
-$closeQuote = $orderService->preview(9001, $closeInput, 'cancel');
-$orderService->execute(9001, bin2hex(random_bytes(16)), $closeInput, $closeQuote['quote_id'], (array)$closeQuote['expected_revisions'], 'cancel');
+foreach ($remainingOrders as $remainingOrder) {
+    $closeInput = ['node_id' => $gameCity, 'order_id' => (int)$remainingOrder['id']];
+    $closeQuote = $orderService->preview(9001, $closeInput, 'cancel');
+    $orderService->execute(9001, bin2hex(random_bytes(16)), $closeInput, $closeQuote['quote_id'], (array)$closeQuote['expected_revisions'], 'cancel');
+}
 economyCheck(!(new Query())->from('economy_purchase_order')->where(['node_id' => $gameCity, 'status' => 'open'])->exists($db)
     && economyGameplayMoney($db)->decimal() === $closedMoney, 'zero funded demand releases only the unused reserve and does not issue credits');
 economyReject(function () use ($db, $gameCity, $remainingOrder) {

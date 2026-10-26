@@ -14,6 +14,9 @@ foreach (['m261008_120000_world_mvp_facilities', 'm261008_160000_world_construct
     ob_start(); try { (new $migrationClass(['db' => $db]))->up(); } finally { ob_end_clean(); }
 }
 $db->schema->refresh();
+require_once $yiiRoot . '/console/world-migrations/m261023_120000_world_starter_funding.php';
+ob_start(); try { (new m261023_120000_world_starter_funding(['db' => $db]))->up(); } finally { ob_end_clean(); }
+$db->schema->refresh();
 require_once $yiiRoot . '/vendor/yiisoft/yii2/rbac/migrations/m140506_102106_rbac_init.php';
 $app->set('authManager', ['class' => \yii\rbac\DbManager::class, 'db' => $db]);
 ob_start(); try { (new m140506_102106_rbac_init(['db' => $db]))->up(); } finally { ob_end_clean(); }
@@ -85,7 +88,7 @@ $startProject = \common\modules\world\models\Build::requireOne($start['build']['
 $db->createCommand()->update('world_build_work', ['accounted_at' => time() - 30, 'last_seen_at' => time()], ['build_id' => $startProject->id, 'ended_at' => null])->execute();
 \common\modules\world\models\Command::run($freshUser, bin2hex(random_bytes(16)), 'world.build.heartbeat', ['build_id' => (int)$startProject->id], function ($operation) use ($startProject, $freshUser) { return \common\modules\world\models\BuildWork::heartbeat($startProject, $freshUser, $operation, false); });
 $siteId = (int)$startProject->node_id;
-economyCheck((int)(new Query())->from('world_map_cell')->where(['parent_id' => $siteId, 'state' => 'open'])->count('*', $db) === 9, 'completed starter site opens exactly nine free cells');
+economyCheck((int)(new Query())->from('world_map_cell')->where(['parent_id' => $siteId, 'state' => 'open'])->count('*', $db) === 1, 'completed starter site opens only the initial cell and keeps exploration meaningful');
 $freshStock = new \common\modules\world\modules\craft\models\domain\CraftStorage($db); $freshStock->workspaceNodeId = $siteId;
 $logItem = (int)(new Query())->select('id')->from('craft_item')->where(['code' => 'classic-log'])->scalar($db);
 economyCheck($freshStock->quantities($freshUser)[$logItem] === 4, 'new starter grant has four logs rather than the old oversized set');
@@ -93,12 +96,12 @@ $plankRecipe = (int)(new Query())->select('id')->from('craft_recipe')->where(['c
 (new \common\modules\world\modules\craft\models\domain\Crafting($freshStock))->command($freshUser, bin2hex(random_bytes(16)), 'craft', ['id' => $plankRecipe, 'quantity' => 1]);
 economyCheck(EconomyQuota::state($db, $freshUser, 'crafting_hourly')['remaining'] === 29, 'legacy crafting consumes the same recipe-batch quota');
 $forestTemplate = \common\modules\world\models\NodeTemplate::requireOne(['code' => 'forest-plot']);
-$forestInput = ['parent_id' => $siteId, 'template_id' => (int)$forestTemplate->id, 'name' => 'Fixture forest', 'labor_budget' => '0', 'top_up' => true,
+$forestInput = ['parent_id' => $siteId, 'template_id' => (int)$forestTemplate->id, 'name' => 'Fixture forest', 'labor_budget' => $forestTemplate->minimumLaborBudget(), 'top_up' => true,
     'terms_digest' => \common\modules\world\models\domain\EconomyConstruction::terms($forestTemplate)['terms_digest']];
 $forestBuild = \common\modules\world\models\Command::run($freshUser, bin2hex(random_bytes(16)), 'world.build.create', $forestInput, function ($operation) use ($freshUser, $forestInput) {
     $build = \common\modules\world\models\Build::begin($freshUser, $forestInput, $operation); return ['id' => (int)$build->id];
 });
-economyCheck(\common\modules\world\modules\economy\value\Money::parse((string)(new Query())->select('credit')->from('persone')->where(['user_id' => $freshUser])->scalar($db))->decimal() === '220.0000', 'construction separately pays thirty credits after consuming materials');
+economyCheck(\common\modules\world\modules\economy\value\Money::parse((string)(new Query())->select('credit')->from('persone')->where(['user_id' => $freshUser])->scalar($db))->decimal() === '218.0000', 'construction pays thirty credits and holds the two-credit minimum helper budget');
 $forestProject = \common\modules\world\models\Build::requireOne($forestBuild['id']);
 \common\modules\world\models\Command::run($freshUser, bin2hex(random_bytes(16)), 'world.build.fixture-finish', ['build_id' => (int)$forestProject->id], function ($operation) use ($forestProject) {
     $forestProject->worked_seconds = $forestProject->required_seconds; $forestProject->finish($operation); return ['completed' => true];
@@ -156,7 +159,7 @@ function economySourceCommand(int $user, int $node, string $action, array $extra
 {
     $payload = ['mining_node_id' => $node] + $extra;
     return \common\modules\world\models\Command::run($user, bin2hex(random_bytes(16)), 'world.mining.' . $action, $payload, function ($operation) use ($user, $node, $action, $extra) {
-        if ($action === 'start') return \common\modules\world\models\Mining::start($node, $user, $operation, $extra['action_code'] ?? null, $extra['output_storage_id'] ?? null);
+        if ($action === 'start') return \common\modules\world\models\Mining::start($node, $user, $operation, $extra['action_code'] ?? null, $extra['output_storage_id'] ?? null, $extra['output_destination'] ?? null);
         return \common\modules\world\models\Mining::heartbeat($node, $user, $operation, $action === 'stop');
     });
 }
@@ -192,8 +195,13 @@ economyCheck($delivered['pending_quantity'] === 0 && $delivered['quota']['remain
 $rollbackPreview = $publisher->preview($profile);
 $publisher->publish($profile, $rollbackPreview['digest'], 9001, 'Fixture: restore prior profile as a new revision');
 economyCheck(EconomyRuntime::current($db)['version'] === 3 && (int)(new Query())->from('world_economy_profile')->count('*', $db) === 3, 'rollback creates a new immutable publication without deleting history');
-$db->createCommand()->insert('craft_storage', ['identity_key' => 'fixture-full-source', 'kind' => 'stockpile', 'owner_user_id' => $freshUser, 'node_id' => $forestId, 'capacity' => 1])->execute();
-$fullStorage = (int)$db->getLastInsertID();
+$fullStorage = $db->transaction(static function () use ($db, $forestId, $freshUser) {
+$sourceNode = \common\modules\world\models\Node::requireOne($forestId);
+$sourceMini = \common\modules\world\models\NodeFactory::create(\common\modules\world\models\NodeTemplate::requireOne(['code' => 'mini-storage-level-' . ((int)$sourceNode->hierarchy_level + 1)]), $sourceNode, $freshUser, 'Source mini-storage', 'source-mini-storage', null, 'constructing');
+$db->createCommand()->update('world_node', ['status' => 'active', 'condition' => $sourceMini->max_condition], ['id' => $sourceMini->id])->execute();
+$db->createCommand()->insert('craft_storage', ['identity_key' => 'fixture-full-source', 'kind' => 'stockpile', 'owner_user_id' => $freshUser, 'node_id' => $sourceMini->id, 'capacity' => 1])->execute();
+return (int)$db->getLastInsertID();
+});
 $db->transaction(function () use ($db, $freshUser, $fullStorage, $freshStock) {
     $inventory = new \common\modules\world\modules\craft\models\domain\CanonicalInventory($freshStock);
     $target = (new Query())->from('craft_storage')->where(['id' => $fullStorage])->one($db);
@@ -246,15 +254,23 @@ economyCheck($claimed === \common\modules\world\models\Command::run($freshUser, 
 $app->authManager->assign($testRole, $freshUser);
 
 $expansions = new \common\modules\world\models\domain\EconomyStorage($db, $flags);
+// Disposable fixture funds cover the progressive ten-slot price.
+$db->createCommand()->update('persone', ['credit' => '1000.0000'], ['user_id' => $freshUser])->execute();
 $backpackId = (int)(new \common\modules\world\modules\craft\models\domain\CanonicalInventory($freshStock))->backpack($freshUser)['id'];
 $expandedPreview = $expansions->preview($freshUser, $backpackId, 'backpack-10');
-economyCheck($expandedPreview['terms']['capacity_before'] === 20 && $expandedPreview['terms']['capacity_after'] === 30 && $expandedPreview['terms']['price_cr'] === '90.0000', 'storage package preview binds permanent capacity and exact total');
+economyCheck($expandedPreview['terms']['capacity_before'] === 20 && $expandedPreview['terms']['capacity_after'] === 30 && $expandedPreview['terms']['price_cr'] === '550.0000', 'both inventory and placement use the progressive ten-slot price instead of a discounted package');
+$sharedPurchase = new \common\modules\world\modules\craft\models\domain\CraftInventory($freshStock);
+economyCheck($sharedPurchase->purchaseQuote($freshUser, 10)['total_price'] === 550, 'legacy purchase adapter shares the same slot quotation');
+try { $sharedPurchase->buy($freshUser, 10, 10, 90); throw new LogicException('Cheap slot purchase accepted.'); }
+catch (\yii\web\ConflictHttpException $error) { economyCheck(true, 'old discounted slot totals cannot bypass progressive pricing'); }
 $expandedKey = bin2hex(random_bytes(16));
 $expanded = $expansions->execute($freshUser, $backpackId, 'backpack-10', $expandedKey, $expandedPreview['quote_id'], (array)$expandedPreview['expected_revisions']);
 economyCheck($expanded['capacity_after'] === 30 && $expansions->state($freshUser, $backpackId)['capacity'] === 30, 'storage package adds permanent slots without replacing existing rights');
 economyCheck($expanded === $expansions->execute($freshUser, $backpackId, 'backpack-10', $expandedKey, $expandedPreview['quote_id'], (array)$expandedPreview['expected_revisions'])
     && (int)(new Query())->from('world_storage_expansion')->where(['user_id' => $freshUser])->count('*', $db) === 1, 'storage expansion replay debits and expands exactly once');
 economyReject(function () use ($expansions, $freshUser, $backpackId, $expandedPreview) { $expansions->execute($freshUser, $backpackId, 'backpack-10', bin2hex(random_bytes(16)), $expandedPreview['quote_id'], (array)$expandedPreview['expected_revisions']); }, 'QUOTE_ALREADY_USED');
+economyCheck($expansions->preview($freshUser, $backpackId, 'backpack-1')['terms']['price_cr'] === '110.0000'
+    && (float)(new Query())->select('credit')->from('persone')->where(['user_id' => $freshUser])->scalar($db) === 450.0, 'next slot price follows purchased capacity and ten slots debit exactly once');
 
 $adminPermission = $app->authManager->createPermission('p-admin'); $app->authManager->add($adminPermission); $app->authManager->assign($adminPermission, 9001);
 $app->user->switchIdentity(new CraftIdentity());
@@ -266,8 +282,8 @@ adminReject(400, function () use ($profile) { adminPage('world/craft/catalog/eco
 $app->authManager->revoke($adminPermission, 9001); $app->user->switchIdentity(new CraftIdentity());
 adminReject(403, function () { adminPage('world/craft/catalog/economy'); }, 'profile administration requires built-in administrator permission');
 
-$db->transaction(function () use ($db, $forestId, $freshUser, &$greenhouse, &$greenhouseBed) {
-    $greenhouse = \common\modules\world\models\NodeFactory::create(\common\modules\world\models\NodeTemplate::requireOne(['code' => 'small-greenhouse']), \common\modules\world\models\Node::requireOne($forestId), $freshUser, 'Existing fixture greenhouse', 'fixture-greenhouse', null, 'constructing');
+$db->transaction(function () use ($db, $siteId, $freshUser, &$greenhouse, &$greenhouseBed) {
+    $greenhouse = \common\modules\world\models\NodeFactory::create(\common\modules\world\models\NodeTemplate::requireOne(['code' => 'small-greenhouse']), \common\modules\world\models\Node::requireOne($siteId), $freshUser, 'Existing fixture greenhouse', 'fixture-greenhouse', null, 'constructing');
     $db->createCommand()->update('world_node', ['status' => 'active', 'condition' => $greenhouse->max_condition], ['id' => $greenhouse->id])->execute(); $greenhouse->refresh();
     $greenhouseBed = \common\modules\world\models\NodeFactory::create(\common\modules\world\models\NodeTemplate::requireOne(['code' => 'garden-bed']), $greenhouse, $freshUser, 'Existing fixture greenhouse bed', 'fixture-greenhouse-bed', null, 'constructing');
     $db->createCommand()->update('world_node', ['status' => 'active', 'condition' => $greenhouseBed->max_condition], ['id' => $greenhouseBed->id])->execute();

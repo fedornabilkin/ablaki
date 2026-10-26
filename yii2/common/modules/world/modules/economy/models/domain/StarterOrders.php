@@ -125,7 +125,9 @@ class StarterOrders
             if ($policy['rate_bps'] >= 10000) throw new GameError('STARTER_POLICY_ZERO_NET', 'Начальные условия должны оставлять игроку часть собранного дохода.', 422);
             $cost = Money::parse($input['unit_price'])->multiply($input['quantity']);
             if ($cost->isZero() || $cost->isNegative() || (new BudgetSpending($this->db))->available((int)$budget['id'])->compare($cost) < 0) throw new GameError('INSUFFICIENT_BUDGET', 'Недостаточно свободных средств бюджета для полной оплаты заказа.');
-            $terms += ['reserved_cost' => $cost->decimal(), 'item_name' => trim($item['name']), 'starter_policy' => $policy, 'goods_consumed' => true];
+            $rate = (int)(\common\modules\world\models\WorldTime::settings($this->db)['world_time_rate'] ?? 1);
+            $terms += ['reserved_cost' => $cost->decimal(), 'item_name' => trim($item['name']), 'starter_policy' => $policy, 'goods_consumed' => true,
+                'lifetime_seconds' => \common\modules\world\models\WorldTime::realSeconds($input['lifetime_hours'] * 3600, $rate)];
         } else {
             $order = $this->order($place['id'], $input['order_id']); $result['order'] = $order; $terms['order_revision'] = (int)$order['revision'];
             if ($action === 'cancel') {
@@ -197,9 +199,9 @@ class StarterOrders
                 $hold = $spend->reserve((int)$p['budget']['id'], Money::parse($terms['reserved_cost']), $payload['purpose'], $operation);
                 $this->db->createCommand()->insert('economy_purchase_order', ['node_id' => $payload['node_id'], 'item_id' => $payload['item_id'], 'commitment_id' => $hold,
                     'starter_history_id' => $terms['starter_policy']['history_id'], 'quantity' => $payload['quantity'], 'remaining_quantity' => $payload['quantity'], 'per_user_limit' => $payload['per_user_limit'],
-                    'unit_price' => $payload['unit_price'], 'purpose' => $payload['purpose'], 'status' => 'open', 'created_by' => $user, 'created_at' => $now, 'expires_at' => $now + $payload['lifetime_hours'] * 3600])->execute();
+                    'unit_price' => $payload['unit_price'], 'purpose' => $payload['purpose'], 'status' => 'open', 'created_by' => $user, 'created_at' => $now, 'expires_at' => $now + $terms['lifetime_seconds']])->execute();
                 $id = (int)$this->db->getLastInsertID();
-                (new JobQueue($this->db))->enqueue('economy.order.expire', 'order:' . $id, ['order_id' => $id], null, $now + $payload['lifetime_hours'] * 3600);
+                (new JobQueue($this->db))->enqueue('economy.order.expire', 'order:' . $id, ['order_id' => $id], null, $now + $terms['lifetime_seconds']);
             } elseif ($action === 'cancel') {
                 $id = (int)$p['order']['id']; $this->close($p['order'], 'cancelled', $operation);
             } else {

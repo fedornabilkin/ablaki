@@ -132,6 +132,7 @@ class TreasuryLedger
                 'status' => 'pending', 'created_at' => $now, 'due_at' => $now + $plan['rule']['due_seconds']])->execute();
             $this->db->createCommand()->insert('economy_budget_reservation', ['obligation_id' => (int)$this->db->getLastInsertID(), 'account_id' => $budgetId, 'amount' => $tax->decimal()])->execute();
         }
+        (new \common\modules\world\models\domain\StarterFunding($this->db))->settle($node, $operation);
     }
     /** Called only by JobQueue::perform while the live lease/fence and registry are locked. */
     public function runLoss(array $payload): void

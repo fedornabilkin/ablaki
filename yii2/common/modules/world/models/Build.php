@@ -25,6 +25,7 @@ class Build extends Record
         if (!$onboarding || $parent->owner_user_id !== null) $parent->requireOwner($user);
         $template = NodeTemplate::requireOne($input['template_id']);
         if (!$template->player_buildable || !$template->enabled || !$template->permits($parent)) throw new GameError('INVALID_TEMPLATE', 'Этот объект здесь строить нельзя.', 422);
+        self::requireAvailableProject($user, (int)$parent->root_id);
         $economyTerms = domain\EconomyConstruction::check($template, $user, $input, $onboarding);
         $cell = isset($input['x'], $input['y']) ? ['x' => $input['x'], 'y' => $input['y']]
             : ($onboarding ? null : (new \common\modules\world\models\domain\WorldTree(self::getDb()))->nextPosition((int)$parent->id));
@@ -34,12 +35,19 @@ class Build extends Record
                 throw new GameError('MAP_CELL_CLOSED', 'Сначала исследуйте и откройте выбранную ячейку.', 422);
         }
         $budget = Money::parse($input['labor_budget']);
+        $minimumEnabled = (domain\EconomyRuntime::current(self::getDb())['profile']['construction']['minimum_budgets'] ?? false) === true;
+        $minimum = $minimumEnabled && !$onboarding ? Money::parse($template->minimumLaborBudget((int)$parent->hierarchy_level + 1)) : Money::parse('0');
+        if (!$budget->isZero() && $budget->compare($minimum) < 0) throw new GameError('MINIMUM_BUILD_BUDGET', 'Для найма нужен бюджет от ' . $minimum->display() . '; для самостоятельной стройки укажите 0.', 422, ['minimum_labor_budget' => $minimum->decimal()]);
         if ($budget->isNegative()) throw new GameError('INVALID_BUDGET', 'Бюджет не может быть отрицательным.', 422);
         $hold = null;
         BuildRequirements::check($user, (int)$parent->id, $template);
         BuildMaterials::consume($user, $template->materials(), $operation, (int)$parent->id);
         if ($economyTerms) domain\EconomyPayments::charge(self::getDb(), $user, (int)$parent->id, Money::parse($economyTerms['price_cr']), (bool)($input['top_up'] ?? false), $operation, 'Постройка: ' . $template->name);
         $node = NodeFactory::create($template, $parent, $user, $input['name'], 'build-' . $operation, $cell, 'constructing');
+        $settings = json_decode($node->settings_json ?: '{}', true) ?: [];
+        $settings['accepted_build_minimum_cr'] = $minimum->decimal(); $settings['builder_limit_enabled'] = $minimumEnabled;
+        $node->settings_json = Json::encode((object)$settings);
+        if (!$node->save(false)) throw new \RuntimeException('Construction terms write failed.');
         $accounts = (new EconomyHierarchy(self::getDb()))->provision((int)$node->id, $operation);
         if (!$budget->isZero()) {
             $source = $parent->owner_user_id == $user ? $parent : $node;
@@ -48,13 +56,24 @@ class Build extends Record
             $hold = (new BudgetSpending(self::getDb()))->reserve((int)$accounts['budget']['id'], $budget, 'Строительство: ' . $template->name, $operation);
         }
         $build = new self(); $build->setAttributes(['node_id' => $node->id, 'parent_id' => $parent->id, 'owner_user_id' => $user,
-            'required_seconds' => $template->build_seconds, 'worked_seconds' => 0, 'labor_budget' => $budget->decimal(), 'commitment_id' => $hold,
+            'required_seconds' => $template->realWorkSeconds(WorldTime::rate((int)$parent->root_id)), 'worked_seconds' => 0, 'labor_budget' => $budget->decimal(), 'commitment_id' => $hold,
             'materials_json' => Json::encode((object)$template->materials()), 'status' => 'building', 'revision' => 1, 'created_at' => time()], false);
         if ($build->hasAttribute('active_node_id')) $build->active_node_id = $node->id;
         if (!$build->save(false)) throw new \RuntimeException('Build write failed.');
         return $build;
     }
     public function isRepair(): bool { return $this->getAttribute('job_kind') === 'repair'; }
+    public static function requireAvailableProject(int $user, int $world): void
+    {
+        if (self::find()->alias('b')->innerJoin(['n' => 'world_node'], 'n.id=b.node_id')->where(['b.owner_user_id' => $user, 'b.status' => 'building', 'n.root_id' => $world])->exists())
+            throw new GameError('CONSTRUCTION_LIMIT', 'Сначала завершите или отмените текущую стройку или ремонт.', 409);
+    }
+    public function minimumLaborBudget(): string { return (string)((json_decode($this->node->settings_json ?: '{}', true) ?: [])['accepted_build_minimum_cr'] ?? '0.0000'); }
+    public function builderLimit(): ?int
+    {
+        $settings = json_decode($this->node->settings_json ?: '{}', true) ?: [];
+        return ($settings['builder_limit_enabled'] ?? false) ? intdiv((int)explode('.', (string)$this->labor_budget)[0], 2) : null;
+    }
     public static function repair(int $user, int $nodeId, string $operation): self
     {
         self::requireTransaction();
@@ -62,6 +81,7 @@ class Build extends Record
         $node = Node::readable($nodeId, $user); $node->requireOwner($user);
         if ($node->status !== 'active') throw new GameError('REPAIR_UNAVAILABLE', 'Ремонт доступен только завершённому объекту.', 422);
         if (self::find()->where(['active_node_id'=>$nodeId])->exists()) throw new GameError('REPAIR_ALREADY_STARTED', 'Ремонт уже запущен.', 409);
+        self::requireAvailableProject($user, (int)$node->root_id);
         if ((new \yii\db\Query())->from(['n'=>'world_node'])->innerJoin(['c'=>'world_node_closure'], 'c.ancestor_id=n.id')->where(['c.descendant_id'=>$nodeId])->andWhere(['<>','n.status','active'])->exists()) throw new GameError('REPAIR_UNAVAILABLE', 'Родительский объект недоступен.', 409);
         $instance = BuildStrength::shelterInstance($nodeId);
         if ($instance) {
@@ -73,7 +93,7 @@ class Build extends Record
         $missing = (int)$node->max_condition - (int)$node->condition;
         if ($missing <= 0) throw new GameError('REPAIR_NOT_NEEDED', 'Объект полностью исправен.', 422);
         $build = new self(); $build->setAttributes(['node_id'=>$nodeId,'active_node_id'=>$nodeId,'parent_id'=>$node->parent_id ?: $nodeId,'owner_user_id'=>$user,
-            'job_kind'=>'repair','initial_condition'=>(int)$node->condition,'required_seconds'=>max(1,(int)ceil($missing * 60 / 100)),
+            'job_kind'=>'repair','initial_condition'=>(int)$node->condition,'required_seconds'=>max(1,WorldTime::realSeconds((int)ceil($missing * 60 / 100), WorldTime::rate((int)$node->root_id))),
             'worked_seconds'=>0,'labor_budget'=>'0.0000','materials_json'=>'{}','status'=>'building','revision'=>1,'created_at'=>time()], false);
         if (!$build->save(false)) throw new \RuntimeException('Repair write failed.');
         return $build;
@@ -94,16 +114,20 @@ class Build extends Record
         $form = new BuildSettingsForm(); $form->setAttributes(['name'=>$name,'labor_budget'=>$budgetValue,'top_up'=>$topUp]);
         $validated = $form->input(); $name = $validated['name'];
         $budget = Money::parse($budgetValue); $old = Money::parse((string)$this->labor_budget);
+        if (!$budget->isZero() && $budget->compare(Money::parse($this->minimumLaborBudget())) < 0) throw new GameError('MINIMUM_BUILD_BUDGET', 'Для найма укажите принятый минимум или 0 для самостоятельной стройки.', 422);
         if ($budget->isNegative()) throw new GameError('INVALID_BUDGET', 'Бюджет не может быть отрицательным.', 422);
         if ($budget->compare($old) !== 0) {
-            if ($budget->compare($old) < 0) throw new GameError('BUILD_BUDGET_DECREASE', 'Бюджет строительства можно только пополнять.', 422);
+            if ($budget->compare($old) < 0) {
+                BuildClock::checkpoint($this, time());
+                if ($this->getWork()->andWhere(['<>', 'user_id', $this->owner_user_id])->andWhere(['or', ['ended_at' => null], ['>', 'seconds', 0]])->exists()) throw new GameError('BUILD_BUDGET_DECREASE', 'Помощники уже приняли работу. Их оплату нельзя уменьшить; бюджет можно увеличить.', 422);
+            }
             $spending = new BudgetSpending(self::getDb());
             // Preserve the accepted funding account; a new commitment uses the owned parent budget when possible.
             $source = $this->fundingNode();
             $account = $this->commitment_id ? $spending->commitment((int)$this->commitment_id)['account_id'] : (new EconomyHierarchy(self::getDb()))->provision((int)$source->id, $operation)['budget']['id'];
             $fundingNode = (int)(new \yii\db\Query())->select('s.node_id')->from(['a' => 'economy_account'])->innerJoin(['s' => 'economy_subject'], '[[s.id]]=[[a.subject_id]]')->where(['a.id' => $account])->scalar(self::getDb());
             Node::requireOne($fundingNode)->requireOwner($user);
-            self::fund($user, Node::requireOne($fundingNode), (int)$account, $budget->subtract($old), $topUp, $operation);
+            if ($budget->compare($old) > 0) self::fund($user, Node::requireOne($fundingNode), (int)$account, $budget->subtract($old), $topUp, $operation);
             if ($this->commitment_id) $spending->release((int)$this->commitment_id);
             $this->commitment_id = null;
             if (!$budget->isZero()) {
@@ -142,6 +166,7 @@ class Build extends Record
         if (!$cancel && (int)$this->worked_seconds < (int)$this->required_seconds) return;
         BuildPayment::settle($this, $operation);
         if ($cancel && !$this->isRepair()) BuildPayment::refundCancelled($this, $operation);
+        if ($cancel && !$this->isRepair()) (new domain\StarterFunding(self::getDb()))->cancel((int)$this->node_id, $operation);
         if ($cancel && !$this->isRepair()) BuildMaterials::refund((int)$this->owner_user_id, Json::decode($this->materials_json), $operation, (int)$this->parent_id);
         BuildWork::closeAll((int)$this->id);
         $this->status = $cancel ? 'cancelled' : 'completed'; $this->finished_at = time(); $this->revision++;
@@ -172,6 +197,9 @@ class Build extends Record
         return ['id', 'node_id', 'parent_id', 'owner_user_id', 'required_seconds', 'worked_seconds', 'labor_budget', 'status', 'revision', 'created_at',
             'world_time_rate' => function () { return WorldTime::rate((int)$this->node->root_id); },
             'server_time' => function () { return time(); },
+            'minimum_labor_budget' => function () { return $this->minimumLaborBudget(); },
+            'can_reduce_budget' => function () { return !$this->getWork()->andWhere(['<>', 'user_id', $this->owner_user_id])->andWhere(['or', ['ended_at' => null], ['>', 'seconds', 0]])->exists(); },
+            'builder_limit' => function () { return $this->builderLimit(); },
             'job_kind' => function () { return $this->isRepair() ? 'repair' : 'construction'; },
             'initial_condition' => function () { return (int)$this->getAttribute('initial_condition'); },
             'max_condition' => function () { return (int)$this->node->max_condition; },

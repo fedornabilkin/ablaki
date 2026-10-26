@@ -8,18 +8,25 @@ class NightCalendar
     {
         if ($sequence < 0) throw new \InvalidArgumentException('Negative night sequence.');
         $start = (int)$policy['activated_at'] + $sequence * (int)$policy['day_seconds'] + (int)$policy['night_offset'];
-        return ['sequence' => $sequence, 'started_at' => $start, 'ended_at' => $start + (int)$policy['night_seconds']];
+        $duration = (int)$policy['night_seconds'];
+        foreach ($policy['time_segments'] ?? [] as $segment) {
+            if ($sequence < $segment['from_sequence']) break;
+            $start = (int)$segment['started_at'] + ($sequence - (int)$segment['from_sequence']) * (int)$segment['day_seconds'];
+            $duration = (int)$segment['night_seconds'];
+        }
+        return ['sequence' => $sequence, 'started_at' => $start, 'ended_at' => $start + $duration];
     }
     public static function firstStartingAt(array $policy, int $instant): int
     {
-        $delta = max(0, $instant - (int)$policy['activated_at'] - (int)$policy['night_offset']);
-        return intdiv($delta + (int)$policy['day_seconds'] - 1, (int)$policy['day_seconds']);
+        $low = 0; $high = max(1, $instant - (int)$policy['activated_at'] + 1);
+        while ($low < $high) { $middle = intdiv($low + $high, 2); if (self::bounds($policy, $middle)['started_at'] < $instant) $low = $middle + 1; else $high = $middle; }
+        return $low;
     }
     public static function currentOrNext(array $policy, int $now): array
     {
-        $firstEnd = (int)$policy['activated_at'] + (int)$policy['night_offset'] + (int)$policy['night_seconds'];
-        $sequence = $now < $firstEnd ? 0 : intdiv($now - $firstEnd, (int)$policy['day_seconds']) + 1;
-        return self::bounds($policy, $sequence);
+        $low = 0; $high = max(1, $now - (int)$policy['activated_at'] + 1);
+        while ($low < $high) { $middle = intdiv($low + $high, 2); if (self::bounds($policy, $middle)['ended_at'] <= $now) $low = $middle + 1; else $high = $middle; }
+        return self::bounds($policy, $low);
     }
     public static function efficiency(array $policy, int $severity): int
     {

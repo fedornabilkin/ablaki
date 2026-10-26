@@ -100,41 +100,43 @@ jobs:
           composer check-platform-reqs
           composer audit --locked --no-dev --abandoned=ignore
 
-      - name: Run isolated API checks
-        working-directory: yii2
-        shell: bash
-        run: |
-          for suite in auth-response frontend-lists frontend-api-routing game-overview five-game forum-gift forum-install daily-reward exchange-refund topic68-economy worker-barrier-test world-economy-gameplay world-feedback-food classic-craft-install world-economy-profile user-activity user-cleanup; do
-            if ! php "tests/release/$suite.php" 2>&1 | tee "$RUNNER_TEMP/backend-$suite.log"; then
-              details=$(tail -n 15 "$RUNNER_TEMP/backend-$suite.log")
-              details=${details//%/%25}
-              details=${details//$'\r'/%0D}
-              details=${details//$'\n'/%0A}
-              echo "::error file=yii2/tests/release/$suite.php,title=Isolated API check failed::$details"
-              exit 1
-            fi
-          done
-
-      - name: Check MySQL and PostgreSQL transactions
+      - name: Run isolated API and target database checks in parallel
         working-directory: yii2
         env:
           MYSQL_CONTAINER: ${{ job.services.mysql.id }}
         shell: bash
         run: |
           # PHP 8.3 supports the MySQL 8 default authentication plugin.
+          check_isolated() {
+            unset ABL_TEST_DSN
+            for suite in auth-response frontend-lists frontend-api-routing game-overview five-game forum-gift forum-install daily-reward exchange-refund topic68-economy worker-barrier-test world-economy-gameplay world-feedback-food classic-craft-install world-economy-profile user-activity user-cleanup; do
+              if ! php "tests/release/$suite.php" 2>&1 | tee "$RUNNER_TEMP/backend-$suite.log"; then
+                details=$(tail -n 15 "$RUNNER_TEMP/backend-$suite.log")
+                details=${details//%/%25}
+                details=${details//$'\r'/%0D}
+                details=${details//$'\n'/%0A}
+                echo "::error file=yii2/tests/release/$suite.php,title=Isolated API check failed::$details"
+                return 1
+              fi
+            done
+          }
           check_database() {
             export ABL_TEST_DSN="$1"
             php tests/release/target-database.php && php tests/release/world-economy-race.php && php tests/release/user-activity.php
           }
-          # Independent disposable databases; keep suites sequential within each database.
+          # SQLite fixtures and the two target databases are independent.
+          # Keep suites sequential within each group; deployment requires all three.
+          check_isolated > "$RUNNER_TEMP/isolated-checks.log" 2>&1 &
+          isolated_pid=$!
           check_database 'mysql:host=127.0.0.1;port=3306;dbname=ablakin_ci' > "$RUNNER_TEMP/mysql-checks.log" 2>&1 &
           mysql_pid=$!
           check_database 'pgsql:host=127.0.0.1;port=5432;dbname=ablakin_ci' > "$RUNNER_TEMP/pgsql-checks.log" 2>&1 &
           pgsql_pid=$!
           failed=0
+          wait "$isolated_pid" || failed=1
           wait "$mysql_pid" || failed=1
           wait "$pgsql_pid" || failed=1
-          cat "$RUNNER_TEMP/mysql-checks.log" "$RUNNER_TEMP/pgsql-checks.log"
+          cat "$RUNNER_TEMP/isolated-checks.log" "$RUNNER_TEMP/mysql-checks.log" "$RUNNER_TEMP/pgsql-checks.log"
           exit "$failed"
 
   runtime-image:
@@ -225,6 +227,11 @@ jobs:
           printf '%s\n' "$DEPLOY_SSH_KEY" | tr -d '\r' > "$HOME/.ssh/deploy_key"
           printf '%s\n' "$DEPLOY_KNOWN_HOSTS" | tr -d '\r' > "$HOME/.ssh/known_hosts"
           chmod 600 "$HOME/.ssh/deploy_key" "$HOME/.ssh/known_hosts"
+          # Reuse the authenticated connection across SSH/scp calls in this job.
+          # The socket belongs to this ephemeral runner; no key is stored in it.
+          printf 'Host %s\n  ControlMaster auto\n  ControlPersist 60\n  ControlPath %s/backend-ssh-%%C\n' \
+            "$DEPLOY_HOST" "$RUNNER_TEMP" > "$HOME/.ssh/config"
+          chmod 600 "$HOME/.ssh/config"
 
       - name: Run git pull and make up on the VPS
         shell: bash

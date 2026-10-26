@@ -1,5 +1,6 @@
 <?php
 return array_merge([
+    'POST v1/world/objects/<id:\d+>/starter-reserve' => 'world/start-api/reserve',
     'GET v1/world/economy' => 'world/economy-api/index',
     'GET v1/world/economy/progression' => 'world/economy-api/progression',
     'GET v1/world/economy/kitchen/<id:\d+>' => 'world/economy-api/kitchen',
@@ -9,7 +10,7 @@ return array_merge([
     'POST v1/world/economy/goals/fund' => 'world/economy-api/fund-goal',
     'POST v1/world/objects/<id:\d+>/repair' => 'world/build-api/repair',
     'GET v1/world/objects/<id:\d+>/mining' => 'world/mining-api/view',
-    'POST v1/world/objects/<id:\d+>/mining/<action:start|heartbeat|stop>' => 'world/mining-api/<action>',
+    'POST v1/world/objects/<id:\d+>/mining/<action:start|heartbeat|stop|settings>' => 'world/mining-api/<action>',
     'GET v1/world/objects/<id:\d+>/budget' => 'world/account-api/view',
     'POST v1/world/objects/<id:\d+>/budget' => 'world/account-api/create',
     'POST v1/world/objects/<id:\d+>/gather' => 'world/supply-api/create',

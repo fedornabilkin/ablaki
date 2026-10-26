@@ -173,6 +173,8 @@ class ExchangeService
             $owner = (int)$row['user_id'];
             if (($ownerOnly && $owner !== $user) || (!$ownerOnly && $owner === $user)) throw new \yii\web\ForbiddenHttpException('Эта операция недоступна.');
             if ((int)$row['user_buyer'] > 0) throw new \yii\web\ConflictHttpException('Позиция уже закрыта.');
+            if (!in_array(trim((string)$row['type']), [CreditExchange::EX_TYPE_BUY, CreditExchange::EX_TYPE_SELL], true))
+                throw new \yii\web\ConflictHttpException('Тип старой заявки не определён. Обратитесь к администратору.');
             CreditExchange::populateRecord($model, $row);
             $ids = array_values(array_unique([$user, $owner])); sort($ids, SORT_NUMERIC);
             foreach ($ids as $id) if (!$ledger->lock('persone', ['user_id' => $id])) throw new \RuntimeException('Account unavailable.');

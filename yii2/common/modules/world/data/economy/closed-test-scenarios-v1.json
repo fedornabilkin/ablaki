@@ -3,7 +3,8 @@
   "profile": "economy-closed-test-v1",
   "starts_at": "2026-10-17T10:00:00+03:00",
   "timezone": "Europe/Moscow",
-  "municipal_budget_cr": "560.0000",
+  "municipal_budget_cr": "810.0000",
+  "initial_open_cells": 1,
   "orders": {
     "classic-stone": {
       "quantity": 40,
@@ -99,6 +100,12 @@
       "action": "build",
       "code": "garden",
       "parent": "starter-site"
+    },
+    {
+      "action": "grant",
+      "source": "starter-site",
+      "destination": "garden",
+      "amount_cr": "12.0000"
     },
     {
       "action": "build",
@@ -3180,6 +3187,10 @@
         "quantity": 3
       },
       {
+        "action": "source",
+        "code": "gather-magic-herb"
+      },
+      {
         "action": "daily"
       },
       {
@@ -3227,7 +3238,7 @@
       {
         "action": "source",
         "code": "gather-coal",
-        "quantity": 20
+        "quantity": 19
       },
       {
         "action": "deliver",
@@ -3287,6 +3298,10 @@
         "quantity": 4
       },
       {
+        "action": "source",
+        "code": "gather-magic-herb"
+      },
+      {
         "action": "daily"
       },
       {
@@ -3315,7 +3330,7 @@
       {
         "action": "source",
         "code": "gather-coal",
-        "quantity": 9
+        "quantity": 8
       },
       {
         "action": "deliver",
@@ -3514,14 +3529,29 @@
         "code": "classic-plank"
       },
       {
-        "action": "grant",
-        "source": "starter-site",
-        "destination": "stone-plot",
-        "amount_cr": "104.0000"
+        "action": "explore",
+        "code": "starter-site",
+        "cells": [
+          [
+            -2,
+            0
+          ]
+        ],
+        "use_elixir": true
+      },
+      {
+        "action": "buy",
+        "code": "starter-site",
+        "cells": [
+          [
+            -2,
+            0
+          ]
+        ]
       },
       {
         "action": "build",
-        "parent": "stone-plot",
+        "parent": "starter-site",
         "code": "workshop-building"
       },
       {
@@ -3538,6 +3568,10 @@
         "quantity": 7
       },
       {
+        "action": "source",
+        "code": "gather-magic-herb"
+      },
+      {
         "action": "daily"
       },
       {
@@ -3547,7 +3581,7 @@
       },
       {
         "action": "source",
-        "quantity": 5,
+        "quantity": 4,
         "code": "gather-coal"
       },
       {
@@ -3624,29 +3658,728 @@
         "quantity": 2
       },
       {
+        "action": "craft",
+        "code": "classic-glass"
+      },
+      {
+        "action": "craft",
+        "code": "classic-bottle"
+      },
+      {
+        "action": "craft",
+        "code": "world-explorer-elixir",
+        "quantity": 2
+      },
+      {
         "action": "explore",
-        "code": "stone-plot",
+        "code": "starter-site",
         "cells": [
           [
-            1,
-            0
+            0,
+            2
           ]
-        ]
+        ],
+        "use_elixir": true
       },
       {
         "action": "buy",
-        "code": "stone-plot",
+        "code": "starter-site",
         "cells": [
           [
-            1,
-            0
+            0,
+            2
           ]
         ]
       },
       {
         "action": "build",
         "code": "storage-building",
-        "parent": "stone-plot"
+        "parent": "starter-site"
+      },
+      {
+        "action": "explore",
+        "code": "starter-site",
+        "cells": [
+          [
+            2,
+            1
+          ]
+        ],
+        "use_elixir": true
+      },
+      {
+        "action": "buy",
+        "code": "starter-site",
+        "cells": [
+          [
+            2,
+            1
+          ]
+        ]
+      },
+      {
+        "action": "source",
+        "code": "gather-log",
+        "quantity": 1
+      },
+      {
+        "action": "source",
+        "code": "mine-stone",
+        "quantity": 1
+      },
+      {
+        "action": "source",
+        "code": "gather-fibre",
+        "quantity": 2
+      },
+      {
+        "action": "craft",
+        "code": "classic-plank",
+        "quantity": 1
+      },
+      {
+        "action": "craft",
+        "code": "classic-rope",
+        "quantity": 1
+      },
+      {
+        "action": "deliver",
+        "code": "classic-coal",
+        "quantity": 2,
+        "destination": "starter-site"
+      },
+      {
+        "action": "collect",
+        "code": "starter-site"
+      },
+      {
+        "action": "build",
+        "code": "house",
+        "parent": "starter-site"
+      },
+      {
+        "action": "checkpoint",
+        "code": "week-day-7-storage-and-house"
+      }
+    ],
+    "first-seven-days-finite-supplies": [
+      {
+        "action": "day",
+        "quantity": 2
+      },
+      {
+        "action": "daily"
+      },
+      {
+        "action": "harvest"
+      },
+      {
+        "action": "craft",
+        "code": "starter-carrot-seeds"
+      },
+      {
+        "action": "deliver",
+        "code": "world-carrot",
+        "quantity": 2,
+        "destination": "garden"
+      },
+      {
+        "action": "collect",
+        "code": "garden"
+      },
+      {
+        "action": "craft",
+        "code": "classic-plank",
+        "quantity": 2
+      },
+      {
+        "action": "build",
+        "code": "meadow-plot",
+        "parent": "starter-site"
+      },
+      {
+        "action": "source",
+        "code": "gather-fibre",
+        "quantity": 3
+      },
+      {
+        "action": "craft",
+        "code": "classic-rope",
+        "quantity": 2
+      },
+      {
+        "action": "source",
+        "code": "gather-log",
+        "quantity": 2
+      },
+      {
+        "action": "craft",
+        "code": "classic-plank",
+        "quantity": 2
+      },
+      {
+        "action": "craft",
+        "code": "classic-bed"
+      },
+      {
+        "action": "place",
+        "code": "classic-bed",
+        "node": "starter-shelter"
+      },
+      {
+        "action": "lodge",
+        "code": "starter-shelter"
+      },
+      {
+        "action": "source",
+        "code": "gather-coal",
+        "quantity": 15
+      },
+      {
+        "action": "deliver",
+        "code": "classic-coal",
+        "quantity": 10,
+        "destination": "starter-site"
+      },
+      {
+        "action": "deliver",
+        "code": "classic-coal",
+        "quantity": 10,
+        "destination": "starter-site"
+      },
+      {
+        "action": "deliver",
+        "code": "classic-coal",
+        "quantity": 10,
+        "destination": "starter-site"
+      },
+      {
+        "action": "collect",
+        "code": "starter-site"
+      },
+      {
+        "action": "sow"
+      },
+      {
+        "action": "water"
+      },
+      {
+        "action": "checkpoint",
+        "code": "bed-day-2"
+      },
+      {
+        "action": "day",
+        "quantity": 3
+      },
+      {
+        "action": "source",
+        "code": "gather-magic-herb"
+      },
+      {
+        "action": "daily"
+      },
+      {
+        "action": "harvest"
+      },
+      {
+        "action": "craft",
+        "code": "starter-carrot-seeds"
+      },
+      {
+        "action": "deliver",
+        "code": "world-carrot",
+        "quantity": 2,
+        "destination": "garden"
+      },
+      {
+        "action": "collect",
+        "code": "garden"
+      },
+      {
+        "action": "checkpoint",
+        "code": "return-day-3"
+      },
+      {
+        "action": "explore",
+        "code": "starter-site",
+        "cells": [
+          [
+            2,
+            0
+          ]
+        ],
+        "use_elixir": true
+      },
+      {
+        "action": "buy",
+        "code": "starter-site",
+        "cells": [
+          [
+            2,
+            0
+          ]
+        ]
+      },
+      {
+        "action": "source",
+        "code": "gather-coal",
+        "quantity": 19
+      },
+      {
+        "action": "deliver",
+        "code": "classic-coal",
+        "quantity": 10,
+        "destination": "starter-site"
+      },
+      {
+        "action": "deliver",
+        "code": "classic-coal",
+        "quantity": 10,
+        "destination": "starter-site"
+      },
+      {
+        "action": "deliver",
+        "code": "classic-coal",
+        "quantity": 10,
+        "destination": "starter-site"
+      },
+      {
+        "action": "deliver",
+        "code": "classic-coal",
+        "quantity": 10,
+        "destination": "starter-site"
+      },
+      {
+        "action": "collect",
+        "code": "starter-site"
+      },
+      {
+        "action": "craft",
+        "code": "classic-plank",
+        "quantity": 2
+      },
+      {
+        "action": "build",
+        "code": "clay-plot",
+        "parent": "starter-site"
+      },
+      {
+        "action": "build",
+        "code": "sand-plot",
+        "parent": "starter-site"
+      },
+      {
+        "action": "sow"
+      },
+      {
+        "action": "water"
+      },
+      {
+        "action": "checkpoint",
+        "code": "lodged-day-3"
+      },
+      {
+        "action": "day",
+        "quantity": 4
+      },
+      {
+        "action": "source",
+        "code": "gather-magic-herb"
+      },
+      {
+        "action": "daily"
+      },
+      {
+        "action": "harvest"
+      },
+      {
+        "action": "craft",
+        "code": "starter-carrot-seeds"
+      },
+      {
+        "action": "deliver",
+        "code": "world-carrot",
+        "quantity": 2,
+        "destination": "garden"
+      },
+      {
+        "action": "collect",
+        "code": "garden"
+      },
+      {
+        "action": "sow"
+      },
+      {
+        "action": "water"
+      },
+      {
+        "action": "source",
+        "code": "gather-coal",
+        "quantity": 8
+      },
+      {
+        "action": "deliver",
+        "code": "classic-coal",
+        "quantity": 10,
+        "destination": "starter-site"
+      },
+      {
+        "action": "deliver",
+        "code": "classic-coal",
+        "quantity": 8,
+        "destination": "starter-site"
+      },
+      {
+        "action": "collect",
+        "code": "starter-site"
+      },
+      {
+        "action": "source",
+        "code": "gather-log",
+        "quantity": 3
+      },
+      {
+        "action": "source",
+        "code": "mine-stone",
+        "quantity": 2
+      },
+      {
+        "action": "craft",
+        "code": "classic-plank",
+        "quantity": 5
+      },
+      {
+        "action": "build",
+        "code": "forge",
+        "parent": "starter-site"
+      },
+      {
+        "action": "source",
+        "code": "gather-clay",
+        "quantity": 4
+      },
+      {
+        "action": "source",
+        "code": "gather-sand",
+        "quantity": 2
+      },
+      {
+        "action": "checkpoint",
+        "code": "lodged-day-4"
+      },
+      {
+        "action": "day",
+        "quantity": 5
+      },
+      {
+        "action": "daily"
+      },
+      {
+        "action": "harvest"
+      },
+      {
+        "action": "craft",
+        "code": "starter-carrot-seeds"
+      },
+      {
+        "action": "deliver",
+        "code": "world-carrot",
+        "quantity": 2,
+        "destination": "garden"
+      },
+      {
+        "action": "collect",
+        "code": "garden"
+      },
+      {
+        "action": "source",
+        "code": "gather-log"
+      },
+      {
+        "action": "source",
+        "code": "mine-stone",
+        "quantity": 4
+      },
+      {
+        "action": "source",
+        "code": "gather-ore",
+        "quantity": 2
+      },
+      {
+        "action": "source",
+        "code": "gather-coal"
+      },
+      {
+        "action": "craft",
+        "code": "classic-plank",
+        "quantity": 3
+      },
+      {
+        "action": "craft",
+        "code": "classic-rope",
+        "quantity": 2
+      },
+      {
+        "action": "craft",
+        "code": "classic-bench"
+      },
+      {
+        "action": "place",
+        "code": "classic-bench",
+        "node": "forest-plot"
+      },
+      {
+        "action": "craft",
+        "code": "classic-brick",
+        "quantity": 4
+      },
+      {
+        "action": "craft",
+        "code": "classic-furnace"
+      },
+      {
+        "action": "place",
+        "code": "classic-furnace",
+        "node": "forge"
+      },
+      {
+        "action": "craft",
+        "code": "classic-ingot"
+      },
+      {
+        "action": "goal",
+        "code": "day-2"
+      },
+      {
+        "action": "collect",
+        "code": "starter-site"
+      },
+      {
+        "action": "checkpoint",
+        "code": "lodged-first-ingot-day-5"
+      },
+      {
+        "action": "source",
+        "quantity": 8,
+        "code": "gather-log"
+      },
+      {
+        "action": "source",
+        "quantity": 4,
+        "code": "mine-stone"
+      },
+      {
+        "action": "day",
+        "quantity": 6
+      },
+      {
+        "action": "daily"
+      },
+      {
+        "action": "source",
+        "quantity": 9,
+        "code": "mine-stone"
+      },
+      {
+        "action": "deliver",
+        "quantity": 10,
+        "destination": "starter-site",
+        "code": "classic-stone"
+      },
+      {
+        "action": "deliver",
+        "quantity": 10,
+        "destination": "starter-site",
+        "code": "classic-stone"
+      },
+      {
+        "action": "deliver",
+        "quantity": 10,
+        "destination": "starter-site",
+        "code": "classic-stone"
+      },
+      {
+        "action": "deliver",
+        "quantity": 2,
+        "destination": "starter-site",
+        "code": "classic-stone"
+      },
+      {
+        "action": "collect",
+        "code": "starter-site"
+      },
+      {
+        "action": "craft",
+        "quantity": 10,
+        "code": "classic-plank"
+      },
+      {
+        "action": "explore",
+        "code": "starter-site",
+        "cells": [
+          [
+            -2,
+            0
+          ]
+        ],
+        "use_elixir": true
+      },
+      {
+        "action": "buy",
+        "code": "starter-site",
+        "cells": [
+          [
+            -2,
+            0
+          ]
+        ]
+      },
+      {
+        "action": "build",
+        "parent": "starter-site",
+        "code": "workshop-building"
+      },
+      {
+        "action": "source",
+        "quantity": 11,
+        "code": "gather-ore"
+      },
+      {
+        "action": "checkpoint",
+        "code": "week-day-6-workshop"
+      },
+      {
+        "action": "day",
+        "quantity": 7
+      },
+      {
+        "action": "source",
+        "code": "gather-magic-herb"
+      },
+      {
+        "action": "daily"
+      },
+      {
+        "action": "source",
+        "quantity": 7,
+        "code": "gather-ore"
+      },
+      {
+        "action": "source",
+        "quantity": 4,
+        "code": "gather-coal"
+      },
+      {
+        "action": "craft",
+        "quantity": 3,
+        "code": "classic-ingot"
+      },
+      {
+        "action": "craft",
+        "code": "classic-anvil"
+      },
+      {
+        "action": "place",
+        "node": "mine",
+        "code": "classic-anvil"
+      },
+      {
+        "action": "craft",
+        "quantity": 6,
+        "code": "classic-ingot"
+      },
+      {
+        "action": "craft",
+        "quantity": 1,
+        "code": "classic-plank"
+      },
+      {
+        "action": "craft",
+        "code": "classic-stick"
+      },
+      {
+        "action": "craft",
+        "code": "classic-nails"
+      },
+      {
+        "action": "craft",
+        "code": "classic-saw"
+      },
+      {
+        "action": "craft",
+        "code": "classic-pickaxe"
+      },
+      {
+        "action": "source",
+        "quantity": 3,
+        "code": "gather-log"
+      },
+      {
+        "action": "craft",
+        "quantity": 3,
+        "code": "classic-plank"
+      },
+      {
+        "action": "craft",
+        "code": "classic-chest"
+      },
+      {
+        "action": "place",
+        "node": "meadow-plot",
+        "code": "classic-chest"
+      },
+      {
+        "action": "checkpoint",
+        "code": "week-day-7-tools-and-chest"
+      },
+      {
+        "action": "source",
+        "code": "gather-fibre",
+        "quantity": 1
+      },
+      {
+        "action": "craft",
+        "code": "classic-rope",
+        "quantity": 2
+      },
+      {
+        "action": "craft",
+        "code": "classic-glass"
+      },
+      {
+        "action": "craft",
+        "code": "classic-bottle"
+      },
+      {
+        "action": "craft",
+        "code": "world-explorer-elixir",
+        "quantity": 2
+      },
+      {
+        "action": "explore",
+        "code": "starter-site",
+        "cells": [
+          [
+            0,
+            2
+          ]
+        ],
+        "use_elixir": true
+      },
+      {
+        "action": "buy",
+        "code": "starter-site",
+        "cells": [
+          [
+            0,
+            2
+          ]
+        ]
+      },
+      {
+        "action": "build",
+        "code": "storage-building",
+        "parent": "starter-site"
       },
       {
         "action": "explore",
@@ -3761,6 +4494,10 @@
     "missed-day-resumed-with-lodging",
     "coal-order-exhausted",
     "after-coal-order-exhaustion",
-    "first-seven-days-with-lodging"
+    "first-seven-days-with-lodging",
+    "first-seven-days-finite-supplies"
+  ],
+  "finite_supply_scenarios": [
+    "first-seven-days-finite-supplies"
   ]
 }

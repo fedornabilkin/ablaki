@@ -29,10 +29,18 @@ class BuildWork extends Record
             if ((int)$work->build_id === (int)$build->id && $work->ended_at === null) return $work->toArray();
             throw new GameError('BUILDER_BUSY', 'Сначала завершите работу на другой стройке.', 409);
         }
+        self::requireSlot($build, $user);
         $work = new self(); $work->setAttributes(['build_id' => $build->id, 'user_id' => $user, 'started_at' => time(), 'last_seen_at' => time(), 'accounted_at' => time(), 'seconds' => 0, 'paid_amount' => '0.0000'], false);
         if (!$work->save(false)) throw new \RuntimeException('Work session write failed.');
         $db->createCommand()->insert('world_builder', ['user_id' => $user, 'work_id' => $work->id])->execute();
         return $work->toArray();
+    }
+    private static function requireSlot(Build $build, int $user): void
+    {
+        $db = self::getDb(); $limit = $build->builderLimit();
+        if ($user !== (int)$build->owner_user_id && $limit !== null && (int)(new Query())->from(['b' => 'world_builder'])->innerJoin(['w' => 'world_build_work'], 'w.id=b.work_id')
+            ->where(['w.build_id' => $build->id])->andWhere(['not in', 'w.user_id', [$build->owner_user_id, $user]])->andWhere(['>', 'w.last_seen_at', time() - self::HEARTBEAT_SECONDS])->count('*', $db) >= $limit)
+            throw new GameError('BUILDERS_LIMIT', 'Все места оплачиваемых строителей заняты. Владельцу нужно увеличить бюджет.', 409, ['builder_limit' => $limit]);
     }
     public static function heartbeat(Build $build, int $user, string $operation, bool $stop): array
     {
@@ -40,6 +48,13 @@ class BuildWork extends Record
         $build->assertOpen();
         $work = self::find()->where(['build_id' => $build->id, 'user_id' => $user, 'ended_at' => null])->one();
         if (!$work) throw new GameError('WORK_NOT_STARTED', 'Сначала начните работу.', 409);
+        if (!$stop) {
+            $active = (new Query())->from('world_builder')->where(['user_id' => $user])->one(self::getDb());
+            if ($active && (int)$active['work_id'] !== (int)$work->id) throw new GameError('BUILDER_BUSY', 'Сначала остановите работу на другой стройке.', 409);
+            if ((new Query())->from('world_mining_worker')->where(['user_id' => $user])->exists(self::getDb())) throw new GameError('MINER_BUSY', 'Остановите добычу перед строительством.', 409);
+            self::requireSlot($build, $user);
+            if (!$active) self::getDb()->createCommand()->insert('world_builder', ['user_id' => $user, 'work_id' => $work->id])->execute();
+        }
         $now = time(); BuildClock::checkpoint($build, $now); $work->refresh();
         $work->last_seen_at = max((int)$work->last_seen_at, $now); $work->accounted_at = max((int)$work->accounted_at, $now);
         if ($stop) $work->ended_at = $now;

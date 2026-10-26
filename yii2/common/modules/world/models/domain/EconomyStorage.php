@@ -24,11 +24,17 @@ final class EconomyStorage
         $capacity = $storage['kind'] === 'backpack' ? (new CraftInventory(new CraftStorage($this->db)))->capacity($user)['permanent_slots'] : (int)$storage['capacity'];
         $node = $storage['node_id'] === null ? null : (new Query())->select('t.code')->from(['n' => 'world_node'])->innerJoin(['t' => 'world_template'], 't.id=n.template_id')->where(['n.id' => $storage['node_id']])->scalar($this->db);
         $options = [];
-        foreach ($profile['profile']['storage']['expansions'] ?? [] as $code => $pack) if ($pack['kind'] === $storage['kind'] && ($pack['node_code'] === null || $pack['node_code'] === $node)) {
+        if ($storage['kind'] === 'backpack') {
+            $inventory = new CraftInventory(new CraftStorage($this->db));
+            foreach ($inventory->purchaseQuotes($user) as $slots => $quote) {
+                $options[] = ['code' => 'backpack-' . $slots, 'slots' => $slots, 'price_cr' => (string)$quote['total_price'] . '.0000', 'capacity_after' => $quote['capacity_after']];
+            }
+        }
+        foreach ($profile['profile']['storage']['expansions'] ?? [] as $code => $pack) if ($storage['kind'] !== 'backpack' && $pack['kind'] === $storage['kind'] && ($pack['node_code'] === null || $pack['node_code'] === $node)) {
             $maximum = $storage['kind'] === 'backpack' ? min(CraftInventory::LIMIT, $pack['maximum']) : $pack['maximum'];
             if ($capacity + $pack['slots'] <= $maximum) $options[] = ['code' => $code, 'slots' => $pack['slots'], 'price_cr' => $pack['price_cr'], 'capacity_after' => $capacity + $pack['slots']];
         }
-        return ['storage_id' => $id, 'capacity' => $capacity, 'options' => $options, 'profile_version' => $profile ? $profile['version'] : null,
+        return ['storage_id' => $id, 'kind' => $storage['kind'], 'capacity' => $capacity, 'options' => $options, 'profile_version' => $profile ? $profile['version'] : null,
             'writable' => $this->flags->capabilities()['world_write'], 'server_time' => time()];
     }
     private function prepare(int $user, int $id, string $code): array
@@ -51,9 +57,11 @@ final class EconomyStorage
         return $bus->execute($user, $key, 'world.storage.expand', ['storage_id' => $id, 'code' => $code], $quote, $revisions, function ($input, $terms, $operation) use ($user, $id, $code, $bus) {
             $prepared = $this->prepare($user, $id, $code);
             if (CanonicalJson::encode($prepared['terms']) !== CanonicalJson::encode($terms)) throw new GameError('STORAGE_EXPANSION_CHANGED', 'Вместимость или цена изменилась. Повторите расчёт.', 409);
-            (new CreditLedger($this->db))->changeExact($user, '-' . $terms['price_cr'], 'world_storage', 'Расширение хранилища #' . $id);
             $storage = $prepared['storage']; $next = $terms['capacity_after'];
-            if ($storage['kind'] === 'backpack') $this->db->createCommand()->update('craft_capacity', ['permanent_slots' => $next], ['user_id' => $user])->execute();
+            if ($storage['kind'] === 'backpack') {
+                $inventory = new CraftInventory(new CraftStorage($this->db)); $purchase = $inventory->purchaseQuote($user, $terms['slots']);
+                $inventory->buy($user, $terms['slots'], $purchase['unit_price'], $purchase['total_price']);
+            } else (new CreditLedger($this->db))->changeExact($user, '-' . $terms['price_cr'], 'world_storage', 'Расширение хранилища #' . $id);
             if ($storage['kind'] === 'chest') $this->db->createCommand()->update('craft_container', ['capacity' => $next], ['id' => $storage['container_inventory_id'], 'user_id' => $user])->execute();
             $values = ['revision' => new Expression('revision+1')]; if ($storage['kind'] !== 'backpack') $values['capacity'] = $next;
             if ($this->db->createCommand()->update('craft_storage', $values, ['id' => $id, 'revision' => $storage['revision']])->execute() !== 1) throw new \RuntimeException('Storage changed.');

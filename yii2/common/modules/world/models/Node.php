@@ -15,6 +15,16 @@ class Node extends LockedRecord
     public function behaviors(): array { return [TimestampBehavior::class]; }
     public function optimisticLock() { return 'revision'; }
     public function transactions() { return [self::SCENARIO_DEFAULT => self::OP_ALL]; }
+    public function beforeSave($insert)
+    {
+        if (!parent::beforeSave($insert)) return false;
+        if (!$insert && (int)$this->hierarchy_level === 1 && $this->isAttributeChanged('settings_json')) {
+            $old = json_decode((string)$this->getOldAttribute('settings_json'), true) ?: [];
+            $settings = json_decode((string)$this->settings_json, true) ?: [];
+            $this->settings_json = json_encode(WorldTime::change($this, $old, $settings), JSON_THROW_ON_ERROR);
+        }
+        return true;
+    }
     public function afterSave($insert, $changedAttributes)
     {
         parent::afterSave($insert, $changedAttributes);
@@ -78,7 +88,8 @@ class Node extends LockedRecord
     {
         $template = NodeTemplate::findOne($this->template_id);
         $parent = $this->parent_id ? self::findOne($this->parent_id) : null;
-        if (!$template || ($this->isNewRecord && !$template->enabled) || ($this->parent_id && !$parent) || !$template->permits($parent)) {
+        $samePlacement = !$this->isNewRecord && !$this->isAttributeChanged('parent_id') && !$this->isAttributeChanged('template_id');
+        if (!$template || ($this->isNewRecord && !$template->enabled) || ($this->parent_id && !$parent) || (!$samePlacement && !$template->permits($parent))) {
             $this->addError('parent_id', 'Шаблон нельзя построить в выбранном объекте.'); return;
         }
         if (!$this->isNewRecord && ($this->isAttributeChanged('code') || $this->isAttributeChanged('parent_id') || $this->isAttributeChanged('template_id') || $this->isAttributeChanged('owner_user_id')))

@@ -100,7 +100,13 @@ final class EconomyBootstrapBound
         $missed = self::value([$crop['yield'] => max(1, intdiv($crop['yield_quantity'], 2))], $weights)
             ->subtract(self::value([$crop['seed'] => 1, $crop['water'] => 1], $weights))
             ->subtract(Money::parse($crop['dig_fee_cr']))->subtract(Money::parse($crop['sow_fee_cr']))->subtract(Money::parse($crop['harvest_fee_cr']));
-        if (!$missed->isNegative() || $net->compare(Money::parse('0.2500')) > 0) throw new \InvalidArgumentException('Crop rules require a new optimistic bound.');
+        if (!$missed->isNegative() || $net->compare(Money::parse('0.2500')) > 0) {
+            // Free owner digging can make either watering strategy profitable. Bound each
+            // water unit by the better strategy, rounding up rather than underestimating.
+            $perWater = $net->isNegative() ? Money::parse('0') : $net->ratioCeil(1, 2);
+            if ($missed->compare($perWater) > 0) $perWater = $missed;
+            $cropBonus = $perWater->multiply($water);
+        }
         $rawCost = self::value($raw, $weights); $initialValue = self::value($initial, $weights);
         $upper = Money::parse($profile['starter']['credits_cr'])->add(Money::parse($profile['goals']['day-1']['credits_cr']))
             ->add($initialValue)->add($best->multiply($batches))->subtract($rawCost)->add($cropBonus);

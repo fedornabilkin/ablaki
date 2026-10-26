@@ -32,7 +32,8 @@ final class WorldSources
     }
     private static function context(int $node, int $user): Node
     {
-        $place = Node::readable($node, $user); $place->requireOwner($user);
+        $place = Node::readable($node, $user);
+        if ((int)$place->owner_user_id !== $user && (!$place->template || $place->template->code !== 'mine')) $place->requireOwner($user);
         if ((int)$place->root_id !== EconomyRuntime::world(Node::getDb()) || $place->status !== 'active' || (new Query())->from(['c' => 'world_node_closure'])->innerJoin(['n' => 'world_node'], 'n.id=c.ancestor_id')
             ->where(['c.descendant_id' => $node])->andWhere(['<>', 'n.status', 'active'])->exists(Node::getDb())) throw new GameError('SOURCE_UNAVAILABLE', 'Источник временно недоступен.', 409);
         return $place;
@@ -71,10 +72,12 @@ final class WorldSources
             if ($row['cooldown_seconds']) $availableAt = (int)(new Query())->select('completed_at')->from('world_source_work')
                 ->where(['user_id' => $user, 'node_id' => $node, 'action_code' => $code, 'status' => 'completed'])->orderBy(['id' => SORT_DESC])->scalar($db) + $row['cooldown_seconds'];
             if (isset($row['daily_limit'])) {
-                $period = (new \DateTimeImmutable('@' . time()))->setTimezone(new \DateTimeZone('Europe/Moscow'))->setTime(0, 0)->getTimestamp();
-                if (self::dailyUsed($user, $code, $period) >= $row['daily_limit']) $availableAt = max($availableAt, $period + 86400);
+                $period = \common\modules\world\models\WorldTime::dayWindow($db, time());
+                if (self::dailyUsed($user, $code, $period['start']) >= $row['daily_limit']) $availableAt = max($availableAt, $period['end']);
             }
-            $choices[] = ['code' => $code, 'work_seconds' => $row['work_seconds'], 'experience' => $row['experience'], 'cooldown_seconds' => $row['cooldown_seconds'], 'available_at' => max(time(), $availableAt), 'output' => $output, 'tools' => $row['tools'], 'tool_names' => $toolNames, 'unavailable_reason' => $missing($row), 'daily_limit' => $row['daily_limit'] ?? null];
+            $reason = $missing($row);
+            if ((int)$place->owner_user_id !== $user && !$reason) try { HiredExtraction::context($place, $user, $work !== null, $work ? null : $row); } catch (GameError $error) { $reason = $error->getMessage(); }
+            $choices[] = ['code' => $code, 'work_seconds' => $row['work_seconds'], 'experience' => $row['experience'], 'cooldown_seconds' => $row['cooldown_seconds'], 'available_at' => max(time(), $availableAt), 'output' => $output, 'tools' => $row['tools'], 'tool_names' => $toolNames, 'unavailable_reason' => $reason, 'daily_limit' => $row['daily_limit'] ?? null];
         }
         $definition = $work ? json_decode($work['definition_json'], true) : null;
         // An accepted batch retains its published tools even after a profile update.
@@ -87,8 +90,9 @@ final class WorldSources
             'worked_seconds' => $work ? (int)$work['worked_seconds'] : 0, 'action_code' => $work ? $work['action_code'] : null,
             'work_id' => $work ? (int)$work['id'] : null, 'required_seconds' => $definition ? (int)$definition['work_seconds'] : 0,
             'live_work' => $worker ? [['accounted_at' => (int)$worker['accounted_at'], 'last_seen_at' => (int)$worker['last_seen_at']]] : [],
-            'status' => $work ? $work['status'] : 'idle', 'output_storage_id' => $work ? (int)$work['target_storage_id'] : null, 'actions' => $choices, 'blocked_code' => $work ? $work['blocked_code'] : null,
+            'status' => $work ? $work['status'] : 'idle', 'output_storage_id' => $work ? (int)$work['target_storage_id'] : null, 'output_destination' => $definition['output_destination'] ?? (isset($definition['employment']) ? 'mini_storage' : null), 'output_storages' => ExtractionStorage::choices($place, $user), 'actions' => $choices, 'blocked_code' => $work ? $work['blocked_code'] : null,
             'blocked_message' => $work ? $work['blocked_message'] : null, 'unavailable_reason' => $definition ? $missing($definition) : null,
+            'employment' => $place->template && $place->template->code === 'mine' ? HiredExtraction::state($place, $user, $work) : null,
             'quota' => EconomyQuota::state($db, $user, 'extraction_daily'), 'server_time' => time()];
     }
     private static function tools(int $user, array $definition): array
@@ -102,7 +106,7 @@ final class WorldSources
         }
         return $units;
     }
-    public static function start(int $node, int $user, string $operation, ?string $action, ?int $target): array
+    public static function start(int $node, int $user, string $operation, ?string $action, ?int $target, ?string $destination = null): array
     {
         $db = Node::getDb(); $place = self::context($node, $user); $options = self::options($place);
         $work = self::work($node, $user);
@@ -118,18 +122,24 @@ final class WorldSources
             if (!$quota['remaining']) throw new GameError('ECONOMY_QUOTA_EXHAUSTED', 'Дневной лимит добычи исчерпан.', 409, $quota);
             $last = (new Query())->from('world_source_work')->where(['user_id' => $user, 'node_id' => $node, 'action_code' => $action, 'status' => 'completed'])->orderBy(['id' => SORT_DESC])->one($db);
             if ($last && (int)$last['completed_at'] + $definition['cooldown_seconds'] > time()) throw new GameError('SOURCE_COOLDOWN', 'Источник восстанавливается.', 409, ['available_at' => (int)$last['completed_at'] + $definition['cooldown_seconds']]);
-            $period = (new \DateTimeImmutable('@' . time()))->setTimezone(new \DateTimeZone('Europe/Moscow'))->setTime(0, 0)->getTimestamp();
-            $used = self::dailyUsed($user, $action, $period);
-            if ($used >= ($definition['daily_limit'] ?? 10000)) throw new GameError('SOURCE_DAILY_LIMIT', 'Сегодня этот ресурс уже получен.', 409, ['available_at' => $period + 86400]);
-            $backpack = (new CanonicalInventory(new CraftStorage($db)))->backpack($user);
-            $target = $target ?? ($backpack ? (int)$backpack['id'] : 0);
-            (new StorageAccessPolicy($db))->storage($user, $target, true);
+            $period = \common\modules\world\models\WorldTime::dayWindow($db, time());
+            $used = self::dailyUsed($user, $action, $period['start']);
+            if ($used >= ($definition['daily_limit'] ?? 10000)) throw new GameError('SOURCE_DAILY_LIMIT', 'Сегодня этот ресурс уже получен.', 409, ['available_at' => $period['end']]);
+            if ((int)$place->owner_user_id !== $user) {
+                $definition = HiredExtraction::accept($place, $user, $definition, $operation);
+                $target = (int)$definition['employment']['storage_id'];
+            } else {
+                if ($destination === 'mini_storage') {
+                    $target = (int)ExtractionStorage::nearest($place, $definition)['id']; $definition['output_destination'] = 'mini_storage';
+                } else $target = ExtractionStorage::ownerTarget($place, $user, $destination === 'backpack' ? null : $target);
+            }
             $revision = EconomyRuntime::current($db);
             $db->createCommand()->insert('world_source_work', ['user_id' => $user, 'node_id' => $node, 'active_key' => $user . ':' . $node,
                 'action_code' => $action, 'definition_json' => CanonicalJson::encode($definition), 'profile_id' => $revision['id'],
                 'target_storage_id' => $target, 'worked_seconds' => 0, 'status' => 'paused', 'created_at' => time()])->execute();
             $work = self::work($node, $user);
         }
+        if ((int)$place->owner_user_id !== $user && $work) HiredExtraction::target($place, $user, json_decode($work['definition_json'], true));
         if (!$worker) $db->createCommand()->insert('world_mining_worker', ['user_id' => $user, 'node_id' => $node, 'source_work_id' => $work['id'], 'accounted_at' => time(), 'last_seen_at' => time()])->execute();
         $db->createCommand()->update('world_source_work', ['status' => 'working'], ['id' => $work['id']])->execute();
         return self::state($node, $user);
@@ -161,19 +171,21 @@ final class WorldSources
                 // Persist earned work when delivery is temporarily blocked, without consuming quota/wear.
                 $transaction = $db->beginTransaction();
                 try {
-                    self::context($node, $user); $units = self::tools($user, $definition);
-                    $period = (new \DateTimeImmutable('@' . time()))->setTimezone(new \DateTimeZone('Europe/Moscow'))->setTime(0, 0)->getTimestamp();
-                    $used = self::dailyUsed($user, $work['action_code'], $period);
+                    $place = self::context($node, $user); $units = self::tools($user, $definition);
+                    $period = \common\modules\world\models\WorldTime::dayWindow($db, time());
+                    $used = self::dailyUsed($user, $work['action_code'], $period['start']);
                     if ($used >= ($definition['daily_limit'] ?? 10000)) throw new GameError('SOURCE_DAILY_LIMIT', 'Дневной предел этого источника исчерпан.', 409);
                     $store = new CraftStorage($db); $store->operationId = $operation; $inventory = new CanonicalInventory($store);
-                    $target = (new StorageAccessPolicy($db))->storage($user, (int)$work['target_storage_id'], true);
+                    $target = isset($definition['employment']) ? HiredExtraction::target($place, $user, $definition)
+                        : (($definition['output_destination'] ?? null) === 'mini_storage' ? ExtractionStorage::nearest($place, $definition) : (new StorageAccessPolicy($db))->storage($user, (int)$work['target_storage_id'], true));
                     foreach ($definition['output'] as $code => $quantity) {
                         $item = (new Query())->from('craft_item')->where(['code' => $code, 'active' => 1])->one($db);
                         if (!$item) throw new GameError('SOURCE_OUTPUT_UNAVAILABLE', 'Ресурс временно отключён.', 409);
                         $plan = $inventory->planCraft([], $target, [], [], $item, $quantity);
                         if (!$plan['output_fits']) throw new GameError('SOURCE_STORAGE_FULL', 'Освободите место для добытого ресурса.', 409);
-                        $inventory->applyCraft($user, $plan, $target, [], $item, 'source:' . $work['action_code']);
+                        $inventory->applyCraft(isset($definition['employment']) ? (int)$definition['employment']['owner_user_id'] : $user, $plan, $target, [], $item, 'source:' . $work['action_code']);
                     }
+                    HiredExtraction::pay($user, (int)$work['id'], $definition, $operation);
                     EconomyRuntime::fact($db, $user, 'source:' . $work['action_code'], array_sum($definition['output']), $operation);
                     EconomyQuota::consume($db, $user, 'extraction_daily', 1, $operation);
                     foreach ($units as $unit) (new EquipmentExposure($db))->use($unit['instance_id'], 1, 1, false);
@@ -185,7 +197,7 @@ final class WorldSources
                         else $db->createCommand()->insert('craft_skill', $where + ['experience' => min(9900, $xp)])->execute();
                     }
                     $db->createCommand()->insert('craft_event', ['user_id' => $user, 'action' => 'source', 'item_id' => $item['id'], 'quantity' => array_sum($definition['output']), 'credit_change' => 0, 'created_at' => time()])->execute();
-                    $db->createCommand()->update('world_source_work', ['status' => 'completed', 'active_key' => null, 'blocked_code' => null, 'blocked_message' => null, 'completed_at' => time(), 'operation_id' => $operation], ['id' => $work['id']])->execute();
+                    $db->createCommand()->update('world_source_work', ['status' => 'completed', 'target_storage_id' => (int)$target['id'], 'active_key' => null, 'blocked_code' => null, 'blocked_message' => null, 'completed_at' => time(), 'operation_id' => $operation], ['id' => $work['id']])->execute();
                     $transaction->commit();
                 } catch (GameError $error) {
                     $transaction->rollBack();

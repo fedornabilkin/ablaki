@@ -10,7 +10,7 @@ class EquipmentPlacementPolicy
 {
     private $db;
     public function __construct(Connection $db) { $this->db = $db; }
-    public function assertAllowed(array $item, array $storage, array $slot): void
+    public function assertAllowed(array $item, array $storage, array $slot, bool $checkCell = true): void
     {
         $chest = ($item['storage_kind'] ?? '') === 'chest';
         $station = (new Query())->from('craft_station')->where(['item_id' => $item['id'], 'active' => 1])->exists($this->db);
@@ -29,11 +29,21 @@ class EquipmentPlacementPolicy
         if (!$node) throw new ConflictHttpException('Локация оборудования недоступна.');
         $index = (int)$slot['position'] - 1; $width = (int)$node['map_width'];
         $x = (int)$node['map_origin_x'] + $index % $width; $y = (int)$node['map_origin_y'] + intdiv($index, $width);
-        try { if ($index >= 0 && $index < $width * (int)$node['map_height']) (new \common\modules\world\models\domain\WorldTree($this->db))->assertFreePosition((int)$node['id'], $x, $y, null, false); }
+        try { if ($checkCell && $index >= 0 && $index < $width * (int)$node['map_height']) (new \common\modules\world\models\domain\WorldTree($this->db))->assertFreePosition((int)$node['id'], $x, $y, null, false); }
         catch (\common\modules\world\support\GameError $error) { throw new ConflictHttpException($error->getMessage()); }
         if (isset($node['hierarchy_level'])) {
             if (!\common\modules\world\models\domain\NodeAvailability::activePath($this->db, (int)$node['id'])) throw new ConflictHttpException('Объект или его родитель недоступен для размещения.');
-            if (!(new Query())->from('world_map_cell')->where(['parent_id' => $node['id'], 'x' => $x, 'y' => $y, 'state' => 'open'])->exists($this->db)) throw new ConflictHttpException('Сначала откройте ячейку для размещения.');
+            if (!in_array($node['node_type'], ['PLOT', 'BUILDING', 'ROOM', 'PLACE'], true)) throw new ConflictHttpException('В этом объекте нет мест для размещения предметов.');
+            if ($furniture) {
+                $exposures = json_decode($furniture['exposures_json'], true);
+                if (!is_array($exposures) || !in_array($slot['exposure_class'], $exposures, true)) throw new ConflictHttpException('Предмет не подходит к условиям этого места.');
+            } elseif ($station && !$chest) {
+                $template = (new Query())->select('code')->from('world_template')->where(['id' => $node['template_id']])->scalar($this->db);
+                $worksite = ($item['code'] === 'classic-bench' && $template === 'forest-plot') || ($item['code'] === 'classic-anvil' && $template === 'mine');
+                if (!$worksite && !in_array($template, ['forge', 'workshop-building', 'workroom', 'starter-shelter', 'house'], true) && !in_array($node['building_kind'], ['forge', 'workshop', 'shelter', 'house'], true) && $codes === null)
+                    throw new ConflictHttpException('Выберите подходящее укрытие, мастерскую или рабочий участок.');
+            }
+            if ($checkCell && !(new Query())->from('world_map_cell')->where(['parent_id' => $node['id'], 'x' => $x, 'y' => $y, 'state' => 'open'])->exists($this->db)) throw new ConflictHttpException('Сначала откройте ячейку для размещения.');
             return;
         }
         if ($furniture) {

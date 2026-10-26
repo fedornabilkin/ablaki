@@ -67,11 +67,15 @@ class ThemeController extends ActiveController
             if (!trim((string)Yii::$app->request->get('q', ''))) $query->andWhere(['forum_theme.is_closed' => 0]);
             $provider = ApiList::provider($query, ['title'], ['id', 'user_id', 'created_at', 'last_post', 'title', 'last_comment_text', 'last_comment_username', 'last_comment_created_at', 'first_comment_user_id', 'first_comment_username']);
             $provider->sort->attributes['last_comment_created_at'] = ['asc' => ['last_comment_sort' => SORT_ASC, 'id' => SORT_DESC], 'desc' => ['last_comment_sort' => SORT_DESC, 'id' => SORT_DESC]];
+            $provider->sort->defaultOrder = ['last_comment_created_at' => SORT_DESC];
             return $provider;
         };
         $actions['my'] = $actions['index'];
         $actions['my']['prepareDataProvider'] = function () {
-            return ApiList::provider($this->modelClass::find()->my(App::user()->identity), ['title'], ['id', 'user_id', 'created_at', 'last_post', 'title', 'last_comment_text', 'last_comment_username', 'last_comment_created_at', 'first_comment_user_id', 'first_comment_username']);
+            $provider = ApiList::provider($this->modelClass::find()->my(App::user()->identity), ['title'], ['id', 'user_id', 'created_at', 'last_post', 'title', 'last_comment_text', 'last_comment_username', 'last_comment_created_at', 'first_comment_user_id', 'first_comment_username']);
+            $provider->sort->attributes['last_comment_created_at'] = ['asc' => ['last_comment_sort' => SORT_ASC, 'id' => SORT_DESC], 'desc' => ['last_comment_sort' => SORT_DESC, 'id' => SORT_DESC]];
+            $provider->sort->defaultOrder = ['last_comment_created_at' => SORT_DESC];
+            return $provider;
         };
         $actions['create']['scenario'] = 'create';
         $actions['update']['scenario'] = 'update';

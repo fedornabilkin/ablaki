@@ -7,13 +7,26 @@ class NodeTemplate extends LockedRecord
 {
     public $parentIds;
     public $worldBuildSeconds;
+    public $minimumBuildBudget;
     public static function tableName() { return 'world_template'; }
     public function beforeValidate()
     {
         if (!parent::beforeValidate()) return false;
+        if ($this->minimumBuildBudget !== null) {
+            try {
+                $minimum = \common\modules\world\modules\economy\value\Money::parse((string)$this->minimumBuildBudget);
+                if ($minimum->isNegative()) throw new \InvalidArgumentException();
+                $defaults = json_decode($this->defaults_json ?: '{}', true);
+                if (is_array($defaults)) { $defaults['minimum_build_budget_cr'] = $minimum->decimal(); $this->defaults_json = Json::encode((object)$defaults); }
+            } catch (\Throwable $error) { $this->addError('minimumBuildBudget', 'Укажите неотрицательный бюджет.'); }
+        }
         if ((is_int($this->worldBuildSeconds) || is_string($this->worldBuildSeconds)) && ctype_digit((string)$this->worldBuildSeconds)
             && (float)$this->worldBuildSeconds >= 1 && (float)$this->worldBuildSeconds <= 52254720000)
+        {
             $this->build_seconds = WorldTime::realSeconds((int)$this->worldBuildSeconds, WorldTime::rate());
+            $defaults = json_decode($this->defaults_json ?: '{}', true);
+            if (is_array($defaults)) { $defaults['world_work_seconds'] = (int)$this->worldBuildSeconds; $this->defaults_json = Json::encode((object)$defaults); }
+        }
         if ($this->parentIds === '') $this->parentIds = [];
         if ($this->parentIds !== null) {
             if (!is_array($this->parentIds)) { $this->addError('parentIds', 'Выберите родителей из списка.'); return true; }
@@ -38,6 +51,7 @@ class NodeTemplate extends LockedRecord
             ['hierarchy_level', 'integer', 'min' => 1, 'max' => 7],
             ['build_seconds', 'integer', 'min' => 1, 'max' => 604800],
             ['worldBuildSeconds', 'integer', 'min' => 1, 'max' => 52254720000],
+            ['minimumBuildBudget', 'safe'],
             [['enabled', 'player_buildable'], 'boolean'],
             [['materials_json', 'defaults_json'], 'default', 'value' => '{}'],
             [['materials_json', 'defaults_json'], 'validateJson'],
@@ -61,6 +75,8 @@ class NodeTemplate extends LockedRecord
                     || !modules\ItemLookup::exists($code, 'material')) throw new \InvalidArgumentException();
             }
             if ($attribute === 'defaults_json') {
+                if (isset($data['minimum_build_budget_cr']) && (!is_string($data['minimum_build_budget_cr']) || \common\modules\world\modules\economy\value\Money::parse($data['minimum_build_budget_cr'])->isNegative())) throw new \InvalidArgumentException();
+                if (isset($data['world_work_seconds']) && (!is_int($data['world_work_seconds']) || $data['world_work_seconds'] < 1 || $data['world_work_seconds'] > 52254720000)) throw new \InvalidArgumentException();
                 if (isset($data['description']) && (!is_string($data['description']) || mb_strlen($data['description']) > 5000)) throw new \InvalidArgumentException();
                 foreach (['population', 'plot_limit', 'level', 'condition', 'max_condition', 'area', 'fertility', 'allow_building', 'unlocked'] as $field)
                     if (isset($data[$field]) && (!is_int($data[$field]) || $data[$field] < 0 || $data[$field] > 1000000)) throw new \InvalidArgumentException();
@@ -104,7 +120,8 @@ class NodeTemplate extends LockedRecord
     public function permits(?Node $parent): bool
     {
         if (!$parent) return (int)$this->hierarchy_level === 1;
-        if ($this->player_buildable) return (new domain\CommonNodePolicy())->permitsChild($parent->getAttributes());
+        if ($this->player_buildable) return (new domain\CommonNodePolicy())->permitsChild($parent->getAttributes())
+            && $this->getAllowedParents()->andWhere(['id' => $parent->template_id])->exists();
         return $parent->status === 'active' && (int)$parent->hierarchy_level + 1 === (int)$this->hierarchy_level
             && $this->getAllowedParents()->andWhere(['id' => $parent->template_id])->exists();
     }
@@ -118,12 +135,18 @@ class NodeTemplate extends LockedRecord
     }
     public function beforeDelete() { $this->addError('id', 'Отключите шаблон вместо удаления.'); return false; }
     public function materials(): array { return Json::decode($this->materials_json); }
-    public function defaults(): array { return Json::decode($this->defaults_json); }
+    public function defaults(): array { return Json::decode($this->defaults_json ?: '{}') ?: []; }
+    public function worldWorkSeconds(): int { return (int)($this->defaults()['world_work_seconds'] ?? $this->build_seconds); }
+    public function realWorkSeconds(?int $rate = null): int { return WorldTime::realSeconds($this->worldWorkSeconds(), $rate ?? WorldTime::rate()); }
+    public function minimumLaborBudget(?int $hierarchyLevel = null): string
+    {
+        return (string)($this->defaults()['minimum_build_budget_cr'] ?? ((int)ceil(BuildStrength::forTemplate($this, $hierarchyLevel) / 100000) * 2 . '.0000'));
+    }
     public function fields(): array
     {
-        return array_merge(parent::fields(), ['description' => function () { return $this->defaults()['description'] ?? ''; },
+        return array_merge(parent::fields(), ['build_seconds' => function () { return $this->realWorkSeconds(); }, 'minimum_labor_budget' => function () { return $this->minimumLaborBudget(); }, 'description' => function () { return $this->defaults()['description'] ?? ''; },
             'economy' => function () { return domain\EconomyConstruction::terms($this); }, 'world_time_rate' => function () { return WorldTime::rate(); },
-            'world_build_seconds' => function () { return (int)$this->build_seconds * WorldTime::rate(); }, 'material_summary' => function () {
+            'world_build_seconds' => function () { return $this->worldWorkSeconds(); }, 'material_summary' => function () {
             $defaults = $this->defaults();
             $requirements = $this->materials() + ($defaults['build_tools'] ?? []) + ($defaults['build_stations'] ?? []);
             $items = \common\modules\world\modules\craft\models\CraftItem::find()->where(['code' => array_keys($requirements)])->indexBy('code')->all();

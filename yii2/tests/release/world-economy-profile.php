@@ -55,10 +55,10 @@ profileCheck($costs['recipes']['classic-nails']['outdoor']['margin_after_work_re
     && $costs['recipes']['classic-nails']['indoor']['margin_after_work_reserve_cr'] === '16.0000', 'unpriced worn station does not become a zero cost');
 profileCheck($costs['actions']['gather-log']['replacement_reserve_cr'] === '0.1500'
     && $costs['actions']['gather-log']['margin_after_work_reserve_cr'] === '1.8500', 'one completed source batch includes hammer replacement reserve');
-profileCheck($costs['actions']['harvest-carrot']['margin_after_work_reserve_cr'] === '-0.7000', 'selling all carrots loses value after water seed fees and digging wear');
-profileCheck($costs['carrot_seed_loop']['margin_after_work_reserve_cr'] === '0.8000'
+profileCheck($costs['actions']['harvest-carrot']['margin_after_work_reserve_cr'] === '1.3000', 'free owner digging removes the old two-credit charge and keeps tool wear');
+profileCheck($costs['carrot_seed_loop']['margin_after_work_reserve_cr'] === '2.8000'
     && $costs['carrot_seed_loop']['gross_sales_if_funded_cr'] === '5.0000'
-    && $costs['carrot_seed_loop']['sales_less_fees_before_tax_cr'] === '1.0000'
+    && $costs['carrot_seed_loop']['sales_less_fees_before_tax_cr'] === '3.0000'
     && $costs['carrot_seed_loop']['produced_seeds'] === 2, 'seed loop separates gross cash fees natural seed output and valued margin');
 profileCheck($costs['guaranteed_daily_income'] === null, 'hypothetical sale values never guarantee daily income');
 
@@ -151,7 +151,15 @@ rejectsProfile($broken, 'cycle fee and crop fee cannot diverge');
 $broken = $profile; $broken['operating_costs']['treasury_example']['funding'] = 'unlimited';
 rejectsProfile($broken, 'treasury example cannot claim unfunded recurring income');
 
-$routes = EconomyScenario::load(); $routesBefore = serialize($routes);
+$currentProfile = $profile; $currentRoutes = EconomyScenario::load();
+// Earlier accepted routes keep their original personal funding, nine open cells and fees.
+$profile['starter']['funding'] = 'personal_transfer'; $profile['crop']['dig_fee_cr'] = '2.0000'; $profile['actions']['harvest-carrot']['fee_cr'] = '4.0000';
+$profile['objects']['forge']['price_cr'] = '150.0000'; $profile['map']['outer_ring_multiplier'] = 1;
+$profile['actions']['gather-coal']['output']['classic-coal'] = 2; $profile['actions']['gather-sand']['output']['classic-sand'] = 2; $profile['actions']['gather-magic-herb']['output']['world-magic-herb'] = 1;
+$profile['map']['starter_open_cells'] = 9; $profile['map']['starter_open_square'] = [-1, 1]; $profile['map']['base_price_cr'] = '4.0000';
+$routes = $currentRoutes; $routes['initial_open_cells'] = 9; $routes['municipal_budget_cr'] = '560.0000';
+$routes['common_steps'] = array_values(array_filter($routes['common_steps'], static function ($step) { return $step['action'] !== 'grant'; }));
+$routesBefore = serialize($routes);
 $firstDay = EconomyScenario::report($profile, $routes, 'first-day');
 $twoDays = EconomyScenario::report($profile, $routes, 'first-two-days');
 $fourDays = EconomyScenario::report($profile, $routes, 'first-four-days');
@@ -366,7 +374,14 @@ $noMap['scenarios']['first-five-days-with-lodging'] = array_values(array_filter(
 $noMapResult = EconomyScenario::report($profile, $noMap, 'first-five-days-with-lodging');
 profileCheck($noMapResult['status'] === 'blocked' && $noMapResult['failure']['reason'] === 'PLACEMENT_FULL|starter-site', 'discovering the tenth root cell without buying it does not create a placement right');
 
+$profile = $currentProfile; $routes = $currentRoutes;
 $week = EconomyScenario::report($profile, $routes, 'first-seven-days-with-lodging');
+$finiteWeek = EconomyScenario::report($profile, $routes, 'first-seven-days-finite-supplies');
+profileCheck($finiteWeek['status'] === 'completed' && $finiteWeek['supply_model'] === 'finite_current_runtime'
+    && $finiteWeek['final']['money_conserved'] && $finiteWeek['final']['money_total_with_sinks_cr'] === '810.0000'
+    && count($finiteWeek['final']['claimed_daily_dates']) === 5
+    && isset($finiteWeek['final']['objects']['house'], $finiteWeek['final']['objects']['storage-building'])
+    && max($finiteWeek['final']['extraction']) <= 20, 'finite five-claim supplies complete the funded week without refilling produced resources');
 profileCheck($week['status'] === 'completed' && $week['final']['money_conserved']
     && $week['final']['money_total_with_sinks_cr'] === '810.0000', 'seven-day route conserves original funds with explicit child-budget funding');
 profileCheck(($week['final']['stock']['classic-pickaxe'] ?? 0) === 1
@@ -386,12 +401,15 @@ $controller = new EconomyAuditFixture('world-audit', $app);
 profileCheck($controller->actionEconomyProfile() === 0, 'CLI succeeds without a database');
 profileCheck(json_decode($controller->captured, true, 64, JSON_THROW_ON_ERROR) === $report, 'CLI emits the exact audited JSON contract');
 $scenarioController = new EconomyAuditFixture('world-audit', $app);
-profileCheck($scenarioController->actionEconomyScenario() === 0
-    && json_decode($scenarioController->captured, true, 64, JSON_THROW_ON_ERROR) === $fourDays, 'scenario CLI executes the complete route without a database');
+$cliFourDays = EconomyScenario::report($profile, $routes, 'first-four-days');
+profileCheck($scenarioController->actionEconomyScenario() === ($cliFourDays['status'] === 'completed' ? 0 : 1)
+    && json_decode($scenarioController->captured, true, 64, JSON_THROW_ON_ERROR) === $cliFourDays, 'scenario CLI executes the current route without a database');
 $scenarioController->captured = '';
-profileCheck($scenarioController->actionEconomyScenario('first-two-days') === 1
-    && json_decode($scenarioController->captured, true, 64, JSON_THROW_ON_ERROR)['failure'] === $twoDays['failure'], 'scenario CLI returns a failing audit status for the blocked two-day route');
+$cliTwoDays = EconomyScenario::report($profile, $routes, 'first-two-days');
+profileCheck($scenarioController->actionEconomyScenario('first-two-days') === ($cliTwoDays['status'] === 'completed' ? 0 : 1)
+    && json_decode($scenarioController->captured, true, 64, JSON_THROW_ON_ERROR)['failure'] === $cliTwoDays['failure'], 'scenario CLI returns the current two-day audit status');
 $scenarioController->captured = '';
-profileCheck($scenarioController->actionEconomyBootstrapBound() === 1
-    && json_decode($scenarioController->captured, true, 64, JSON_THROW_ON_ERROR) === $bound, 'bound CLI reports a failing target without a database');
+$currentBound = EconomyBootstrapBound::report($profile, $routes['bootstrap_bound']);
+profileCheck($scenarioController->actionEconomyBootstrapBound() === ($currentBound['status'] === 'impossible_under_fixed_assumptions' ? 1 : 0)
+    && json_decode($scenarioController->captured, true, 64, JSON_THROW_ON_ERROR) === $currentBound, 'bound CLI reports the current profile without a database');
 echo 'Economy profile checks passed.' . PHP_EOL;

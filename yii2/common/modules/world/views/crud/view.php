@@ -15,7 +15,7 @@ if ($model instanceof \common\modules\world\models\Node && $model->parent_id ===
 }
 if ($model instanceof \common\modules\world\models\NodeTemplate) {
     $attributes = array_values(array_filter($attributes, static function ($attribute) { return $attribute !== 'build_seconds'; }));
-    $attributes[] = ['label' => 'Трудоёмкость (время мира)', 'value' => \common\modules\world\models\WorldTime::duration((int)$model->build_seconds * \common\modules\world\models\WorldTime::rate())];
+    $attributes[] = ['label' => 'Трудоёмкость (время мира)', 'value' => \common\modules\world\models\WorldTime::duration($model->worldWorkSeconds())];
 }
 if ($model instanceof \common\modules\world\models\NodeTemplate) $attributes[] = ['label' => 'Разрешённые родители', 'format' => 'raw',
     'value' => implode('<br>', array_map(static function ($parent) { return \backend\support\EntityDisplay::link('world_template', $parent->getAttributes()); }, $model->getAllowedParents()->all())) ?: '—'];

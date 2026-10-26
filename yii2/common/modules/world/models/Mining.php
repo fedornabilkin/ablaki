@@ -31,9 +31,9 @@ final class Mining
             'worked_seconds' => (int)($state['worked_seconds'] ?? 0), 'live_work' => array_map(static function ($worker) { return ['accounted_at' => (int)$worker['accounted_at'], 'last_seen_at' => (int)$worker['last_seen_at']]; }, $workers),
             'seconds_per_unit' => (int)($state['seconds_per_unit'] ?? $config['seconds_per_unit'] ?? 60), 'server_time' => $now];
     }
-    public static function start(int $nodeId, int $user, string $operation, ?string $action = null, ?int $target = null): array
+    public static function start(int $nodeId, int $user, string $operation, ?string $action = null, ?int $target = null, ?string $destination = null): array
     {
-        if (domain\WorldSources::handles(Node::readable($nodeId, $user))) return domain\WorldSources::start($nodeId, $user, $operation, $action, $target);
+        if (domain\WorldSources::handles(Node::readable($nodeId, $user))) return domain\WorldSources::start($nodeId, $user, $operation, $action, $target, $destination);
         [$node, $config] = self::context($nodeId, $user); $db = Node::getDb();
         if (!$config) throw new GameError('EXTRACTOR_REQUIRED', 'Сначала постройте буровую установку внутри шахты.', 422);
         if ((new Query())->from('world_builder')->where(['user_id' => $user])->exists($db)) throw new GameError('BUILDER_BUSY', 'Приостановите строительство перед добычей.', 409);

@@ -15,10 +15,12 @@ final class EconomyConstruction
     }
     public static function catalogTerms(NodeTemplate $template, ?array $revision): ?array
     {
-        if (!$revision || !isset($revision['profile']['objects'][$template->code])) return null;
-        $price = $revision['profile']['objects'][$template->code]['price_cr'];
+        if (!$revision) return null;
+        $all = ($revision['profile']['closed_test']['all_templates'] ?? false) && getenv('WORLD_TEST_MODE') === '1';
+        if (!isset($revision['profile']['objects'][$template->code]) && !$all) return null;
+        $price = $revision['profile']['objects'][$template->code]['price_cr'] ?? (string)($template->defaults()['price_cr'] ?? '0.0000');
         return ['profile_version' => $revision['version'], 'price_cr' => $price,
-            'terms_digest' => hash('sha256', CanonicalJson::encode([$revision['id'], $template->getAttributes(), $price]))];
+            'terms_digest' => hash('sha256', CanonicalJson::encode([$revision['id'], $template->getAttributes(), $price, $revision['clock_settings']['world_time_rate'] ?? 1]))];
     }
     public static function check(NodeTemplate $template, int $user, array $input, bool $onboarding): ?array
     {
@@ -35,7 +37,7 @@ final class EconomyConstruction
         }
         $active = (new Query())->from(['b' => 'world_build'])->innerJoin(['n' => 'world_node'], 'n.id=b.node_id')
             ->where(['b.owner_user_id' => $user, 'b.status' => 'building', 'n.root_id' => EconomyRuntime::world($db)])->count('*', $db);
-        if ((int)$active >= $revision['profile']['limits']['active_constructions']) throw new GameError('CONSTRUCTION_LIMIT', 'Сначала завершите или отмените одну из трёх строек.', 409);
+        if ((int)$active >= min(1, $revision['profile']['limits']['active_constructions'])) throw new GameError('CONSTRUCTION_LIMIT', 'Сначала завершите или отмените текущую стройку.', 409);
         $limit = $revision['profile']['limits']['objects'][$template->code] ?? null;
         if ($limit !== null) {
             $count = (new Query())->from('world_node')->where(['owner_user_id' => $user, 'root_id' => EconomyRuntime::world($db), 'template_id' => $template->id])->andWhere(['<>', 'status', 'archived'])->count('*', $db);

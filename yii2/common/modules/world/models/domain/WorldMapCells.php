@@ -51,7 +51,7 @@ class WorldMapCells
         if ($revision) {
             $map = $revision['profile']['map'];
             return ['paid_cells' => (int)(new Query())->from('world_map_cell')->where(['parent_id' => $node, 'state' => 'open'])->andWhere(['>', 'price', 0])->count('*', $db),
-                'base_price' => $map['base_price_cr'], 'next_price' => $map['base_price_cr'], 'curve' => 'rings', 'bulk_minimum' => $map['bulk_minimum'], 'discount_bps' => $map['discount_bps'], 'max_quantity' => $map['max_cells'], 'currency' => 'Cr'];
+                'base_price' => $map['base_price_cr'], 'next_price' => $map['base_price_cr'], 'curve' => 'rings', 'outer_ring_multiplier' => $map['outer_ring_multiplier'] ?? 1, 'bulk_minimum' => $map['bulk_minimum'], 'discount_bps' => $map['discount_bps'], 'max_quantity' => $map['max_cells'], 'currency' => 'Cr'];
         }
         $paid = (int)(new Query())->from('world_map_cell')->where(['parent_id' => $node, 'state' => 'open'])->andWhere(['>', 'price', 0])->count('*', $db);
         $level = $db->schema->getTableSchema('world_node')->getColumn('hierarchy_level')
@@ -65,7 +65,8 @@ class WorldMapCells
         $base = Money::parse($pricing['base_price']); $gross = Money::parse('0'); $discount = Money::parse('0'); $carry = 0; $units = [];
         $bps = count($cells) >= $pricing['bulk_minimum'] ? (int)$pricing['discount_bps'] : 0;
         foreach ($cells as $point) {
-            $unit = $base->multiply(max(1, abs($point['x']), abs($point['y'])));
+            $ring = max(1, abs($point['x']), abs($point['y']));
+            $unit = $base->multiply($ring)->multiply($ring > 1 ? (int)($pricing['outer_ring_multiplier'] ?? 1) : 1);
             $part = $unit->portion($bps, $carry); $carry = $part['carry'];
             $gross = $gross->add($unit); $discount = $discount->add($part['amount']);
             $units[] = $point + ['gross_price' => $unit->decimal(), 'price' => $unit->subtract($part['amount'])->decimal()];

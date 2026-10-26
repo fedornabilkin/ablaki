@@ -97,6 +97,11 @@ class WorldQuery
     {
         if (!$rows) return [];
         $ids = array_column($rows, 'id');
+        $lodging = null;
+        if ($this->db->schema->getTableSchema('world_lodging_interval') && $this->db->schema->getTableSchema('world_housing_interval')) {
+            $actor = (new Query())->select('id')->from('game_actor')->where(['user_id' => $this->policy->userId()])->scalar($this->db);
+            if ($actor) $lodging = (new LodgingAssignments($this->db))->current((int)$actor);
+        }
         $commonModel = isset($this->db->schema->getTableSchema('world_node')->columns['hierarchy_level']);
         $purchasedRooms = [];
         $byType = []; foreach ($rows as $row) $byType[$row['node_type']][] = $row['id'];
@@ -147,6 +152,7 @@ class WorldQuery
         $result = [];
         foreach ($rows as $row) {
             $owned = $this->policy->owns($row); $detail = $details[$row['id']] ?? [];
+            $detail['is_lodging'] = $lodging !== null && $lodging['node_id'] === (int)$row['id'];
             if ($owned) {
                 $fields = ['climate', 'settlement_kind', 'population', 'plot_limit', 'building_kind', 'level', 'condition', 'max_condition', 'area', 'exposure_class', 'plot_kind', 'fertility', 'allow_building', 'unlocked', 'operational_status'];
                 $detail = array_merge(array_intersect_key($row, array_flip($fields)), $detail);

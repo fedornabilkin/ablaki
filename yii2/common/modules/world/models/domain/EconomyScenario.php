@@ -16,6 +16,19 @@ final class EconomyScenario
     {
         return json_decode(file_get_contents(dirname(__DIR__, 2) . '/data/economy/closed-test-scenarios-v1.json'), true, 64, JSON_THROW_ON_ERROR);
     }
+    public static function routeSteps(array $config, string $scenario, bool $finite = false): array
+    {
+        $common = $config['common_steps'];
+        if (($config['initial_open_cells'] ?? 9) === 1) {
+            $cells = [[-1, -1], [0, -1], [1, -1], [-1, 0], [1, 0], [-1, 1], [0, 1], [1, 1]];
+            array_splice($common, 1, 0, [['action' => 'explore', 'code' => 'starter-site', 'cells' => $cells], ['action' => 'buy', 'code' => 'starter-site', 'cells' => $cells]]);
+        }
+        if ($finite) {
+            $daily = null; foreach ($common as $step) if ($step['action'] === 'daily') { $daily = $step; break; }
+            if ($daily) { $common = array_values(array_filter($common, static function ($step) { return $step['action'] !== 'daily'; })); array_splice($common, 1, 0, [$daily]); }
+        }
+        return array_merge($common, $config['scenarios'][$scenario]);
+    }
 
     private static function need(bool $condition, string $code, string $detail = ''): void
     {
@@ -157,6 +170,11 @@ final class EconomyScenario
             $this->stock($row['materials'], -1); $this->state['now'] += $row['work_seconds'];
             $this->state['objects'][$code] = $parent;
             $this->state['budgets'][$code] = self::money('0'); $this->state['tax_reserved'][$code] = self::money('0'); $this->state['tax_carry'][$code] = 0;
+            if ($code === 'starter-site' && ($this->profile['starter']['funding'] ?? '') === 'parent_budget') {
+                $amount = self::money($this->profile['starter']['credits_cr']);
+                self::need($this->state['municipal']->subtract($this->state['municipal_reserved'])->compare($amount) >= 0, 'STARTER_FUNDING_PENDING');
+                $this->state['municipal'] = $this->state['municipal']->subtract($amount); $this->state['budgets'][$code] = $amount;
+            }
             foreach (['starter-site' => 'starter_site_active', 'starter-shelter' => 'shelter_built', 'garden' => 'garden_built', 'mine' => 'mine_built', 'forge' => 'forge_built'] as $object => $fact) if ($code === $object) $this->state['facts'][$fact] = true;
         } elseif ($action === 'craft') {
             self::need(isset($this->profile['recipes'][$code]), 'UNKNOWN_RECIPE', $code);
@@ -167,9 +185,15 @@ final class EconomyScenario
             $recent = array_filter($this->state['craft_times'], function ($at) { return $at > $this->state['now'] - 3600; });
             self::need(count($recent) + $quantity <= $this->profile['limits']['crafting_hourly']['maximum'], 'CRAFT_HOURLY_LIMIT');
             $fee = self::money($row['fee_cr'])->multiply($quantity);
-            self::need($this->state['wallet']->compare($fee) >= 0, 'INSUFFICIENT_CRAFT_WALLET');
-            $this->state['wallet'] = $this->state['wallet']->subtract($fee); $this->state['craft_fee_sink'] = $this->state['craft_fee_sink']->add($fee);
-            $this->flow('wallet', 'craft_fee_sink', $fee, 'existing_craft_debit');
+            if (($this->profile['starter']['funding'] ?? '') === 'parent_budget') {
+                self::need($this->available('starter-site')->compare($fee) >= 0, 'INSUFFICIENT_CRAFT_BUDGET');
+                $this->state['budgets']['starter-site'] = $this->state['budgets']['starter-site']->subtract($fee);
+                $this->flow('starter-site:budget', 'craft_fee_sink', $fee, 'existing_craft_debit');
+            } else {
+                self::need($this->state['wallet']->compare($fee) >= 0, 'INSUFFICIENT_CRAFT_WALLET');
+                $this->state['wallet'] = $this->state['wallet']->subtract($fee); $this->flow('wallet', 'craft_fee_sink', $fee, 'existing_craft_debit');
+            }
+            $this->state['craft_fee_sink'] = $this->state['craft_fee_sink']->add($fee);
             for ($i = 0; $i < $quantity; $i++) {
                 foreach ($row['tools'] as $tool) if ($tool !== $row['station']) $this->tool($tool, $this->profile['operating_costs']['craft_base_work_wear']);
                 if ($row['station'] !== null) $this->station($row['station']);
@@ -226,7 +250,7 @@ final class EconomyScenario
                 $level = MapExploration::requiredLevel($point['x'], $point['y']);
                 self::need($level === 1 || ($step['use_elixir'] ?? false), 'EXPLORER_LEVEL_REQUIRED');
                 if ($level > 1) $elixirs++;
-                $initial = $code === 'starter-site' ? max(abs($point['x']), abs($point['y'])) <= 1 : $point === ['x' => 0, 'y' => 0];
+                $initial = $code === 'starter-site' && $this->profile['map']['starter_open_cells'] === 9 ? max(abs($point['x']), abs($point['y'])) <= 1 : $point === ['x' => 0, 'y' => 0];
                 self::need(!$initial && !isset($this->state['explored'][$key]), 'MAP_CELL_EXPLORED');
                 $this->state['explored'][$key] = true;
             }
@@ -236,12 +260,23 @@ final class EconomyScenario
             self::need(!($step['use_elixir'] ?? false), 'INVALID_MAP_ACTION');
             foreach ($cells as $key => $point) self::need(isset($this->state['explored'][$key]) && !isset($this->state['paid_cells'][$code][$key]), 'MAP_CELL_NOT_DISCOVERED');
             $map = $this->profile['map'];
-            $quote = WorldMapCells::purchasePricing(['base_price' => $map['base_price_cr'], 'bulk_minimum' => $map['bulk_minimum'], 'discount_bps' => $map['discount_bps']], array_values($cells));
+            $quote = WorldMapCells::purchasePricing(['base_price' => $map['base_price_cr'], 'outer_ring_multiplier' => $map['outer_ring_multiplier'] ?? 1, 'bulk_minimum' => $map['bulk_minimum'], 'discount_bps' => $map['discount_bps']], array_values($cells));
             $this->spend($code, self::money($quote['total']));
             foreach (array_keys($cells) as $i => $key) $this->state['paid_cells'][$code][$key] = $quote['unit_prices'][$i];
         } elseif ($action === 'daily') {
             self::need(!isset($this->state['daily'][$day]), 'DAILY_ALREADY_CLAIMED');
-            $grant = []; foreach ($this->profile['daily']['items'] as $item => $amount) $grant[$item] = max(1, intdiv($amount * $this->efficiency(), 10000));
+            $grant = [];
+            foreach ($this->profile['daily']['items'] as $item => $amount) {
+                if ($this->config['finite_supplies']) {
+                    $sources = $this->profile['daily']['suppressed_by'][$item] ?? [];
+                    if (array_intersect($sources, array_keys($this->state['objects']))) continue;
+                    $used = $this->state['supply_claims'][$item] ?? 0;
+                    if ($used >= $this->profile['daily']['claim_limit']) continue;
+                    $grant[$item] = max(1, intdiv($amount * $this->efficiency(), 10000)) * ($this->profile['daily']['initial_multiplier'] - $used);
+                    $this->state['supply_claims'][$item] = $used + 1;
+                } else $grant[$item] = max(1, intdiv($amount * $this->efficiency(), 10000));
+            }
+            if (!$grant) return; // The UI hides exhausted supplies; no command or quota is consumed.
             $this->stock($grant, 1); $this->state['daily'][$day] = true;
         } elseif ($action === 'grant') {
             // Direct owned children only; retain explicit movement and reserved parent funds.
@@ -351,6 +386,7 @@ final class EconomyScenario
             || !is_string($config['municipal_budget_cr']) || !is_string($config['starts_at'])
             || !preg_match('/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\+03:00$/D', $config['starts_at'])) throw new \InvalidArgumentException('Invalid economy scenario configuration.');
         $self = new self(); $self->profile = $profile; $self->config = $config;
+        $self->config['finite_supplies'] = in_array($scenario, $config['finite_supply_scenarios'] ?? [], true);
         $start = new \DateTimeImmutable($config['starts_at']);
         if ($start->format('c') !== $config['starts_at']) throw new \InvalidArgumentException('Invalid fixed scenario date.');
         $self->config['start'] = $start->getTimestamp();
@@ -375,19 +411,19 @@ final class EconomyScenario
             $reserve = $reserve->add(self::money($order['unit_price_cr'])->multiply($order['quantity'])); $orders[$code] = $order['quantity'];
         }
         foreach ($profile['goals'] as $goal) $reserve = $reserve->add(self::money($goal['credits_cr']));
-        $wallet = self::money($profile['starter']['credits_cr']); $municipal = self::money($config['municipal_budget_cr']);
+        $wallet = self::money(($profile['starter']['funding'] ?? '') === 'parent_budget' ? '0' : $profile['starter']['credits_cr']); $municipal = self::money($config['municipal_budget_cr']);
         $self->initialMoney = $wallet->add($municipal);
         if ($municipal->isNegative()) throw new \InvalidArgumentException('Negative initial municipal funding.');
         $self->state = ['now' => $self->config['start'], 'wallet' => $wallet, 'municipal' => $municipal, 'municipal_reserved' => $reserve, 'loss_sink' => self::money('0'), 'craft_fee_sink' => self::money('0'), 'flows' => [], 'step' => 0,
             'stock' => $profile['starter']['items'], 'tools' => [], 'stations' => [], 'objects' => [], 'budgets' => [], 'tax_reserved' => [], 'tax_carry' => [], 'receipts' => [],
-            'placements' => [], 'orders' => $orders, 'daily' => [], 'goals' => [], 'crafted' => [], 'craft_times' => [], 'gathered' => [], 'action_counts' => [],
+            'placements' => [], 'orders' => $orders, 'daily' => [], 'supply_claims' => [], 'goals' => [], 'crafted' => [], 'craft_times' => [], 'gathered' => [], 'action_counts' => [],
             'extraction' => [], 'sales' => [], 'explored' => [], 'paid_cells' => [], 'cancelled_crops' => [], 'facts' => ['city_joined' => true], 'crop' => null, 'peak_slots' => 0, 'checkpoints' => [],
             'night_enabled' => $nightEnabled, 'health' => $health, 'night_history' => [], 'beds' => [], 'lodging' => []];
         foreach ($profile['starter']['items'] as $code => $quantity) if ($profile['items'][$code]['kind'] === 'tool') $self->state['tools'][$code] = array_fill(0, $quantity, $profile['operating_costs']['equipment_max_durability']);
         $trace = []; $failure = null;
         try { self::need($municipal->compare($reserve) >= 0, 'INSUFFICIENT_MUNICIPAL_RESERVE', $reserve->decimal()); $self->capacity(); }
         catch (\DomainException $exception) { $failure = ['step' => 0, 'reason' => $exception->getMessage()]; }
-        foreach (array_merge($config['common_steps'], $config['scenarios'][$scenario]) as $index => $step) {
+        foreach (self::routeSteps($config, $scenario, $self->config['finite_supplies']) as $index => $step) {
             if ($failure !== null) break;
             $before = $self->state;
             try { $self->state['step'] = $index + 1; $self->apply($step); self::need($self->summary()['money_conserved'], 'MONEY_NOT_CONSERVED'); }
@@ -403,7 +439,7 @@ final class EconomyScenario
             }
             $trace[] = ['step' => $index + 1, 'input' => $step, 'at' => $self->summary()['at'], 'wallet_cr' => $self->state['wallet']->decimal()];
         }
-        return ['profile' => $profile['code'], 'scenario' => $scenario, 'status' => $failure === null ? 'completed' : 'blocked', 'applied' => false,
+        return ['profile' => $profile['code'], 'scenario' => $scenario, 'supply_model' => $self->config['finite_supplies'] ? 'finite_current_runtime' : 'historical_daily_model', 'status' => $failure === null ? 'completed' : 'blocked', 'applied' => false,
             'initial_total_cr' => $self->initialMoney->decimal(), 'failure' => $failure, 'trace' => $trace, 'flows' => $self->state['flows'], 'checkpoints' => $self->state['checkpoints'], 'night_history' => $self->state['night_history'], 'final' => $self->summary(),
             'limitations' => ['candidate_not_live_game', $nightEnabled ? 'explicit_example_night_rules_not_a_live_policy' : 'full_health_efficiency_assumed_not_a_night_survival_test',
                 'initial_municipal_funding_and_uncompeted_orders_are_test_setup_prerequisites', 'no_market_or_additional_personal_transfers',

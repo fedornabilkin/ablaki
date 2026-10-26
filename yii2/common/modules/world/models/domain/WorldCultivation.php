@@ -21,6 +21,18 @@ class WorldCultivation
     private $access;
     public function __construct(Connection $db, WorldFlags $flags, WorldAccessPolicy $access) { $this->db = $db; $this->flags = $flags; $this->access = $access; }
     private function one(string $table, array $where): ?array { return (new Query())->from($table)->where($where)->one($this->db) ?: null; }
+    private function timedRules(array $rules, ?array $cycle): array
+    {
+        $keys = ['grow_seconds', 'water_interval_seconds', 'water_window_seconds', 'harvest_window_seconds'];
+        if ($cycle) {
+            $accepted = json_decode($cycle['terms_json'] ?? '{}', true) ?: [];
+            foreach ($keys as $key) if (isset($accepted[$key])) $rules[$key] = (int)$accepted[$key];
+        } else {
+            $rate = (int)(\common\modules\world\models\WorldTime::settings($this->db)['world_time_rate'] ?? 1);
+            foreach ($keys as $key) if (isset($rules[$key]) && (int)$rules[$key] > 0) $rules[$key] = \common\modules\world\models\WorldTime::realSeconds((int)$rules[$key], $rate);
+        }
+        return $rules;
+    }
     private function resource(int $id): array
     {
         $item = $this->one('craft_item', ['id' => $id, 'active' => 1]);
@@ -45,20 +57,23 @@ class WorldCultivation
         $result['water_item_id'] = $water;
         return $result;
     }
-    private function context(int $user, int $id): array
+    private function context(int $user, int $id, bool $allowDig = false, bool $readOnly = false): array
     {
         $this->flags->requireFlag('world_read'); $this->flags->requireFlag('storage_v2');
         $node = (new WorldQuery($this->db, new WorldAccessPolicy($user)))->node($id);
         $bed = $this->one('world_bed', ['node_id' => $id]);
-        if (!$bed || !(int)$bed['unlocked'] || $node['type'] !== 'BED' || !$node['permissions']['storage'] || $node['status'] !== 'active') throw new GameError('BED_UNAVAILABLE', 'Выберите свою открытую грядку.', 403);
+        $foreign = !$node['permissions']['storage'];
+        if (!$bed || !(int)$bed['unlocked'] || $node['type'] !== 'BED' || ($foreign && !$allowDig) || $node['status'] !== 'active') throw new GameError('BED_UNAVAILABLE', 'Выберите доступную открытую грядку.', 403);
         if (!(new Query())->from('world_membership')->where(['user_id' => $user, 'world_id' => $node['root_id']])->exists($this->db)
             || (new Query())->from(['n' => 'world_node'])->innerJoin(['c' => 'world_node_closure'], '[[c.ancestor_id]]=[[n.id]]')->where(['c.descendant_id' => $id])->andWhere(['<>', 'n.status', 'active'])->exists($this->db)) throw new GameError('BED_UNAVAILABLE', 'Территория грядки недоступна.');
         $entitlement = $this->one('world_expansion_entitlement', ['node_id' => $id]);
         if (!$entitlement && !\common\modules\world\models\Build::find()->where(['node_id' => $id, 'status' => 'completed'])->exists()) throw new GameError('BED_NOT_PURCHASED', 'Сначала постройте грядку.');
         $guard = $this->one('world_bed_active_cycle', ['bed_id' => $id]);
+        if ($foreign && ($guard || $bed['dug_at'] !== null) && !$readOnly) throw new GameError('BED_WORK_UNAVAILABLE', 'Помочь можно только со вскапыванием свободной невскопанной грядки.', 403);
+        if ($foreign && $readOnly) $guard = null;
         $cycle = $guard ? $this->one('world_crop_cycle', ['id' => $guard['cycle_id'], 'owner_user_id' => $user, 'closed_at' => null]) : null;
         if ($guard && !$cycle) throw new GameError('CROP_STATE_INVALID', 'Цикл выращивания требует сверки.');
-        return compact('node', 'bed', 'cycle');
+        return compact('node', 'bed', 'cycle', 'foreign');
     }
     public function crops(int $page, string $search): array
     {
@@ -79,16 +94,18 @@ class WorldCultivation
     public function state(int $user, int $bed): array
     {
         return (new FinanceReadSnapshot($this->db))->run(function () use ($user, $bed) {
-            $c = $this->context($user, $bed); $cycle = $c['cycle']; $result = null; $now = time();
+            $c = $this->context($user, $bed, true, true); $cycle = $c['cycle']; $result = null; $now = time();
             if ($cycle) {
                 $rules = $this->one('world_crop_revision', ['id' => $cycle['crop_revision_id']]);
                 $environment = CultivationEnvironment::accepted($cycle); $rules = CultivationEnvironment::rules($rules, $environment);
+                $rules = $this->timedRules($rules, $cycle);
                 $cycle['event_loss_bps'] = CultivationEnvironment::damage($this->db, $cycle, $environment, $now)['loss_bps'];
                 $result = ['id' => (int)$cycle['id'], 'crop_revision_id' => (int)$cycle['crop_revision_id'], 'revision' => (int)$cycle['revision']];
                 $result = array_merge($result, CultivationClock::project($cycle, $rules, $now));
                 $result['name'] = $this->one('world_crop', ['id' => $rules['crop_id']])['name'];
             }
-            return ['bed_id' => $bed, 'dug' => $c['bed']['dug_at'] !== null, 'cycle' => $result, 'writable' => $this->flags->capabilities()['world_write'], 'server_time' => $now];
+            $workAvailable = !$c['foreign'] || ($c['bed']['dug_at'] === null && !(new Query())->from('world_bed_active_cycle')->where(['bed_id' => $bed])->exists($this->db));
+            return ['bed_id' => $bed, 'owner' => !$c['foreign'], 'dug' => $c['bed']['dug_at'] !== null, 'cycle' => $result, 'writable' => $workAvailable && $this->flags->capabilities()['world_write'], 'server_time' => $now];
         });
     }
     private function prepare(int $user, string $action, array $input): array
@@ -107,15 +124,20 @@ class WorldCultivation
             $version = $crop ? (int)(new Query())->from('world_crop_revision')->where(['crop_id' => $crop['id']])->max('version', $this->db) + 1 : 1;
             return ['terms' => $normalized + ['version' => $version, 'existing_cycles_unchanged' => true], 'revisions' => $revisions];
         }
-        $c = $this->context($user, $input['bed_id']); $cycle = $c['cycle'];
+        $c = $this->context($user, $input['bed_id'], $action === 'dig'); $cycle = $c['cycle'];
         $revisions['node:' . $input['bed_id']] = $c['node']['revision'];
         if ($action === 'dig') {
             if ($cycle) throw new GameError('BED_OCCUPIED', 'Сначала соберите или уберите урожай.');
             if ($c['bed']['dug_at'] !== null) throw new GameError('BED_ALREADY_DUG', 'Грядка уже вскопана.');
             $shovel = GardenTools::shovel($this->db, $user);
             $profile = EconomyRuntime::current($this->db);
+            $wage = $c['foreign'] ? (string)($profile['profile']['crop']['dig_wage_cr'] ?? '1.0000') : '0.0000';
+            if ($c['foreign']) {
+                $accounts = (new \common\modules\world\modules\economy\models\domain\EconomyHierarchy($this->db))->accounts((int)$c['bed']['garden_node_id']);
+                if (empty($accounts['budget']) || (new \common\modules\world\modules\economy\models\domain\BudgetSpending($this->db))->available((int)$accounts['budget']['id'])->compare(\common\modules\world\modules\economy\value\Money::parse($wage)) < 0) throw new GameError('GARDEN_WAGE_UNAVAILABLE', 'Владелец должен пополнить бюджет огорода для оплаты вскапывания.');
+            }
             return $c + ['terms' => ['bed_id' => $input['bed_id'], 'action' => 'dig', 'tool' => $shovel['result'],
-                'price_cr' => $profile ? $profile['profile']['crop']['dig_fee_cr'] : '0.0000', 'payer_node_id' => (int)$c['bed']['garden_node_id']], 'revisions' => $revisions + $shovel['revisions']];
+                'price_cr' => '0.0000', 'worker_reward_cr' => $wage, 'payer_node_id' => (int)$c['bed']['garden_node_id']], 'revisions' => $revisions + $shovel['revisions']];
         }
         if ($action === 'sow') {
             if ($c['bed']['dug_at'] === null) throw new GameError('BED_NOT_DUG', 'Сначала вскопайте грядку.');
@@ -128,9 +150,10 @@ class WorldCultivation
         if (!$rules) throw new GameError('CROP_UNAVAILABLE', 'Культура недоступна.', 404);
         $environment = $cycle ? CultivationEnvironment::accepted($cycle) : CultivationEnvironment::snapshot($this->db, $input['bed_id'], $user);
         $rules = CultivationEnvironment::rules($rules, $environment);
+        $rules = $this->timedRules($rules, $cycle);
         $weather = $cycle ? CultivationEnvironment::damage($this->db, $cycle, $environment, time()) : ['loss_bps' => 0, 'effects' => []];
         if ($cycle) $cycle['event_loss_bps'] = $weather['loss_bps'];
-        $terms = ['bed_id' => $input['bed_id'], 'cycle_id' => $cycle ? (int)$cycle['id'] : null, 'cycle_revision' => $cycle ? (int)$cycle['revision'] : null, 'crop_revision_id' => (int)$rules['id'], 'grow_seconds' => (int)$rules['grow_seconds'], 'water_interval_seconds' => (int)$rules['water_interval_seconds'], 'cancel_refund' => false];
+        $terms = ['bed_id' => $input['bed_id'], 'cycle_id' => $cycle ? (int)$cycle['id'] : null, 'cycle_revision' => $cycle ? (int)$cycle['revision'] : null, 'crop_revision_id' => (int)$rules['id'], 'grow_seconds' => (int)$rules['grow_seconds'], 'water_interval_seconds' => (int)$rules['water_interval_seconds'], 'water_window_seconds' => (int)$rules['water_window_seconds'], 'harvest_window_seconds' => (int)$rules['harvest_window_seconds'], 'cancel_refund' => false];
         $accepted = json_decode($rules['config_json'], true) ?: [];
         $terms += ['price_cr' => $action === 'cancel' ? '0.0000' : ($accepted['fees'][$action] ?? '0.0000'), 'payer_node_id' => (int)$c['bed']['garden_node_id']];
         $terms['environment'] = $environment; $terms['event_loss_bps'] = $cycle['event_loss_bps'] ?? 0;
@@ -175,6 +198,11 @@ class WorldCultivation
             if ($action === 'dig') {
                 if (!$terms['tool']['available']) throw new GameError('SHOVEL_REQUIRED', 'Для вскапывания нужна исправная лопата в рюкзаке.');
                 (new \common\modules\world\modules\craft\models\domain\EquipmentExposure($this->db))->use($terms['tool']['instance_id'], 1, 1, false);
+                if ($p['foreign']) {
+                    $accounts = (new \common\modules\world\modules\economy\models\domain\EconomyHierarchy($this->db))->accounts((int)$p['bed']['garden_node_id']);
+                    (new \common\modules\world\modules\economy\models\domain\BudgetDisbursement($this->db))->wage((int)$accounts['budget']['id'], $user,
+                        \common\modules\world\modules\economy\value\Money::parse($terms['worker_reward_cr']), $operation, 'dig-' . $payload['bed_id'], 'Вскапывание грядки #' . $payload['bed_id']);
+                }
                 $this->db->createCommand()->update('world_bed', ['dug_at' => $now], ['node_id' => $payload['bed_id']])->execute();
                 $this->db->createCommand()->update('world_node', ['revision' => new Expression('[[revision]]+1')], ['id' => $payload['bed_id']])->execute();
                 EconomyRuntime::fact($this->db, $user, 'bed_dug', 1, $operation);

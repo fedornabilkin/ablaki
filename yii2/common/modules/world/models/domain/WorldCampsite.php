@@ -64,6 +64,8 @@ class WorldCampsite
         $supplies = ['starter_available' => !(new Query())->from('craft_event')->where(['user_id' => $user, 'action' => 'starter'])->exists($this->db),
             'gather_available' => !(new Query())->from('craft_event')->where(['user_id' => $user, 'action' => 'gather'])->andWhere(['>=', 'created_at', $today])->exists($this->db),
             'gather_available_at' => $today + 86400];
+        $finite = (new FiniteSupplies($this->db))->state($user);
+        if ($finite) $supplies = ['starter_available' => $supplies['starter_available']] + $finite;
         $credit = (new Query())->select('credit')->from('persone')->where(['user_id' => $user])->scalar($this->db);
         $walletCredit = $credit === false ? null : Money::parse((string)$credit)->decimal();
         return compact('site', 'flags', 'shelter', 'nights', 'economy', 'premises', 'garden', 'orders', 'storages', 'placement', 'hasDebt', 'supplies', 'walletCredit');

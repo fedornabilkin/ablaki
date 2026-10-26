@@ -1,7 +1,7 @@
 {
   "_type": "export",
   "__export_format": 4,
-  "__export_date": "2026-10-03T06:39:54.000Z",
+  "__export_date": "2026-10-23T06:27:59.544Z",
   "__export_source": "insomnia.desktop.app:v2022.7.0",
   "resources": [
     {
@@ -2096,7 +2096,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/nodes/{{ _.world_node_id }}/campsite",
       "name": "GET /world/nodes/{id}/campsite",
-      "description": "Player's starter campsite and available actions",
+      "description": "Player's starter campsite and available actions\n2026-10-22: finite per-item supplies; gather_remaining/gather_limit/gather_exhausted. Exhaustion hides gathering until a NEW gatherable catalogue item is introduced. Production excludes its raw resource. Replays never refill old allowances; five decreasing claims in the current profile. Dates follow the continuous world clock, deadlines remain real timestamps.",
       "method": "GET",
       "body": {},
       "parameters": [],
@@ -2263,7 +2263,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/nodes/{{ _.world_node_id }}/supplies-gather-preview",
       "name": "POST /world/nodes/{id}/supplies-gather-preview",
-      "description": "Quote the daily gathering with current health modifier Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело.",
+      "description": "Quote the daily gathering with current health modifier Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело.\n2026-10-22: finite per-item supplies; gather_remaining/gather_limit/gather_exhausted. Exhaustion hides gathering until a NEW gatherable catalogue item is introduced. Production excludes its raw resource. Replays never refill old allowances; five decreasing claims in the current profile. Dates follow the continuous world clock, deadlines remain real timestamps.",
       "method": "POST",
       "body": {
         "mimeType": "application/json",
@@ -2298,7 +2298,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/nodes/{{ _.world_node_id }}/supplies-gather",
       "name": "POST /world/nodes/{id}/supplies-gather",
-      "description": "Collect today's materials Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело.",
+      "description": "Collect today's materials Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело.\n2026-10-22: finite per-item supplies; gather_remaining/gather_limit/gather_exhausted. Exhaustion hides gathering until a NEW gatherable catalogue item is introduced. Production excludes its raw resource. Replays never refill old allowances; five decreasing claims in the current profile. Dates follow the continuous world clock, deadlines remain real timestamps.",
       "method": "POST",
       "body": {
         "mimeType": "application/json",
@@ -4162,11 +4162,11 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/nodes/{{ _.world_node_id }}/housing-lodge-preview",
       "name": "POST /world/nodes/{id}/housing-lodge-preview",
-      "description": "CommandBus owner/registry locks serialize shelter and house occupancy. One current assignment per player. No charge. Preview lasts 300 seconds; commit pins place/actor/interval and room revision, saves audit/outbox and exact replay. Protection requires the same place for the entire night; no retroactive healing. Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело.",
+      "description": "CommandBus owner/registry locks serialize shelter and house occupancy. One current assignment per player. No charge. Preview lasts 300 seconds; commit pins place/actor/interval and room revision, saves audit/outbox and exact replay. Protection requires the same place for the entire night; no retroactive healing. Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело. Schema 43: replace_current=true атомарно заменяет прежний ночлег, сохраняя историю. Тот же флаг нужен в preview и execute; операция бесплатна.",
       "method": "POST",
       "body": {
         "mimeType": "application/json",
-        "text": "{}"
+        "text": "{\n  \"replace_current\": true\n}"
       },
       "parameters": [],
       "headers": [
@@ -4197,11 +4197,11 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/nodes/{{ _.world_node_id }}/housing-lodge",
       "name": "POST /world/nodes/{id}/housing-lodge",
-      "description": "CommandBus owner/registry locks serialize shelter and house occupancy. One current assignment per player. No charge. Preview lasts 300 seconds; commit pins place/actor/interval and room revision, saves audit/outbox and exact replay. Protection requires the same place for the entire night; no retroactive healing. Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело.",
+      "description": "CommandBus owner/registry locks serialize shelter and house occupancy. One current assignment per player. No charge. Preview lasts 300 seconds; commit pins place/actor/interval and room revision, saves audit/outbox and exact replay. Protection requires the same place for the entire night; no retroactive healing. Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело. Schema 43: replace_current=true атомарно заменяет прежний ночлег, сохраняя историю. Тот же флаг нужен в preview и execute; операция бесплатна.",
       "method": "POST",
       "body": {
         "mimeType": "application/json",
-        "text": "{\n  \"request_key\": \"{{ _.world_request_key }}\",\n  \"quote_id\": \"{{ _.world_quote_id }}\",\n  \"expected_revisions\": {{ _.world_expected_revisions }}\n}"
+        "text": "{\n  \"replace_current\": true,\n  \"request_key\": \"{{ _.world_request_key }}\",\n  \"quote_id\": \"{{ _.world_quote_id }}\",\n  \"expected_revisions\": {{ _.world_expected_revisions }}\n}"
       },
       "parameters": [],
       "headers": [
@@ -10692,7 +10692,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/nodes/{{ _.world_node_id }}/placement-options",
       "name": "GET /world/nodes/{id}/placement-options",
-      "description": "Contract: docs/architecture/simple-world-api.md. Optional x/y restrict the catalog to the selected cell. Open and unoccupied positions are filtered before full placement-policy inspection. Requires-crafting entries have quantity=0,input=null; owned items retain canonical inventory IDs. Preview and transfer repeat the complete authoritative checks. Since 2026-10-21 each item also exposes description (string, max 5000). Identical SQL reads are reused only within one service call; the next read and all preview/commit commands use fresh checks.",
+      "description": "Схема 43: только совместимые с нодой/условиями предметы; до изготовления requires_crafting=true. Открытая пустая ячейка проверяется при переносе той же серверной политикой.",
       "method": "GET",
       "body": {},
       "parameters": [
@@ -10874,7 +10874,7 @@
       "name": "GET · Шаблоны для родителя",
       "url": "{{ _.baseUrl }}/v1/world/templates?parent_id={{ _.simple_parent_id }}&envelope=1&per-page=100",
       "method": "GET",
-      "description": "Contract: docs/architecture/simple-world-api.md. Material availability and equipment are checked in one catalog batch. Pagination accepts per-page=1..100, default 30. Preserve economy.terms_digest for POST /builds; available/unavailable_reason do not include personal funding consent. Since 2026-10-21 each Template also exposes description (string, max 5000, empty for legacy data); published profile object descriptions are included in both template API representations. Candidate prices: shelter 20 Cr, house 80 Cr; publish the profile explicitly per environment.",
+      "description": "Схема 43: только шаблоны с разрешённым родителем parent_id, корректные totalCount/pageCount после фильтрации. available отдельно отражает материалы и единственную незавершённую стройку. Контракт: docs/architecture/simple-world-api.md.",
       "body": {},
       "parameters": [],
       "headers": [
@@ -10993,14 +10993,20 @@
     {
       "_id": "req_a505a0b875f7feca1f1f5598f280b0dd",
       "parentId": "fld_6d6e271b7544c709bed8d6c70f1b90e0",
-      "modified": 1791244800000,
+      "modified": 1792776552897,
       "created": 1791244800000,
-      "name": "GET · Своя стоянка",
+      "name": "GET · Старт и обеспеченные места",
       "url": "{{ _.baseUrl }}/v1/world/start",
       "method": "GET",
-      "description": "Контракт: docs/architecture/simple-world-api.md. ID в окружении — примеры: сначала получите действительные ID из GET.",
+      "description": "Схема 42: optional node_id returns city/region funded places, payout per new settler, protected reserve and pending FIFO obligations. city_id is a compatible alias. No mutation. Контракт: docs/architecture/simple-world-api.md.",
       "body": {},
-      "parameters": [],
+      "parameters": [
+        {
+          "name": "node_id",
+          "value": "{{ _.world_node_id }}",
+          "disabled": true
+        }
+      ],
       "headers": [
         {
           "name": "Accept",
@@ -11012,6 +11018,48 @@
         "token": "{{ _.bearer }}"
       },
       "metaSortKey": 8,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_0d37454b02784060b774d1c904170d42",
+      "parentId": "fld_6d6e271b7544c709bed8d6c70f1b90e0",
+      "modified": 1792776552897,
+      "created": 1792776552897,
+      "name": "POST · Стартовый резерв поселения",
+      "url": "{{ _.baseUrl }}/v1/world/objects/{{ _.simple_city_id }}/starter-reserve",
+      "method": "POST",
+      "description": "Схема 42. Владелец действующего поселения или world-manage. payout_cr>0 changes only future settlers; add_amount_cr>=0 earmarks existing free budget, then settles accepted FIFO amounts. Reserve is included in budget, never newly minted. New simple_request_key per action, same key and body on retry. Контракт: docs/architecture/simple-world-api.md.",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"payout_cr\": \"250.0000\",\n  \"add_amount_cr\": \"500.0000\"\n}"
+      },
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Accept",
+          "value": "application/json"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "name": "Idempotency-Key",
+          "value": "{{ _.simple_request_key }}"
+        }
+      ],
+      "authentication": {
+        "type": "bearer",
+        "token": "{{ _.bearer }}"
+      },
+      "metaSortKey": 8.5,
       "isPrivate": false,
       "settingStoreCookies": true,
       "settingSendCookies": true,
@@ -11066,12 +11114,12 @@
     {
       "_id": "req_57c57818437ba5339cb7b8199d94ddb2",
       "parentId": "fld_6d6e271b7544c709bed8d6c70f1b90e0",
-      "modified": 1791244800000,
+      "modified": 1792776552898,
       "created": 1791244800000,
       "name": "POST · Начать стройку",
       "url": "{{ _.baseUrl }}/v1/world/builds",
       "method": "POST",
-      "description": "Contract: docs/architecture/simple-world-api.md. Existing budget is reserved first; top_up=true permits only the missing amount from the personal wallet. Funding, materials and construction are atomic. Retry with the same Idempotency-Key and body.",
+      "description": "Contract: docs/architecture/simple-world-api.md. Existing budget is reserved first; top_up=true permits only the missing amount from the personal wallet. Funding, materials and construction are atomic. Retry with the same Idempotency-Key and body. Schema 42: labor_budget=0 permits self-construction; a positive amount must meet the accepted minimum. Decrease only before helpers accept/earn work (can_reduce_budget). top_up charges only the shortfall. Schema 43: одна незавершённая стройка/ремонт на игрока, иначе CONSTRUCTION_LIMIT; неподходящий родитель INVALID_TEMPLATE.",
       "body": {
         "mimeType": "application/json",
         "text": "{\"parent_id\": {{ _.simple_parent_id }}, \"template_id\": {{ _.simple_template_id }}, \"name\": \"Мой дом\", \"labor_budget\": \"0\", \"x\": 0, \"y\": 0,\n  \"top_up\": false\n}"
@@ -11422,12 +11470,12 @@
     {
       "_id": "req_c33e1bcfb09a59f39a4d1a44094049fc",
       "parentId": "fld_6d6e271b7544c709bed8d6c70f1b90e0",
-      "modified": 1791244800000,
+      "modified": 1792736879544,
       "created": 1791244800000,
       "name": "GET · Таймер сбора",
       "url": "{{ _.baseUrl }}/v1/world/objects/{{ _.simple_node_id }}/gather",
       "method": "GET",
-      "description": "{gather_available,gather_available_at,server_time}. Только своя действующая стоянка; GET ничего не списывает.",
+      "description": "{gather_available,gather_available_at,server_time}. Только своя действующая стоянка; GET ничего не списывает. Schema 41: gather_items, gather_remaining/gather_limit, gather_can_claim and gather_reason prepare the modal and explain backpack capacity before POST.",
       "body": {},
       "parameters": [],
       "headers": [
@@ -11453,12 +11501,12 @@
     {
       "_id": "req_0959e8a31d17579090141bb935fba924",
       "parentId": "fld_6d6e271b7544c709bed8d6c70f1b90e0",
-      "modified": 1791244800000,
+      "modified": 1792776552898,
       "created": 1791244800000,
       "name": "POST · Имя и бюджет стройки",
       "url": "{{ _.baseUrl }}/v1/world/builds/{{ _.simple_build_id }}/settings",
       "method": "POST",
-      "description": "Contract: docs/architecture/simple-world-api.md. Existing budget is reserved first; top_up=true permits only the missing amount from the personal wallet. Funding, materials and construction are atomic. Retry with the same Idempotency-Key and body.",
+      "description": "Contract: docs/architecture/simple-world-api.md. Existing budget is reserved first; top_up=true permits only the missing amount from the personal wallet. Funding, materials and construction are atomic. Retry with the same Idempotency-Key and body. Schema 42: labor_budget=0 permits self-construction; a positive amount must meet the accepted minimum. Decrease only before helpers accept/earn work (can_reduce_budget). top_up charges only the shortfall.",
       "body": {
         "mimeType": "application/json",
         "text": "{\"name\":\"Мой дом\", \"labor_budget\":\"0\",\n  \"top_up\": false\n}"
@@ -11500,7 +11548,7 @@
       "name": "GET - Mining view",
       "url": "{{ _.baseUrl }}/v1/world/objects/{{ _.simple_node_id }}/mining",
       "method": "GET",
-      "description": "Contract: docs/architecture/simple-world-api.md. Set simple_node_id to a visible active mine containing a completed drilling rig. Workers produce ore for its owner; heartbeat every 10 seconds, maximum 60 seconds credited after disconnect. Commands require a new key per action; retries retain the key. Progress DTO: worked_seconds, server_time, live_work[{accounted_at,last_seen_at}]; versioned sources also expose work_id (nullable) and required_seconds from accepted batch terms. Project no later than last_seen_at+60; check heartbeat at completion and every 10 seconds. Only server confirmation grants output. Since 2026-10-21 actions[].unavailable_reason reports missing usable tools; root unavailable_reason refers to the accepted batch definition, including older profile tools. Null means this reason is absent, not that all quota/time/storage conditions pass. Commands revalidate availability.",
+      "description": "Contract: docs/architecture/simple-world-api.md. Set simple_node_id to a visible active mine containing a completed drilling rig. Workers produce ore for its owner; heartbeat every 10 seconds, maximum 60 seconds credited after disconnect. Commands require a new key per action; retries retain the key. Progress DTO: worked_seconds, server_time, live_work[{accounted_at,last_seen_at}]; versioned sources also expose work_id (nullable) and required_seconds from accepted batch terms. Project no later than last_seen_at+60; check heartbeat at completion and every 10 seconds. Only server confirmation grants output. Since 2026-10-21 actions[].unavailable_reason reports missing usable tools; root unavailable_reason refers to the accepted batch definition, including older profile tools. Null means this reason is absent, not that all quota/time/storage conditions pass. Commands revalidate availability. Mining state returns output_storages for the owner: backpack (default) and local child mini-storages only. Hired workers always use the employer mini-storage.",
       "body": {},
       "parameters": [],
       "headers": [
@@ -11513,7 +11561,49 @@
         "type": "bearer",
         "token": "{{ _.bearer }}"
       },
-      "metaSortKey": 31.0,
+      "metaSortKey": 31,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_world_mining_employment_20261023",
+      "parentId": "fld_6d6e271b7544c709bed8d6c70f1b90e0",
+      "modified": 1792736879544,
+      "created": 1792736879544,
+      "name": "POST - Mine employment settings",
+      "url": "{{ _.baseUrl }}/v1/world/objects/{{ _.simple_node_id }}/mining/settings",
+      "method": "POST",
+      "description": "Owner only. A new paid batch always targets the first active mini-storage (CHEST child) inside the mine; there is no destination selector. Build a mini-storage before enabling work. Accepted destinations and wages remain pinned. Positive exact reward_cr is configured independently of available wage funds; budget and free storage capacity are rechecked when accepting each batch. No destination selector.",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"enabled\": true,\n  \"reward_cr\": \"2.0000\"\n}"
+      },
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Accept",
+          "value": "application/json"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "name": "Idempotency-Key",
+          "value": "{{ _.simple_request_key }}"
+        }
+      ],
+      "authentication": {
+        "type": "bearer",
+        "token": "{{ _.bearer }}"
+      },
+      "metaSortKey": 31.05,
       "isPrivate": false,
       "settingStoreCookies": true,
       "settingSendCookies": true,
@@ -11526,12 +11616,12 @@
     {
       "_id": "req_ddbf1e379ea7df92f9c58c4cc62f4a5f",
       "parentId": "fld_6d6e271b7544c709bed8d6c70f1b90e0",
-      "modified": 1791244800000,
+      "modified": 1792736879544,
       "created": 1791244800000,
       "name": "POST - Mining start",
       "url": "{{ _.baseUrl }}/v1/world/objects/{{ _.simple_node_id }}/mining/start",
       "method": "POST",
-      "description": "Contract: docs/architecture/simple-world-api.md. Set simple_node_id to a visible active mine containing a completed drilling rig. Workers produce ore for its owner; heartbeat every 10 seconds, maximum 60 seconds credited after disconnect. Commands require a new key per action; retries retain the key. Progress DTO: worked_seconds, server_time, live_work[{accounted_at,last_seen_at}]; versioned sources also expose work_id (nullable) and required_seconds from accepted batch terms. Project no later than last_seen_at+60; check heartbeat at completion and every 10 seconds. Only server confirmation grants output. Since 2026-10-21 actions[].unavailable_reason reports missing usable tools; root unavailable_reason refers to the accepted batch definition, including older profile tools. Null means this reason is absent, not that all quota/time/storage conditions pass. Commands revalidate availability.",
+      "description": "Contract: docs/architecture/simple-world-api.md. Set simple_node_id to a visible active mine containing a completed drilling rig. Workers produce ore for its owner; heartbeat every 10 seconds, maximum 60 seconds credited after disconnect. Commands require a new key per action; retries retain the key. Progress DTO: worked_seconds, server_time, live_work[{accounted_at,last_seen_at}]; versioned sources also expose work_id (nullable) and required_seconds from accepted batch terms. Project no later than last_seen_at+60; check heartbeat at completion and every 10 seconds. Only server confirmation grants output. Since 2026-10-21 actions[].unavailable_reason reports missing usable tools; root unavailable_reason refers to the accepted batch definition, including older profile tools. Null means this reason is absent, not that all quota/time/storage conditions pass. Commands revalidate availability. Topic 82: an invited foreign worker needs HP >= 60, personal tools, mine condition >= 50%, free employer stockpile and a fully reserved batch wage. Employer storage is mandatory for the result. employment exposes accepted_reward_cr separately from the new rate. Mining state returns output_storages for the owner: backpack (default) and local child mini-storages only. Hired workers always use the employer mini-storage.",
       "body": {
         "mimeType": "application/json",
         "text": "{}"
@@ -11821,7 +11911,7 @@
       "name": "GET - History",
       "url": "{{ _.baseUrl }}/v1/world/economy/history",
       "method": "GET",
-      "description": "Contract: docs/architecture/economy-runtime-api.md. Use a local or disposable acceptance environment. Read current state/options before supplying IDs, codes, health revision and preview revisions. A new command needs a new key; an uncertain result requires the same key and exact body.\nJournal correlation: actor_user_id, node_id, profile_id/profile_version, from/to, item_id, exact balance_before_cr/balance_after_cr, transfer_ids and transfer_phase=create|claim|cancel. Missing historical fields are null; transfer passwords and foreign balances are never returned.",
+      "description": "Contract: docs/architecture/economy-runtime-api.md. Use a local or disposable acceptance environment. Read current state/options before supplying IDs, codes, health revision and preview revisions. A new command needs a new key; an uncertain result requires the same key and exact body.\nJournal correlation: actor_user_id, node_id, profile_id/profile_version, from/to, item_id, exact balance_before_cr/balance_after_cr, transfer_ids and transfer_phase=create|claim|cancel. Missing historical fields are null; transfer passwords and foreign balances are never returned.\n2026-10-22: items[] contains item_id, code, name, quantity, direction (collected/created/spent/received/moved/sold/bought), derived only from owned inventory movements. Empty for old rows without item details. Search supports item names/codes.",
       "body": {},
       "parameters": [
         {
@@ -11980,7 +12070,7 @@
       "name": "GET - Storage options",
       "url": "{{ _.baseUrl }}/v1/world/economy/storage/{{ _.economy_storage_id }}",
       "method": "GET",
-      "description": "Contract: docs/architecture/economy-runtime-api.md. Use a local or disposable acceptance environment. Read current state/options before supplying IDs, codes, health revision and preview revisions. A new command needs a new key; an uncertain result requires the same key and exact body.",
+      "description": "Contract: docs/architecture/economy-runtime-api.md. Use a local or disposable acceptance environment. Read current state/options before supplying IDs, codes, health revision and preview revisions. A new command needs a new key; an uncertain result requires the same key and exact body. Backpack codes backpack-N use the same progressive price as inventory (10 first slots cost 550 at base 10). Read current options; profile flat backpack packages do not apply. This is the shared purchase endpoint for both inventory and placement.",
       "body": {},
       "parameters": [],
       "headers": [
@@ -12011,7 +12101,7 @@
       "name": "POST - Preview storage expansion",
       "url": "{{ _.baseUrl }}/v1/world/economy/storage/{{ _.economy_storage_id }}/expand-preview",
       "method": "POST",
-      "description": "Contract: docs/architecture/economy-runtime-api.md. Use a local or disposable acceptance environment. Read current state/options before supplying IDs, codes, health revision and preview revisions. A new command needs a new key; an uncertain result requires the same key and exact body.",
+      "description": "Contract: docs/architecture/economy-runtime-api.md. Use a local or disposable acceptance environment. Read current state/options before supplying IDs, codes, health revision and preview revisions. A new command needs a new key; an uncertain result requires the same key and exact body. Backpack codes backpack-N use the same progressive price as inventory (10 first slots cost 550 at base 10). Read current options; profile flat backpack packages do not apply. This is the shared purchase endpoint for both inventory and placement.",
       "body": {
         "mimeType": "application/json",
         "text": "{\"code\": \"{{ _.economy_pack_code }}\"}"
@@ -12049,7 +12139,7 @@
       "name": "POST - Confirm storage expansion",
       "url": "{{ _.baseUrl }}/v1/world/economy/storage/{{ _.economy_storage_id }}/expand",
       "method": "POST",
-      "description": "Contract: docs/architecture/economy-runtime-api.md. Use a local or disposable acceptance environment. Read current state/options before supplying IDs, codes, health revision and preview revisions. A new command needs a new key; an uncertain result requires the same key and exact body.",
+      "description": "Contract: docs/architecture/economy-runtime-api.md. Use a local or disposable acceptance environment. Read current state/options before supplying IDs, codes, health revision and preview revisions. A new command needs a new key; an uncertain result requires the same key and exact body. Backpack codes backpack-N use the same progressive price as inventory (10 first slots cost 550 at base 10). Read current options; profile flat backpack packages do not apply. This is the shared purchase endpoint for both inventory and placement.",
       "body": {
         "mimeType": "application/json",
         "text": "{\"request_key\": \"{{ _.economy_request_key }}\", \"code\": \"{{ _.economy_pack_code }}\", \"quote_id\": \"{{ _.economy_quote_id }}\", \"expected_revisions\": {{ _.economy_expected_revisions }}}"
@@ -12170,6 +12260,48 @@
         "token": "{{ _.bearer }}"
       },
       "metaSortKey": 397,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_world_mining_nearest_20261024",
+      "parentId": "fld_6d6e271b7544c709bed8d6c70f1b90e0",
+      "modified": 1792838491363,
+      "created": 1792838491363,
+      "name": "POST - Mining start with nearest mini-storage",
+      "url": "{{ _.baseUrl }}/v1/world/objects/{{ _.simple_node_id }}/mining/start",
+      "method": "POST",
+      "description": "Owner: automatic nearest available mini-storage inside this object. Order: Manhattan distance from map origin, then storage ID. Require room for the whole batch; reselect at delivery for this new automatic batch. Never combine output_destination with output_storage_id. Hired workers always use automatic employer storage. Preserve the accepted wage; fixed historical batches remain fixed.",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"action_code\": \"mine-stone\",\n  \"output_destination\": \"mini_storage\"\n}"
+      },
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Accept",
+          "value": "application/json"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "name": "Idempotency-Key",
+          "value": "{{ _.simple_request_key }}"
+        }
+      ],
+      "authentication": {
+        "type": "bearer",
+        "token": "{{ _.bearer }}"
+      },
+      "metaSortKey": 31.1,
       "isPrivate": false,
       "settingStoreCookies": true,
       "settingSendCookies": true,

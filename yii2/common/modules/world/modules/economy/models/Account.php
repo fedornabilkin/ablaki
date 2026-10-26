@@ -22,7 +22,7 @@ class Account extends Record
         Node::readable($node, $user)->requireOwner($user);
         $money = Money::parse($amount);
         if ($money->isZero() || $money->isNegative()) throw new \common\modules\world\support\GameError('INVALID_AMOUNT', 'Введите положительную сумму.', 422);
-        (new BudgetFunding(self::getDb()))->contribute($user, $node, $money, 'Бюджет строительства', $operation);
-        return self::state($node, $user);
+        $result = (new BudgetFunding(self::getDb()))->contribute($user, $node, $money, 'Бюджет объекта', $operation);
+        return self::state($node, $user) + $result + ['contributed_cr' => $money->decimal(), 'message' => 'Бюджет пополнен.'];
     }
 }

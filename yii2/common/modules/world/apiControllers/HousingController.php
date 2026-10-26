@@ -24,6 +24,10 @@ class HousingController extends LegacyController
         $body = Yii::$app->request->bodyParams;
         if (!is_array($body)) throw new GameError('INVALID_COMMAND', 'Некорректное действие с жильём.', 422);
         $input = ['node_id' => $this->id($id)]; $user = (int)Yii::$app->user->id;
+        if (array_key_exists('replace_current', $body)) {
+            if (!is_bool($body['replace_current'])) throw new GameError('INVALID_COMMAND', 'Укажите способ смены ночлега.', 422);
+            $input['replace_current'] = $body['replace_current'];
+        }
         $service = new \common\modules\world\models\domain\WorldHousing(Yii::$app->db, $this->flags());
         if ($preview) return $service->preview($user, $input, $operation);
         if (!is_string($body['request_key'] ?? null) || !is_string($body['quote_id'] ?? null) || !is_array($body['expected_revisions'] ?? null)) throw new GameError('INVALID_COMMAND', 'Требуется подтверждённый расчёт.', 422);

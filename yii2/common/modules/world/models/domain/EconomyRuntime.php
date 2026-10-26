@@ -28,11 +28,16 @@ final class EconomyRuntime
     public static function current(Connection $db): ?array
     {
         if (!$db->schema->getTableSchema('world_economy_current')) return null;
-        $row = (new Query())->select('p.*')->from(['c' => 'world_economy_current'])
-            ->innerJoin(['p' => 'world_economy_profile'], 'p.id=c.profile_id')->where(['c.id' => 1])->one($db);
+        $query = (new Query())->select('p.*')->from(['c' => 'world_economy_current'])->innerJoin(['p' => 'world_economy_profile'], 'p.id=c.profile_id')->where(['c.id' => 1]);
+        $schema = $db->schema->getTableSchema('world_node');
+        if ($schema && isset($schema->columns['settings_json'])) $query->addSelect(['world_clock_settings' => 'n.settings_json'])
+            ->leftJoin(['r' => 'world_registry'], 'r.id=1')->leftJoin(['n' => 'world_node'], 'n.id=r.active_world_id');
+        $row = $query->one($db);
         if (!$row) return null;
         $profile = json_decode($row['config_json'], true, 64, JSON_THROW_ON_ERROR);
-        return ['id' => (int)$row['id'], 'version' => (int)$row['version'], 'digest' => $row['digest'], 'profile' => $profile];
+        $settings = json_decode($row['world_clock_settings'] ?? '{}', true) ?: [];
+        return ['id' => (int)$row['id'], 'version' => (int)$row['version'], 'digest' => $row['digest'], 'raw_profile' => $profile, 'clock_settings' => $settings,
+            'profile' => \common\modules\world\models\WorldTime::runtimeProfile($db, $profile, $settings)];
     }
     public static function admission(Connection $db, int $user, bool $admin = false): array
     {
