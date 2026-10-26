@@ -47,3 +47,28 @@ try {
     putenv($oldTest===false?'CRAFT_TEST_INSTALL':'CRAFT_TEST_INSTALL='.$oldTest);
     putenv($oldProduction===false?'CRAFT_PRODUCTION_INSTALL':'CRAFT_PRODUCTION_INSTALL='.$oldProduction);
 }
+
+// Release readiness must reject incomplete installations and never repair them.
+class ReleaseReadinessFixture extends \console\controllers\ReleaseController {
+    public $captured = '';
+    public function stdout($string) { $this->captured .= $string; return strlen($string); }
+}
+$release = new ReleaseReadinessFixture('release', $app);
+$oldContext = getenv('WORLD_TEST_SETUP'); $oldMode = getenv('WORLD_TEST_MODE');
+try {
+    putenv('WORLD_TEST_SETUP'); putenv('WORLD_TEST_MODE');
+    foreach (['actionTestState', 'actionTestInstall', 'actionTestProfile'] as $action) {
+        try { $release->$action(); throw new \LogicException('Test context was not required'); }
+        catch (\RuntimeException $error) { checkInstall($error->getMessage() === 'Test release context is required.', $action . ' requires explicit test context'); }
+    }
+    putenv('WORLD_TEST_SETUP=confirmed-test-checkout'); putenv('WORLD_TEST_MODE=1');
+    $inventoryBefore = (new \yii\db\Query())->from('craft_inventory')->all($db);
+    $migrationsBefore = (new \yii\db\Query())->from('migration')->all($db);
+    checkInstall($release->actionTestState() === 2 && json_decode($release->captured, true)['ready'] === false,
+        'incomplete installation never reports ready');
+    checkInstall($inventoryBefore === (new \yii\db\Query())->from('craft_inventory')->all($db)
+        && $migrationsBefore === (new \yii\db\Query())->from('migration')->all($db), 'readiness does not alter inventory or migration history');
+} finally {
+    putenv($oldContext === false ? 'WORLD_TEST_SETUP' : 'WORLD_TEST_SETUP=' . $oldContext);
+    putenv($oldMode === false ? 'WORLD_TEST_MODE' : 'WORLD_TEST_MODE=' . $oldMode);
+}

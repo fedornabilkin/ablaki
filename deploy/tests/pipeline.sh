@@ -107,15 +107,18 @@ for scenario in production test dirty pull make wrong_branch invalid_branch prod
   printf 'PASS deployment scenario: %s\n' "$scenario"
 done
 
-# Exercise test-world activation with temporary paths and command fixtures only.
-# In particular, no PostgreSQL dump, restore or database creation is permitted.
+# Test release activation uses command fixtures, never a real database or Docker.
 mkdir -p "$test_root/world-bin"
-export TEST_DEPLOY_ROOT TEST_WORLD_FAIL
+export TEST_DEPLOY_ROOT TEST_WORLD_FAIL TEST_WORKER_HASH
 cat > "$test_root/world-bin/git" <<'MOCK'
 #!/usr/bin/env bash
 set -eu
-[[ "$*" = 'symbolic-ref --quiet --short HEAD' ]]
-printf 'test\n'
+case "$1" in
+  symbolic-ref) echo test ;;
+  ls-files) printf '.installer\0' ;;
+  rev-parse) printf '%040d\n' 1 ;;
+  *) exit 1 ;;
+esac
 MOCK
 cat > "$test_root/world-bin/flock" <<'MOCK'
 #!/usr/bin/env bash
@@ -126,13 +129,17 @@ cat > "$test_root/world-bin/docker" <<'MOCK'
 set -eu
 printf 'docker %s\n' "$*" >> "$TEST_LOG"
 case "$1 $2" in
-  'container inspect') exit 0 ;;
+  'container inspect') [[ -f "$TEST_REPO/worker" ]] ;;
   'inspect -f')
-    if [[ "$3" = *State.Running* ]]; then
-      if [[ "$TEST_WORLD_FAIL" = worker ]]; then printf 'false\n'; else printf 'true\n'; fi
-    elif [[ "$TEST_WORLD_FAIL" = label ]]; then printf 'unexpected\n'; else printf 'test\n'; fi
-    ;;
-  'stop --time'|'rm ablaki-world-worker-test'|'update --restart') ;;
+    case "$3" in
+      *com.docker.compose.oneoff*) echo False ;;
+      '{{.Image}}') echo sha256:fixture ;;
+      *'|{{.State.Running}}|'*) echo "sha256:fixture|true|$TEST_WORKER_HASH" ;;
+      '{{.State.Running}}') [[ "$TEST_WORLD_FAIL" != worker ]] && echo true || echo false ;;
+      *) [[ "$TEST_WORLD_FAIL" != label ]] && echo test || echo unrelated ;;
+    esac ;;
+  'stop --time'|'update --restart') ;;
+  'rm ablaki-world-worker-test') rm -f "$TEST_REPO/worker" ;;
   *) echo "Unexpected Docker command: $*" >&2; exit 1 ;;
 esac
 MOCK
@@ -141,64 +148,121 @@ cat > "$test_root/world-bin/docker-compose" <<'MOCK'
 set -eu
 printf 'compose %s\n' "$*" >> "$TEST_LOG"
 case "$*" in
-  'stop -t 60 nginx php') ;;
-  'run --rm --no-deps -T --entrypoint php -e WORLD_INSTALL=confirmed-world-install -e WORLD_TEST_SETUP=confirmed-test-checkout php /web/yii2/yii world-setup/test-ready')
-    [[ -f "$TEST_DEPLOY_ROOT/world-activation.pending" ]]
-    [[ "$TEST_WORLD_FAIL" != setup ]] || exit 23
-    ;;
-  'run --rm --no-deps -T --entrypoint php php /web/yii2/yii world-worker/run 200')
-    [[ "$TEST_WORLD_FAIL" != handlers ]] || exit 24
-    ;;
-  'up -d --no-deps php nginx') ;;
-  'run -d --no-deps --name ablaki-world-worker-test --label ablaki.world.worker=test --entrypoint /bin/sh php -c '*) ;;
-  *) echo "Unexpected Compose command (including any database backup/restore): $*" >&2; exit 1 ;;
+  *'release/test-state')
+    [[ "$TEST_WORLD_FAIL" != state ]] || exit 2
+    echo '{"ready":true,"schema":43,"profile":4}' ;;
+  *'release/test-install')
+    [[ -e "$TEST_DEPLOY_ROOT/world-activation.pending" ]]
+    [[ "$TEST_WORLD_FAIL" != setup ]] || exit 23 ;;
+  *'release/test-profile '*) [[ "$TEST_WORLD_FAIL" != profile ]] || exit 25 ;;
+  *'world-worker/run 200') [[ "$TEST_WORLD_FAIL" != handlers ]] || exit 24 ;;
+  'stop -t 60 nginx php'|'up -d --no-deps php nginx') ;;
+  'ps -q php') echo php-id ;;
+  'port nginx 80') echo 0.0.0.0:3180 ;;
+  'run -d --no-deps --name ablaki-world-worker-test '*) touch "$TEST_REPO/worker" ;;
+  *) echo "Unexpected Compose command: $*" >&2; exit 1 ;;
 esac
+MOCK
+cat > "$test_root/world-bin/curl" <<'MOCK'
+#!/usr/bin/env bash
+set -eu
+[[ "$TEST_WORLD_FAIL" != http ]] || exit 22
+output=''
+write=false
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    -o|--output) output=$2; shift ;;
+    --write-out) write=true; shift ;;
+  esac
+  shift
+done
+[[ -z "$output" ]] || printf '{"users":1}\n' > "$output"
+[[ "$write" != true ]] || printf 401
 MOCK
 chmod +x "$test_root/world-bin/"*
 export PATH="$test_root/world-bin:$PATH"
-
-for scenario in ready resume setup handlers worker label lock; do
+for scenario in cold warm resume changed profile_changed setup handlers worker label lock state profile http; do
   TEST_WORLD_FAIL=$scenario
   TEST_REPO="$test_root/world-$scenario/repo"
   TEST_DEPLOY_ROOT="$test_root/world-$scenario/deploy"
-  mkdir -p "$TEST_REPO" "$TEST_DEPLOY_ROOT/backups"
+  mkdir -p "$TEST_REPO/yii2/console" "$TEST_REPO/yii2/common/modules/world/data/economy" "$TEST_DEPLOY_ROOT"
   TEST_REPO=$(cd "$TEST_REPO" && pwd -P)
   TEST_DEPLOY_ROOT=$(cd "$TEST_DEPLOY_ROOT" && pwd -P)
-  printf 'existing backup\n' > "$TEST_DEPLOY_ROOT/backups/previous.dump"
-  printf '# Existing settings\nDB_FIXTURE=preserved\nWORLD_READ=0\n' > "$TEST_REPO/.env"
+  printf 'installer v1\n' > "$TEST_REPO/.installer"
+  printf '# Preserved settings\nDB_FIXTURE=preserved\nWORLD_READ=1\n' > "$TEST_REPO/.env"
+  cp "$TEST_REPO/.env" "$TEST_REPO/env-before"
+  cp "$source_root/yii2/console/world-worker-loop.sh" "$TEST_REPO/yii2/console/"
+  touch "$TEST_REPO/yii2/common/modules/world/Module.php" "$TEST_REPO/worker"
+  printf 'profile\n' > "$TEST_REPO/yii2/common/modules/world/data/economy/closed-test-v1.json"
+  TEST_WORKER_HASH=$(sha256sum "$TEST_REPO/yii2/console/world-worker-loop.sh" | cut -d' ' -f1)
   TEST_LOG="$TEST_REPO/commands.log"
   : > "$TEST_LOG"
-  [[ "$scenario" != resume ]] || touch "$TEST_DEPLOY_ROOT/world-activation.pending"
+  (cd "$TEST_REPO"; sha256sum .installer | sha256sum | cut -d' ' -f1) > "$TEST_DEPLOY_ROOT/world-installation.sha256"
+  sha256sum "$TEST_REPO/yii2/common/modules/world/data/economy/closed-test-v1.json" | cut -d' ' -f1 > "$TEST_DEPLOY_ROOT/world-profile.sha256"
+  case "$scenario" in
+    cold|setup|handlers|worker|profile) rm "$TEST_DEPLOY_ROOT/world-installation.sha256" ;;
+    resume) touch "$TEST_DEPLOY_ROOT/world-activation.pending" ;;
+    changed) printf 'installer v2\n' > "$TEST_REPO/.installer" ;;
+    profile_changed) echo previous > "$TEST_DEPLOY_ROOT/world-profile.sha256" ;;
+  esac
   sed -e "s@/var/code/ablaki@$TEST_REPO@g" -e "s@/opt/ablaki-backend-test@$TEST_DEPLOY_ROOT@g" \
     "$source_root/deploy/world-open-test.sh" > "$TEST_REPO/activate.sh"
   status=0
   bash "$TEST_REPO/activate.sh" > "$TEST_REPO/output.log" 2>&1 || status=$?
-  if [[ "$scenario" = ready || "$scenario" = resume ]]; then
-    [[ "$status" = 0 ]] || { cat "$TEST_REPO/output.log"; exit 1; }
-    [[ ! -e "$TEST_DEPLOY_ROOT/world-activation.pending" ]]
-    grep -Fxq 'compose up -d --no-deps php nginx' "$TEST_LOG"
-    grep -Fq 'docker update --restart unless-stopped' "$TEST_LOG"
-    for flag in WORLD_READ WORLD_WRITE STORAGE_V2 ECONOMY_TICK WORLD_WORKER WORLD_TEST_MODE; do
-      [[ "$(grep -c "^$flag=1$" "$TEST_REPO/.env")" = 1 ]]
-    done
-  else
-    [[ "$status" != 0 ]]
-    if [[ "$scenario" = setup || "$scenario" = handlers || "$scenario" = worker ]]; then
-      [[ -f "$TEST_DEPLOY_ROOT/world-activation.pending" ]]
-      grep -Fq 'rollout checkpoints are retained' "$TEST_REPO/output.log"
-    fi
-    if [[ "$scenario" != worker ]]; then ! grep -q '^compose up' "$TEST_LOG"; fi
-    if [[ "$scenario" = label || "$scenario" = lock ]]; then
+  case "$scenario" in
+    cold|warm|resume|changed|profile_changed)
+      [[ "$status" = 0 ]] || { cat "$TEST_REPO/output.log"; exit 1; }
       [[ ! -e "$TEST_DEPLOY_ROOT/world-activation.pending" ]]
-      ! grep -q '^compose\|^docker stop' "$TEST_LOG"
-    fi
-  fi
+      grep -q 'READY ' "$TEST_REPO/output.log"
+      if [[ "$scenario" = warm || "$scenario" = profile_changed ]]; then
+        cmp "$TEST_REPO/.env" "$TEST_REPO/env-before"
+        ! grep -Eq 'release/test-install|compose stop|world-worker/run|docker stop' "$TEST_LOG"
+      else
+        grep -q 'release/test-install' "$TEST_LOG"
+        grep -Fxq 'compose up -d --no-deps php nginx' "$TEST_LOG"
+      fi
+      if [[ "$scenario" = profile_changed ]]; then grep -q 'release/test-profile 1 fedornabilkin' "$TEST_LOG"; else grep -q 'release/test-profile 0 fedornabilkin' "$TEST_LOG"; fi
+      ;;
+    *)
+      [[ "$status" != 0 ]] || { cat "$TEST_REPO/output.log"; exit 1; }
+      ! grep -q 'READY ' "$TEST_REPO/output.log"
+      if [[ "$scenario" = label || "$scenario" = lock ]]; then ! grep -q '^docker stop' "$TEST_LOG"; fi
+      if [[ "$scenario" = setup || "$scenario" = handlers || "$scenario" = worker || "$scenario" = profile || "$scenario" = state ]]; then [[ -e "$TEST_DEPLOY_ROOT/world-activation.pending" ]]; fi
+      ;;
+  esac
   grep -Fxq 'DB_FIXTURE=preserved' "$TEST_REPO/.env"
-  [[ "$(cat "$TEST_DEPLOY_ROOT/backups/previous.dump")" = 'existing backup' ]]
-  [[ "$(find "$TEST_DEPLOY_ROOT/backups" -type f | wc -l)" -eq 1 ]]
   ! grep -Eq 'pg_dump|pg_restore|createdb|dropdb|world-verify-test' "$TEST_LOG"
-  printf 'PASS world activation without database backup: %s\n' "$scenario"
+  printf 'PASS test release activation: %s\n' "$scenario"
 done
+
+# Real POSIX signals: finish the running batch, then exit without starting another.
+# Windows Git Bash does not implement POSIX subprocess signals; CI runs Linux.
+if [[ "${OSTYPE:-}" != msys* && "${OSTYPE:-}" != cygwin* ]]; then
+  python3 - "$source_root/yii2/console/world-worker-loop.sh" "$test_root" <<'PY'
+import os, pathlib, signal, subprocess, sys, time
+root = pathlib.Path(sys.argv[2]) / 'signals'
+root.mkdir()
+php = root / 'php'
+php.write_text('#!/bin/sh\necho start >> "$BATCH_LOG"\nsleep 0.3\necho finish >> "$BATCH_LOG"\n')
+php.chmod(0o755)
+for sig in (signal.SIGTERM, signal.SIGQUIT):
+    log = root / str(sig)
+    env = dict(os.environ, PATH=str(root) + ':' + os.environ['PATH'], BATCH_LOG=str(log))
+    process = subprocess.Popen(['/bin/sh', sys.argv[1]], env=env)
+    try:
+        deadline = time.monotonic() + 3
+        while not log.exists() and time.monotonic() < deadline: time.sleep(0.01)
+        assert log.exists(), 'worker did not start'
+        process.send_signal(sig)
+        assert process.wait(timeout=3) == 0
+        assert log.read_text().splitlines() == ['start', 'finish'], 'batch interrupted or repeated'
+    finally:
+        if process.poll() is None: process.kill(); process.wait()
+print('PASS worker TERM/QUIT finish current batch')
+PY
+else
+  printf 'SKIP POSIX signal checks on Windows; required in Linux CI\n'
+fi
 
 export PATH="$test_root/bin:$PATH"
 # The runtime transition keeps the old vendor/image until the new FPM is ready.
