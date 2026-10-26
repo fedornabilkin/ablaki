@@ -271,7 +271,7 @@ jobs:
   full_after:
     name: Extended checks after test deployment
     needs: deploy
-    if: ${{ (github.ref == 'refs/heads/test' || inputs.target == 'test') }}
+    if: ${{ always() && needs.deploy.result == 'success' && (github.ref == 'refs/heads/test' || inputs.target == 'test') }}
     uses: ./.github/workflows/backend-full.yml
     with:
       target: test
