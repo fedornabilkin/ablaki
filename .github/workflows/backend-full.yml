@@ -1,0 +1,120 @@
+name: Extended backend checks
+'on':
+  workflow_call:
+    inputs:
+      target:
+        type: string
+        required: true
+permissions:
+  contents: read
+jobs:
+  checks:
+    name: Extended backend checks (SQLite, MySQL, PostgreSQL)
+    runs-on: ubuntu-22.04
+    timeout-minutes: 20
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_DATABASE: ablakin_ci
+          MYSQL_USER: ablakin_ci
+          MYSQL_PASSWORD: ci-only-password
+          MYSQL_ROOT_PASSWORD: ci-only-root
+        ports:
+          - 3306:3306
+        options: --health-cmd="mysqladmin ping -h 127.0.0.1 -pci-only-root" --health-interval=5s --health-timeout=5s --health-retries=20
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: ablakin_ci
+          POSTGRES_USER: ablakin_ci
+          POSTGRES_PASSWORD: ci-only-password
+        ports:
+          - 5432:5432
+        options: --health-cmd="pg_isready -U ablakin_ci -d ablakin_ci" --health-interval=5s --health-timeout=5s --health-retries=20
+    steps:
+      - uses: actions/checkout@v7
+      - name: Validate requested target
+        env:
+          TARGET: ${{ inputs.target }}
+        run: |
+          if [[ "$GITHUB_EVENT_NAME" = workflow_dispatch ]]; then
+            [[ "$GITHUB_REF_TYPE" = branch ]]
+            [[ "$TARGET" = test || ( "$TARGET" = production && "$GITHUB_REF_NAME" = master ) ]]
+          fi
+      - name: Set up the supported PHP runtime
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: 8.3.36
+          extensions: mbstring, pdo_sqlite, pdo_pgsql, pdo_mysql, intl, gd, curl, zip
+          tools: composer:2.10.3
+          coverage: none
+      - name: Check deployment scripts
+        run: |
+          for script in deploy/*.sh deploy/tests/*.sh docker/php/entrypoint.sh docker/composer/entrypoint.sh; do bash -n "$script"; done
+          php -r 'exit(PHP_VERSION === "8.3.36" ? 0 : 1);'
+          php -l yii2/yii
+          bash deploy/tests/pipeline.sh
+          if [[ -f yii2/tests/release/world-test-credits.php ]]; then php yii2/tests/release/world-test-credits.php; fi
+      - name: Install locked dependencies for the selected target
+        working-directory: yii2
+        env:
+          TARGET: ${{ inputs.target }}
+          COMPOSER_AUTH: '{"github-oauth":{"github.com":"${{ github.token }}"}}'
+        shell: bash
+        run: |
+          options=(--no-interaction --prefer-dist --no-progress --optimize-autoloader)
+          if [[ "$TARGET" = production ]]; then options+=(--no-dev); fi
+          composer install "${options[@]}"
+          composer check-platform-reqs
+          composer audit --locked --no-dev --abandoned=ignore
+      - name: Run isolated API and target database checks in parallel
+        working-directory: yii2
+        env:
+          MYSQL_CONTAINER: ${{ job.services.mysql.id }}
+        shell: bash
+        run: |
+          # PHP 8.3 supports the MySQL 8 default authentication plugin.
+          check_isolated() {
+            unset ABL_TEST_DSN
+            suites="auth-response frontend-lists frontend-api-routing game-overview five-game forum-gift forum-install daily-reward exchange-refund topic68-economy worker-barrier-test world-economy-gameplay world-feedback-food classic-craft-install world-economy-profile user-activity user-cleanup"
+            if [[ ! -f tests/release/world-economy-gameplay.php ]]; then
+              suites=${suites//world-economy-gameplay/}
+              suites=${suites//world-feedback-food/}
+              suites=${suites//world-economy-profile/}
+              suites="$suites classic-craft"
+            fi
+            for suite in $suites; do
+              if ! php "tests/release/$suite.php" 2>&1 | tee "$RUNNER_TEMP/backend-$suite.log"; then
+                details=$(tail -n 15 "$RUNNER_TEMP/backend-$suite.log")
+                details=${details//%/%25}
+                details=${details//$'\r'/%0D}
+                details=${details//$'\n'/%0A}
+                echo "::error file=yii2/tests/release/$suite.php,title=Isolated API check failed::$details"
+                return 1
+              fi
+            done
+          }
+          check_database() {
+            export ABL_TEST_DSN="$1"
+            php tests/release/target-database.php || return
+            if [[ -f tests/release/world-economy-race.php ]]; then php tests/release/world-economy-race.php || return; else php tests/release/classic-craft.php || return; fi
+            php tests/release/user-activity.php
+          }
+          # SQLite fixtures and the two target databases are independent.
+          # Keep suites sequential within each group; production requires all three; test runs them after publication.
+          check_isolated > "$RUNNER_TEMP/isolated-checks.log" 2>&1 &
+          isolated_pid=$!
+          check_database 'mysql:host=127.0.0.1;port=3306;dbname=ablakin_ci' > "$RUNNER_TEMP/mysql-checks.log" 2>&1 &
+          mysql_pid=$!
+          check_database 'pgsql:host=127.0.0.1;port=5432;dbname=ablakin_ci' > "$RUNNER_TEMP/pgsql-checks.log" 2>&1 &
+          pgsql_pid=$!
+          failed=0
+          wait "$isolated_pid" || failed=1
+          wait "$mysql_pid" || failed=1
+          wait "$pgsql_pid" || failed=1
+          cat "$RUNNER_TEMP/isolated-checks.log" "$RUNNER_TEMP/mysql-checks.log" "$RUNNER_TEMP/pgsql-checks.log"
+          exit "$failed"
+    concurrency:
+      group: backend-extended-${{ github.ref }}
+      cancel-in-progress: true
