@@ -26,6 +26,9 @@ if [ -n "$(git status --porcelain --untracked-files=no)" ]; then
   git -c user.name='Ablaki deploy' -c user.email='deploy@ablaki.ru' stash push -m "$stash_message"
 fi
 git fetch --prune origin "$branch"
+if [[ -n "$expected_sha" ]]; then
+  [[ "$expected_sha" =~ ^[0-9a-f]{40}$ && "$(git rev-parse FETCH_HEAD)" = "$expected_sha" ]] || die 'The branch advanced beyond this checked release; use the newer run'
+fi
 if [[ "$(git symbolic-ref --quiet --short HEAD || true)" != "$branch" ]]; then
   if git show-ref --verify --quiet "refs/heads/$branch"; then
     git checkout "$branch"
@@ -37,7 +40,7 @@ fi
 
 phase='git pull'
 printf '[backend-deploy] git pull (%s, %s)\n' "$target" "$branch"
-git pull --ff-only origin "$branch"
+git pull --ff-only origin "${expected_sha:-$branch}"
 if [[ -n "$expected_sha" ]]; then
   [[ "$expected_sha" =~ ^[0-9a-f]{40}$ && "$(git rev-parse HEAD)" = "$expected_sha" ]] || die 'Checkout no longer matches the checked release; use the newer run'
 fi
