@@ -68,6 +68,17 @@ try {
         'incomplete installation never reports ready');
     checkInstall($inventoryBefore === (new \yii\db\Query())->from('craft_inventory')->all($db)
         && $migrationsBefore === (new \yii\db\Query())->from('migration')->all($db), 'readiness does not alter inventory or migration history');
+    $fixturePath = sys_get_temp_dir() . '/ablaki-release-migration-' . bin2hex(random_bytes(8));
+    mkdir($fixturePath, 0700);
+    $fixtureFile = $fixturePath . '/m991026_000000_release_namespace_fixture.php';
+    file_put_contents($fixtureFile, '<?php namespace console\\migrations; class m991026_000000_release_namespace_fixture extends \\yii\\db\\Migration { public function safeUp() { $this->createTable("release_namespace_fixture", ["id" => $this->primaryKey()]); } }');
+    try {
+        $migrate = new \ReflectionMethod($release, 'migrate'); $migrate->setAccessible(true);
+        checkInstall($migrate->invoke($release, $fixturePath) === 0 && $migrate->invoke($release, $fixturePath) === 0,
+            'namespaced historical migrations apply once through the release installer');
+        checkInstall((new \yii\db\Query())->from('migration')->where(['version' => 'm991026_000000_release_namespace_fixture'])->count('*', $db) == 1,
+            'migration is recorded only after its real up succeeds');
+    } finally { unlink($fixtureFile); rmdir($fixturePath); }
 } finally {
     putenv($oldContext === false ? 'WORLD_TEST_SETUP' : 'WORLD_TEST_SETUP=' . $oldContext);
     putenv($oldMode === false ? 'WORLD_TEST_MODE' : 'WORLD_TEST_MODE=' . $oldMode);

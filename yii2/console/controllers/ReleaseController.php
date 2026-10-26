@@ -71,13 +71,27 @@ class ReleaseController extends \yii\console\Controller
         return $state['ready'] ? 0 : 2;
     }
 
+    private function migrate(string $path): int
+    {
+        // Historical application migrations contain both global and namespaced
+        // classes. Keep their existing history identifiers and execute the real up().
+        $migration = new class('release-migration', Yii::$app, ['migrationPath' => $path, 'migrationNamespaces' => [], 'interactive' => false]) extends \yii\console\controllers\MigrateController {
+            protected function createMigration($class)
+            {
+                $this->includeMigrationFile($class);
+                if (!class_exists($class, false) && class_exists('console\\migrations\\' . $class)) $class = 'console\\migrations\\' . $class;
+                return Yii::createObject(['class' => $class, 'db' => $this->db, 'compact' => $this->compact]);
+            }
+        };
+        return $migration->runAction('up');
+    }
+
     public function actionTestInstall(): int
     {
         $this->context();
         putenv('WORLD_INSTALL=confirmed-world-install');
         foreach (['@vendor/dektrium/yii2-user/migrations', '@fedornabilkin/binds/migrations', '@fedornabilkin/redirect/migrations', '@yii/rbac/migrations', '@console/migrations'] as $path) {
-            $migration = new \yii\console\controllers\MigrateController('release-migration', Yii::$app, ['migrationPath' => $path, 'migrationNamespaces' => [], 'interactive' => false]);
-            $exit = $migration->runAction('up');
+            $exit = $this->migrate($path);
             if ($exit !== 0) return $exit;
         }
         putenv('USER_ACTIVITY_INSTALL=confirmed-test-checkout');

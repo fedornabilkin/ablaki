@@ -88,7 +88,7 @@ jobs:
       - name: Check authentication, rewards, refunds and API routes
         working-directory: yii2
         run: |
-          for suite in auth-response daily-reward exchange-refund frontend-api-routing; do php "tests/release/$suite.php"; done
+          for suite in auth-response daily-reward exchange-refund frontend-api-routing classic-craft-install; do php "tests/release/$suite.php"; done
           if [[ -f tests/release/world-economy-profile.php ]]; then php tests/release/world-economy-profile.php; fi
   full_before:
     name: Full checks before production
