@@ -99,7 +99,8 @@ final class Mining
         $ids = (new Query())->select('node_id')->from('world_mining_worker')->distinct()->limit(100)->column($db);
         foreach ($ids as $id) {
             $node = Node::requireOne($id);
-            Command::run((int)$node->owner_user_id, 'mining-tick-' . $id . '-' . time(), 'world.mining.tick', ['mining_node_id' => (int)$id], function ($operation) use ($id) { self::checkpoint((int)$id, $operation); return ['node_id' => (int)$id]; });
+            $npc = (new \common\modules\world\models\domain\NpcInfrastructure(Node::getDb()))->managed($node->getAttributes(), ['source']);
+            Command::run((int)$node->owner_user_id, 'mining-tick-' . $id . '-' . time(), 'world.mining.tick', ['mining_node_id' => (int)$id], function ($operation) use ($id) { self::checkpoint((int)$id, $operation); return ['node_id' => (int)$id]; }, $npc);
         }
     }
 }

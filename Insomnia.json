@@ -2096,7 +2096,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/nodes/{{ _.world_node_id }}/campsite",
       "name": "GET /world/nodes/{id}/campsite",
-      "description": "Player's starter campsite and available actions\n2026-10-22: finite per-item supplies; gather_remaining/gather_limit/gather_exhausted. Exhaustion hides gathering until a NEW gatherable catalogue item is introduced. Production excludes its raw resource. Replays never refill old allowances; five decreasing claims in the current profile. Dates follow the continuous world clock, deadlines remain real timestamps.",
+      "description": "Player's starter campsite and available actions\n2026-10-28: decreasing per-item starter supplies followed by one of each resource per world day, including sand and clay. gather_minimum=true when the starter allowance is spent; gathering remains visible and the daily cooldown still applies. A built source halves its starter grant, with a floor of one. New catalogue resources receive their own allowance; old receipts and replays never refill it. Deadlines remain real timestamps.",
       "method": "GET",
       "body": {},
       "parameters": [],
@@ -2263,7 +2263,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/nodes/{{ _.world_node_id }}/supplies-gather-preview",
       "name": "POST /world/nodes/{id}/supplies-gather-preview",
-      "description": "Quote the daily gathering with current health modifier Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело.\n2026-10-22: finite per-item supplies; gather_remaining/gather_limit/gather_exhausted. Exhaustion hides gathering until a NEW gatherable catalogue item is introduced. Production excludes its raw resource. Replays never refill old allowances; five decreasing claims in the current profile. Dates follow the continuous world clock, deadlines remain real timestamps.",
+      "description": "Quote the daily gathering with current health modifier Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело.\n2026-10-28: decreasing per-item starter supplies followed by one of each resource per world day, including sand and clay. gather_minimum=true when the starter allowance is spent; gathering remains visible and the daily cooldown still applies. A built source halves its starter grant, with a floor of one. New catalogue resources receive their own allowance; old receipts and replays never refill it. Deadlines remain real timestamps.",
       "method": "POST",
       "body": {
         "mimeType": "application/json",
@@ -2298,7 +2298,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/nodes/{{ _.world_node_id }}/supplies-gather",
       "name": "POST /world/nodes/{id}/supplies-gather",
-      "description": "Collect today's materials Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело.\n2026-10-22: finite per-item supplies; gather_remaining/gather_limit/gather_exhausted. Exhaustion hides gathering until a NEW gatherable catalogue item is introduced. Production excludes its raw resource. Replays never refill old allowances; five decreasing claims in the current profile. Dates follow the continuous world clock, deadlines remain real timestamps.",
+      "description": "Collect today's materials Сначала выполните preview, затем перенесите quote_id и expected_revisions. Для новой команды задайте новый world_request_key; при повторе используйте прежний ключ и тело.\n2026-10-28: decreasing per-item starter supplies followed by one of each resource per world day, including sand and clay. gather_minimum=true when the starter allowance is spent; gathering remains visible and the daily cooldown still applies. A built source halves its starter grant, with a floor of one. New catalogue resources receive their own allowance; old receipts and replays never refill it. Deadlines remain real timestamps.",
       "method": "POST",
       "body": {
         "mimeType": "application/json",
@@ -2610,7 +2610,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/crops",
       "name": "GET /world/crops",
-      "description": "Growth never pauses. Missed watering halves yield; expired crops cannot be harvested. Dig requires a shovel and wears it once. Harvest enters five-slot garden storage.",
+      "description": "Growth never pauses. Missed watering halves yield; expired crops cannot be harvested. Dig requires a shovel and wears it once. Harvest enters five-slot garden storage.\n2026-10-28: NPC stockpiles expose npc_supply=true, sell actual extracted raw stock at profile reference prices and recycle proceeds. NPC seller does not consume the personal daily sale quota; buyer funds, per-operation quantity, capacity, quotes and replay checks remain enforced.",
       "method": "GET",
       "body": {},
       "parameters": [
@@ -2648,7 +2648,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/beds/{{ _.world_bed_id }}/cultivation",
       "name": "GET /world/beds/{id}/cultivation",
-      "description": "Growth never pauses. Missed watering halves yield; expired crops cannot be harvested. Dig requires a shovel and wears it once. Harvest enters five-slot garden storage.",
+      "description": "Growth never pauses. Missed watering halves yield; expired crops cannot be harvested. Dig requires a shovel and wears it once. Harvest enters five-slot garden storage.\n2026-10-28: NPC stockpiles expose npc_supply=true, sell actual extracted raw stock at profile reference prices and recycle proceeds. NPC seller does not consume the personal daily sale quota; buyer funds, per-operation quantity, capacity, quotes and replay checks remain enforced.",
       "method": "GET",
       "body": {},
       "parameters": [],
@@ -2675,7 +2675,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/beds/{{ _.world_bed_id }}/sow-preview",
       "name": "POST /world/beds/{id}/sow-preview",
-      "description": "Growth never pauses. Missed watering halves yield; expired crops cannot be harvested. Dig requires a shovel and wears it once. Harvest enters five-slot garden storage.",
+      "description": "Growth never pauses. Missed watering halves yield; expired crops cannot be harvested. Dig requires a shovel and wears it once. Harvest enters five-slot garden storage.\n2026-10-28: NPC stockpiles expose npc_supply=true, sell actual extracted raw stock at profile reference prices and recycle proceeds. NPC seller does not consume the personal daily sale quota; buyer funds, per-operation quantity, capacity, quotes and replay checks remain enforced.",
       "method": "POST",
       "body": {
         "mimeType": "application/json",
@@ -2710,7 +2710,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/beds/{{ _.world_bed_id }}/sow",
       "name": "POST /world/beds/{id}/sow",
-      "description": "Growth never pauses. Missed watering halves yield; expired crops cannot be harvested. Dig requires a shovel and wears it once. Harvest enters five-slot garden storage.",
+      "description": "Growth never pauses. Missed watering halves yield; expired crops cannot be harvested. Dig requires a shovel and wears it once. Harvest enters five-slot garden storage.\n2026-10-28: NPC stockpiles expose npc_supply=true, sell actual extracted raw stock at profile reference prices and recycle proceeds. NPC seller does not consume the personal daily sale quota; buyer funds, per-operation quantity, capacity, quotes and replay checks remain enforced.",
       "method": "POST",
       "body": {
         "mimeType": "application/json",
@@ -2745,7 +2745,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/beds/{{ _.world_bed_id }}/water-preview",
       "name": "POST /world/beds/{id}/water-preview",
-      "description": "Growth never pauses. Missed watering halves yield; expired crops cannot be harvested. Dig requires a shovel and wears it once. Harvest enters five-slot garden storage.",
+      "description": "Growth never pauses. Missed watering halves yield; expired crops cannot be harvested. Dig requires a shovel and wears it once. Harvest enters five-slot garden storage.\n2026-10-28: NPC stockpiles expose npc_supply=true, sell actual extracted raw stock at profile reference prices and recycle proceeds. NPC seller does not consume the personal daily sale quota; buyer funds, per-operation quantity, capacity, quotes and replay checks remain enforced.",
       "method": "POST",
       "body": {
         "mimeType": "application/json",
@@ -2780,7 +2780,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/beds/{{ _.world_bed_id }}/water",
       "name": "POST /world/beds/{id}/water",
-      "description": "Growth never pauses. Missed watering halves yield; expired crops cannot be harvested. Dig requires a shovel and wears it once. Harvest enters five-slot garden storage.",
+      "description": "Growth never pauses. Missed watering halves yield; expired crops cannot be harvested. Dig requires a shovel and wears it once. Harvest enters five-slot garden storage.\n2026-10-28: NPC stockpiles expose npc_supply=true, sell actual extracted raw stock at profile reference prices and recycle proceeds. NPC seller does not consume the personal daily sale quota; buyer funds, per-operation quantity, capacity, quotes and replay checks remain enforced.",
       "method": "POST",
       "body": {
         "mimeType": "application/json",
@@ -2815,7 +2815,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/beds/{{ _.world_bed_id }}/harvest-preview",
       "name": "POST /world/beds/{id}/harvest-preview",
-      "description": "Growth never pauses. Missed watering halves yield; expired crops cannot be harvested. Dig requires a shovel and wears it once. Harvest enters five-slot garden storage.",
+      "description": "Growth never pauses. Missed watering halves yield; expired crops cannot be harvested. Dig requires a shovel and wears it once. Harvest enters five-slot garden storage.\n2026-10-28: NPC stockpiles expose npc_supply=true, sell actual extracted raw stock at profile reference prices and recycle proceeds. NPC seller does not consume the personal daily sale quota; buyer funds, per-operation quantity, capacity, quotes and replay checks remain enforced.",
       "method": "POST",
       "body": {
         "mimeType": "application/json",
@@ -2850,7 +2850,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/beds/{{ _.world_bed_id }}/harvest",
       "name": "POST /world/beds/{id}/harvest",
-      "description": "Growth never pauses. Missed watering halves yield; expired crops cannot be harvested. Dig requires a shovel and wears it once. Harvest enters five-slot garden storage.",
+      "description": "Growth never pauses. Missed watering halves yield; expired crops cannot be harvested. Dig requires a shovel and wears it once. Harvest enters five-slot garden storage.\n2026-10-28: NPC stockpiles expose npc_supply=true, sell actual extracted raw stock at profile reference prices and recycle proceeds. NPC seller does not consume the personal daily sale quota; buyer funds, per-operation quantity, capacity, quotes and replay checks remain enforced.",
       "method": "POST",
       "body": {
         "mimeType": "application/json",
@@ -2885,7 +2885,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/beds/{{ _.world_bed_id }}/cancel-preview",
       "name": "POST /world/beds/{id}/cancel-preview",
-      "description": "Growth never pauses. Missed watering halves yield; expired crops cannot be harvested. Dig requires a shovel and wears it once. Harvest enters five-slot garden storage.",
+      "description": "Growth never pauses. Missed watering halves yield; expired crops cannot be harvested. Dig requires a shovel and wears it once. Harvest enters five-slot garden storage.\n2026-10-28: NPC stockpiles expose npc_supply=true, sell actual extracted raw stock at profile reference prices and recycle proceeds. NPC seller does not consume the personal daily sale quota; buyer funds, per-operation quantity, capacity, quotes and replay checks remain enforced.",
       "method": "POST",
       "body": {
         "mimeType": "application/json",
@@ -2920,7 +2920,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/beds/{{ _.world_bed_id }}/cancel",
       "name": "POST /world/beds/{id}/cancel",
-      "description": "Growth never pauses. Missed watering halves yield; expired crops cannot be harvested. Dig requires a shovel and wears it once. Harvest enters five-slot garden storage.",
+      "description": "Growth never pauses. Missed watering halves yield; expired crops cannot be harvested. Dig requires a shovel and wears it once. Harvest enters five-slot garden storage.\n2026-10-28: NPC stockpiles expose npc_supply=true, sell actual extracted raw stock at profile reference prices and recycle proceeds. NPC seller does not consume the personal daily sale quota; buyer funds, per-operation quantity, capacity, quotes and replay checks remain enforced.",
       "method": "POST",
       "body": {
         "mimeType": "application/json",
@@ -2955,7 +2955,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/crops/publish-preview",
       "name": "POST /world/crops/publish-preview",
-      "description": "Growth never pauses. Missed watering halves yield; expired crops cannot be harvested. Dig requires a shovel and wears it once. Harvest enters five-slot garden storage.",
+      "description": "Growth never pauses. Missed watering halves yield; expired crops cannot be harvested. Dig requires a shovel and wears it once. Harvest enters five-slot garden storage.\n2026-10-28: NPC stockpiles expose npc_supply=true, sell actual extracted raw stock at profile reference prices and recycle proceeds. NPC seller does not consume the personal daily sale quota; buyer funds, per-operation quantity, capacity, quotes and replay checks remain enforced.",
       "method": "POST",
       "body": {
         "mimeType": "application/json",
@@ -2990,7 +2990,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/crops/publish",
       "name": "POST /world/crops/publish",
-      "description": "Growth never pauses. Missed watering halves yield; expired crops cannot be harvested. Dig requires a shovel and wears it once. Harvest enters five-slot garden storage.",
+      "description": "Growth never pauses. Missed watering halves yield; expired crops cannot be harvested. Dig requires a shovel and wears it once. Harvest enters five-slot garden storage.\n2026-10-28: NPC stockpiles expose npc_supply=true, sell actual extracted raw stock at profile reference prices and recycle proceeds. NPC seller does not consume the personal daily sale quota; buyer funds, per-operation quantity, capacity, quotes and replay checks remain enforced.",
       "method": "POST",
       "body": {
         "mimeType": "application/json",
@@ -10222,7 +10222,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/beds/{{ _.world_bed_id }}/dig-preview",
       "name": "POST /world/beds/{id}/dig-preview",
-      "description": "Growth never pauses. Missed watering halves yield; expired crops cannot be harvested. Dig requires a shovel and wears it once. Harvest enters five-slot garden storage.",
+      "description": "Growth never pauses. Missed watering halves yield; expired crops cannot be harvested. Dig requires a shovel and wears it once. Harvest enters five-slot garden storage.\n2026-10-28: NPC stockpiles expose npc_supply=true, sell actual extracted raw stock at profile reference prices and recycle proceeds. NPC seller does not consume the personal daily sale quota; buyer funds, per-operation quantity, capacity, quotes and replay checks remain enforced.",
       "method": "POST",
       "body": {
         "mimeType": "application/json",
@@ -10257,7 +10257,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/beds/{{ _.world_bed_id }}/dig",
       "name": "POST /world/beds/{id}/dig",
-      "description": "Growth never pauses. Missed watering halves yield; expired crops cannot be harvested. Dig requires a shovel and wears it once. Harvest enters five-slot garden storage.",
+      "description": "Growth never pauses. Missed watering halves yield; expired crops cannot be harvested. Dig requires a shovel and wears it once. Harvest enters five-slot garden storage.\n2026-10-28: NPC stockpiles expose npc_supply=true, sell actual extracted raw stock at profile reference prices and recycle proceeds. NPC seller does not consume the personal daily sale quota; buyer funds, per-operation quantity, capacity, quotes and replay checks remain enforced.",
       "method": "POST",
       "body": {
         "mimeType": "application/json",
@@ -10455,7 +10455,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/nodes/{{ _.world_node_id }}/harvest",
       "name": "GET /world/nodes/{id}/harvest",
-      "description": "Склад урожая: пять ячеек, данные партий и цен. Для владельца destinations содержит доступные собственные рюкзак, сундуки и склады на территории огорода.",
+      "description": "Склад урожая: пять ячеек, данные партий и цен. Для владельца destinations содержит доступные собственные рюкзак, сундуки и склады на территории огорода.\n2026-10-28: NPC stockpiles expose npc_supply=true, sell actual extracted raw stock at profile reference prices and recycle proceeds. NPC seller does not consume the personal daily sale quota; buyer funds, per-operation quantity, capacity, quotes and replay checks remain enforced.",
       "method": "GET",
       "body": {},
       "parameters": [],
@@ -10482,7 +10482,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/nodes/{{ _.world_node_id }}/harvest-price-preview",
       "name": "POST /world/nodes/{id}/harvest-price-preview",
-      "description": "placement-options: GET /v1/world/nodes/{id}/placement-options.",
+      "description": "placement-options: GET /v1/world/nodes/{id}/placement-options.\n2026-10-28: NPC stockpiles expose npc_supply=true, sell actual extracted raw stock at profile reference prices and recycle proceeds. NPC seller does not consume the personal daily sale quota; buyer funds, per-operation quantity, capacity, quotes and replay checks remain enforced.",
       "method": "POST",
       "body": {
         "mimeType": "application/json",
@@ -10517,7 +10517,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/nodes/{{ _.world_node_id }}/harvest-price",
       "name": "POST /world/nodes/{id}/harvest-price",
-      "description": "placement-options: GET /v1/world/nodes/{id}/placement-options.",
+      "description": "placement-options: GET /v1/world/nodes/{id}/placement-options.\n2026-10-28: NPC stockpiles expose npc_supply=true, sell actual extracted raw stock at profile reference prices and recycle proceeds. NPC seller does not consume the personal daily sale quota; buyer funds, per-operation quantity, capacity, quotes and replay checks remain enforced.",
       "method": "POST",
       "body": {
         "mimeType": "application/json",
@@ -10552,7 +10552,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/nodes/{{ _.world_node_id }}/harvest-buy-preview",
       "name": "POST /world/nodes/{id}/harvest-buy-preview",
-      "description": "placement-options: GET /v1/world/nodes/{id}/placement-options.",
+      "description": "placement-options: GET /v1/world/nodes/{id}/placement-options.\n2026-10-28: NPC stockpiles expose npc_supply=true, sell actual extracted raw stock at profile reference prices and recycle proceeds. NPC seller does not consume the personal daily sale quota; buyer funds, per-operation quantity, capacity, quotes and replay checks remain enforced.",
       "method": "POST",
       "body": {
         "mimeType": "application/json",
@@ -10587,7 +10587,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/nodes/{{ _.world_node_id }}/harvest-buy",
       "name": "POST /world/nodes/{id}/harvest-buy",
-      "description": "placement-options: GET /v1/world/nodes/{id}/placement-options.",
+      "description": "placement-options: GET /v1/world/nodes/{id}/placement-options.\n2026-10-28: NPC stockpiles expose npc_supply=true, sell actual extracted raw stock at profile reference prices and recycle proceeds. NPC seller does not consume the personal daily sale quota; buyer funds, per-operation quantity, capacity, quotes and replay checks remain enforced.",
       "method": "POST",
       "body": {
         "mimeType": "application/json",
@@ -10622,7 +10622,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/nodes/{{ _.world_node_id }}/harvest-withdraw-preview",
       "name": "POST /world/nodes/{id}/harvest-withdraw-preview",
-      "description": "Перемещение урожая в выбранное собственное хранилище из destinations GET harvest. Необязательный destination_storage_id; без него — рюкзак. Preview проверяет вместимость и право доступа; execute с теми же входом, quote_id, expected_revisions и request_key. Повтор не дублирует выдачу.",
+      "description": "Перемещение урожая в выбранное собственное хранилище из destinations GET harvest. Необязательный destination_storage_id; без него — рюкзак. Preview проверяет вместимость и право доступа; execute с теми же входом, quote_id, expected_revisions и request_key. Повтор не дублирует выдачу.\n2026-10-28: NPC stockpiles expose npc_supply=true, sell actual extracted raw stock at profile reference prices and recycle proceeds. NPC seller does not consume the personal daily sale quota; buyer funds, per-operation quantity, capacity, quotes and replay checks remain enforced.",
       "method": "POST",
       "body": {
         "mimeType": "application/json",
@@ -10657,7 +10657,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/nodes/{{ _.world_node_id }}/harvest-withdraw",
       "name": "POST /world/nodes/{id}/harvest-withdraw",
-      "description": "Перемещение урожая в выбранное собственное хранилище из destinations GET harvest. Необязательный destination_storage_id; без него — рюкзак. Preview проверяет вместимость и право доступа; execute с теми же входом, quote_id, expected_revisions и request_key. Повтор не дублирует выдачу.",
+      "description": "Перемещение урожая в выбранное собственное хранилище из destinations GET harvest. Необязательный destination_storage_id; без него — рюкзак. Preview проверяет вместимость и право доступа; execute с теми же входом, quote_id, expected_revisions и request_key. Повтор не дублирует выдачу.\n2026-10-28: NPC stockpiles expose npc_supply=true, sell actual extracted raw stock at profile reference prices and recycle proceeds. NPC seller does not consume the personal daily sale quota; buyer funds, per-operation quantity, capacity, quotes and replay checks remain enforced.",
       "method": "POST",
       "body": {
         "mimeType": "application/json",

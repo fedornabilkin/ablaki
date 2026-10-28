@@ -192,6 +192,8 @@ class WorldQuery
                 $policy = new NodeFacilitiesDecorator(new CommonNodePolicy());
                 $dto = (new WorldComposite($row))->accept(new NodePresentationVisitor($policy, $this->policy->userId(), $dto));
             }
+            if (($settings['npc_role'] ?? null) === 'workshop' && (new NpcInfrastructure($this->db))->managed($row, ['workshop'])) $dto['extensions'][] = 'public_workspace';
+            if (($settings['npc_role'] ?? null) === 'source' && (new NpcInfrastructure($this->db))->managed($row, ['source'])) $dto['extensions'][] = 'public_work';
             $dto['owner'] = ['id' => $row['owner_user_id'] === null ? null : (int)$row['owner_user_id'], 'owned_by_me' => $dto['owned_by_me'], 'has_finances' => $dto['has_finances']];
             $result[] = $dto;
         }

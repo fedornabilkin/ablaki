@@ -22,6 +22,9 @@ class WorldWorkerController extends \yii\console\Controller
         }
         if ($flags->capabilities()['world_write'] && $flags->capabilities()['storage_v2']) {
             \common\modules\world\models\Mining::discover();
+            $npc = new \common\modules\world\models\domain\NpcMaintenance(Yii::$app->db);
+            $npc->discover();
+            $handlers['world.npc.maintain'] = function (array $payload, array $job) use ($npc) { $npc->perform($payload, $job); };
             $construction = new \common\modules\world\models\domain\WorldConstruction(Yii::$app->db, $flags);
             $handlers['world.construction.finish'] = function (array $payload, array $job) use ($construction) { $construction->finish($payload, $job); };
             $wear = new \common\modules\world\models\domain\EquipmentWearJob(Yii::$app->db, $flags);

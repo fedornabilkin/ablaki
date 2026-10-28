@@ -156,11 +156,12 @@ printf 'compose %s\n' "$*" >> "$TEST_LOG"
 case "$*" in
   *'release/test-state')
     [[ "$TEST_WORLD_FAIL" != state ]] || exit 2
-    echo '{"ready":true,"schema":43,"profile":4}' ;;
+    echo '{"ready":true,"schema":44,"profile":5}' ;;
   *'release/test-install')
     [[ -e "$TEST_DEPLOY_ROOT/world-activation.pending" ]]
     [[ "$TEST_WORLD_FAIL" != setup ]] || exit 23 ;;
   *'release/test-profile '*) [[ "$TEST_WORLD_FAIL" != profile ]] || exit 25 ;;
+  *'release/test-npc '*) [[ "$TEST_WORLD_FAIL" != npc ]] || exit 26 ;;
   *'world-worker/run 200') [[ "$TEST_WORLD_FAIL" != handlers ]] || exit 24 ;;
   'stop -t 60 nginx php'|'up -d --no-deps php nginx') ;;
   'ps -q php') echo php-id ;;
@@ -187,7 +188,7 @@ done
 MOCK
 chmod +x "$test_root/world-bin/"*
 export PATH="$test_root/world-bin:$PATH"
-for scenario in cold warm resume changed profile_changed setup handlers worker label lock state profile http; do
+for scenario in cold warm resume changed profile_changed setup handlers worker label lock state profile npc http; do
   TEST_WORLD_FAIL=$scenario
   TEST_REPO="$test_root/world-$scenario/repo"
   TEST_DEPLOY_ROOT="$test_root/world-$scenario/deploy"
@@ -228,6 +229,7 @@ for scenario in cold warm resume changed profile_changed setup handlers worker l
         grep -Fxq 'compose up -d --no-deps php nginx' "$TEST_LOG"
       fi
       if [[ "$scenario" = profile_changed ]]; then grep -q 'release/test-profile 1 fedornabilkin' "$TEST_LOG"; else grep -q 'release/test-profile 0 fedornabilkin' "$TEST_LOG"; fi
+      grep -q 'release/test-npc fedornabilkin' "$TEST_LOG"
       ;;
     *)
       [[ "$status" != 0 ]] || { cat "$TEST_REPO/output.log"; exit 1; }

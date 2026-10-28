@@ -55,6 +55,7 @@ class StationResolver
                 'durability' => (int)$current['durability'], 'max_durability' => (int)$unit['max_durability'], 'exposure_class' => $current['exposure_class']];
             if (count($result) >= $limit) break;
         }
+        if ($station && count($result) < $limit) $result = array_merge($result, NpcStations::candidates($this->s, $user, $item, $instance, $limit - count($result)));
         return $result;
     }
 }

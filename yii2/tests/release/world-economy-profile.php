@@ -29,7 +29,7 @@ $report = EconomyProfile::report($profile);
 profileCheck($report['counts'] === ['items' => 57, 'objects' => 23, 'recipes' => 44, 'actions' => 14], 'candidate contains existing catalog and concrete additions');
 profileCheck($report['applied'] === false && $report['effective_from'] === null, 'audit does not activate candidate');
 profileCheck($report['starter_credits_cr'] === '250.0000' && $profile['starter']['credit_source'] === 'existing_transfer', 'start uses existing transfer, without minting');
-profileCheck($report['daily_grant'] === ['actual_credits_cr' => '0.0000', 'reference_value_cr' => '29.0000', 'sale_value_before_limits_cr' => '14.5000'], 'natural supply value is distinct from actual credits');
+profileCheck($report['daily_grant'] === ['actual_credits_cr' => '0.0000', 'reference_value_cr' => '36.0000', 'sale_value_before_limits_cr' => '18.0000'], 'natural supply including sand and clay is distinct from actual credits');
 profileCheck($report['first_day_objects_only_cr'] === '140.0000', 'object price subtotal excludes materials and later income');
 profileCheck($profile['objects']['starter-shelter']['price_cr'] === '20.0000' && $profile['objects']['house']['price_cr'] === '80.0000', 'shelter and house have the requested twenty/eighty prices');
 profileCheck(\common\modules\world\modules\economy\value\Money::parse($profile['objects']['house']['price_cr'])->compare(\common\modules\world\modules\economy\value\Money::parse($profile['objects']['starter-shelter']['price_cr'])) > 0
@@ -206,10 +206,11 @@ blockedRoute($badProfile, $routes, 'EXTRACTION_DAILY_LIMIT', 'one fewer extracti
 $badProfile = $profile; $badProfile['limits']['sales_daily']['gross_cr'] = '40.0000';
 blockedRoute($badProfile, $routes, 'SALES_DAILY_LIMIT', 'sales share the daily gross cap across orders');
 $badProfile = $profile; $badProfile['items']['classic-coal']['stack_size'] = 1;
-profileCheck(EconomyScenario::report($badProfile, $routes, 'first-day')['final']['peak_backpack_slots'] === 19, 'log-based stick route uses nineteen slots with single-unit coal stacks');
-$badProfile['storage']['backpack_slots'] = 19;
+$badProfile['storage']['backpack_slots'] = 21;
+profileCheck(EconomyScenario::report($badProfile, $routes, 'first-day')['final']['peak_backpack_slots'] === 21, 'single-unit coal stacks plus sand and clay require twenty-one slots');
+$badProfile['storage']['backpack_slots'] = 21;
 profileCheck(EconomyScenario::report($badProfile, $routes, 'first-day')['status'] === 'completed', 'the exact active-slot boundary remains usable');
-$badProfile['storage']['backpack_slots'] = 18;
+$badProfile['storage']['backpack_slots'] = 20;
 blockedRoute($badProfile, $routes, 'BACKPACK_FULL', 'source results must fit actual stack capacities');
 $badRoutes = $routes; $badRoutes['scenarios']['first-day'][] = ['action' => 'goal', 'code' => 'day-1'];
 blockedRoute($profile, $badRoutes, 'GOAL_ALREADY_CLAIMED', 'milestone reward cannot be repeated');
@@ -244,13 +245,13 @@ $reversedBound = EconomyBootstrapBound::report($profile, $reversedTargets);
 profileCheck($bound['required_raw_items'] === ['classic-clay' => 8, 'classic-coal' => 1, 'classic-fibre' => 12, 'classic-log' => 23, 'classic-ore' => 2, 'classic-sand' => 4, 'classic-stone' => 40]
     && $bound['required_raw_value_cr'] === '157.0000' && $reversedBound['required_raw_items'] === $bound['required_raw_items']
     && $reversedBound['cash_upper_bound_cr'] === $bound['cash_upper_bound_cr'], 'bootstrap expansion shares intermediate surplus and preserves the bound when target order is reversed');
-profileCheck($bound['mandatory_building_prices_cr'] === '475.0000' && $bound['initial_raw_potential_cr'] === '61.5000', 'bound separates unavoidable prices and generous initial raw potential');
+profileCheck($bound['mandatory_building_prices_cr'] === '475.0000' && $bound['initial_raw_potential_cr'] === '68.5000', 'bound separates unavoidable prices and generous initial raw potential');
 profileCheck($bound['best_source_batch_cr'] === '6.0000' && $bound['maximum_source_batches'] === 40
     && in_array('deep-mining', $bound['excluded_sources'], true), 'pre-ingot frontier excludes circular income from the iron pickaxe');
 profileCheck($bound['seed_potential_cr'] === '1.2500' && $bound['maximum_crop_cycles'] === 44
     && $bound['maximum_crop_bonus_cr'] === '11.0000', 'seed reproduction cannot become an unlimited hidden source of optimistic cash');
-profileCheck($bound['status'] === 'impossible_under_fixed_assumptions' && $bound['cash_upper_bound_cr'] === '455.5000'
-    && $bound['minimum_shortfall_cr'] === '19.5000', 'even zero taxes unlimited raw demand and free time cannot fund the fixed two-calendar-day target');
+profileCheck($bound['status'] === 'impossible_under_fixed_assumptions' && $bound['cash_upper_bound_cr'] === '462.5000'
+    && $bound['minimum_shortfall_cr'] === '12.5000', 'even zero taxes unlimited raw demand and free time cannot fund the fixed two-calendar-day target');
 profileCheck(EconomyBootstrapBound::report($profile, $routes['bootstrap_bound'], 3)['status'] === 'not_ruled_out', 'nonnegative optimistic bound never claims a feasible three-day route');
 $changed = $profile; $changed['recipes']['classic-plank']['quantity'] = 1;
 profileCheck(EconomyBootstrapBound::report($changed, $routes['bootstrap_bound'])['required_raw_items']['classic-log'] === 42, 'bound recalculates raw demand when a recipe output changes');
@@ -377,11 +378,15 @@ profileCheck($noMapResult['status'] === 'blocked' && $noMapResult['failure']['re
 $profile = $currentProfile; $routes = $currentRoutes;
 $week = EconomyScenario::report($profile, $routes, 'first-seven-days-with-lodging');
 $finiteWeek = EconomyScenario::report($profile, $routes, 'first-seven-days-finite-supplies');
+profileCheck($finiteWeek['status'] === 'blocked' && $finiteWeek['failure']['reason'] === 'BACKPACK_FULL|21'
+    && $finiteWeek['final']['money_conserved'], 'collecting every supply exposes a real backpack capacity limit before the final buildings');
+$finiteRoom = $profile; $finiteRoom['storage']['backpack_slots'] = 21;
+$finiteWeek = EconomyScenario::report($finiteRoom, $routes, 'first-seven-days-finite-supplies');
 profileCheck($finiteWeek['status'] === 'completed' && $finiteWeek['supply_model'] === 'finite_current_runtime'
     && $finiteWeek['final']['money_conserved'] && $finiteWeek['final']['money_total_with_sinks_cr'] === '810.0000'
-    && count($finiteWeek['final']['claimed_daily_dates']) === 5
+    && count($finiteWeek['final']['claimed_daily_dates']) === 7
     && isset($finiteWeek['final']['objects']['house'], $finiteWeek['final']['objects']['storage-building'])
-    && max($finiteWeek['final']['extraction']) <= 20, 'finite five-claim supplies complete the funded week without refilling produced resources');
+    && max($finiteWeek['final']['extraction']) <= 20, 'decreasing supplies and the daily minimum complete the funded week without extra credits');
 profileCheck($week['status'] === 'completed' && $week['final']['money_conserved']
     && $week['final']['money_total_with_sinks_cr'] === '810.0000', 'seven-day route conserves original funds with explicit child-budget funding');
 profileCheck(($week['final']['stock']['classic-pickaxe'] ?? 0) === 1

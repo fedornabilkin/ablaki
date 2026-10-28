@@ -95,6 +95,8 @@ final class EconomyProfile
         foreach (['starter', 'daily'] as $section) self::quantities($data[$section]['items'], $items, $section);
         if (isset($data['daily']['claim_limit']) && (!is_int($data['daily']['claim_limit']) || $data['daily']['claim_limit'] < 1 || $data['daily']['claim_limit'] > 30))
             throw new \InvalidArgumentException('Daily allowance must contain 1–30 decreasing claims per item.');
+        if (isset($data['daily']['minimum_quantity']) && $data['daily']['minimum_quantity'] !== 1)
+            throw new \InvalidArgumentException('Minimum daily supply is one item per resource.');
         if (isset($data['daily']['initial_multiplier']) && (!is_int($data['daily']['initial_multiplier']) || $data['daily']['initial_multiplier'] < ($data['daily']['claim_limit'] ?? 5) || $data['daily']['initial_multiplier'] > 30))
             throw new \InvalidArgumentException('Initial supply multiplier must cover every decreasing claim.');
         foreach ($data['daily']['suppressed_by'] ?? [] as $code => $objects) {

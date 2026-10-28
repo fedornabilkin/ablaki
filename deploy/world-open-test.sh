@@ -51,6 +51,7 @@ if [[ "$world" = true ]]; then
   apply=0
   if [[ "$profile_mode" = publish || ( "$profile_mode" = changed && -f "$profile_marker" && "$(cat "$profile_marker")" != "$profile_hash" ) ]]; then apply=1; fi
   cli release/test-profile "$apply" "$profile_author"
+  cli release/test-npc "$profile_author"
   printf '%s\n' "$profile_hash" > "$profile_marker.new"
   mv -- "$profile_marker.new" "$profile_marker"
 fi

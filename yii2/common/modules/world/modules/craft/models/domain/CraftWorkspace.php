@@ -10,7 +10,7 @@ use common\modules\world\support\GameError;
 use yii\db\Connection;
 use yii\db\Query;
 
-/** Explicit, owner-only manual production. Public tariffs and NPC reservations are separate stages. */
+/** Manual production with own materials and optional public NPC stations. */
 class CraftWorkspace
 {
     private $db;
@@ -20,8 +20,8 @@ class CraftWorkspace
     {
         $this->flags->requireFlags(['world_read', 'storage_v2']);
         $place = (new WorldQuery($this->db, new WorldAccessPolicy($user)))->record($node);
-        if ((int)$place['owner_user_id'] !== $user || $place['status'] !== 'active')
-            throw new GameError('WORKSPACE_UNAVAILABLE', 'Изготовление доступно в собственном действующем объекте.', 409);
+        if ($place['status'] !== 'active' || ((int)$place['owner_user_id'] !== $user && !(new \common\modules\world\models\domain\NpcInfrastructure($this->db))->publicWorkshop($node)))
+            throw new GameError('WORKSPACE_UNAVAILABLE', 'Выберите свой действующий объект или открытую мастерскую NPC.', 409);
         if (!(new Query())->from('world_membership')->where(['user_id' => $user, 'world_id' => $place['root_id']])->exists($this->db)) throw new GameError('WORLD_MEMBERSHIP_REQUIRED', 'Сначала вступите в этот мир.');
         if (isset($place['hierarchy_level'])) {
             if (!\common\modules\world\models\domain\NodeAvailability::activePath($this->db, $node)) throw new GameError('WORKSPACE_UNAVAILABLE', 'Объект или его родитель недоступен для работы.');
@@ -72,7 +72,7 @@ class CraftWorkspace
             $equipment[] = ['item_id' => $item, 'name' => trim($definition['name']), 'is_station' => $station, 'candidates' => (new StationResolver($store))->candidates($user, $item, $station)];
         }
         $storages = [];
-        foreach ((new WorldStorage($this->db, $this->flags))->list($user, $node)['items'] as $header) {
+        foreach ((new WorldStorage($this->db, $this->flags))->list($user, (int)$place['owner_user_id'] === $user ? $node : null)['items'] as $header) {
             try {
                 $this->storage($user, $header['id'], $node, false); $incoming = true;
                 try { $this->storage($user, $header['id'], $node, true); } catch (\yii\web\HttpException $e) { $incoming = false; } catch (GameError $e) { $incoming = false; }
@@ -82,7 +82,7 @@ class CraftWorkspace
         $recipes = (new WorkspaceAvailability($this->db))->recipes($user, $store, $catalog, $recipes, $storages);
         $profile = \common\modules\world\models\domain\EconomyRuntime::current($this->db);
         return ['node_id' => $node, 'name' => $place['name'], 'recipe_id' => $selected ? (int)$selected['id'] : null, 'recipes' => $recipes, 'equipment' => $equipment, 'storages' => $storages, 'writable' => $this->flags->capabilities()['world_write'],
-            'quota' => \common\modules\world\models\domain\EconomyQuota::state($this->db, $user, 'crafting_hourly'), 'object_budget_payment' => (bool)($profile['profile']['craft_fees']['object_budget_payment'] ?? false), 'server_time' => time()];
+            'quota' => \common\modules\world\models\domain\EconomyQuota::state($this->db, $user, 'crafting_hourly'), 'object_budget_payment' => (int)$place['owner_user_id'] === $user && (bool)($profile['profile']['craft_fees']['object_budget_payment'] ?? false), 'server_time' => time()];
     }
     private function prepare(int $user, array $payload): array
     {
