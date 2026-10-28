@@ -56,8 +56,8 @@ if [[ "$world" = true ]]; then
   mv -- "$profile_marker.new" "$profile_marker"
 fi
 if [[ "$setup" = true ]]; then
-  [[ "$world" != true ]] || cli world-worker/run 200
   docker-compose up -d --no-deps php nginx
+  [[ "$world" != true ]] || cli release/test-worker 200
 fi
 if [[ "$world" = true ]]; then
   loop_hash=$(sha256sum yii2/console/world-worker-loop.sh | cut -d' ' -f1)

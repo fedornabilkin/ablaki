@@ -93,6 +93,18 @@ class ReleaseController extends \yii\console\Controller
         return 0;
     }
 
+    public function actionTestWorker(int $limit = 200): int
+    {
+        $this->context();
+        try { return Yii::$app->runAction('world-worker/run', ['limit' => $limit]); }
+        catch (\Throwable $error) {
+            // No environment, arguments, SQL body or stack trace in release logs.
+            $this->output(['worker_ready' => false, 'error' => get_class($error),
+                'reason' => mb_substr(preg_split('/\R/u', $error->getMessage())[0], 0, 700), 'file' => basename($error->getFile()), 'line' => $error->getLine()]);
+            return 2;
+        }
+    }
+
     private function protectedState(): string
     {
         $db = Yii::$app->db;
