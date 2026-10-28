@@ -57,13 +57,13 @@ final class NpcMaintenance
             }
         }
         // Keep one new batch funded at every source before filling larger buffers.
-        foreach ($nodes as $node) if (NpcInfrastructure::role($node) === 'source') $this->fund($node, $policy, $operation, Money::parse($policy['reward_cr']), true);
+        foreach ($nodes as $node) if (NpcInfrastructure::role($node) === 'source') $this->fund($node, $policy, $operation, $this->minimumWage((int)$node['id'], $policy), true);
         usort($nodes, static fn($a, $b) => [NpcInfrastructure::role($a) !== 'source', $a['id']] <=> [NpcInfrastructure::role($b) !== 'source', $b['id']]);
         $shortfall = Money::parse('0');
         foreach ($nodes as $node) if (in_array(NpcInfrastructure::role($node), ['camp', 'source', 'workshop', 'equipment', 'warehouse'], true)) {
             $this->fund($node, $policy, $operation);
             $accounts = (new EconomyHierarchy($this->db))->accounts((int)$node['id']);
-            $available = (new BudgetSpending($this->db))->available((int)$accounts['budget']['id']); $target = Money::parse($policy['target_budget_cr']);
+            $available = (new BudgetSpending($this->db))->available((int)$accounts['budget']['id']); $target = $this->targetBudget($node, $policy);
             if ($available->compare($target) < 0) $shortfall = $shortfall->add($target->subtract($available));
         }
         $this->db->createCommand()->update('world_npc_policy', ['last_refill_at' => time(), 'last_shortfall_cr' => $shortfall->decimal()], ['id' => $policy['id']])->execute();
@@ -73,11 +73,22 @@ final class NpcMaintenance
         $infrastructure = new NpcInfrastructure($this->db);
         if ($infrastructure->managed($node->getAttributes(), ['source'])) $this->fund($node->getAttributes(), $infrastructure->policy((int)$node->root_id), $operation, null, true);
     }
+    private function minimumWage(int $node, array $policy): Money
+    {
+        $place = Node::findOne($node);
+        return Money::parse($place ? HiredExtraction::rates($place)['reward_cr'] : $policy['reward_cr']);
+    }
+    private function targetBudget(array $node, array $policy): Money
+    {
+        $target = Money::parse($policy['target_budget_cr']);
+        $wage = NpcInfrastructure::role($node) === 'source' ? $this->minimumWage((int)$node['id'], $policy) : Money::parse('0');
+        return $wage->compare($target) > 0 ? $wage : $target;
+    }
     private function fund(array $node, array $policy, string $operation, ?Money $goal = null, bool $useBuffers = false): void
     {
         $db = $this->db; $spending = new BudgetSpending($db); $hierarchy = new EconomyHierarchy($db);
         $target = $hierarchy->provision((int)$node['id'], $operation)['budget'];
-        $buffer = Money::parse($policy['target_budget_cr']); $goal = $goal ?? $buffer; $available = $spending->available((int)$target['id']);
+        $buffer = Money::parse($policy['target_budget_cr']); $goal = $goal ?? $this->targetBudget($node, $policy); $available = $spending->available((int)$target['id']);
         if ($available->compare($goal) >= 0) return;
         $needed = $goal->subtract($available);
         $sources = (new Query())->select(['a.*', 'n.node_type', 'n.root_id', 'n.owner_user_id', 'n.settings_json', 'n.id AS node_id'])->from(['a' => 'economy_account'])
@@ -90,7 +101,8 @@ final class NpcMaintenance
                 && !(new NpcInfrastructure($db))->managed(array_replace($source, ['id' => $source['node_id']]))) continue;
             $free = $spending->available((int)$source['id']);
             if ($role !== null && $role !== 'store') {
-                $retained = $useBuffers ? Money::parse($role === 'source' ? $policy['reward_cr'] : '0') : $buffer;
+                $minimum = $role === 'source' ? $this->minimumWage((int)$source['node_id'], $policy) : Money::parse('0');
+                $retained = $useBuffers || $minimum->compare($buffer) > 0 ? $minimum : $buffer;
                 $free = $free->compare($retained) > 0 ? $free->subtract($retained) : Money::parse('0');
             }
             $amount = $free->compare($needed) < 0 ? $free : $needed;

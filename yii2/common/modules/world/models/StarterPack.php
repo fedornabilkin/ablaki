@@ -33,7 +33,7 @@ class StarterPack extends Record
     public static function enter(int $user, int $city, string $operation): array
     {
         $parent = Node::readable($city, $user);
-        if ((int)$parent->hierarchy_level !== 3 || (int)$parent->root_id !== Registry::worldId()) throw new GameError('INVALID_CITY', 'Выберите город действующего мира.', 422);
+        if ((int)$parent->hierarchy_level !== 3 || $parent->node_type !== 'SETTLEMENT' || $parent->visibility !== 'public' || $parent->status !== 'active' || (int)$parent->root_id !== Registry::worldId()) throw new GameError('INVALID_CITY', 'Выберите публичный действующий город этого мира.', 422);
         $membership = Membership::forUser($user);
         self::claim($user, $operation);
         (new domain\ActorResolver(self::getDb()))->player($user);

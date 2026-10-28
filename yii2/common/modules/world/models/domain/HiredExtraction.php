@@ -15,7 +15,7 @@ final class HiredExtraction
         return ($node->template && $node->template->code === 'mine')
             || (new NpcInfrastructure(Node::getDb()))->managed($node->getAttributes(), ['source']);
     }
-    public static function configuration(Node $node): array
+    public static function rates(Node $node): array
     {
         $settings = json_decode($node->settings_json ?: '{}', true) ?: [];
         $rule = $settings['hired_extraction'] ?? [];
@@ -23,8 +23,15 @@ final class HiredExtraction
         if ($npc->managed($node->getAttributes(), ['source'])) {
             $rule = ['enabled' => true, 'reward_cr' => $npc->policy((int)$node->root_id)['reward_cr']];
         }
+        $multiplier = DrillingRig::bonus($node)['reward_multiplier'] ?? 1;
+        try { $base = Money::parse((string)($rule['reward_cr'] ?? '1.0000')); $amount = $base->multiply($multiplier); }
+        catch (\InvalidArgumentException | \OverflowException $error) { throw new GameError('INVALID_WAGE', 'Проверьте базовую оплату и коэффициент буровой.', 422); }
+        return ['enabled' => ($rule['enabled'] ?? false) === true, 'base_reward_cr' => $base->decimal(), 'reward_multiplier' => $multiplier, 'reward_cr' => $amount->decimal()];
+    }
+    public static function configuration(Node $node): array
+    {
         $local = self::storages($node);
-        return ['enabled' => ($rule['enabled'] ?? false) === true, 'reward_cr' => (string)($rule['reward_cr'] ?? '1.0000'), 'storage_id' => $local ? (int)$local[0]['id'] : null];
+        return self::rates($node) + ['storage_id' => $local ? (int)$local[0]['id'] : null];
     }
     public static function storages(Node $node, bool $accepted = false): array
     {
@@ -35,7 +42,7 @@ final class HiredExtraction
         $node->requireOwner($user);
         if (!self::supports($node) || $node->status !== 'active') throw new GameError('HIRED_MINE_REQUIRED', 'Оплачиваемая добыча доступна в действующей шахте или стартовом источнике NPC.', 422);
         if ((new NpcInfrastructure(Node::getDb()))->managed($node->getAttributes(), ['source'])) throw new GameError('NPC_WORK_POLICY', 'Работа в стартовых объектах NPC всегда открыта. Оплата задаётся общей политикой мира.', 409);
-        try { $amount = Money::parse($reward); }
+        try { $amount = Money::parse($reward); $amount->multiply(DrillingRig::bonus($node)['reward_multiplier'] ?? 1); }
         catch (\InvalidArgumentException | \OverflowException $error) { throw new GameError('INVALID_WAGE', 'Укажите положительную оплату за партию, до четырёх знаков после точки.', 422); }
         if ($amount->isZero() || $amount->isNegative()) throw new GameError('INVALID_WAGE', 'Укажите положительную оплату за партию.', 422);
         if ($enabled && !self::storages($node)) throw new GameError('EMPLOYER_STORAGE_REQUIRED', 'Постройте действующий мини-склад внутри объекта.', 422);

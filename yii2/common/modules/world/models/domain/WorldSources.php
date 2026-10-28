@@ -27,7 +27,8 @@ final class WorldSources
     {
         $revision = EconomyRuntime::current(Node::getDb()); $result = [];
         if (!$revision || !$node->template) return [];
-        foreach ($revision['profile']['actions'] as $code => $row) if ($row['quota'] === 'extraction_daily' && $row['node'] === $node->template->code) $result[$code] = $row;
+        $bonus = DrillingRig::bonus($node, $revision['profile']);
+        foreach ($revision['profile']['actions'] as $code => $row) if ($row['quota'] === 'extraction_daily' && $row['node'] === $node->template->code) $result[$code] = DrillingRig::apply($row, $bonus, $revision['profile']);
         return $result;
     }
     private static function context(int $node, int $user): Node
@@ -53,11 +54,13 @@ final class WorldSources
     {
         $place = self::context($node, $user); $options = self::options($place); $db = Node::getDb();
         $work = self::work($node, $user); $worker = (new Query())->from('world_mining_worker')->where(['node_id' => $node, 'user_id' => $user])->one($db);
+        if ($work) $options[$work['action_code']] = json_decode($work['definition_json'], true);
         $codes = [];
         foreach ($options as $row) $codes = array_merge($codes, array_keys($row['output']), $row['tools']);
         $items = (new Query())->from('craft_item')->where(['code' => array_unique($codes)])->indexBy('code')->all($db);
         $resolver = new StationResolver(new CraftStorage($db)); $toolAvailability = [];
-        $missing = static function (array $definition) use ($user, &$items, $resolver, &$toolAvailability): ?string {
+        $missing = static function (array $definition) use ($place, $user, &$items, $resolver, &$toolAvailability): ?string {
+            try { DrillingRig::requireAccepted($place, $definition); } catch (GameError $error) { return $error->getMessage(); }
             $names = [];
             foreach ($definition['tools'] as $code) {
                 if (!array_key_exists($code, $toolAvailability)) $toolAvailability[$code] = isset($items[$code]) && (int)$items[$code]['active'] === 1 && $resolver->select($user, (int)$items[$code]['id']) !== null;
@@ -77,7 +80,8 @@ final class WorldSources
             }
             $reason = $missing($row);
             if ((int)$place->owner_user_id !== $user && !$reason) try { HiredExtraction::context($place, $user, $work !== null, $work ? null : $row); } catch (GameError $error) { $reason = $error->getMessage(); }
-            $choices[] = ['code' => $code, 'work_seconds' => $row['work_seconds'], 'experience' => $row['experience'], 'cooldown_seconds' => $row['cooldown_seconds'], 'available_at' => max(time(), $availableAt), 'output' => $output, 'tools' => $row['tools'], 'tool_names' => $toolNames, 'unavailable_reason' => $reason, 'daily_limit' => $row['daily_limit'] ?? null];
+            $choices[] = ['code' => $code, 'work_seconds' => $row['work_seconds'], 'experience' => $row['experience'], 'cooldown_seconds' => $row['cooldown_seconds'], 'available_at' => max(time(), $availableAt), 'output' => $output, 'tools' => $row['tools'], 'tool_names' => $toolNames, 'unavailable_reason' => $reason, 'daily_limit' => $row['daily_limit'] ?? null]
+                + (isset($row['drilling']) ? ['drilling' => $row['drilling']] : []);
         }
         $definition = $work ? json_decode($work['definition_json'], true) : null;
         // An accepted batch retains its published tools even after a profile update.
@@ -139,6 +143,7 @@ final class WorldSources
                 'target_storage_id' => $target, 'worked_seconds' => 0, 'status' => 'paused', 'created_at' => time()])->execute();
             $work = self::work($node, $user);
         }
+        if ($work) DrillingRig::requireAccepted($place, json_decode($work['definition_json'], true));
         if ((int)$place->owner_user_id !== $user && $work) HiredExtraction::target($place, $user, json_decode($work['definition_json'], true));
         if (!$worker) $db->createCommand()->insert('world_mining_worker', ['user_id' => $user, 'node_id' => $node, 'source_work_id' => $work['id'], 'accounted_at' => time(), 'last_seen_at' => time()])->execute();
         $db->createCommand()->update('world_source_work', ['status' => 'working'], ['id' => $work['id']])->execute();
@@ -171,7 +176,7 @@ final class WorldSources
                 // Persist earned work when delivery is temporarily blocked, without consuming quota/wear.
                 $transaction = $db->beginTransaction();
                 try {
-                    $place = self::context($node, $user); $units = self::tools($user, $definition);
+                    $place = self::context($node, $user); DrillingRig::requireAccepted($place, $definition); $units = self::tools($user, $definition);
                     $period = \common\modules\world\models\WorldTime::dayWindow($db, time());
                     $used = self::dailyUsed($user, $work['action_code'], $period['start']);
                     if ($used >= ($definition['daily_limit'] ?? 10000)) throw new GameError('SOURCE_DAILY_LIMIT', 'Дневной предел этого источника исчерпан.', 409);

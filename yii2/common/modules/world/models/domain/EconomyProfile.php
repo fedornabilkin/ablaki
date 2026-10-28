@@ -86,6 +86,19 @@ final class EconomyProfile
         }
         EconomyOperatingCosts::treasury($costs['treasury_example'], 0);
         $items = $data['items'];
+        if (isset($data['source_equipment'])) {
+            if (!is_array($data['source_equipment'])) throw new \InvalidArgumentException('Expected source equipment rules.');
+            foreach ($data['source_equipment'] as $equipment => $rule) {
+                if ($equipment !== 'drilling-rig' || !isset($data['objects'][$equipment]) || !is_array($rule)
+                    || ($rule['source'] ?? null) !== 'mine' || !isset($data['objects']['mine']) || !is_array($rule['replaces_tools'] ?? null)) throw new \InvalidArgumentException('Unsupported source equipment rule.');
+                foreach (['output_multiplier', 'reward_multiplier'] as $field) if (!is_int($rule[$field] ?? null) || $rule[$field] < 1 || $rule[$field] > 20) throw new \InvalidArgumentException('Equipment multipliers must be integers from 1 to 20.');
+                self::references($rule['replaces_tools'], $items, 'source equipment tools');
+                if (!$rule['replaces_tools'] || count(array_unique($rule['replaces_tools'])) !== count($rule['replaces_tools'])) throw new \InvalidArgumentException('Expected distinct replaced tools.');
+                foreach ($rule['replaces_tools'] as $tool) if ($items[$tool]['kind'] !== 'tool') throw new \InvalidArgumentException('Equipment may replace tools only.');
+                foreach ($data['actions'] as $action) if (($action['node'] ?? null) === $rule['source'] && is_array($action['output'] ?? null)) foreach ($action['output'] as $quantity)
+                    if ($quantity * $rule['output_multiplier'] > 10000) throw new \InvalidArgumentException('Equipment output exceeds the batch limit.');
+            }
+        }
         foreach ($items as $code => $row) {
             if (!isset($row['stack_size']) || !is_int($row['stack_size']) || $row['stack_size'] < 1 || $row['stack_size'] > 10000) throw new \InvalidArgumentException('Invalid stack size: ' . $code);
             foreach (['reference_price_cr', 'sale_price_cr'] as $field) {
