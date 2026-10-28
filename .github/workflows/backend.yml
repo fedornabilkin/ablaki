@@ -1,22 +1,29 @@
 name: Backend CI and deployment
-
-on:
+'on':
   push:
-    branches: [master, test]
+    branches:
+      - master
+      - test
   pull_request:
-    branches: [master]
+    branches:
+      - master
   workflow_dispatch:
     inputs:
       target:
         description: Deployment environment (production requires master)
         type: choice
-        options: [test, production]
+        options:
+          - test
+          - production
         default: test
         required: true
       economy_test:
         description: Preview or prepare the funded MVP test (test only)
         type: choice
-        options: [skip, preview, prepare]
+        options:
+          - skip
+          - preview
+          - prepare
         default: skip
         required: true
       economy_donor:
@@ -24,121 +31,71 @@ on:
         type: string
         default: Test01
         required: true
-
 permissions:
   contents: read
-
 jobs:
-  checks:
-    name: Backend checks
+  minimum:
+    name: Minimum release checks
     runs-on: ubuntu-22.04
-    timeout-minutes: 20
-    services:
-      mysql:
-        image: mysql:8.0
-        env:
-          MYSQL_DATABASE: ablakin_ci
-          MYSQL_USER: ablakin_ci
-          MYSQL_PASSWORD: ci-only-password
-          MYSQL_ROOT_PASSWORD: ci-only-root
-        ports: ['3306:3306']
-        options: >-
-          --health-cmd="mysqladmin ping -h 127.0.0.1 -pci-only-root"
-          --health-interval=5s --health-timeout=5s --health-retries=20
-      postgres:
-        image: postgres:16
-        env:
-          POSTGRES_DB: ablakin_ci
-          POSTGRES_USER: ablakin_ci
-          POSTGRES_PASSWORD: ci-only-password
-        ports: ['5432:5432']
-        options: >-
-          --health-cmd="pg_isready -U ablakin_ci -d ablakin_ci"
-          --health-interval=5s --health-timeout=5s --health-retries=20
+    timeout-minutes: 6
     steps:
       - uses: actions/checkout@v7
-
+        with:
+          fetch-depth: 2
       - name: Validate requested target
         env:
-          TARGET: ${{ (github.ref == 'refs/heads/test' && 'test') || inputs.target || 'production' }}
+          TARGET: ${{ ((github.ref == 'refs/heads/test' && 'test') || inputs.target || 'production') }}
         run: |
           if [[ "$GITHUB_EVENT_NAME" = workflow_dispatch ]]; then
             [[ "$GITHUB_REF_TYPE" = branch ]]
             [[ "$TARGET" = test || ( "$TARGET" = production && "$GITHUB_REF_NAME" = master ) ]]
           fi
-
       - name: Set up the supported PHP runtime
         uses: shivammathur/setup-php@v2
         with:
-          php-version: '8.3.36'
+          php-version: 8.3.36
           extensions: mbstring, pdo_sqlite, pdo_pgsql, pdo_mysql, intl, gd, curl, zip
           tools: composer:2.10.3
           coverage: none
-
-      - name: Check deployment scripts
+      - name: Restore locked Composer dependencies
+        uses: actions/cache@v5
+        with:
+          path: yii2/vendor
+          key: ${{ runner.os }}-php8336-minimum-${{ hashFiles('yii2/composer.lock') }}
+      - name: Install production dependencies and check platform
+        working-directory: yii2
+        env:
+          COMPOSER_AUTH: '{"github-oauth":{"github.com":"${{ github.token }}"}}'
+        run: |
+          composer install --no-dev --no-interaction --prefer-dist --no-progress --optimize-autoloader
+          composer check-platform-reqs --no-dev
+      - name: Check changed PHP and deployment guards
+        env:
+          PREVIOUS_SHA: ${{ github.event.before }}
+        shell: bash
         run: |
           for script in deploy/*.sh deploy/tests/*.sh docker/php/entrypoint.sh docker/composer/entrypoint.sh; do bash -n "$script"; done
-          php -r 'exit(PHP_VERSION === "8.3.36" ? 0 : 1);'
+          base=HEAD^
+          if [[ "$PREVIOUS_SHA" =~ ^[0-9a-f]{40}$ ]] && git cat-file -e "$PREVIOUS_SHA^{commit}" 2>/dev/null; then base=$PREVIOUS_SHA; fi
+          if git rev-parse --verify "$base" >/dev/null 2>&1; then
+            git diff --name-only --diff-filter=ACMR -z "$base" HEAD -- '*.php' > "$RUNNER_TEMP/php-files"
+          else
+            git ls-files -z -- '*.php' > "$RUNNER_TEMP/php-files"
+          fi
+          while IFS= read -r -d '' file; do php -l "$file" >/dev/null; done < "$RUNNER_TEMP/php-files"
           php -l yii2/yii
-          php -l yii2/console/migrations/AbstractMigration.php
-          php -l yii2/api/modules/v1/controllers/StatController.php
-          php -l yii2/tests/release/frontend-api-routing.php
-          for file in yii2/common/modules/world/models/domain/TestWorld*.php yii2/console/controllers/WorldSetupController.php yii2/console/world-migrations/m260928_003400_system_profession_author.php yii2/console/world-verify-test.php; do php -l "$file"; done
-          php yii2/tests/release/world-test-credits.php
           bash deploy/tests/pipeline.sh
-
-      - name: Install locked dependencies for the selected target
+      - name: Check authentication, rewards, refunds and API routes
         working-directory: yii2
-        env:
-          TARGET: ${{ (github.ref == 'refs/heads/test' && 'test') || inputs.target || 'production' }}
-          COMPOSER_AUTH: '{"github-oauth":{"github.com":"${{ github.token }}"}}'
-        shell: bash
         run: |
-          options=(--no-interaction --prefer-dist --no-progress --optimize-autoloader)
-          if [[ "$TARGET" = production ]]; then options+=(--no-dev); fi
-          composer install "${options[@]}"
-          composer check-platform-reqs
-          composer audit --locked --no-dev --abandoned=ignore
-
-      - name: Run isolated API and target database checks in parallel
-        working-directory: yii2
-        env:
-          MYSQL_CONTAINER: ${{ job.services.mysql.id }}
-        shell: bash
-        run: |
-          # PHP 8.3 supports the MySQL 8 default authentication plugin.
-          check_isolated() {
-            unset ABL_TEST_DSN
-            for suite in auth-response frontend-lists frontend-api-routing game-overview five-game forum-gift forum-install daily-reward exchange-refund topic68-economy worker-barrier-test world-economy-gameplay world-feedback-food classic-craft-install world-economy-profile user-activity user-cleanup; do
-              if ! php "tests/release/$suite.php" 2>&1 | tee "$RUNNER_TEMP/backend-$suite.log"; then
-                details=$(tail -n 15 "$RUNNER_TEMP/backend-$suite.log")
-                details=${details//%/%25}
-                details=${details//$'\r'/%0D}
-                details=${details//$'\n'/%0A}
-                echo "::error file=yii2/tests/release/$suite.php,title=Isolated API check failed::$details"
-                return 1
-              fi
-            done
-          }
-          check_database() {
-            export ABL_TEST_DSN="$1"
-            php tests/release/target-database.php && php tests/release/world-economy-race.php && php tests/release/user-activity.php
-          }
-          # SQLite fixtures and the two target databases are independent.
-          # Keep suites sequential within each group; deployment requires all three.
-          check_isolated > "$RUNNER_TEMP/isolated-checks.log" 2>&1 &
-          isolated_pid=$!
-          check_database 'mysql:host=127.0.0.1;port=3306;dbname=ablakin_ci' > "$RUNNER_TEMP/mysql-checks.log" 2>&1 &
-          mysql_pid=$!
-          check_database 'pgsql:host=127.0.0.1;port=5432;dbname=ablakin_ci' > "$RUNNER_TEMP/pgsql-checks.log" 2>&1 &
-          pgsql_pid=$!
-          failed=0
-          wait "$isolated_pid" || failed=1
-          wait "$mysql_pid" || failed=1
-          wait "$pgsql_pid" || failed=1
-          cat "$RUNNER_TEMP/isolated-checks.log" "$RUNNER_TEMP/mysql-checks.log" "$RUNNER_TEMP/pgsql-checks.log"
-          exit "$failed"
-
+          for suite in auth-response daily-reward exchange-refund frontend-api-routing classic-craft-install; do php "tests/release/$suite.php"; done
+          if [[ -f tests/release/world-economy-profile.php ]]; then php tests/release/world-economy-profile.php; fi
+  full_before:
+    name: Full checks before production
+    if: ${{ !(github.ref == 'refs/heads/test' || inputs.target == 'test') }}
+    uses: ./.github/workflows/backend-full.yml
+    with:
+      target: production
   runtime-image:
     name: PHP 8.3.36 FPM and Composer images
     runs-on: ubuntu-22.04
@@ -150,10 +107,12 @@ jobs:
       - name: Build and check the real Linux images
         env:
           PREVIOUS_SHA: ${{ github.event.before }}
+          TARGET: ${{ ((github.ref == 'refs/heads/test' && 'test') || inputs.target || 'production') }}
         shell: bash
         run: |
-          if [[ "$GITHUB_EVENT_NAME" = push && "$PREVIOUS_SHA" =~ ^[0-9a-f]{40}$ && "$PREVIOUS_SHA" != 0000000000000000000000000000000000000000 ]]; then
-            if git cat-file -e "$PREVIOUS_SHA^{commit}" && git diff --quiet "$PREVIOUS_SHA" HEAD -- docker/php docker/composer .github/workflows/backend.yml; then
+          if [[ "$TARGET" = test && "$GITHUB_EVENT_NAME" = workflow_dispatch ]]; then PREVIOUS_SHA=$(git rev-parse HEAD^); fi
+          if [[ "$TARGET" = test && "$PREVIOUS_SHA" =~ ^[0-9a-f]{40}$ && "$PREVIOUS_SHA" != 0000000000000000000000000000000000000000 ]]; then
+            if git cat-file -e "$PREVIOUS_SHA^{commit}" && git diff --quiet "$PREVIOUS_SHA" HEAD -- docker/php docker/composer; then
               echo 'Runtime files unchanged; the existing verified image is reused.'
               exit 0
             fi
@@ -185,13 +144,17 @@ jobs:
           fi
           docker stop --time 10 php83-fpm
           test "$(docker inspect -f '{{.State.ExitCode}}' php83-fpm)" = 0
-
   deploy:
     name: Deploy backend to ${{ (github.ref == 'refs/heads/test' && 'test') || inputs.target || 'production' }}
-    needs: [checks, runtime-image]
-    if: github.event_name != 'pull_request' && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/test' || (github.event_name == 'workflow_dispatch' && inputs.target == 'test' && github.ref_type == 'branch'))
+    needs:
+      - minimum
+      - full_before
+      - runtime-image
+    if: always() && needs.minimum.result == 'success' && needs.runtime-image.result == 'success' && (needs.full_before.result == 'success' || ((github.ref == 'refs/heads/test' || inputs.target
+      == 'test') && needs.full_before.result == 'skipped')) && github.event_name != 'pull_request' && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/test' || (github.event_name
+      == 'workflow_dispatch' && inputs.target == 'test' && github.ref_type == 'branch'))
     runs-on: ubuntu-22.04
-    timeout-minutes: 30
+    timeout-minutes: 10
     environment: ${{ (inputs.target == 'test' || github.ref == 'refs/heads/test') && 'test-backend' || 'production-backend' }}
     concurrency:
       group: ${{ (inputs.target == 'test' || github.ref == 'refs/heads/test') && 'test-backend' || 'production-backend' }}
@@ -205,7 +168,6 @@ jobs:
       DEPLOY_KNOWN_HOSTS: ${{ secrets[(inputs.target == 'test' || github.ref == 'refs/heads/test') && 'TEST_BACKEND_DEPLOY_KNOWN_HOSTS' || 'BACKEND_DEPLOY_KNOWN_HOSTS'] }}
     steps:
       - uses: actions/checkout@v7
-
       - name: Validate deployment settings
         shell: bash
         run: |
@@ -219,7 +181,6 @@ jobs:
           [[ "$DEPLOY_USER" =~ ^[a-z_][a-z0-9_-]*$ ]]
           [[ "$DEPLOY_PORT" =~ ^[0-9]{1,5}$ ]]
           ((10#$DEPLOY_PORT >= 1 && 10#$DEPLOY_PORT <= 65535))
-
       - name: Configure SSH
         shell: bash
         run: |
@@ -232,7 +193,6 @@ jobs:
           printf 'Host %s\n  ControlMaster auto\n  ControlPersist 60\n  ControlPath %s/backend-ssh-%%C\n' \
             "$DEPLOY_HOST" "$RUNNER_TEMP" > "$HOME/.ssh/config"
           chmod 600 "$HOME/.ssh/config"
-
       - name: Run git pull and make up on the VPS
         shell: bash
         run: |
@@ -255,16 +215,7 @@ jobs:
             ssh "${options[@]}" -p "$DEPLOY_PORT" "$DEPLOY_USER@$DEPLOY_HOST" "bash '$deploy_root/craft-prepare-test.sh'"
           fi
           ssh "${options[@]}" -p "$DEPLOY_PORT" "$DEPLOY_USER@$DEPLOY_HOST" \
-            "bash '$deploy_root/backend-deploy.sh' '$repo_root' '$GITHUB_REF_NAME' '$TARGET'"
-
-      - name: Resume interrupted world activation on test
-        if: env.TARGET == 'test'
-        shell: bash
-        run: |
-          options=(-i "$HOME/.ssh/deploy_key" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=yes -o UserKnownHostsFile="$HOME/.ssh/known_hosts")
-          ssh "${options[@]}" -p "$DEPLOY_PORT" "$DEPLOY_USER@$DEPLOY_HOST" \
-            "if test -f /opt/ablaki-backend-test/world-activation.pending; then bash /var/code/ablaki/deploy/world-open-test.sh; fi"
-
+            "bash '$deploy_root/backend-deploy.sh' '$repo_root' '$GITHUB_REF_NAME' '$TARGET' '$GITHUB_SHA'"
       - name: Apply additive activity, craft and forum migrations
         shell: bash
         run: |
@@ -289,15 +240,7 @@ jobs:
             "cd '$repo_root' && test \"\$(pwd -P)\" = '$repo_root' && docker-compose exec -T -e '$install_context' php php /web/yii2/yii craft-setup/$install_action"
           ssh "${options[@]}" -p "$DEPLOY_PORT" "$DEPLOY_USER@$DEPLOY_HOST" \
             "cd '$repo_root' && test \"\$(pwd -P)\" = '$repo_root' && docker-compose exec -T -e 'FORUM_INSTALL=confirmed-$TARGET-checkout' php php /web/yii2/yii forum-setup/install"
-
-      - name: Prepare and start all implemented world features on test
-        if: env.TARGET == 'test'
-        shell: bash
-        run: |
-          options=(-i "$HOME/.ssh/deploy_key" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=yes -o UserKnownHostsFile="$HOME/.ssh/known_hosts")
-          ssh "${options[@]}" -p "$DEPLOY_PORT" "$DEPLOY_USER@$DEPLOY_HOST" \
-            "bash /var/code/ablaki/deploy/world-open-test.sh"
-
+        if: env.TARGET == 'production'
       - name: Prepare the explicitly requested funded economy test
         if: env.TARGET == 'test' && inputs.economy_test != '' && inputs.economy_test != 'skip'
         shell: bash
@@ -311,7 +254,6 @@ jobs:
           options=(-i "$HOME/.ssh/deploy_key" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=yes -o UserKnownHostsFile="$HOME/.ssh/known_hosts")
           ssh "${options[@]}" -p "$DEPLOY_PORT" "$DEPLOY_USER@$DEPLOY_HOST" \
             "cd /var/code/ablaki && test \"\$(pwd -P)\" = /var/code/ablaki && docker-compose exec -T -e WORLD_INSTALL=confirmed-world-install -e WORLD_TEST_SETUP=confirmed-test-checkout -e WORLD_TEST_MODE=1 php php /web/yii2/yii world-setup/economy-test-prepare '$apply' '$ECONOMY_DONOR'"
-
       - name: Verify deployed PHP, dependencies and background scheduler
         shell: bash
         run: |
@@ -325,3 +267,11 @@ jobs:
           docker-compose exec -T php service cron status </dev/null
           docker-compose exec -T php composer check-platform-reqs </dev/null
           VERIFY
+          printf '### Backend ready: `%s`\n\nMandatory checks, server readiness and HTTP smoke passed. Extended tests continue separately.\n' "$GITHUB_SHA" >> "$GITHUB_STEP_SUMMARY"
+  full_after:
+    name: Extended checks after test deployment
+    needs: deploy
+    if: ${{ always() && needs.deploy.result == 'success' && (github.ref == 'refs/heads/test' || inputs.target == 'test') }}
+    uses: ./.github/workflows/backend-full.yml
+    with:
+      target: test

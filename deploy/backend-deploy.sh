@@ -8,6 +8,7 @@ trap 'code=$?; printf "::error title=Backend deployment failed::%s (line %s, exi
 repo=${1:?Repository path is required}
 branch=${2:-master}
 target=${3:-production}
+expected_sha=${4:-}
 [[ "$target" = production || "$target" = test ]] || die 'Invalid deployment environment'
 [[ "$target" != production || "$branch" = master ]] || die 'Production only accepts master'
 [[ "$repo" = /* && "$repo" != / && -d "$repo/.git" ]] || die 'An existing checkout is required'
@@ -25,6 +26,9 @@ if [ -n "$(git status --porcelain --untracked-files=no)" ]; then
   git -c user.name='Ablaki deploy' -c user.email='deploy@ablaki.ru' stash push -m "$stash_message"
 fi
 git fetch --prune origin "$branch"
+if [[ -n "$expected_sha" ]]; then
+  [[ "$expected_sha" =~ ^[0-9a-f]{40}$ && "$(git rev-parse FETCH_HEAD)" = "$expected_sha" ]] || die 'The branch advanced beyond this checked release; use the newer run'
+fi
 if [[ "$(git symbolic-ref --quiet --short HEAD || true)" != "$branch" ]]; then
   if git show-ref --verify --quiet "refs/heads/$branch"; then
     git checkout "$branch"
@@ -36,7 +40,10 @@ fi
 
 phase='git pull'
 printf '[backend-deploy] git pull (%s, %s)\n' "$target" "$branch"
-git pull --ff-only origin "$branch"
+git pull --ff-only origin "${expected_sha:-$branch}"
+if [[ -n "$expected_sha" ]]; then
+  [[ "$expected_sha" =~ ^[0-9a-f]{40}$ && "$(git rev-parse HEAD)" = "$expected_sha" ]] || die 'Checkout no longer matches the checked release; use the newer run'
+fi
 
 if [[ -f deploy/php-runtime-upgrade.sh ]]; then
   phase='Installing the verified PHP runtime'
@@ -45,10 +52,15 @@ fi
 
 if [[ "$target" = test && "$repo" = /var/code/ablaki && -f /opt/ablaki-backend-test/world-activation.pending ]]; then
   printf '[backend-deploy] World activation is pending; keep writers stopped until the resume step.\n'
+  bash deploy/world-open-test.sh "${PROFILE_MODE:-changed}" "${PROFILE_AUTHOR:-fedornabilkin}"
   exit 0
 fi
 
 phase='make up'
 printf '[backend-deploy] make up\n'
 make up
+if [[ "$target" = test && "$repo" = /var/code/ablaki && -f deploy/world-open-test.sh ]]; then
+  phase='Test readiness and changed profile'
+  bash deploy/world-open-test.sh "${PROFILE_MODE:-changed}" "${PROFILE_AUTHOR:-fedornabilkin}"
+fi
 printf '[backend-deploy] git pull and make up completed\n'
