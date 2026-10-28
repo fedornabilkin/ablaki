@@ -30,6 +30,13 @@ profileCheck($report['counts'] === ['items' => 57, 'objects' => 23, 'recipes' =>
 profileCheck($report['applied'] === false && $report['effective_from'] === null, 'audit does not activate candidate');
 profileCheck($report['starter_credits_cr'] === '250.0000' && $profile['starter']['credit_source'] === 'existing_transfer', 'start uses existing transfer, without minting');
 profileCheck($report['daily_grant'] === ['actual_credits_cr' => '0.0000', 'reference_value_cr' => '36.0000', 'sale_value_before_limits_cr' => '18.0000'], 'natural supply including sand and clay is distinct from actual credits');
+profileCheck($profile['source_equipment']['drilling-rig'] === ['source' => 'mine', 'output_multiplier' => 5, 'reward_multiplier' => 3, 'replaces_tools' => ['world-stone-pickaxe', 'classic-pickaxe']], 'working drill replaces picks and publishes fivefold output and triple wages');
+foreach ([0, 21, 2.5, '3'] as $invalidMultiplier) {
+    $invalidDrill = $profile; $invalidDrill['source_equipment']['drilling-rig']['reward_multiplier'] = $invalidMultiplier;
+    rejectsProfile($invalidDrill, 'drill multiplier rejects non-integer or out-of-range values');
+}
+$invalidDrill = $profile; $invalidDrill['source_equipment']['drilling-rig']['replaces_tools'] = ['classic-stone'];
+rejectsProfile($invalidDrill, 'drill cannot replace raw materials instead of tools');
 profileCheck($report['first_day_objects_only_cr'] === '140.0000', 'object price subtotal excludes materials and later income');
 profileCheck($profile['objects']['starter-shelter']['price_cr'] === '20.0000' && $profile['objects']['house']['price_cr'] === '80.0000', 'shelter and house have the requested twenty/eighty prices');
 profileCheck(\common\modules\world\modules\economy\value\Money::parse($profile['objects']['house']['price_cr'])->compare(\common\modules\world\modules\economy\value\Money::parse($profile['objects']['starter-shelter']['price_cr'])) > 0

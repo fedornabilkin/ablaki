@@ -819,7 +819,7 @@
       "capability_requirements": [
         "mine"
       ],
-      "description": "Буровая установка для работы в шахте. Размещается внутри подходящего объекта и используется для добычи руды."
+      "description": "Исправная буровая заменяет кирку в этой шахте и увеличивает выход ресурсов и оплату новых партий. Коэффициенты показаны в блоке добычи."
     },
     "forest-plot": {
       "name": "Лесной участок",
@@ -2095,5 +2095,16 @@
     "CONTENT:B-F",
     "UI/CONUI",
     "ACC:A-C"
-  ]
+  ],
+  "source_equipment": {
+    "drilling-rig": {
+      "source": "mine",
+      "output_multiplier": 5,
+      "reward_multiplier": 3,
+      "replaces_tools": [
+        "world-stone-pickaxe",
+        "classic-pickaxe"
+      ]
+    }
+  }
 }

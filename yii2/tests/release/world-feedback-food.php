@@ -610,6 +610,74 @@ echo 'Node-context, single-builder and one-click lodging checks passed.' . PHP_E
     $forbiddenForge = $forgeInput; $forbiddenForge['source_storage_ids'] = [(int)$waterStorage['id']];
     try { $workspace->preview($freshUser, $forbiddenForge); throw new \RuntimeException('NPC inventory access was accepted.'); }
     catch (\yii\web\HttpException $error) { economyCheck(in_array($error->statusCode, [403, 404], true), 'public workshop does not grant access to NPC stock'); }
+    // A new participant has no pick: the working NPC rig supplies the equipment.
+    $drillUser = 9098;
+    $db->createCommand()->insert('user', ['id' => $drillUser, 'username' => 'DrillWorkerFixture'])->execute();
+    $db->createCommand()->insert('persone', ['id' => $drillUser, 'user_id' => $drillUser, 'credit' => '0.0000', 'balance' => '0.0000'])->execute();
+    $app->authManager->assign($testRole, $drillUser);
+    $drillJoin = Command::run($drillUser, bin2hex(random_bytes(16)), 'world.start', ['city_id' => (int)$policy['city_node_id']], static function ($op) use ($drillUser, $policy) { return \common\modules\world\models\StarterPack::enter($drillUser, (int)$policy['city_node_id'], $op); });
+    $drillSite = \common\modules\world\models\Build::requireOne($drillJoin['build']['id']);
+    Command::run($drillUser, bin2hex(random_bytes(16)), 'fixture.complete-site', ['build_id' => (int)$drillSite->id], static function ($op) use ($drillSite) { $drillSite->worked_seconds = $drillSite->required_seconds; $drillSite->finish($op); return []; });
+    economyCheck((int)Node::requireOne($drillSite->node_id)->owner_user_id === $drillUser && $npcTotal() === $npcMoneyBefore, 'new participant can settle in a public bot-owned city without receiving invented credits');
+    economyReject(static function () use ($drillUser, $policy) { Command::run($drillUser, bin2hex(random_bytes(16)), 'fixture.foreign-build', ['parent_id' => (int)$policy['site_node_id']], static function ($op) use ($drillUser, $policy) {
+        return \common\modules\world\models\Build::begin($drillUser, ['parent_id' => (int)$policy['site_node_id'], 'template_id' => (int)NodeTemplate::requireOne(['code' => 'mine'])->id, 'name' => 'Forbidden foreign mine', 'labor_budget' => '0'], $op)->toArray();
+    }); }, 'OWNER_REQUIRED');
+    $mineNpc = Node::requireOne(['code' => 'npc-bot-mine']); $rigNpc = Node::requireOne(['code' => 'npc-bot-drilling']);
+    $plainMine = Node::requireOne($sourceNodes['mine']);
+    $plainActions = \common\modules\world\models\domain\WorldSources::options($plainMine);
+    economyCheck($plainActions['mine-stone']['output']['classic-stone'] === 3 && $plainActions['mine-stone']['tools'] === ['world-stone-pickaxe'], 'a drill in a different mine does not replace this mine pick or increase its output');
+    foreach ([['status' => 'constructing'], ['condition' => 0], ['owner_user_id' => $freshUser]] as $unavailableRig) {
+        $rigTx = $db->beginTransaction();
+        try {
+            $db->createCommand()->update('world_node', $unavailableRig, ['id' => $rigNpc->id])->execute();
+            $withoutRig = \common\modules\world\models\domain\WorldSources::options($mineNpc);
+            economyCheck($withoutRig['mine-stone']['tools'] === ['world-stone-pickaxe'] && $withoutRig['mine-stone']['output']['classic-stone'] === 3
+                && \common\modules\world\models\domain\HiredExtraction::rates($mineNpc)['reward_cr'] === '1.0000', 'unfinished, broken or foreign equipment cannot grant drill bonuses');
+        } finally { $rigTx->rollBack(); }
+    }
+    $pickItems = (new Query())->select('id')->from('craft_item')->where(['code' => ['world-stone-pickaxe', 'classic-pickaxe']])->column($db);
+    economyCheck(!(new Query())->from('craft_inventory')->where(['user_id' => $drillUser, 'item_id' => $pickItems])->andWhere(['>', 'item_quantity', 0])->exists($db), 'drill worker starts without either kind of pick');
+    $drillStock = \common\modules\world\models\domain\HiredExtraction::storages($mineNpc)[0];
+    $stoneItem = (int)(new Query())->select('id')->from('craft_item')->where(['code' => 'classic-stone'])->scalar($db);
+    $stoneBefore = (int)(new Query())->from('craft_inventory')->where(['storage_id' => $drillStock['id'], 'item_id' => $stoneItem])->sum('item_quantity', $db);
+    $quotaBeforeDrill = \common\modules\world\models\domain\EconomyQuota::state($db, $drillUser, 'extraction_daily')['remaining'];
+    $drillStarted = economySourceCommand($drillUser, (int)$mineNpc->id, 'start', ['action_code' => 'mine-stone']);
+    $drillChoice = array_column($drillStarted['actions'], null, 'code')['mine-stone'];
+    economyCheck($drillStarted['working'] && $drillChoice['tools'] === [] && $drillChoice['output'][0]['quantity'] === 15
+        && $drillStarted['employment']['base_reward_cr'] === '1.0000' && $drillStarted['employment']['accepted_reward_cr'] === '3.0000', 'a pick-free drill batch accepts fifteen stone and reserves the triple wage');
+    $mineBudget = (new \common\modules\world\modules\economy\models\domain\EconomyHierarchy($db))->accounts((int)$mineNpc->id)['budget'];
+    economyCheck(\common\modules\world\modules\economy\value\Money::parse($mineBudget['reserved'])->decimal() === '3.0000', 'accepted drill wages reserve exactly three existing credits');
+    $savedProfile = EconomyRuntime::current($db)['raw_profile']; $changedDrill = $savedProfile;
+    $changedDrill['source_equipment']['drilling-rig']['output_multiplier'] = 7; $changedDrill['source_equipment']['drilling-rig']['reward_multiplier'] = 4;
+    $drillPublisher = new \common\modules\world\models\domain\EconomyProfilePublisher($db); $drillPreview = $drillPublisher->preview($changedDrill);
+    $drillPublisher->publish($changedDrill, $drillPreview['digest'], 9001, 'Drill accepted batch compatibility fixture');
+    $acceptedDrill = \common\modules\world\models\Mining::state((int)$mineNpc->id, $drillUser);
+    $acceptedChoice = array_column($acceptedDrill['actions'], null, 'code')['mine-stone'];
+    economyCheck($acceptedChoice['output'][0]['quantity'] === 15 && $acceptedChoice['drilling']['output_multiplier'] === 5
+        && $acceptedDrill['employment']['reward_cr'] === '4.0000' && $acceptedDrill['employment']['accepted_reward_cr'] === '3.0000', 'profile changes affect future drill batches while the active batch retains its quantity and wage');
+    $db->createCommand()->update('world_node', ['condition' => 0], ['id' => $rigNpc->id])->execute();
+    for ($tick = 0; $tick < 3; $tick++) $blockedDrill = economySourceTick($drillUser, (int)$mineNpc->id);
+    economyCheck($blockedDrill['pending_quantity'] === 1 && $blockedDrill['blocked_code'] === 'SOURCE_EQUIPMENT_REQUIRED'
+        && \common\modules\world\models\domain\EconomyQuota::state($db, $drillUser, 'extraction_daily')['remaining'] === $quotaBeforeDrill
+        && \common\modules\world\modules\economy\value\Money::parse((string)(new Query())->select('credit')->from('persone')->where(['user_id' => $drillUser])->scalar($db))->isZero(), 'a broken drill preserves earned progress and wage reserve without paying or consuming quota');
+    $db->createCommand()->update('world_node', ['condition' => $rigNpc->max_condition], ['id' => $rigNpc->id])->execute();
+    $drillFinishKey = bin2hex(random_bytes(16)); $drillFinishPayload = ['mining_node_id' => (int)$mineNpc->id];
+    $drillFinish = static function ($op) use ($mineNpc, $drillUser) { return \common\modules\world\models\Mining::heartbeat((int)$mineNpc->id, $drillUser, $op); };
+    $drillDone = Command::run($drillUser, $drillFinishKey, 'fixture.drill.finish', $drillFinishPayload, $drillFinish);
+    economyCheck(Command::run($drillUser, $drillFinishKey, 'fixture.drill.finish', $drillFinishPayload, $drillFinish) === $drillDone
+        && (int)(new Query())->from('craft_inventory')->where(['storage_id' => $drillStock['id'], 'item_id' => $stoneItem])->sum('item_quantity', $db) - $stoneBefore === 15
+        && \common\modules\world\modules\economy\value\Money::parse((string)(new Query())->select('credit')->from('persone')->where(['user_id' => $drillUser])->scalar($db))->decimal() === '3.0000'
+        && \common\modules\world\models\domain\EconomyQuota::state($db, $drillUser, 'extraction_daily')['remaining'] === $quotaBeforeDrill - 1
+        && $npcTotal() === $npcMoneyBefore, 'repaired drill delivers the accepted fifteen stone and three credits exactly once without minting money');
+    $restorePreview = $drillPublisher->preview($savedProfile); $drillPublisher->publish($savedProfile, $restorePreview['digest'], 9001, 'Restore drill fixture profile');
+    $db->transaction(static function () use ($db, $plainMine, $freshUser) {
+        $ownedRig = NodeFactory::create(NodeTemplate::requireOne(['code' => 'drilling-rig']), $plainMine, $freshUser, 'Owned drill fixture', 'owned-drill-fixture', null, 'constructing');
+        $db->createCommand()->update('world_node', ['status' => 'active', 'condition' => $ownedRig->max_condition], ['id' => $ownedRig->id])->execute();
+    });
+    foreach (['2.0000' => '6.0000', '3.0000' => '9.0000'] as $baseWage => $effectiveWage) {
+        $settings = Command::run($freshUser, bin2hex(random_bytes(16)), 'world.mining.settings', ['mining_node_id' => (int)$plainMine->id, 'reward_cr' => $baseWage], static function () use ($plainMine, $freshUser, $baseWage) { return \common\modules\world\models\domain\HiredExtraction::configure(Node::requireOne($plainMine->id), $freshUser, false, $baseWage); });
+        economyCheck($settings['employment']['base_reward_cr'] === $baseWage && $settings['employment']['reward_cr'] === $effectiveWage, 'configured base wages are multiplied once by the owned drill');
+    }
     $npcPrivate = static function () use ($db, $npcUser): array {
         return (new Query())->select(['a.id', 'a.amount', 'a.reserved'])->from(['a' => 'economy_account'])->innerJoin(['s' => 'economy_subject'], 's.id=a.subject_id')->innerJoin(['n' => 'world_node'], 'n.id=s.node_id')
             ->where(['not', ['n.owner_user_id' => $npcUser]])->orderBy('a.id')->all($db);
@@ -649,7 +717,8 @@ echo 'Node-context, single-builder and one-click lodging checks passed.' . PHP_E
         $sources = array_filter((new \common\modules\world\models\domain\NpcInfrastructure($db))->nodes($policy), static fn($node) => \common\modules\world\models\domain\NpcInfrastructure::role($node) === 'source');
         foreach ($sources as $source) {
             $budget = (new \common\modules\world\modules\economy\models\domain\EconomyHierarchy($db))->accounts((int)$source['id'])['budget'];
-            economyCheck($spending->available((int)$budget['id'])->compare(\common\modules\world\modules\economy\value\Money::parse($policy['reward_cr'])) >= 0, 'idle NPC buffers fund at least one new batch without consuming reserved money: ' . $source['code']);
+            $minimumWage = \common\modules\world\models\domain\HiredExtraction::rates(Node::requireOne($source['id']))['reward_cr'];
+            economyCheck($spending->available((int)$budget['id'])->compare(\common\modules\world\modules\economy\value\Money::parse($minimumWage)) >= 0, 'idle NPC buffers fund at least one new batch without consuming reserved money: ' . $source['code']);
         }
         foreach ($accounts as $account) $reserve($account['id']);
         $maintenance->refresh($policy, $operation); return [];

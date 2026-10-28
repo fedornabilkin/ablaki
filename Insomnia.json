@@ -10998,7 +10998,7 @@
       "name": "GET · Старт и обеспеченные места",
       "url": "{{ _.baseUrl }}/v1/world/start",
       "method": "GET",
-      "description": "Схема 42: optional node_id returns city/region funded places, payout per new settler, protected reserve and pending FIFO obligations. city_id is a compatible alias. No mutation. Контракт: docs/architecture/simple-world-api.md.",
+      "description": "Схема 42: optional node_id returns city/region funded places, payout per new settler, protected reserve and pending FIFO obligations. city_id is a compatible alias. No mutation. Контракт: docs/architecture/simple-world-api.md.\n2026-10-28: onboarding may create the participant starter site in an active public city owned by bot. It does not permit ordinary construction on foreign property or create credits; payout still requires the dedicated funded settlement reserve.",
       "body": {},
       "parameters": [
         {
@@ -11077,7 +11077,7 @@
       "name": "POST · Начать стоянку",
       "url": "{{ _.baseUrl }}/v1/world/start",
       "method": "POST",
-      "description": "Контракт: docs/architecture/simple-world-api.md. ID в окружении — примеры: сначала получите действительные ID из GET. Новый ключ для нового действия; тот же ключ и тело при повторе.",
+      "description": "Контракт: docs/architecture/simple-world-api.md. ID в окружении — примеры: сначала получите действительные ID из GET. Новый ключ для нового действия; тот же ключ и тело при повторе.\n2026-10-28: onboarding may create the participant starter site in an active public city owned by bot. It does not permit ordinary construction on foreign property or create credits; payout still requires the dedicated funded settlement reserve.",
       "body": {
         "mimeType": "application/json",
         "text": "{\"city_id\": {{ _.simple_city_id }}}"
@@ -11161,7 +11161,7 @@
       "name": "POST · Начать работу",
       "url": "{{ _.baseUrl }}/v1/world/builds/{{ _.simple_build_id }}/start",
       "method": "POST",
-      "description": "Контракт: docs/architecture/simple-world-api.md. ID в окружении — примеры: сначала получите действительные ID из GET. Новый ключ для нового действия; тот же ключ и тело при повторе.",
+      "description": "Контракт: docs/architecture/simple-world-api.md. ID в окружении — примеры: сначала получите действительные ID из GET. Новый ключ для нового действия; тот же ключ и тело при повторе.\n2026-10-28: onboarding may create the participant starter site in an active public city owned by bot. It does not permit ordinary construction on foreign property or create credits; payout still requires the dedicated funded settlement reserve.",
       "body": {
         "mimeType": "application/json",
         "text": "{}"
@@ -11203,7 +11203,7 @@
       "name": "POST · Учесть труд",
       "url": "{{ _.baseUrl }}/v1/world/builds/{{ _.simple_build_id }}/heartbeat",
       "method": "POST",
-      "description": "Контракт: docs/architecture/simple-world-api.md. ID в окружении — примеры: сначала получите действительные ID из GET. Новый ключ для нового действия; тот же ключ и тело при повторе.",
+      "description": "Контракт: docs/architecture/simple-world-api.md. ID в окружении — примеры: сначала получите действительные ID из GET. Новый ключ для нового действия; тот же ключ и тело при повторе.\n2026-10-28: onboarding may create the participant starter site in an active public city owned by bot. It does not permit ordinary construction on foreign property or create credits; payout still requires the dedicated funded settlement reserve.",
       "body": {
         "mimeType": "application/json",
         "text": "{}"
@@ -11245,7 +11245,7 @@
       "name": "POST · Остановить работу",
       "url": "{{ _.baseUrl }}/v1/world/builds/{{ _.simple_build_id }}/stop",
       "method": "POST",
-      "description": "Контракт: docs/architecture/simple-world-api.md. ID в окружении — примеры: сначала получите действительные ID из GET. Новый ключ для нового действия; тот же ключ и тело при повторе.",
+      "description": "Контракт: docs/architecture/simple-world-api.md. ID в окружении — примеры: сначала получите действительные ID из GET. Новый ключ для нового действия; тот же ключ и тело при повторе.\n2026-10-28: onboarding may create the participant starter site in an active public city owned by bot. It does not permit ordinary construction on foreign property or create credits; payout still requires the dedicated funded settlement reserve.",
       "body": {
         "mimeType": "application/json",
         "text": "{}"
@@ -11360,7 +11360,7 @@
       "name": "POST · Пополнить свой бюджет",
       "url": "{{ _.baseUrl }}/v1/world/objects/{{ _.simple_node_id }}/budget",
       "method": "POST",
-      "description": "Контракт: docs/architecture/simple-world-api.md. ID в окружении — примеры: сначала получите действительные ID из GET. Новый ключ для нового действия; тот же ключ и тело при повторе.",
+      "description": "Контракт: docs/architecture/simple-world-api.md. ID в окружении — примеры: сначала получите действительные ID из GET. Новый ключ для нового действия; тот же ключ и тело при повторе.\n2026-10-28: onboarding may create the participant starter site in an active public city owned by bot. It does not permit ordinary construction on foreign property or create credits; payout still requires the dedicated funded settlement reserve.",
       "body": {
         "mimeType": "application/json",
         "text": "{\"amount\":\"10.0000\"}"
@@ -11548,7 +11548,7 @@
       "name": "GET - Mining view",
       "url": "{{ _.baseUrl }}/v1/world/objects/{{ _.simple_node_id }}/mining",
       "method": "GET",
-      "description": "Contract: docs/architecture/simple-world-api.md. Set simple_node_id to a visible active mine containing a completed drilling rig. Workers produce ore for its owner; heartbeat every 10 seconds, maximum 60 seconds credited after disconnect. Commands require a new key per action; retries retain the key. Progress DTO: worked_seconds, server_time, live_work[{accounted_at,last_seen_at}]; versioned sources also expose work_id (nullable) and required_seconds from accepted batch terms. Project no later than last_seen_at+60; check heartbeat at completion and every 10 seconds. Only server confirmation grants output. Since 2026-10-21 actions[].unavailable_reason reports missing usable tools; root unavailable_reason refers to the accepted batch definition, including older profile tools. Null means this reason is absent, not that all quota/time/storage conditions pass. Commands revalidate availability. Mining state returns output_storages for the owner: backpack (default) and local child mini-storages only. Hired workers always use the employer mini-storage.",
+      "description": "Contract: docs/architecture/simple-world-api.md. Set simple_node_id to a visible active mine containing a completed drilling rig. Workers produce ore for its owner; heartbeat every 10 seconds, maximum 60 seconds credited after disconnect. Commands require a new key per action; retries retain the key. Progress DTO: worked_seconds, server_time, live_work[{accounted_at,last_seen_at}]; versioned sources also expose work_id (nullable) and required_seconds from accepted batch terms. Project no later than last_seen_at+60; check heartbeat at completion and every 10 seconds. Only server confirmation grants output. Since 2026-10-21 actions[].unavailable_reason reports missing usable tools; root unavailable_reason refers to the accepted batch definition, including older profile tools. Null means this reason is absent, not that all quota/time/storage conditions pass. Commands revalidate availability. Mining state returns output_storages for the owner: backpack (default) and local child mini-storages only. Hired workers always use the employer mini-storage.\n2026-10-28: a working owned drilling-rig in this mine replaces picks. Published source_equipment multipliers: output x5, wages x3. action.drilling identifies the rig; action.output already contains final quantities. employment.base_reward_cr and reward_multiplier separate base/effective wages; mining/settings reward_cr is BASE wage. Accepted batch output/tools/wage remain frozen, including after profile changes. A broken rig blocks delivery without consuming quota or paying; repair and retry deliver once.",
       "body": {},
       "parameters": [],
       "headers": [
@@ -11579,7 +11579,7 @@
       "name": "POST - Mine employment settings",
       "url": "{{ _.baseUrl }}/v1/world/objects/{{ _.simple_node_id }}/mining/settings",
       "method": "POST",
-      "description": "Owner only. A new paid batch always targets the first active mini-storage (CHEST child) inside the mine; there is no destination selector. Build a mini-storage before enabling work. Accepted destinations and wages remain pinned. Positive exact reward_cr is configured independently of available wage funds; budget and free storage capacity are rechecked when accepting each batch. No destination selector.",
+      "description": "Owner only. A new paid batch always targets the first active mini-storage (CHEST child) inside the mine; there is no destination selector. Build a mini-storage before enabling work. Accepted destinations and wages remain pinned. Positive exact reward_cr is configured independently of available wage funds; budget and free storage capacity are rechecked when accepting each batch. No destination selector.\n2026-10-28: a working owned drilling-rig in this mine replaces picks. Published source_equipment multipliers: output x5, wages x3. action.drilling identifies the rig; action.output already contains final quantities. employment.base_reward_cr and reward_multiplier separate base/effective wages; mining/settings reward_cr is BASE wage. Accepted batch output/tools/wage remain frozen, including after profile changes. A broken rig blocks delivery without consuming quota or paying; repair and retry deliver once.",
       "body": {
         "mimeType": "application/json",
         "text": "{\n  \"enabled\": true,\n  \"reward_cr\": \"2.0000\"\n}"
@@ -11621,7 +11621,7 @@
       "name": "POST - Mining start",
       "url": "{{ _.baseUrl }}/v1/world/objects/{{ _.simple_node_id }}/mining/start",
       "method": "POST",
-      "description": "Contract: docs/architecture/simple-world-api.md. Set simple_node_id to a visible active mine containing a completed drilling rig. Workers produce ore for its owner; heartbeat every 10 seconds, maximum 60 seconds credited after disconnect. Commands require a new key per action; retries retain the key. Progress DTO: worked_seconds, server_time, live_work[{accounted_at,last_seen_at}]; versioned sources also expose work_id (nullable) and required_seconds from accepted batch terms. Project no later than last_seen_at+60; check heartbeat at completion and every 10 seconds. Only server confirmation grants output. Since 2026-10-21 actions[].unavailable_reason reports missing usable tools; root unavailable_reason refers to the accepted batch definition, including older profile tools. Null means this reason is absent, not that all quota/time/storage conditions pass. Commands revalidate availability. Topic 82: an invited foreign worker needs HP >= 60, personal tools, mine condition >= 50%, free employer stockpile and a fully reserved batch wage. Employer storage is mandatory for the result. employment exposes accepted_reward_cr separately from the new rate. Mining state returns output_storages for the owner: backpack (default) and local child mini-storages only. Hired workers always use the employer mini-storage.",
+      "description": "Contract: docs/architecture/simple-world-api.md. Set simple_node_id to a visible active mine containing a completed drilling rig. Workers produce ore for its owner; heartbeat every 10 seconds, maximum 60 seconds credited after disconnect. Commands require a new key per action; retries retain the key. Progress DTO: worked_seconds, server_time, live_work[{accounted_at,last_seen_at}]; versioned sources also expose work_id (nullable) and required_seconds from accepted batch terms. Project no later than last_seen_at+60; check heartbeat at completion and every 10 seconds. Only server confirmation grants output. Since 2026-10-21 actions[].unavailable_reason reports missing usable tools; root unavailable_reason refers to the accepted batch definition, including older profile tools. Null means this reason is absent, not that all quota/time/storage conditions pass. Commands revalidate availability. Topic 82: an invited foreign worker needs HP >= 60, personal tools, mine condition >= 50%, free employer stockpile and a fully reserved batch wage. Employer storage is mandatory for the result. employment exposes accepted_reward_cr separately from the new rate. Mining state returns output_storages for the owner: backpack (default) and local child mini-storages only. Hired workers always use the employer mini-storage.\n2026-10-28: a working owned drilling-rig in this mine replaces picks. Published source_equipment multipliers: output x5, wages x3. action.drilling identifies the rig; action.output already contains final quantities. employment.base_reward_cr and reward_multiplier separate base/effective wages; mining/settings reward_cr is BASE wage. Accepted batch output/tools/wage remain frozen, including after profile changes. A broken rig blocks delivery without consuming quota or paying; repair and retry deliver once.",
       "body": {
         "mimeType": "application/json",
         "text": "{}"
@@ -11663,7 +11663,7 @@
       "name": "POST - Mining heartbeat",
       "url": "{{ _.baseUrl }}/v1/world/objects/{{ _.simple_node_id }}/mining/heartbeat",
       "method": "POST",
-      "description": "Contract: docs/architecture/simple-world-api.md. Set simple_node_id to a visible active mine containing a completed drilling rig. Workers produce ore for its owner; heartbeat every 10 seconds, maximum 60 seconds credited after disconnect. Commands require a new key per action; retries retain the key. Progress DTO: worked_seconds, server_time, live_work[{accounted_at,last_seen_at}]; versioned sources also expose work_id (nullable) and required_seconds from accepted batch terms. Project no later than last_seen_at+60; check heartbeat at completion and every 10 seconds. Only server confirmation grants output. Since 2026-10-21 actions[].unavailable_reason reports missing usable tools; root unavailable_reason refers to the accepted batch definition, including older profile tools. Null means this reason is absent, not that all quota/time/storage conditions pass. Commands revalidate availability.",
+      "description": "Contract: docs/architecture/simple-world-api.md. Set simple_node_id to a visible active mine containing a completed drilling rig. Workers produce ore for its owner; heartbeat every 10 seconds, maximum 60 seconds credited after disconnect. Commands require a new key per action; retries retain the key. Progress DTO: worked_seconds, server_time, live_work[{accounted_at,last_seen_at}]; versioned sources also expose work_id (nullable) and required_seconds from accepted batch terms. Project no later than last_seen_at+60; check heartbeat at completion and every 10 seconds. Only server confirmation grants output. Since 2026-10-21 actions[].unavailable_reason reports missing usable tools; root unavailable_reason refers to the accepted batch definition, including older profile tools. Null means this reason is absent, not that all quota/time/storage conditions pass. Commands revalidate availability.\n2026-10-28: a working owned drilling-rig in this mine replaces picks. Published source_equipment multipliers: output x5, wages x3. action.drilling identifies the rig; action.output already contains final quantities. employment.base_reward_cr and reward_multiplier separate base/effective wages; mining/settings reward_cr is BASE wage. Accepted batch output/tools/wage remain frozen, including after profile changes. A broken rig blocks delivery without consuming quota or paying; repair and retry deliver once.",
       "body": {
         "mimeType": "application/json",
         "text": "{}"
@@ -11705,7 +11705,7 @@
       "name": "POST - Mining stop",
       "url": "{{ _.baseUrl }}/v1/world/objects/{{ _.simple_node_id }}/mining/stop",
       "method": "POST",
-      "description": "Contract: docs/architecture/simple-world-api.md. Set simple_node_id to a visible active mine containing a completed drilling rig. Workers produce ore for its owner; heartbeat every 10 seconds, maximum 60 seconds credited after disconnect. Commands require a new key per action; retries retain the key. Progress DTO: worked_seconds, server_time, live_work[{accounted_at,last_seen_at}]; versioned sources also expose work_id (nullable) and required_seconds from accepted batch terms. Project no later than last_seen_at+60; check heartbeat at completion and every 10 seconds. Only server confirmation grants output. Since 2026-10-21 actions[].unavailable_reason reports missing usable tools; root unavailable_reason refers to the accepted batch definition, including older profile tools. Null means this reason is absent, not that all quota/time/storage conditions pass. Commands revalidate availability.",
+      "description": "Contract: docs/architecture/simple-world-api.md. Set simple_node_id to a visible active mine containing a completed drilling rig. Workers produce ore for its owner; heartbeat every 10 seconds, maximum 60 seconds credited after disconnect. Commands require a new key per action; retries retain the key. Progress DTO: worked_seconds, server_time, live_work[{accounted_at,last_seen_at}]; versioned sources also expose work_id (nullable) and required_seconds from accepted batch terms. Project no later than last_seen_at+60; check heartbeat at completion and every 10 seconds. Only server confirmation grants output. Since 2026-10-21 actions[].unavailable_reason reports missing usable tools; root unavailable_reason refers to the accepted batch definition, including older profile tools. Null means this reason is absent, not that all quota/time/storage conditions pass. Commands revalidate availability.\n2026-10-28: a working owned drilling-rig in this mine replaces picks. Published source_equipment multipliers: output x5, wages x3. action.drilling identifies the rig; action.output already contains final quantities. employment.base_reward_cr and reward_multiplier separate base/effective wages; mining/settings reward_cr is BASE wage. Accepted batch output/tools/wage remain frozen, including after profile changes. A broken rig blocks delivery without consuming quota or paying; repair and retry deliver once.",
       "body": {
         "mimeType": "application/json",
         "text": "{}"
@@ -12277,7 +12277,7 @@
       "name": "POST - Mining start with nearest mini-storage",
       "url": "{{ _.baseUrl }}/v1/world/objects/{{ _.simple_node_id }}/mining/start",
       "method": "POST",
-      "description": "Owner: automatic nearest available mini-storage inside this object. Order: Manhattan distance from map origin, then storage ID. Require room for the whole batch; reselect at delivery for this new automatic batch. Never combine output_destination with output_storage_id. Hired workers always use automatic employer storage. Preserve the accepted wage; fixed historical batches remain fixed.",
+      "description": "Owner: automatic nearest available mini-storage inside this object. Order: Manhattan distance from map origin, then storage ID. Require room for the whole batch; reselect at delivery for this new automatic batch. Never combine output_destination with output_storage_id. Hired workers always use automatic employer storage. Preserve the accepted wage; fixed historical batches remain fixed.\n2026-10-28: a working owned drilling-rig in this mine replaces picks. Published source_equipment multipliers: output x5, wages x3. action.drilling identifies the rig; action.output already contains final quantities. employment.base_reward_cr and reward_multiplier separate base/effective wages; mining/settings reward_cr is BASE wage. Accepted batch output/tools/wage remain frozen, including after profile changes. A broken rig blocks delivery without consuming quota or paying; repair and retry deliver once.",
       "body": {
         "mimeType": "application/json",
         "text": "{\n  \"action_code\": \"mine-stone\",\n  \"output_destination\": \"mini_storage\"\n}"

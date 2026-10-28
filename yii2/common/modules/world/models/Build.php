@@ -22,8 +22,11 @@ class Build extends Record
     {
         self::requireTransaction();
         $parent = Node::readable($input['parent_id'], $user);
-        if (!$onboarding || $parent->owner_user_id !== null) $parent->requireOwner($user);
+        if (!$onboarding) $parent->requireOwner($user);
         $template = NodeTemplate::requireOne($input['template_id']);
+        $publicStarter = $onboarding && $template->code === 'starter-site' && (int)$parent->hierarchy_level === 3 && $parent->node_type === 'SETTLEMENT'
+            && $parent->visibility === 'public' && $parent->status === 'active' && (int)$parent->root_id === Registry::worldId();
+        if ($onboarding && !$publicStarter) $parent->requireOwner($user);
         if (!$template->player_buildable || !$template->enabled || !$template->permits($parent)) throw new GameError('INVALID_TEMPLATE', 'Этот объект здесь строить нельзя.', 422);
         self::requireAvailableProject($user, (int)$parent->root_id);
         $economyTerms = domain\EconomyConstruction::check($template, $user, $input, $onboarding);
