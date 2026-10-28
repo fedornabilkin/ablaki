@@ -96,7 +96,7 @@ class ReleaseController extends \yii\console\Controller
     public function actionTestWorker(int $limit = 200): int
     {
         $this->context();
-        try { return Yii::$app->runAction('world-worker/run', ['limit' => $limit]); }
+        try { return Yii::$app->runAction('world-worker/run', [$limit]); }
         catch (\Throwable $error) {
             // No environment, arguments, SQL body or stack trace in release logs.
             $this->output(['worker_ready' => false, 'error' => get_class($error),
