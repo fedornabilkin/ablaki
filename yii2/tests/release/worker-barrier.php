@@ -11,13 +11,15 @@ function workerReady(): void
 function releaseWorkers(array $children): void
 {
     foreach ($children as list($process, $pipes)) {
-        if (trim((string)fgets($pipes[1])) !== 'ready') {
+        $line = trim((string)fgets($pipes[1]));
+        if ($line !== 'ready') {
+            $diagnostic = $line . PHP_EOL . stream_get_contents($pipes[2]);
             foreach ($children as list($child, $streams)) {
                 if (is_resource($child)) proc_terminate($child);
                 foreach ($streams as $stream) if (is_resource($stream)) fclose($stream);
                 if (is_resource($child)) proc_close($child);
             }
-            throw new RuntimeException('A database worker failed before the barrier.');
+            throw new RuntimeException('A database worker failed before the barrier: ' . $diagnostic);
         }
     }
     foreach ($children as list($process, $pipes)) {

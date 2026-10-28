@@ -45,7 +45,7 @@ try {
 }
 $replay=$engine->command(9001,'full-stack-withdrawal','transfer',$withdraw);
 checkCraft($replay['replayed']&&sameCraftState($withdrawn['state'],$replay['state'])&&$s->quantities(9001)[(int)$material['id']]===20,'withdrawal replay returns success without duplicating materials');
-class FailedTransferStorage extends \common\modules\craft\service\CraftStorage {
+class FailedTransferStorage extends \common\modules\world\modules\craft\models\domain\CraftStorage {
     public function insert(string $table,array $values): int {
         if($table==='craft_inventory')throw new \RuntimeException('transfer destination failure');
         return parent::insert($table,$values);
@@ -53,7 +53,7 @@ class FailedTransferStorage extends \common\modules\craft\service\CraftStorage {
 }
 $backpackSlot=array_values(array_filter($withdrawn['state']['inventory_slots'],static function($slot)use($material){return $slot['item_id']===(int)$material['id'];}))[0];
 try {
-    (new \common\modules\craft\service\Crafting(new FailedTransferStorage($db)))->command(9001,'failed-stack-transfer','transfer',['id'=>(int)$material['id'],'slot_id'=>$backpackSlot['id'],'quantity'=>20,'container_id'=>$chestId,'position'=>6]);
+    (new \common\modules\world\modules\craft\models\domain\Crafting(new FailedTransferStorage($db)))->command(9001,'failed-stack-transfer','transfer',['id'=>(int)$material['id'],'slot_id'=>$backpackSlot['id'],'quantity'=>20,'container_id'=>$chestId,'position'=>6]);
     throw new \LogicException('Transfer failure expected.');
 } catch(\RuntimeException $error) {
     if($error->getMessage()!=='transfer destination failure')throw $error;

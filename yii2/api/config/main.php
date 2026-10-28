@@ -21,7 +21,7 @@ $cfg = [
         ],
     ],
     'basePath' => dirname(__DIR__),
-    'bootstrap' => ['log', 'v1', 'exchange', 'games', 'forum', 'craft', \common\services\user\ActivityBootstrap::class],
+    'bootstrap' => ['log', 'v1', 'exchange', 'games', 'forum', 'world', \common\services\user\ActivityBootstrap::class],
     'controllerNamespace' => 'api\controllers',
     'components' => [
         'response' => [

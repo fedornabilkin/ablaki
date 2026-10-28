@@ -34,6 +34,7 @@ class TransferService
                     'password' => Yii::$app->security->generateRandomString(32), 'created_at' => time(), 'updated_at' => time(),
                 ])->execute();
                 if ($written !== 1) throw new \RuntimeException('Could not create transfer.');
+                $this->audit($userId, (int)Yii::$app->db->getLastInsertID(), 'create');
             }
             return ['created' => $created, 'requested' => (int)$count, 'amount' => (int)$amount, 'total' => $total];
         });
@@ -65,6 +66,7 @@ class TransferService
                 throw new UnprocessableEntityHttpException('Перевод уже получен.');
             }
             $ledger->change($userId, (float)$row['amount'], 'transfer', 'Confirm #' . $row['id']);
+            $this->audit($userId, (int)$row['id'], 'claim');
             $rating = (float)$sender['rating'];
             // Eligibility is decided under both account locks, at receipt time.
             $recipientRating = (float)$recipient['rating'];
@@ -104,7 +106,20 @@ class TransferService
                 throw new UnprocessableEntityHttpException('Перевод уже обработан.');
             }
             $ledger->change($userId, (float)$row['amount'], 'transfer', 'Delete #' . $row['id']);
+            $this->audit($userId, (int)$row['id'], 'cancel');
         });
+    }
+
+    private function audit(int $user, int $transfer, string $phase): void
+    {
+        $db = Yii::$app->db;
+        // Additive world schema is optional for the existing transfer API.
+        if (!$db->schema->getTableSchema('credit_transfer_history')) return;
+        // The caller holds this user's account lock until both writes commit.
+        $history = (new \yii\db\Query())->select('id')->from('history_balance')
+            ->where(['user_id' => $user, 'type' => 'transfer'])->orderBy(['id' => SORT_DESC])->scalar($db);
+        if (!$history || $db->createCommand()->insert('credit_transfer_history', ['history_id' => $history,
+            'transfer_id' => $transfer, 'phase' => $phase])->execute() !== 1) throw new \RuntimeException('Could not correlate transfer history.');
     }
 
     private function checkAmount(array $row): void

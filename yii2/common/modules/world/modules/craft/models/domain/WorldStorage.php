@@ -1,0 +1,246 @@
+<?php
+namespace common\modules\world\modules\craft\models\domain;
+
+use common\modules\world\models\domain\WorldAccessPolicy;
+use common\modules\world\models\domain\WorldQuery;
+use common\modules\world\models\domain\WorldFlags;
+use common\modules\world\support\CommandBus;
+use common\modules\world\support\GameError;
+use yii\db\Connection;
+use yii\db\Query;
+
+class WorldStorage
+{
+    private $db;
+    private $flags;
+    private $reading = false;
+    public function __construct(Connection $db, WorldFlags $flags) { $this->db = $db; $this->flags = $flags; }
+    private function available(): array { return $this->flags->requireFlags(['world_read', 'storage_v2']); }
+    /** Deduplicate identical SQL only within one read. Preview/commit always revalidate fresh data. */
+    private function read(callable $run): array
+    {
+        if ($this->reading) return $run();
+        $previousCache = $this->db->queryCache; $previousEnabled = $this->db->enableQueryCache;
+        $this->db->queryCache = new \yii\caching\ArrayCache(['serializer' => false]);
+        $this->db->enableQueryCache = true; $this->reading = true;
+        try { return $this->db->cache($run, 0); }
+        finally { $this->reading = false; $this->db->queryCache = $previousCache; $this->db->enableQueryCache = $previousEnabled; }
+    }
+    public function list(int $user, ?int $node): array
+    {
+        return $this->read(function () use ($user, $node) { return $this->readList($user, $node); });
+    }
+    private function readList(int $user, ?int $node): array
+    {
+        $this->available();
+        if ($node !== null) {
+            $visible = (new WorldQuery($this->db, new WorldAccessPolicy($user)))->record($node);
+            if ((int)$visible['owner_user_id'] !== $user) throw new GameError('STORAGE_FORBIDDEN', 'Нет доступа к вещам этого объекта.', 403);
+        }
+        $base = (new Query())->from('craft_storage')->where(['owner_user_id' => $user, 'status' => 'active'])->andWhere(['or', ['kind' => ['backpack', 'recovery']], ['and', ['node_id' => $node === null ? null : WorkspaceScope::nodes($this->db, $node)], ['kind' => ['placement', 'stockpile']]]])->orderBy(['id' => SORT_ASC])->limit(100)->all($this->db);
+        // Chest identity follows its outer inventory row; contents never move with the chest.
+        $ids = array_column($base, 'id');
+        $chests = $ids ? (new Query())->select('s.*')->from(['s' => 'craft_storage'])->innerJoin(['i' => 'craft_inventory'], '[[i.id]]=[[s.container_inventory_id]]')
+            ->where(['s.owner_user_id' => $user, 's.status' => 'active', 's.kind' => 'chest', 'i.storage_id' => $ids])->andWhere(['>', 'i.item_quantity', 0])->orderBy(['s.id' => SORT_ASC])->limit(100)->all($this->db) : [];
+        $rows = array_merge($base, $chests);
+        $nodeIds = array_values(array_unique(array_filter(array_column($rows, 'node_id'))));
+        $names = $nodeIds ? (new Query())->select(['id', 'name'])->from('world_node')->where(['id' => $nodeIds])->indexBy('id')->all($this->db) : [];
+        $result = [];
+        foreach ($rows as $row) $result[] = $this->header((new StorageAccessPolicy($this->db))->storage($user, (int)$row['id']), $names);
+        return ['items' => $result, 'server_time' => time()];
+    }
+    private function header(array $row, ?array $names = null): array
+    {
+        $labels = ['backpack' => 'Рюкзак', 'chest' => 'Сундук', 'placement' => 'Места размещения', 'recovery' => 'Восстановление', 'stockpile' => 'Склад'];
+        $node = $row['node_id'] === null ? null : ($names === null
+            ? (new Query())->select('name')->from('world_node')->where(['id' => $row['node_id']])->scalar($this->db)
+            : ($names[$row['node_id']]['name'] ?? null));
+        $name = $node && in_array($row['kind'], ['stockpile', 'placement'], true) ? $node . ($row['kind'] === 'placement' ? ' · Размещение' : ' · Склад') : ($labels[$row['kind']] ?? 'Хранилище');
+        return ['id' => (int)$row['id'], 'kind' => $row['kind'], 'name' => mb_substr($name, 0, 120), 'node_id' => $row['node_id'] === null ? null : (int)$row['node_id'],
+            'container_inventory_id' => $row['container_inventory_id'] === null ? null : (int)$row['container_inventory_id'], 'capacity' => (int)$row['capacity'], 'revision' => (int)$row['revision']];
+    }
+    public function placementOptions(int $user, int $node, ?array $cell = null): array
+    {
+        return $this->read(function () use ($user, $node, $cell) { return $this->readPlacementOptions($user, $node, $cell); });
+    }
+    private function readPlacementOptions(int $user, int $node, ?array $cell): array
+    {
+        $this->available();
+        $location = (new WorldQuery($this->db, new WorldAccessPolicy($user)))->record($node);
+        if (isset($location['hierarchy_level'])) return $this->commonPlacementOptions($user, $location, $cell);
+        $headers = $this->list($user, $node)['items']; $items = [];
+        $target = (new Query())->from('craft_storage')->where(['owner_user_id' => $user, 'node_id' => $node, 'kind' => 'placement', 'status' => 'active'])->one($this->db);
+        if (!$target) return ['node_id' => $node, 'items' => []];
+        $position = null;
+        if ($cell !== null) {
+            $location = (new WorldQuery($this->db, new WorldAccessPolicy($user)))->record($node);
+            \common\modules\world\models\domain\WorldLayout::assertCell($location, $cell['x'], $cell['y']);
+            try { (new \common\modules\world\models\domain\WorldTree($this->db))->assertFreePosition($node, $cell['x'], $cell['y']); }
+            catch (GameError $error) { if ($error->reason !== 'MAP_CELL_OCCUPIED') throw $error; return ['node_id' => $node, 'items' => []]; }
+            $position = ($cell['y'] - (int)$location['map_origin_y']) * (int)$location['map_width'] + $cell['x'] - (int)$location['map_origin_x'] + 1;
+        }
+        $slots = (new Query())->from('world_slot')->where(['storage_id' => $target['id'], 'status' => 'active'])->orderBy(['position' => SORT_ASC])->all($this->db);
+        $occupied = (new Query())->select('slot')->from('craft_inventory')->where(['storage_id' => $target['id']])->andWhere(['>', 'item_quantity', 0])->column($this->db);
+        $sourceIds = array_column(array_filter($headers, static function ($h) { return in_array($h['kind'], ['backpack', 'chest', 'stockpile'], true); }), 'id');
+        $rows = (new Query())->select(['i.*', 'd.code', 'd.kind', 'd.storage_kind', 'd.name', 'd.description', 'd.icon', 'd.active'])->from(['i' => 'craft_inventory'])->innerJoin(['d' => 'craft_item'], '[[d.id]]=[[i.item_id]]')
+            ->where(['i.storage_id' => $sourceIds, 'd.active' => 1])->andWhere(['>', 'i.item_quantity', 0])->orderBy(['i.id' => SORT_ASC])->all($this->db);
+        foreach ($rows as $row) {
+            $definition = $row; $definition['id'] = $row['item_id']; $compatible = false; $destination = null;
+            foreach ($slots as $slot) {
+                try { (new EquipmentPlacementPolicy($this->db))->assertAllowed($definition, $target, $slot); $compatible = true; }
+                catch (\yii\web\ConflictHttpException $e) { continue; }
+                if ($position !== null && (int)$slot['position'] !== $position) continue;
+                if (in_array($slot['position'], $occupied)) continue;
+                $input = ['inventory_id' => (int)$row['id'], 'source_storage_id' => (int)$row['storage_id'], 'destination_storage_id' => (int)$target['id'], 'position' => (int)$slot['position'], 'quantity' => 1, 'instance_id' => null];
+                try { (new CanonicalInventory(new CraftStorage($this->db)))->inspectTransfer($user, (int)$row['id'], (int)$target['id'], (int)$slot['position'], 1); $destination = $input; break; }
+                catch (\yii\web\HttpException $e) { continue; }
+                catch (GameError $e) { continue; }
+            }
+            if ($compatible) $items[] = ['id' => (int)$row['id'], 'name' => trim($row['name']), 'description' => trim($row['description'] ?? ''), 'icon' => trim($row['icon']), 'quantity' => (int)$row['item_quantity'], 'available' => $destination !== null, 'input' => $destination];
+        }
+        // Furnishings are visible before crafting; only an owned inventory row can be placed.
+        if ($this->db->schema->getTableSchema('world_furnishing_rule')) {
+            $catalog = (new Query())->select('d.*')->from(['d'=>'craft_item'])->innerJoin(['r'=>'world_furnishing_rule'], 'r.item_id=d.id')->where(['d.active'=>1])->all($this->db);
+            foreach ($catalog as $definition) {
+                if (in_array((int)$definition['id'], array_map('intval', array_column($rows, 'item_id')), true)) continue;
+                foreach ($slots as $slot) {
+                    try { (new EquipmentPlacementPolicy($this->db))->assertAllowed($definition, $target, $slot); }
+                    catch (\yii\web\ConflictHttpException $e) { continue; }
+                    $items[] = ['id'=>(int)$definition['id'], 'name'=>trim($definition['name']), 'description'=>trim($definition['description'] ?? ''), 'icon'=>trim($definition['icon']), 'quantity'=>0, 'available'=>false, 'input'=>null, 'requires_crafting'=>true];
+                    break;
+                }
+            }
+        }
+        return ['node_id' => $node, 'items' => $items];
+    }
+    private function commonPlacementOptions(int $user, array $location, ?array $cell): array
+    {
+        $node = (int)$location['id']; $owned = (int)$location['owner_user_id'] === $user;
+        $stationIds = (new Query())->select('item_id')->from('craft_station')->where(['active' => 1])->andWhere(['not', ['item_id' => null]]);
+        $furnitureIds = (new Query())->select('item_id')->from('world_furnishing_rule');
+        $catalog = (new Query())->from('craft_item')->where(['active' => 1])->andWhere(['or', ['id' => $stationIds], ['id' => $furnitureIds], ['storage_kind' => 'chest']])->orderBy(['id' => SORT_ASC])->all($this->db);
+        $headers = $owned ? $this->list($user, $node)['items'] : [];
+        $sourceIds = array_column(array_filter($headers, static function ($h) { return in_array($h['kind'], ['backpack', 'chest', 'stockpile'], true); }), 'id');
+        $rows = $sourceIds ? (new Query())->from('craft_inventory')->where(['storage_id' => $sourceIds])->andWhere(['>', 'item_quantity', 0])->orderBy(['id' => SORT_ASC])->all($this->db) : [];
+        $target = $owned ? (new Query())->from('craft_storage')->where(['node_id' => $node, 'owner_user_id' => $user, 'kind' => 'placement', 'status' => 'active'])->one($this->db) : null;
+        $slots = $target ? (new Query())->from('world_slot')->where(['storage_id' => $target['id'], 'status' => 'active'])->orderBy(['position' => SORT_ASC])->all($this->db) : [];
+        $compatibleSlots = [];
+        foreach ($slots as $slot) $compatibleSlots[json_encode([$slot['slot_type'], $slot['size'], $slot['exposure_class'], $slot['compatibility_json']])] = $slot;
+        if ($cell !== null) {
+            \common\modules\world\models\domain\WorldLayout::assertCell($location, $cell['x'], $cell['y']);
+            $position = ($cell['y'] - (int)$location['map_origin_y']) * (int)$location['map_width'] + $cell['x'] - (int)$location['map_origin_x'] + 1;
+            $slots = array_filter($slots, static function ($slot) use ($position) { return (int)$slot['position'] === $position; });
+        }
+        // Inspect only open, empty positions; command previews still repeat the full policy.
+        $open = []; $occupied = [];
+        foreach ((new Query())->select(['x', 'y'])->from('world_map_cell')->where(['parent_id' => $node, 'state' => 'open'])->all($this->db) as $point) $open[$point['x'] . ':' . $point['y']] = true;
+        foreach ((new Query())->select(['position_x', 'position_y', 'footprint_json'])->from('world_node')->where(['parent_id' => $node])->andWhere(['<>', 'status', 'archived'])->all($this->db) as $child)
+            foreach (\common\modules\world\models\domain\WorldMapGeometry::cells($child['footprint_json'], (int)$child['position_x'], (int)$child['position_y']) as $point) $occupied[$point['x'] . ':' . $point['y']] = true;
+        $used = $target ? (new Query())->select('slot')->from('craft_inventory')->where(['storage_id' => $target['id']])->andWhere(['>', 'item_quantity', 0])->column($this->db) : [];
+        $slots = array_filter($slots, static function ($slot) use ($location, $open, $occupied, $used) {
+            $index = (int)$slot['position'] - 1; $width = (int)$location['map_width'];
+            $key = ((int)$location['map_origin_x'] + $index % $width) . ':' . ((int)$location['map_origin_y'] + intdiv($index, $width));
+            return isset($open[$key]) && !isset($occupied[$key]) && !in_array($slot['position'], $used);
+        });
+        $items = [];
+        foreach ($catalog as $definition) {
+            $compatible = false;
+            foreach ($compatibleSlots as $slot) {
+                try { (new EquipmentPlacementPolicy($this->db))->assertAllowed($definition, $target, $slot, false); $compatible = true; break; }
+                catch (\yii\web\ConflictHttpException $error) { continue; }
+            }
+            if (!$compatible) continue;
+            $inventory = array_filter($rows, static function ($row) use ($definition) { return (int)$row['item_id'] === (int)$definition['id']; });
+            if (!$inventory) {
+                $items[] = ['id' => (int)$definition['id'], 'name' => trim($definition['name']), 'description' => trim($definition['description'] ?? ''), 'icon' => trim($definition['icon']), 'quantity' => 0, 'available' => false, 'input' => null, 'requires_crafting' => true];
+                continue;
+            }
+            foreach ($inventory as $row) {
+                $destination = null;
+                if ($location['status'] === 'active') foreach ($slots as $slot) {
+                    try {
+                        (new EquipmentPlacementPolicy($this->db))->assertAllowed($definition, $target, $slot);
+                        (new CanonicalInventory(new CraftStorage($this->db)))->inspectTransfer($user, (int)$row['id'], (int)$target['id'], (int)$slot['position'], 1);
+                        $destination = ['inventory_id' => (int)$row['id'], 'source_storage_id' => (int)$row['storage_id'], 'destination_storage_id' => (int)$target['id'], 'position' => (int)$slot['position'], 'quantity' => 1, 'instance_id' => null];
+                        break;
+                    } catch (\yii\web\HttpException $error) { continue; }
+                    catch (GameError $error) { continue; }
+                }
+                $items[] = ['id' => (int)$row['id'], 'name' => trim($definition['name']), 'description' => trim($definition['description'] ?? ''), 'icon' => trim($definition['icon']), 'quantity' => (int)$row['item_quantity'], 'available' => $destination !== null, 'input' => $destination];
+            }
+        }
+        return ['node_id' => $node, 'items' => $items];
+    }
+    public function view(int $user, int $id, int $page = 1): array
+    {
+        return $this->read(function () use ($user, $id, $page) { return $this->readView($user, $id, $page); });
+    }
+    private function readView(int $user, int $id, int $page): array
+    {
+        $capabilities = $this->available(); if ($page < 1 || $page > 1000000) throw new GameError('INVALID_PAGINATION', 'Некорректная страница.', 422);
+        $storage = (new StorageAccessPolicy($this->db))->storage($user, $id); $query = (new Query())->from('craft_inventory')->where(['storage_id' => $id])->andWhere(['>', 'item_quantity', 0]);
+        $total = (int)(clone $query)->count('*', $this->db); $items = [];
+        $rows = $query->orderBy(['slot' => SORT_ASC, 'id' => SORT_ASC])->offset(($page - 1) * 100)->limit(100)->all($this->db);
+        $definitions = (new Query())->from('craft_item')->where(['id' => array_column($rows, 'item_id')])->indexBy('id')->all($this->db);
+        $instances = (new Query())->from('craft_equipment_instance')->where(['inventory_id' => array_column($rows, 'id'), 'status' => 'active'])->orderBy(['id' => SORT_ASC])->all($this->db);
+        $byInventory = [];
+        foreach ((new EquipmentExposure($this->db))->projectedBatch($instances) as $unit) $byInventory[$unit['inventory_id']][] = $unit;
+        $inners = (new Query())->from('craft_storage')->where(['container_inventory_id' => array_column($rows, 'id'), 'status' => 'active'])->indexBy('container_inventory_id')->all($this->db);
+        foreach ($rows as $row) {
+            $item = $definitions[$row['item_id']];
+            $units = [];
+            foreach ($byInventory[$row['id']] ?? [] as $unit) {
+                $units[] = ['id' => (int)$unit['id'], 'durability' => (int)$unit['durability'], 'max_durability' => (int)$unit['max_durability'], 'exposure_class' => $unit['exposure_class']];
+            }
+            $inner = $inners[$row['id']]['id'] ?? null;
+            $items[] = ['id' => (int)$row['id'], 'item_id' => (int)$row['item_id'], 'name' => trim($item['name']), 'icon' => trim($item['icon']), 'quantity' => (int)$row['item_quantity'], 'position' => (int)$row['slot'], 'revision' => (int)$row['revision'], 'instances' => $units, 'inner_storage_id' => $inner ? (int)$inner : null];
+        }
+        $slots = [];
+        $locationRow = $storage['node_id'] === null ? null : (new Query())->from('world_node')->where(['id' => $storage['node_id']])->one($this->db);
+        $openCells = $locationRow && isset($locationRow['hierarchy_level']) ? (new Query())->from('world_map_cell')->where(['parent_id' => $storage['node_id'], 'state' => 'open'])->all($this->db) : null;
+        $openPositions = [];
+        foreach ($openCells ?? [] as $cell) $openPositions[] = ((int)$cell['y'] - (int)$locationRow['map_origin_y']) * (int)$locationRow['map_width'] + (int)$cell['x'] - (int)$locationRow['map_origin_x'] + 1;
+        if ($storage['kind'] === 'placement') foreach ((new Query())->from('world_slot')->where(['storage_id' => $id])->orderBy(['position' => SORT_ASC])->limit(100)->all($this->db) as $slot) $slots[] = ['position' => (int)$slot['position'], 'type' => $slot['slot_type'], 'exposure_class' => $slot['exposure_class'], 'available' => $slot['status'] === 'active' && ($openCells === null || in_array((int)$slot['position'], $openPositions, true))];
+        $container = null; $location = null; $nodeId = $storage['node_id'];
+        if ($storage['kind'] === 'chest') {
+            $chest = (new Query())->from('craft_container')->where(['id' => $storage['container_inventory_id']])->one($this->db);
+            $container = ['durability' => (int)$chest['durability'], 'max_durability' => (int)$chest['max_durability']];
+            $outer = (new Query())->select('s.node_id')->from(['i' => 'craft_inventory'])->innerJoin(['s' => 'craft_storage'], '[[s.id]]=[[i.storage_id]]')->where(['i.id' => $storage['container_inventory_id']])->one($this->db);
+            $nodeId = $outer['node_id'];
+        }
+        if ($nodeId !== null) {
+            $node = (new WorldQuery($this->db, new WorldAccessPolicy($user)))->record((int)$nodeId);
+            $location = ['node_id' => (int)$node['id'], 'name' => $node['name']];
+        }
+        return ['storage' => $this->header($storage), 'items' => $items, 'slots' => $slots, 'container' => $container, 'location' => $location, '_meta' => ['totalCount' => $total, 'pageCount' => (int)ceil($total / 100), 'currentPage' => $page, 'perPage' => 100], 'server_time' => time(), 'writable' => $capabilities['world_write']];
+    }
+    private function prepare(int $user, array $payload, CraftStorage $store): array
+    {
+        $p = (new CanonicalInventory($store))->inspectTransfer($user, $payload['inventory_id'], $payload['destination_storage_id'], $payload['position'], $payload['quantity'], $payload['instance_id']);
+        if ((int)$p['source']['id'] !== $payload['source_storage_id']) throw new GameError('SOURCE_CHANGED', 'Предмет уже перемещён. Обновите хранилище.');
+        return $p;
+    }
+    public function preview(int $user, array $payload): array
+    {
+        $this->available();
+        return (new CommandBus($this->db, $this->flags))->preview($user, 'world.storage.transfer', $payload, function () use ($user, $payload) {
+            $p = $this->prepare($user, $payload, new CraftStorage($this->db));
+            $revisions = ['inventory:' . $p['row']['id'] => (int)$p['row']['revision'], 'storage:' . $p['source']['id'] => (int)$p['source']['revision'], 'storage:' . $p['target']['id'] => (int)$p['target']['revision'], 'catalog' => (int)(new Query())->select('revision')->from('craft_meta')->where(['id' => 1])->scalar($this->db)];
+            foreach ([$p['source'], $p['target']] as $storage) if ($storage['node_id'] !== null) $revisions['node:' . $storage['node_id']] = (int)(new Query())->select('revision')->from('world_node')->where(['id' => $storage['node_id']])->scalar($this->db);
+            return ['revisions' => $revisions, 'terms' => ['quantity' => $p['quantity'], 'item_name' => trim($p['item']['name']), 'instance_ids' => $p['unit_ids'], 'destination_storage_id' => (int)$p['target']['id'], 'position' => $p['position']]];
+        });
+    }
+    public function transfer(int $user, string $key, array $payload, string $quote, array $revisions): array
+    {
+        $bus = new CommandBus($this->db, $this->flags);
+        return $bus->execute($user, $key, 'world.storage.transfer', $payload, $quote, $revisions, function (array $input, array $terms, string $operation) use ($user, $bus) {
+            $this->available(); $store = new CraftStorage($this->db); $store->operationId = $operation;
+            $prepared = $this->prepare($user, $input, $store);
+            if ($prepared['unit_ids'] !== $terms['instance_ids']) throw new GameError('INSTANCE_CHANGED', 'Выбранные экземпляры изменились.');
+            $result = (new CanonicalInventory($store))->transfer($user, $input['inventory_id'], $input['destination_storage_id'], $input['position'], $input['quantity'], $input['instance_id']);
+            $bus->emit($operation, $user, 'inventory.transferred', $result);
+            $result['changed_node_ids'] = array_values(array_unique(array_map('intval', array_filter([$prepared['source']['node_id'], $prepared['target']['node_id']]))));
+            return $result;
+        });
+    }
+}

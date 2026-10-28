@@ -10,7 +10,6 @@ use common\modules\games\models\GameDuel;
 use Throwable;
 use Yii;
 use yii\base\UserException;
-use yii\db\Query;
 
 /**
  * Игра «Дуэль» — одна схватка: удар + блок с каждой стороны.
@@ -36,13 +35,11 @@ class DuelService
         if ($count < 1 || $count > 100) throw new UserException('Invalid game count.');
         Yii::$app->db->transaction(function () use ($game, $person, $count): void {
             $db = Yii::$app->db;
-            $query = (new Query())->from(Person::tableName())->where(['id' => $person->id]);
-            $command = $query->createCommand($db);
-            $row = $db->driverName === 'sqlite'
-                ? $db->createCommand($command->sql, $command->params)->queryOne()
-                : $db->createCommand($command->sql . ' FOR UPDATE', $command->params)->queryOne();
+            \common\modules\world\modules\economy\models\domain\WalletMaintenance::writable($db);
+            $row = (new \common\services\user\CreditLedger($db))->lock('persone', ['user_id' => (int)$person->user_id]);
             if (!$row) throw new UserException('Account not found.');
             Person::populateRecord($person, $row);
+            if (\common\modules\world\modules\economy\models\domain\WalletSchema::ready($db)) \common\modules\world\modules\economy\models\domain\LegacyCreditPolicy::game($game->kon);
             if ($person->credit < $game->kon * $count) {
                 throw new UserException(Yii::t('games', 'Insufficient funds'));
             }
@@ -96,7 +93,7 @@ class DuelService
         $transaction = Yii::$app->db->beginTransaction();
         try {
             $game->user_gamer = $person->user_id;
-            $game->save(false);
+            if (!$game->save(false)) throw new \RuntimeException('Could not finish duel.');
 
             $this->settle($game, $person);
 

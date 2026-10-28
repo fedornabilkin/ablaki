@@ -8,10 +8,10 @@ Yii::setAlias('@common',dirname(__DIR__,2).'/common');
 Yii::setAlias('@api',dirname(__DIR__,2).'/api');
 Yii::setAlias('@console',dirname(__DIR__,2).'/console');
 error_reporting(E_ALL & ~E_DEPRECATED);
-use common\modules\craft\service\CraftStorage;
-use common\modules\craft\service\CraftCatalog;
-use common\modules\craft\service\Crafting;
-use common\modules\craft\service\CraftSettings;
+use common\modules\world\modules\craft\models\domain\CraftStorage;
+use common\modules\world\modules\craft\models\domain\CraftCatalog;
+use common\modules\world\modules\craft\models\domain\Crafting;
+use common\modules\world\modules\craft\models\domain\CraftSettings;
 use yii\db\Query;
 class CraftIdentity implements \yii\web\IdentityInterface {
     public static function findIdentity($id){return new self;}
@@ -29,7 +29,7 @@ $app=new \yii\web\Application(['id'=>'craft-tests','basePath'=>dirname(__DIR__,2
         'db'=>['class'=>\yii\db\Connection::class,'dsn'=>$dsn?:'sqlite::memory:','username'=>$dsn?'ablakin_ci':null,'password'=>$dsn?'ci-only-password':null,'charset'=>'utf8'],
         'request'=>['cookieValidationKey'=>'test-only','scriptFile'=>__FILE__,'scriptUrl'=>'/index.php','hostInfo'=>'http://test.invalid'],
         'user'=>['identityClass'=>CraftIdentity::class,'enableSession'=>false],
-        'urlManager'=>['enablePrettyUrl'=>true,'enableStrictParsing'=>true,'rules'=>require dirname(__DIR__,2).'/common/modules/craft/config/urlRules.php'],
+        'urlManager'=>['enablePrettyUrl'=>true,'enableStrictParsing'=>true,'rules'=>require dirname(__DIR__,2).'/common/modules/world/modules/craft/config/urlRules.php'],
     ]]);
 $db=$app->db;$s=new CraftStorage($db);$catalog=new CraftCatalog($s);$engine=new Crafting($s);
 if (($argv[1]??'')==='worker') {
@@ -47,7 +47,7 @@ function craftRace($id,$same){
     for($i=0;$i<6;$i++){
         $key=$same?'parallel-same-key':'parallel-unique-'.$i;
         $cmd=escapeshellarg(PHP_BINARY).' '.escapeshellarg(__FILE__).' worker '.escapeshellarg($key).' '.(int)$id;
-        $pipes=[];$process=proc_open($cmd,[0=>['pipe','r'],1=>['pipe','w'],2=>['pipe','w']],$pipes);
+        $pipes=[];$process=proc_open($cmd,[0=>['pipe','r'],1=>['pipe','w'],2=>['pipe','w']],$pipes,null,null,['bypass_shell'=>true]);
         if (!is_resource($process)) throw new RuntimeException('Cannot start craft worker.');
         $children[]=[$process,$pipes];
     }
@@ -90,9 +90,9 @@ ob_start();(new \m260924_160000_craft_storage(['db'=>$db]))->up();ob_end_clean()
 require_once dirname(__DIR__,2).'/console/migrations/m260926_100000_craft_repair.php';
 ob_start();(new \m260926_100000_craft_repair(['db'=>$db]))->up();ob_end_clean();$db->schema->refresh();
 checkCraft(!$settings->chargeCredits()&&$s->quantities(9002)[$old]===7,'credit migration defaults off and preserves inventory');
-$seed=require dirname(__DIR__,2).'/common/modules/craft/data/default-catalog.php';
+$seed=require dirname(__DIR__,2).'/common/modules/world/modules/craft/data/default-catalog.php';
 $preview=$catalog->preview($seed);$catalog->apply($seed,$preview['digest']);
-checkCraft(count($seed['items'])===45&&count($seed['recipes'])===35,'initial catalog: 45 items, 35 recipes, four stations');
+checkCraft(count($seed['items'])===47&&count($seed['recipes'])===37,'initial catalog: 47 items, 37 recipes, four stations');
 $roundtrip=$catalog->export();$preview=$catalog->preview($roundtrip);$catalog->apply($roundtrip,$preview['digest']);
 checkCraft($catalog->export()===$roundtrip,'export/import roundtrip keeps IDs, links and content');
 $bad=$seed;$bad['recipes'][0]['requires']=['classic-plank'];rejectsCraft(function()use($catalog,$bad){$catalog->preview($bad);},'self dependency rejected');
@@ -247,7 +247,7 @@ foreach($seed['recipes'] as $row){
     $command('craft',$ids[$row['code']]);
     $db->createCommand()->delete('craft_command',['user_id'=>9001])->execute();
 }
-checkCraft((int)(new Query())->from('craft_known')->where(['user_id'=>9001])->count('*',$db)===35,'all 35 recipes form a traversable dependency tree');
+checkCraft((int)(new Query())->from('craft_known')->where(['user_id'=>9001])->count('*',$db)===37,'all 37 recipes form a traversable dependency tree');
 $potion=(int)$items['classic-potion']['id'];$before=$s->quantities(9001)[$potion];$command('use',$potion);
 checkCraft(($s->quantities(9001)[$potion]??0)===$before-1,'consumable is removed on use');
 $furnace=(int)$items['classic-furnace']['id'];$db->createCommand()->delete('craft_inventory',['user_id'=>9001,'item_id'=>$furnace])->execute();
@@ -257,8 +257,8 @@ rejectsCraft(function()use($command,$ids){$command('craft',$ids['classic-sword']
 $tx->rollBack();
 class CraftAdminUser extends \yii\web\User { public $admin=false; public function can($permissionName,$params=[],$allowCaching=true){return $this->admin&&$permissionName==='p-admin';} }
 $app->set('user',['class'=>CraftAdminUser::class,'identityClass'=>CraftIdentity::class,'enableSession'=>false]);
-$module=new \common\modules\craft\Module('craft',$app);
-$admin=new \common\modules\craft\controllers\CatalogController('catalog',$module);
+$module=new \common\modules\world\modules\craft\Module('craft',$app);
+$admin=new \common\modules\world\modules\craft\controllers\CatalogController('catalog',$module);
 $_SERVER['REQUEST_METHOD']='GET';$app->id='app-backend';
 rejectsCraft(function()use($admin){$admin->runAction('export');},'guest cannot export administrative catalog');
 rejectsCraft(function()use($admin){$admin->runAction('settings');},'guest cannot change charging');
@@ -307,8 +307,8 @@ ob_start();(new \m260926_100000_craft_repair(['db'=>$db]))->up();ob_end_clean();
 checkCraft(!$settings->chargeCredits(),'fresh installation starts with charges disabled');
 $preview=$catalog->preview($seed);$catalog->apply($seed,$preview['digest']);
 $result=$engine->command(9002,'fresh-install-starter','starter',[]);
-checkCraft(count($result['state']['items'])===45&&count($result['state']['recipes'])===35&&count($result['state']['inventory'])===10,'fresh schema imports full catalog and accepts first command');
+checkCraft(count($result['state']['items'])===47&&count($result['state']['recipes'])===37&&count($result['state']['inventory'])===10,'fresh schema imports full catalog and accepts first command');
 $app->params['remote_db']=$db;
 foreach(glob(dirname(__DIR__,2).'/console/migrations/m230317_*_create_craft_*_table.php') as $file){require_once $file;$class=basename($file,'.php');ob_start();$legacyResult=(new $class(['db'=>$db]))->up();ob_end_clean();checkCraft($legacyResult!==false,'older migration recognizes installed craft schema: '.$class);}
-checkCraft(count($catalog->export()['items'])===45,'later normal migrations preserve initialized craft data');
+checkCraft(count($catalog->export()['items'])===47,'later normal migrations preserve initialized craft data');
 echo 'Classic craft checks passed: '.$db->driverName.PHP_EOL;

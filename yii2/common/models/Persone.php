@@ -28,6 +28,7 @@ use yii\db\ActiveRecord;
  */
 class Persone extends ActiveRecord
 {
+    use \common\modules\world\modules\economy\models\domain\PersonalCreditRecord;
     /**
      * @inheritdoc
      */

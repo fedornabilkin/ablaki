@@ -60,7 +60,9 @@ try {
         'id' => 'routing-test', 'basePath' => dirname(__DIR__, 2), 'vendorPath' => dirname(__DIR__, 2) . '/vendor',
         'runtimePath' => sys_get_temp_dir() . '/ablakin-routing-presence-' . uniqid(),
         'container' => $api['container'],
-        'modules' => ['v1' => ['class' => \api\modules\v1\Module::class], 'user' => ['class' => \dektrium\user\Module::class]],
+        'bootstrap' => ['world'],
+        'modules' => ['v1' => ['class' => \api\modules\v1\Module::class], 'user' => ['class' => \dektrium\user\Module::class],
+            'world' => ['class' => \common\modules\world\Module::class]],
         'components' => [
             'db' => ['class' => \yii\db\Connection::class, 'dsn' => 'sqlite:' . $file],
             'request' => ['cookieValidationKey' => 'local-test', 'scriptFile' => __FILE__, 'scriptUrl' => '/index.php', 'hostInfo' => 'http://test.invalid'],
@@ -89,6 +91,8 @@ try {
     $db->createCommand('CREATE TABLE credit_transfer (id INTEGER PRIMARY KEY, user_id INTEGER, user_buyer INTEGER, amount NUMERIC, password TEXT, created_at INTEGER, updated_at INTEGER)')->execute();
     $db->createCommand('CREATE TABLE credit_exchange (id INTEGER PRIMARY KEY, user_id INTEGER, user_buyer INTEGER, amount NUMERIC, credit NUMERIC, type TEXT, created_at INTEGER, updated_at INTEGER)')->execute();
     $db->createCommand('CREATE TABLE fact (id INTEGER PRIMARY KEY, title TEXT, type TEXT, hide INTEGER)')->execute();
+    routeCheck(dispatch('POST', 'v1/world/nodes/8/map-explore-preview')[0] === 401,
+        'map exploration preview resolves its route and still requires authentication');
     $db->createCommand("INSERT INTO user VALUES (1,'Donor','private1',1,1),(2,'Author','private2',2,2)")->execute();
     $db->createCommand("INSERT INTO persone VALUES (1,1,10,2,1,'',0,0),(2,2,10,1,2,'',1,0)")->execute();
     $db->createCommand('ALTER TABLE persone ADD COLUMN description_approved INTEGER NOT NULL DEFAULT 0')->execute();

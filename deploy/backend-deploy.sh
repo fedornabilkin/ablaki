@@ -43,6 +43,11 @@ if [[ -f deploy/php-runtime-upgrade.sh ]]; then
   bash deploy/php-runtime-upgrade.sh "$repo" "$target"
 fi
 
+if [[ "$target" = test && "$repo" = /var/code/ablaki && -f /opt/ablaki-backend-test/world-activation.pending ]]; then
+  printf '[backend-deploy] World activation is pending; keep writers stopped until the resume step.\n'
+  exit 0
+fi
+
 phase='make up'
 printf '[backend-deploy] make up\n'
 make up

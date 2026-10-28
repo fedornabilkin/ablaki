@@ -145,6 +145,7 @@ class SaperController extends ActiveController
 
         if ($middleware->check()) {
             $lost = (int)$model->etap === GameSaper::GAME_SAPER_ETAP_LOSE;
+            // A completed game returns its result and overview to the client.
         } else {
             $errors = $middleware->getErrors();
             throw new MainException(Yii::t('games', $errors[0]));

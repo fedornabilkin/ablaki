@@ -92,16 +92,22 @@ use mdm\admin\components\Helper;
                 'icon' => 'magic',
                 'url' => '#',
                 'items' => [
-                    ['label' => 'Каталог · импорт / экспорт', 'icon' => 'th', 'url' => ['/craft/catalog']],
-                    ['label' => Yii::t('craft', 'Item'), 'icon' => 'th', 'url' => ['/craft/item']],
-                    ['label' => Yii::t('craft', 'Recipe'), 'icon' => 'book', 'url' => ['/craft/recipe']],
-                    ['label' => Yii::t('craft', 'Category'), 'icon' => 'list-alt', 'url' => ['/craft/category']],
-                    ['label' => Yii::t('craft', 'History'), 'icon' => 'bar-chart-o', 'url' => ['/craft/history']],
-                    ['label' => Yii::t('craft', 'Inventory'), 'icon' => 'suitcase', 'url' => ['/craft/inventory']],
+                    ['label' => 'Каталог · импорт / экспорт', 'icon' => 'th', 'url' => ['/world/craft/catalog']],
+                    ['label' => Yii::t('craft', 'Item'), 'icon' => 'th', 'url' => ['/world/craft/item']],
+                    ['label' => Yii::t('craft', 'Recipe'), 'icon' => 'book', 'url' => ['/world/craft/recipe']],
+                    ['label' => Yii::t('craft', 'Category'), 'icon' => 'list-alt', 'url' => ['/world/craft/category']],
+                    ['label' => Yii::t('craft', 'History'), 'icon' => 'bar-chart-o', 'url' => ['/world/craft/history']],
+                    ['label' => Yii::t('craft', 'Inventory'), 'icon' => 'suitcase', 'url' => ['/world/craft/inventory']],
                 ],
             ],
 
 
+            ['label' => 'Мир', 'icon' => 'globe', 'url' => '#', 'items' => [
+                ['label' => 'Объекты', 'url' => ['/world/node/index']],
+                ['label' => 'Шаблоны объектов', 'url' => ['/world/template/index']],
+                ['label' => 'События', 'url' => ['/world/event/index']],
+                ['label' => 'Расширенные разделы', 'url' => '#', 'items' => \common\modules\world\admin\WorldEntityCatalog::menu()],
+            ]],
             ['label' => 'Other', 'options' => ['class' => 'header']],
 
             ['label' => 'Login', 'url' => ['site/login'], 'visible' => Yii::$app->user->isGuest],
@@ -145,6 +151,16 @@ use mdm\admin\components\Helper;
                 'items' => $menuItems,
             ]
         )?>
+
+        <?php if (!Yii::$app->user->isGuest && Helper::checkRoute('/maintenance/clear-cache')): ?>
+            <div class="sidebar-form">
+                <?= \yii\helpers\Html::beginForm(['/maintenance/clear-cache'], 'post') ?>
+                <?= \yii\helpers\Html::submitButton('Сбросить кэш', [
+                    'class' => 'btn btn-default btn-block', 'title' => 'Сбросить кэш прав доступа и меню',
+                ]) ?>
+                <?= \yii\helpers\Html::endForm() ?>
+            </div>
+        <?php endif ?>
 
     </section>
 

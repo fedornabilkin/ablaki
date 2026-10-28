@@ -39,6 +39,6 @@ try {
     releaseWorkers(barrierChildren([0, 'fail', 50000]));
     throw new LogicException('Failed worker was ignored.');
 } catch (RuntimeException $expected) {
-    if ($expected->getMessage() !== 'A database worker failed before the barrier.') throw $expected;
+    if (strpos($expected->getMessage(), 'A database worker failed before the barrier:') !== 0) throw $expected;
 }
 echo "PASS startup failure aborts the race and closes waiting workers\n";

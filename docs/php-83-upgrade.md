@@ -16,4 +16,12 @@
 
 ## Проверки
 
-CI проверяет production/dev install из lock, Composer audit, API-сценарии, транзакции и конкуренцию MySQL/PostgreSQL, собирает оба Linux-образа, проверяет FPM через HTTP и его корректную остановку. Выкладка зависит от обоих jobs. После запуска VPS отдельно проверяются версия PHP/Yii, autoload, расширения, FPM и cron. Результаты конкретного выпуска фиксируются в плане `2026-10-24-php-83-security-upgrade`.
+CI проверяет production/dev install из lock, Composer audit, API-сценарии, транзакции и конкуренцию MySQL/PostgreSQL, собирает оба Linux-образа, проверяет FPM через HTTP и его корректную остановку. Выкладка зависит от обоих jobs. После запуска VPS отдельно проверяются версия PHP/Yii, autoload, расширения, FPM и cron. [Завершённый план и результаты](plan/done/2026-10-24-php-83-security-upgrade.md).
+
+## Выпуск 2026-10-24
+
+Локальный runtime, test и production используют PHP **8.3.36** и Yii **2.0.55**. На обоих VPS-контурах подтверждены `upload_progress=0`, готовность FPM, работающий cron и успешный `composer check-platform-reqs`. Отдельный test worker также проверен командой PHP и вернул 8.3.36. API всех трёх сред возвращает HTTP 200; успешный вход и профиль проверены существующим тестовым аккаунтом локально и на test. Production проверен публичными запросами и ответами 401 на защищённый маршрут и пустую форму входа; реальный пароль production-аккаунта не использовался.
+
+Production `e44b1c2` выпущен из рабочей ветки PHP, test в master не вливался. Игровые сбросы и копирование БД не выполнялись. В test отдельно применён ранее запрошенный отказ от dump/restore в активации мира. Предыдущие образ и vendor сохранены на VPS для отката. Рабочая ветка мира синхронизирована с выпущенным master.
+
+Подтверждения: [изменения](https://github.com/fedornabilkin/ablaki/pull/25), [test](https://github.com/fedornabilkin/ablaki/actions/runs/40129172843), [production](https://github.com/fedornabilkin/ablaki/actions/runs/40129308423). Повторная test-выкладка подтвердила сообщение `PHP 8.3.36 and locked dependencies are already active` и пропуск пересборки/замены vendor.

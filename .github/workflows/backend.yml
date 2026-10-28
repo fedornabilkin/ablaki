@@ -13,6 +13,17 @@ on:
         options: [test, production]
         default: test
         required: true
+      economy_test:
+        description: Preview or prepare the funded MVP test (test only)
+        type: choice
+        options: [skip, preview, prepare]
+        default: skip
+        required: true
+      economy_donor:
+        description: Existing test account funding the route (no credits are issued)
+        type: string
+        default: Test01
+        required: true
 
 permissions:
   contents: read
@@ -72,6 +83,8 @@ jobs:
           php -l yii2/console/migrations/AbstractMigration.php
           php -l yii2/api/modules/v1/controllers/StatController.php
           php -l yii2/tests/release/frontend-api-routing.php
+          for file in yii2/common/modules/world/models/domain/TestWorld*.php yii2/console/controllers/WorldSetupController.php yii2/console/world-migrations/m260928_003400_system_profession_author.php yii2/console/world-verify-test.php; do php -l "$file"; done
+          php yii2/tests/release/world-test-credits.php
           bash deploy/tests/pipeline.sh
 
       - name: Install locked dependencies for the selected target
@@ -87,41 +100,43 @@ jobs:
           composer check-platform-reqs
           composer audit --locked --no-dev --abandoned=ignore
 
-      - name: Run isolated API checks
-        working-directory: yii2
-        shell: bash
-        run: |
-          for suite in auth-response frontend-lists frontend-api-routing game-overview five-game forum-gift forum-install daily-reward exchange-refund topic68-economy worker-barrier-test classic-craft classic-craft-install user-activity user-cleanup; do
-            if ! php "tests/release/$suite.php" 2>&1 | tee "$RUNNER_TEMP/backend-$suite.log"; then
-              details=$(tail -n 15 "$RUNNER_TEMP/backend-$suite.log")
-              details=${details//%/%25}
-              details=${details//$'\r'/%0D}
-              details=${details//$'\n'/%0A}
-              echo "::error file=yii2/tests/release/$suite.php,title=Isolated API check failed::$details"
-              exit 1
-            fi
-          done
-
-      - name: Check MySQL and PostgreSQL transactions
+      - name: Run isolated API and target database checks in parallel
         working-directory: yii2
         env:
           MYSQL_CONTAINER: ${{ job.services.mysql.id }}
         shell: bash
         run: |
           # PHP 8.3 supports the MySQL 8 default authentication plugin.
+          check_isolated() {
+            unset ABL_TEST_DSN
+            for suite in auth-response frontend-lists frontend-api-routing game-overview five-game forum-gift forum-install daily-reward exchange-refund topic68-economy worker-barrier-test world-economy-gameplay world-feedback-food classic-craft-install world-economy-profile user-activity user-cleanup; do
+              if ! php "tests/release/$suite.php" 2>&1 | tee "$RUNNER_TEMP/backend-$suite.log"; then
+                details=$(tail -n 15 "$RUNNER_TEMP/backend-$suite.log")
+                details=${details//%/%25}
+                details=${details//$'\r'/%0D}
+                details=${details//$'\n'/%0A}
+                echo "::error file=yii2/tests/release/$suite.php,title=Isolated API check failed::$details"
+                return 1
+              fi
+            done
+          }
           check_database() {
             export ABL_TEST_DSN="$1"
-            php tests/release/target-database.php && php tests/release/classic-craft.php && php tests/release/user-activity.php
+            php tests/release/target-database.php && php tests/release/world-economy-race.php && php tests/release/user-activity.php
           }
-          # Independent disposable databases; keep suites sequential within each database.
+          # SQLite fixtures and the two target databases are independent.
+          # Keep suites sequential within each group; deployment requires all three.
+          check_isolated > "$RUNNER_TEMP/isolated-checks.log" 2>&1 &
+          isolated_pid=$!
           check_database 'mysql:host=127.0.0.1;port=3306;dbname=ablakin_ci' > "$RUNNER_TEMP/mysql-checks.log" 2>&1 &
           mysql_pid=$!
           check_database 'pgsql:host=127.0.0.1;port=5432;dbname=ablakin_ci' > "$RUNNER_TEMP/pgsql-checks.log" 2>&1 &
           pgsql_pid=$!
           failed=0
+          wait "$isolated_pid" || failed=1
           wait "$mysql_pid" || failed=1
           wait "$pgsql_pid" || failed=1
-          cat "$RUNNER_TEMP/mysql-checks.log" "$RUNNER_TEMP/pgsql-checks.log"
+          cat "$RUNNER_TEMP/isolated-checks.log" "$RUNNER_TEMP/mysql-checks.log" "$RUNNER_TEMP/pgsql-checks.log"
           exit "$failed"
 
   runtime-image:
@@ -212,6 +227,11 @@ jobs:
           printf '%s\n' "$DEPLOY_SSH_KEY" | tr -d '\r' > "$HOME/.ssh/deploy_key"
           printf '%s\n' "$DEPLOY_KNOWN_HOSTS" | tr -d '\r' > "$HOME/.ssh/known_hosts"
           chmod 600 "$HOME/.ssh/deploy_key" "$HOME/.ssh/known_hosts"
+          # Reuse the authenticated connection across SSH/scp calls in this job.
+          # The socket belongs to this ephemeral runner; no key is stored in it.
+          printf 'Host %s\n  ControlMaster auto\n  ControlPersist 60\n  ControlPath %s/backend-ssh-%%C\n' \
+            "$DEPLOY_HOST" "$RUNNER_TEMP" > "$HOME/.ssh/config"
+          chmod 600 "$HOME/.ssh/config"
 
       - name: Run git pull and make up on the VPS
         shell: bash
@@ -237,6 +257,14 @@ jobs:
           ssh "${options[@]}" -p "$DEPLOY_PORT" "$DEPLOY_USER@$DEPLOY_HOST" \
             "bash '$deploy_root/backend-deploy.sh' '$repo_root' '$GITHUB_REF_NAME' '$TARGET'"
 
+      - name: Resume interrupted world activation on test
+        if: env.TARGET == 'test'
+        shell: bash
+        run: |
+          options=(-i "$HOME/.ssh/deploy_key" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=yes -o UserKnownHostsFile="$HOME/.ssh/known_hosts")
+          ssh "${options[@]}" -p "$DEPLOY_PORT" "$DEPLOY_USER@$DEPLOY_HOST" \
+            "if test -f /opt/ablaki-backend-test/world-activation.pending; then bash /var/code/ablaki/deploy/world-open-test.sh; fi"
+
       - name: Apply additive activity, craft and forum migrations
         shell: bash
         run: |
@@ -261,6 +289,28 @@ jobs:
             "cd '$repo_root' && test \"\$(pwd -P)\" = '$repo_root' && docker-compose exec -T -e '$install_context' php php /web/yii2/yii craft-setup/$install_action"
           ssh "${options[@]}" -p "$DEPLOY_PORT" "$DEPLOY_USER@$DEPLOY_HOST" \
             "cd '$repo_root' && test \"\$(pwd -P)\" = '$repo_root' && docker-compose exec -T -e 'FORUM_INSTALL=confirmed-$TARGET-checkout' php php /web/yii2/yii forum-setup/install"
+
+      - name: Prepare and start all implemented world features on test
+        if: env.TARGET == 'test'
+        shell: bash
+        run: |
+          options=(-i "$HOME/.ssh/deploy_key" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=yes -o UserKnownHostsFile="$HOME/.ssh/known_hosts")
+          ssh "${options[@]}" -p "$DEPLOY_PORT" "$DEPLOY_USER@$DEPLOY_HOST" \
+            "bash /var/code/ablaki/deploy/world-open-test.sh"
+
+      - name: Prepare the explicitly requested funded economy test
+        if: env.TARGET == 'test' && inputs.economy_test != '' && inputs.economy_test != 'skip'
+        shell: bash
+        env:
+          ECONOMY_TEST: ${{ inputs.economy_test }}
+          ECONOMY_DONOR: ${{ inputs.economy_donor }}
+        run: |
+          apply=0
+          [[ "$ECONOMY_TEST" = prepare ]] && apply=1
+          [[ "$ECONOMY_DONOR" =~ ^[A-Za-z0-9_-]{1,32}$ ]]
+          options=(-i "$HOME/.ssh/deploy_key" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=yes -o UserKnownHostsFile="$HOME/.ssh/known_hosts")
+          ssh "${options[@]}" -p "$DEPLOY_PORT" "$DEPLOY_USER@$DEPLOY_HOST" \
+            "cd /var/code/ablaki && test \"\$(pwd -P)\" = /var/code/ablaki && docker-compose exec -T -e WORLD_INSTALL=confirmed-world-install -e WORLD_TEST_SETUP=confirmed-test-checkout -e WORLD_TEST_MODE=1 php php /web/yii2/yii world-setup/economy-test-prepare '$apply' '$ECONOMY_DONOR'"
 
       - name: Verify deployed PHP, dependencies and background scheduler
         shell: bash
