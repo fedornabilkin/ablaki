@@ -162,7 +162,7 @@ case "$*" in
     [[ "$TEST_WORLD_FAIL" != setup ]] || exit 23 ;;
   *'release/test-profile '*) [[ "$TEST_WORLD_FAIL" != profile ]] || exit 25 ;;
   *'release/test-npc '*) [[ "$TEST_WORLD_FAIL" != npc ]] || exit 26 ;;
-  *'world-worker/run 200') [[ "$TEST_WORLD_FAIL" != handlers ]] || exit 24 ;;
+  *'release/test-worker 200') [[ "$TEST_WORLD_FAIL" != handlers ]] || exit 24 ;;
   'stop -t 60 nginx php'|'up -d --no-deps php nginx') ;;
   'ps -q php') echo php-id ;;
   'port nginx 80') echo 0.0.0.0:3180 ;;
@@ -223,7 +223,7 @@ for scenario in cold warm resume changed profile_changed setup handlers worker l
       grep -q 'READY ' "$TEST_REPO/output.log"
       if [[ "$scenario" = warm || "$scenario" = profile_changed ]]; then
         cmp "$TEST_REPO/.env" "$TEST_REPO/env-before"
-        ! grep -Eq 'release/test-install|compose stop|world-worker/run|docker stop' "$TEST_LOG"
+        ! grep -Eq 'release/test-install|compose stop|release/test-worker|docker stop' "$TEST_LOG"
       else
         grep -q 'release/test-install' "$TEST_LOG"
         grep -Fxq 'compose up -d --no-deps php nginx' "$TEST_LOG"

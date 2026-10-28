@@ -637,13 +637,21 @@ echo 'Node-context, single-builder and one-click lodging checks passed.' . PHP_E
         $wallet = \common\modules\world\modules\economy\value\Money::parse((string)(new Query())->select('credit')->from('persone')->where(['user_id' => $npcUser])->scalar($db));
         if (!$wallet->isZero()) (new \common\modules\world\modules\economy\models\domain\BudgetFunding($db))->contribute($npcUser, (int)$policy['world_id'], $wallet, 'Fixture existing money', $operation);
         $spending = new \common\modules\world\modules\economy\models\domain\BudgetSpending($db);
-        $accounts = (new Query())->select('a.id')->from(['a' => 'economy_account'])->innerJoin(['s' => 'economy_subject'], 's.id=a.subject_id')->innerJoin(['n' => 'world_node'], 'n.id=s.node_id')->where(['n.root_id' => $policy['world_id'], 'n.owner_user_id' => $npcUser, 'a.role' => 'budget'])->column($db);
-        foreach ($accounts as $id) {
-            $free = $spending->available((int)$id); if ($free->isZero()) continue;
+        $accounts = (new Query())->select(['a.id', 'n.node_type', 'n.settings_json'])->from(['a' => 'economy_account'])->innerJoin(['s' => 'economy_subject'], 's.id=a.subject_id')->innerJoin(['n' => 'world_node'], 'n.id=s.node_id')->where(['n.root_id' => $policy['world_id'], 'n.owner_user_id' => $npcUser, 'a.role' => 'budget'])->all($db);
+        $reserve = static function ($id) use ($db, $npcUser, $policy, $spending) {
+            $free = $spending->available((int)$id); if ($free->isZero()) return;
             $holdOperation = bin2hex(random_bytes(16));
             $db->createCommand()->insert('game_operation', ['id' => $holdOperation, 'user_id' => $npcUser, 'type' => 'fixture.npc.reserve', 'created_at' => time()] + EconomyRuntime::operationContext($db, ['node_id' => (int)$policy['world_id']]))->execute();
             $spending->reserve((int)$id, $free, 'Fixture protected reserve', $holdOperation);
+        };
+        foreach ($accounts as $account) if (in_array($account['node_type'], ['WORLD', 'REGION', 'SETTLEMENT'], true) || \common\modules\world\models\domain\NpcInfrastructure::role($account) === 'source') $reserve($account['id']);
+        $maintenance->refresh($policy, $operation);
+        $sources = array_filter((new \common\modules\world\models\domain\NpcInfrastructure($db))->nodes($policy), static fn($node) => \common\modules\world\models\domain\NpcInfrastructure::role($node) === 'source');
+        foreach ($sources as $source) {
+            $budget = (new \common\modules\world\modules\economy\models\domain\EconomyHierarchy($db))->accounts((int)$source['id'])['budget'];
+            economyCheck($spending->available((int)$budget['id'])->compare(\common\modules\world\modules\economy\value\Money::parse($policy['reward_cr'])) >= 0, 'idle NPC buffers fund at least one new batch without consuming reserved money: ' . $source['code']);
         }
+        foreach ($accounts as $account) $reserve($account['id']);
         $maintenance->refresh($policy, $operation); return [];
     });
     economyCheck(\common\modules\world\modules\economy\value\Money::parse($infrastructure->policy()['last_shortfall_cr'])->compare(\common\modules\world\modules\economy\value\Money::parse('0')) > 0
