@@ -74,7 +74,20 @@ final class WorldBalanceOverview
             $transit = $db->schema->getTableSchema('credit_transfer') ? (new Query())->select('amount')->from('credit_transfer')->where($open)->all($db) : [];
             $exchange = $db->schema->getTableSchema('credit_exchange') ? (new Query())->select('credit')->from('credit_exchange')->where($open)->andWhere(['in', 'type', ['buy', 'buy ']])->all($db) : [];
             $wallets = self::sum($users, 'credit'); $inTransit = self::sum($transit, 'amount'); $exchangeReserve = self::sum($exchange, 'credit'); $accountTotal = self::sum($accounts, 'amount');
+            $npc = new NpcInfrastructure($db); $npcPolicy = $npc->policy($world); $npcSummary = null;
+            if ($npcPolicy) {
+                $ids = array_column($npc->nodes($npcPolicy), 'id'); $free = Money::parse('0'); $protected = Money::parse('0'); $wallet = Money::parse('0');
+                foreach ($users as $user) if ((int)$user['id'] === (int)$npcPolicy['bot_user_id']) $wallet = Money::parse((string)$user['credit']);
+                foreach ($accounts as $account) if ($account['role'] === 'budget' && (int)$account['owner_user_id'] === (int)$npcPolicy['bot_user_id']
+                    && ((int)$account['hierarchy_level'] <= 3 || in_array((int)$account['node_id'], array_map('intval', $ids), true))) {
+                    $free = $free->add(Money::parse($account['available_cr'])); $protected = $protected->add(Money::parse((string)$account['reserved']));
+                }
+                $npcSummary = ['site_node_id' => (int)$npcPolicy['site_node_id'], 'wallet_cr' => $wallet->decimal(), 'free_budgets_cr' => $free->decimal(),
+                    'protected_cr' => $protected->decimal(), 'available_pool_cr' => $wallet->add($free)->decimal(), 'target_budget_cr' => $npcPolicy['target_budget_cr'],
+                    'reward_cr' => $npcPolicy['reward_cr'], 'refill_interval_seconds' => (int)$npcPolicy['refill_interval_seconds'], 'last_refill_at' => (int)$npcPolicy['last_refill_at'], 'shortfall_cr' => $npcPolicy['last_shortfall_cr']];
+            }
             return ['world_id' => $world, 'participants' => $participants, 'profile_version' => $revision['version'] ?? null, 'users' => $users, 'accounts' => $accounts, 'roles' => $roles,
+                'npc' => $npcSummary,
                 'starter_settlements' => $settlements, 'funded_starter_cr' => $fundedStarter->decimal(),
                 'wallets_cr' => $wallets->decimal(), 'accounts_cr' => $accountTotal->decimal(), 'transfer_reserve_cr' => $inTransit->decimal(), 'exchange_reserve_cr' => $exchangeReserve->decimal(),
                 'total_cr' => $wallets->add($accountTotal)->add($inTransit)->add($exchangeReserve)->decimal(),

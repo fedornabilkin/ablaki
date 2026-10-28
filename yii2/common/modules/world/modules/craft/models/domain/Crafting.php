@@ -33,11 +33,24 @@ class Crafting
             $skill = $skills[$recipe['category_id']] ?? [];
             $reasons[(int)$recipe['id']] = 1 + intdiv((int)($skill['experience'] ?? 0), 100) < (int)$recipe['min_level'] ? ['Нужен уровень ' . $recipe['min_level']] : [];
         }
-        $dependencies = (new Query())->select(['d.recipe_id', 'd.requires_id', 'recipe_name' => 'r.name', 'output_name' => 'i.name'])->from(['d' => 'craft_dependency'])
+        $dependencies = (new Query())->select(['d.recipe_id', 'd.requires_id', 'recipe_name' => 'r.name', 'output_name' => 'i.name', 'output_id' => 'i.id'])->from(['d' => 'craft_dependency'])
             ->leftJoin(['k' => 'craft_known'], '[[k.recipe_id]]=[[d.requires_id]] AND [[k.user_id]]=:requirementUser', [':requirementUser' => $user])
             ->leftJoin(['r' => 'craft_recipe'], '[[r.id]]=[[d.requires_id]]')->leftJoin(['i' => 'craft_item'], '[[i.id]]=[[r.item_id]]')
             ->where(['d.recipe_id' => array_column($recipes, 'id'), 'k.recipe_id' => null])->orderBy(['d.recipe_id' => SORT_ASC, 'd.requires_id' => SORT_ASC])->all($this->s->db);
-        foreach ($dependencies as $dependency) $reasons[(int)$dependency['recipe_id']][] = 'Сначала создайте: ' . trim($dependency['output_name'] ?? preg_replace('/^Создать:\s*/u', '', $dependency['recipe_name'] ?? 'рецепт #' . $dependency['requires_id']));
+        $shared = [];
+        if ($this->s->workspaceNodeId && (new \common\modules\world\models\domain\NpcInfrastructure($this->s->db))->publicWorkshop($this->s->workspaceNodeId)) {
+            $stations = (new Query())->from('craft_station')->where(['id' => array_values(array_filter(array_column($recipes, 'station_id'))), 'active' => 1])->indexBy('id')->all($this->s->db);
+            $availableStations = [];
+            foreach ($recipes as $recipe) {
+                $item = $stations[$recipe['station_id']]['item_id'] ?? null;
+                if ($item && !array_key_exists($item, $availableStations)) $availableStations[$item] = (new StationResolver($this->s))->select($user, (int)$item, true) !== null;
+                if ($item && $availableStations[$item]) $shared[(int)$recipe['id']] = (int)$item;
+            }
+        }
+        foreach ($dependencies as $dependency) {
+            if (($shared[(int)$dependency['recipe_id']] ?? null) === (int)$dependency['output_id']) continue;
+            $reasons[(int)$dependency['recipe_id']][] = 'Сначала создайте: ' . trim($dependency['output_name'] ?? preg_replace('/^Создать:\s*/u', '', $dependency['recipe_name'] ?? 'рецепт #' . $dependency['requires_id']));
+        }
         return $reasons;
     }
     private function event(int $user,string $action,int $qty,array $extra=[]): void
@@ -140,8 +153,9 @@ class Crafting
         $revision = \common\modules\world\models\domain\EconomyRuntime::current($this->s->db);
         $context = $revision['profile']['recipes'][trim($recipe['code'])]['context'] ?? null;
         if ($context !== null) {
-            $place = $this->s->workspaceNodeId ? (new Query())->from(['n' => 'world_node'])->innerJoin(['t' => 'world_template'], 't.id=n.template_id')
-                ->where(['n.id' => $this->s->workspaceNodeId, 'n.owner_user_id' => $user, 'n.status' => 'active', 't.code' => $context])->exists($this->s->db) : false;
+            $location = $this->s->workspaceNodeId ? (new Query())->select('n.*')->from(['n' => 'world_node'])->innerJoin(['t' => 'world_template'], 't.id=n.template_id')
+                ->where(['n.id' => $this->s->workspaceNodeId, 'n.status' => 'active', 't.code' => $context])->one($this->s->db) : null;
+            $place = $location && ((int)$location['owner_user_id'] === $user || (new \common\modules\world\models\domain\NpcInfrastructure($this->s->db))->publicWorkshop((int)$location['id']));
             if (!$place) throw new \common\modules\world\support\GameError('CRAFT_CONTEXT_REQUIRED', 'Выберите подходящий объект для приготовления: ' . $context, 409);
         }
         foreach (['output_quantity'=>[1,1000],'cost_credits'=>[0,1000000],'experience'=>[0,1000],'min_level'=>[1,100]] as $field=>$bounds) {
@@ -248,7 +262,7 @@ class Crafting
         $today=(new \DateTimeImmutable('@'.time()))->setTimezone(new \DateTimeZone('Europe/Moscow'))->setTime(0,0)->getTimestamp();
         $settings=['charge_credits'=>(new CraftSettings($s))->chargeCredits(),'gather_available_at'=>$today+86400];
         $finite = (new \common\modules\world\models\domain\FiniteSupplies($s->db))->state($user);
-        if ($finite) $settings = array_intersect_key($finite, array_flip(['gather_available', 'gather_available_at', 'gather_remaining', 'gather_limit', 'gather_exhausted'])) + $settings;
+        if ($finite) $settings = array_intersect_key($finite, array_flip(['gather_available', 'gather_available_at', 'gather_remaining', 'gather_limit', 'gather_exhausted', 'gather_minimum'])) + $settings;
         return $settings+$storage+['items'=>$items,'categories'=>$categories,'recipes'=>$recipes,'stations'=>$stations,'skills'=>$skills,'inventory'=>$inventory,'credit'=>(float)$person['credit'],'starter_available'=>!$this->one('craft_event',['user_id'=>$user,'action'=>'starter']),'gather_available'=>!(new Query())->from('craft_event')->where(['user_id'=>$user,'action'=>'gather'])->andWhere(['>=','created_at',$today])->exists($s->db)];
     }
     private function equipmentState(int $user, array $recipe): array

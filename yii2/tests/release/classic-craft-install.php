@@ -57,7 +57,7 @@ $release = new ReleaseReadinessFixture('release', $app);
 $oldContext = getenv('WORLD_TEST_SETUP'); $oldMode = getenv('WORLD_TEST_MODE');
 try {
     putenv('WORLD_TEST_SETUP'); putenv('WORLD_TEST_MODE');
-    foreach (['actionTestState', 'actionTestInstall', 'actionTestProfile'] as $action) {
+    foreach (['actionTestState', 'actionTestInstall', 'actionTestProfile', 'actionTestNpc'] as $action) {
         try { $release->$action(); throw new \LogicException('Test context was not required'); }
         catch (\RuntimeException $error) { checkInstall($error->getMessage() === 'Test release context is required.', $action . ' requires explicit test context'); }
     }

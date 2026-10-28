@@ -58,6 +58,8 @@ class ReleaseController extends \yii\console\Controller
                     'flags' => $capabilities, 'storage' => $storage['phase'] ?? null, 'wallet_ready' => $wallet['wallet_ready'] ?? false];
                 foreach (['schema_ready', 'world_read', 'world_write', 'storage_v2', 'economy_tick'] as $flag) $ready = $ready && !empty($capabilities[$flag]);
                 $ready = $ready && ($storage['phase'] ?? null) === 'active' && $wallet['wallet_ready'] && $profile !== null;
+                $npc = new \common\modules\world\models\domain\NpcInfrastructure($db);
+                $state['npc_ready'] = $npc->ready(); $ready = $ready && $state['npc_ready'];
             }
             $state['ready'] = $ready;
         } catch (\Throwable $error) {
@@ -79,6 +81,16 @@ class ReleaseController extends \yii\console\Controller
             if ($exit !== 0) return $exit;
         }
         return $this->world() ? Yii::$app->runAction('world-setup/test-ready') : 0;
+    }
+
+    public function actionTestNpc(string $author = 'fedornabilkin'): int
+    {
+        $this->context();
+        if (!$this->world()) return 0;
+        $user = (new Query())->select('id')->from('user')->where(['username' => $author])->scalar(Yii::$app->db);
+        if (!$user) throw new \RuntimeException('NPC setup requires an existing administrator.');
+        $this->output((new \common\modules\world\models\domain\NpcInfrastructure(Yii::$app->db))->install((int)$user));
+        return 0;
     }
 
     private function protectedState(): string

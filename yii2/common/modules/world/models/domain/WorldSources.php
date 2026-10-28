@@ -33,7 +33,7 @@ final class WorldSources
     private static function context(int $node, int $user): Node
     {
         $place = Node::readable($node, $user);
-        if ((int)$place->owner_user_id !== $user && (!$place->template || $place->template->code !== 'mine')) $place->requireOwner($user);
+        if ((int)$place->owner_user_id !== $user && !HiredExtraction::supports($place)) $place->requireOwner($user);
         if ((int)$place->root_id !== EconomyRuntime::world(Node::getDb()) || $place->status !== 'active' || (new Query())->from(['c' => 'world_node_closure'])->innerJoin(['n' => 'world_node'], 'n.id=c.ancestor_id')
             ->where(['c.descendant_id' => $node])->andWhere(['<>', 'n.status', 'active'])->exists(Node::getDb())) throw new GameError('SOURCE_UNAVAILABLE', 'Источник временно недоступен.', 409);
         return $place;
@@ -92,7 +92,7 @@ final class WorldSources
             'live_work' => $worker ? [['accounted_at' => (int)$worker['accounted_at'], 'last_seen_at' => (int)$worker['last_seen_at']]] : [],
             'status' => $work ? $work['status'] : 'idle', 'output_storage_id' => $work ? (int)$work['target_storage_id'] : null, 'output_destination' => $definition['output_destination'] ?? (isset($definition['employment']) ? 'mini_storage' : null), 'output_storages' => ExtractionStorage::choices($place, $user), 'actions' => $choices, 'blocked_code' => $work ? $work['blocked_code'] : null,
             'blocked_message' => $work ? $work['blocked_message'] : null, 'unavailable_reason' => $definition ? $missing($definition) : null,
-            'employment' => $place->template && $place->template->code === 'mine' ? HiredExtraction::state($place, $user, $work) : null,
+            'employment' => HiredExtraction::supports($place) ? HiredExtraction::state($place, $user, $work) : null,
             'quota' => EconomyQuota::state($db, $user, 'extraction_daily'), 'server_time' => time()];
     }
     private static function tools(int $user, array $definition): array
@@ -186,6 +186,9 @@ final class WorldSources
                         $inventory->applyCraft(isset($definition['employment']) ? (int)$definition['employment']['owner_user_id'] : $user, $plan, $target, [], $item, 'source:' . $work['action_code']);
                     }
                     HiredExtraction::pay($user, (int)$work['id'], $definition, $operation);
+                    $npc = new NpcMaintenance($db);
+                    if ($target['node_id'] !== null) $npc->priceStorage((int)$target['node_id'], $operation);
+                    $npc->ensureBudget($place, $operation);
                     EconomyRuntime::fact($db, $user, 'source:' . $work['action_code'], array_sum($definition['output']), $operation);
                     EconomyQuota::consume($db, $user, 'extraction_daily', 1, $operation);
                     foreach ($units as $unit) (new EquipmentExposure($db))->use($unit['instance_id'], 1, 1, false);

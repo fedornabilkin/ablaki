@@ -269,14 +269,17 @@ final class EconomyScenario
             foreach ($this->profile['daily']['items'] as $item => $amount) {
                 if ($this->config['finite_supplies']) {
                     $sources = $this->profile['daily']['suppressed_by'][$item] ?? [];
-                    if (array_intersect($sources, array_keys($this->state['objects']))) continue;
                     $used = $this->state['supply_claims'][$item] ?? 0;
-                    if ($used >= $this->profile['daily']['claim_limit']) continue;
-                    $grant[$item] = max(1, intdiv($amount * $this->efficiency(), 10000)) * ($this->profile['daily']['initial_multiplier'] - $used);
+                    $minimum = (int)($this->profile['daily']['minimum_quantity'] ?? 1);
+                    $value = $used >= $this->profile['daily']['claim_limit'] ? $minimum
+                        : max(1, intdiv($amount * $this->efficiency(), 10000)) * ($this->profile['daily']['initial_multiplier'] - $used);
+                    if (array_intersect($sources, array_keys($this->state['objects']))) $value = intdiv($value + 1, 2);
+                    if ($used < $this->profile['daily']['claim_limit'] && isset($this->state['supply_previous'][$item])) $value = min($value, $this->state['supply_previous'][$item] - 1);
+                    $grant[$item] = max($minimum, $value); $this->state['supply_previous'][$item] = $grant[$item];
                     $this->state['supply_claims'][$item] = $used + 1;
                 } else $grant[$item] = max(1, intdiv($amount * $this->efficiency(), 10000));
             }
-            if (!$grant) return; // The UI hides exhausted supplies; no command or quota is consumed.
+            if (!$grant) return;
             $this->stock($grant, 1); $this->state['daily'][$day] = true;
         } elseif ($action === 'grant') {
             // Direct owned children only; retain explicit movement and reserved parent funds.

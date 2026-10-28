@@ -46,10 +46,10 @@ final class BudgetDisbursement
         }
         return $transfer;
     }
-    public function toBudget(int $source, int $destination, Money $amount, string $operation, string $line, string $purpose, ?int $commitment = null): int
+    public function toBudget(int $source, int $destination, Money $amount, string $operation, string $line, string $purpose, ?int $commitment = null, string $kind = 'starter_funding'): int
     {
         if ($source === $destination) throw new \LogicException('Distinct budgets required.');
-        return $this->debit($source, $amount, $operation, $line, 'starter_funding', $purpose, $destination, null, $commitment);
+        return $this->debit($source, $amount, $operation, $line, $kind, $purpose, $destination, null, $commitment);
     }
     public function wage(int $source, int $user, Money $amount, string $operation, string $line, string $purpose, ?int $commitment = null): int
     {

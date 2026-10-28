@@ -6,6 +6,13 @@ $labels = ['budget' => 'Бюджеты', 'treasury' => 'Казны', 'loss' => '
 <section class="box box-primary" aria-label="Средства мира"><div class="box-header"><h2 class="box-title">Финансовая картина мира</h2></div><div class="box-body">
 <p>Участников в расчёте: <strong><?= $financialOverview['participants'] ?></strong>. Профиль <?= Html::encode($financialOverview['profile_version']) ?>. Резервы объектов уже входят в остатки счетов; повторно к сумме не прибавляются.</p>
 <p>Скорость времени: <strong>×<?= \common\modules\world\models\WorldTime::rate($financialOverview['world_id']) ?></strong>. <?= Html::a('Настроить время мира', ['update', 'id' => $financialOverview['world_id']], ['class' => 'btn btn-default btn-sm']) ?></p>
+<?php if ($npc = $financialOverview['npc'] ?? null): ?>
+<section class="well well-sm"><h3>Стартовая инфраструктура NPC bot</h3>
+<p><?= Html::a('Стоянка в Северограде', ['view', 'id' => $npc['site_node_id']]) ?> · Оплата партии: <?= $money($npc['reward_cr']) ?> · Свободный бюджет каждого объекта: <?= $money($npc['target_budget_cr']) ?>.</p>
+<p>На балансе bot: <?= $money($npc['wallet_cr']) ?> · Свободно в бюджетах NPC и публичных территорий: <?= $money($npc['free_budgets_cr']) ?> · Всего доступно для работы: <strong><?= $money($npc['available_pool_cr']) ?></strong>.</p>
+<p>Защищённые обязательства: <?= $money($npc['protected_cr']) ?>. Пополнение каждые <?= (int)$npc['refill_interval_seconds'] ?> с, также после выплаты. Выручка от продаж возвращается в этот оборот. Новые кредиты не выпускаются.</p>
+<?php if (!\common\modules\world\modules\economy\value\Money::parse((string)$npc['shortfall_cr'])->isZero()): ?><p class="text-danger">Не хватает для целевых бюджетов: <?= $money($npc['shortfall_cr']) ?>. Нужен перевод существующих средств в бюджет мира или на баланс bot.</p><?php endif ?>
+</section><?php endif ?>
 <div class="row"><div class="col-md-6">
 <?php if ($financialOverview['starter_settlements']): ?>
 <h3>Стартовые средства и места для заселения</h3>

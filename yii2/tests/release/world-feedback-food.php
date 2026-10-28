@@ -145,8 +145,8 @@ try {
         $claimFinite($key);
         economyCheck($afterCount > $beforeCount && (int)(new Query())->from('world_supply_claim')->where(['user_id' => $finiteUser])->count('*', $db) === $afterCount, 'finite supply retry never repeats item receipts: day ' . ($day + 1));
     }
-    economyCheck($counts === [14, 12, 10, 8, 6] && $finite->state($finiteUser)['gather_exhausted'], 'daily quantities strictly decrease and stop after five actual claims');
-    economyReject(static function () use ($claimFinite) { $claimFinite(bin2hex(random_bytes(16))); }, 'SUPPLIES_EXHAUSTED');
+    economyCheck($counts === [14, 12, 10, 8, 6] && $finite->state($finiteUser)['gather_minimum'] && !$finite->state($finiteUser)['gather_available'], 'five decreasing claims preserve the daily cooldown and switch to minimum supply');
+    economyReject(static function () use ($claimFinite) { $claimFinite(bin2hex(random_bytes(16))); }, 'SUPPLIES_ALREADY_CLAIMED');
     $history = (new \common\modules\world\models\domain\EconomyHistory($db))->listing($finiteUser, 'commands', 1, 'снабжение');
     if (!$history['items']) $history = (new \common\modules\world\models\domain\EconomyHistory($db))->listing($finiteUser, 'commands', 1, 'gather');
     $details = array_merge(...array_column($history['items'], 'items'));
@@ -154,14 +154,19 @@ try {
     $nextProfile = EconomyRuntime::current($db)['raw_profile']; $nextProfile['daily']['claim_limit'] = 6;
     $publisher = new \common\modules\world\models\domain\EconomyProfilePublisher($db); $nextPreview = $publisher->preview($nextProfile);
     $publisher->publish($nextProfile, $nextPreview['digest'], 9001, 'Finite allowance compatibility check');
-    economyCheck($finite->state($finiteUser)['gather_exhausted'], 'publishing a larger allowance never refills previously exhausted resources');
+    economyCheck($finite->state($finiteUser)['gather_minimum'] && $finite->state($finiteUser)['gather_remaining'] === 0, 'publishing a larger allowance does not refill old resources above the minimum');
+    Clock::$at += 86400;
+    $minimumState = $finite->state($finiteUser);
+    economyCheck($minimumState['gather_available'] && count($minimumState['items']) === 7 && array_unique(array_column($minimumState['items'], 'quantity')) === [1], 'next day retains one of every raw material, including sand and clay');
+    $minimumKey = bin2hex(random_bytes(16)); $claimFinite($minimumKey); $claimFinite($minimumKey);
+    economyCheck((int)(new Query())->from('world_supply_claim')->where(['user_id' => $finiteUser, 'ordinal' => 6])->count('*', $db) === 7 && !$finite->state($finiteUser)['gather_available'], 'minimum claim and replay apply once per resource and world day');
     $newItem = (new Query())->from('craft_item')->where(['code' => 'classic-log'])->one($db); unset($newItem['id']);
     $newItem['code'] = 'fixture-new-daily-resource'; $newItem['name'] = 'Новый ресурс снабжения'; $newItem['label'] = $newItem['name']; $newItem['gather_quantity'] = 1;
     $db->createCommand()->insert('craft_item', $newItem)->execute();
     $newState = $finite->state($finiteUser);
     economyCheck(array_column($newState['items'], 'code') === ['fixture-new-daily-resource'] && $newState['gather_available'], 'only the newly introduced catalogue resource reopens its own allowance');
     $claimFinite(bin2hex(random_bytes(16)));
-    economyCheck(!(new Query())->from('world_supply_claim')->where(['user_id' => $finiteUser, 'item_code' => 'classic-log', 'ordinal' => 6])->exists($db), 'new catalogue resources cannot repeat the old resource grants');
+    economyCheck((int)(new Query())->from('world_supply_claim')->where(['user_id' => $finiteUser, 'item_code' => 'classic-log', 'ordinal' => 6])->count('*', $db) === 1, 'a new catalogue resource cannot repeat even the minimum of an old resource');
 } finally { Clock::$at = null; $db->createCommand()->update('world_registry', ['active_world_id' => $previousWorld], ['id' => 1])->execute(); }
 
 $tx = $db->beginTransaction();
@@ -548,3 +553,101 @@ try {
 } finally { $tx->rollBack(); }
 
 echo 'Node-context, single-builder and one-click lodging checks passed.' . PHP_EOL;
+
+// Full NPC acceptance follows the legacy interaction fixtures.
+{
+    $npcWorld = (int)(new Query())->select('root_id')->from('world_node')->where(['code' => 'north-city'])->scalar($db);
+    $db->createCommand()->update('world_registry', ['active_world_id' => $npcWorld], ['id' => 1])->execute();
+    $db->createCommand()->update('game_command', ['created_at' => time() - 120], ['user_id' => $freshUser])->execute();
+    $npcUser = 9099;
+    $db->createCommand()->insert('user', ['id' => $npcUser, 'username' => 'bot'])->execute();
+    $db->createCommand()->insert('persone', ['id' => $npcUser, 'user_id' => $npcUser, 'credit' => '1000.0000', 'balance' => '0.0000'])->execute();
+    $adminPermission = $app->authManager->getPermission('p-admin');
+    if (!$adminPermission) { $adminPermission = $app->authManager->createPermission('p-admin'); $app->authManager->add($adminPermission); }
+    if (!$app->authManager->getAssignment('p-admin', 9001)) $app->authManager->assign($adminPermission, 9001);
+    $npcTotal = static function () use ($db): string {
+        return \common\modules\world\modules\economy\value\Money::parse((string)(new Query())->from('persone')->sum('credit', $db))
+            ->add(\common\modules\world\modules\economy\value\Money::parse((string)(new Query())->from('economy_account')->sum('amount', $db)))->decimal();
+    };
+    $npcMoneyBefore = $npcTotal();
+    $infrastructure = new \common\modules\world\models\domain\NpcInfrastructure($db);
+    economyReject(static function () use ($infrastructure, $freshUser) { $infrastructure->install($freshUser); }, 'NPC_ADMIN_REQUIRED');
+    $installed = $infrastructure->install(9001); $policy = $infrastructure->policy();
+    economyCheck($installed['changed'] && count($infrastructure->nodes($policy)) === 26 && $npcTotal() === $npcMoneyBefore, 'NPC setup builds the complete starting infrastructure using existing money only');
+    economyCheck(!$infrastructure->install(9001)['changed'] && $npcTotal() === $npcMoneyBefore, 'NPC setup is repeatable without duplicate buildings, equipment or funding');
+    economyCheck(!(new Query())->from('world_node')->where(['root_id' => $policy['world_id'], 'node_type' => ['WORLD', 'REGION', 'SETTLEMENT']])->andWhere(['or', ['owner_user_id' => null], ['<>', 'owner_user_id', $npcUser]])->exists($db), 'world, regions and settlements belong to bot');
+    if (!$app->authManager->getAssignment('world-tester', $freshUser)) $app->authManager->assign($testRole, $freshUser);
+    $db->createCommand()->update('world_player_health', ['hp' => 100], ['user_id' => $freshUser])->execute();
+    $waterNode = \common\modules\world\models\Node::requireOne(['code' => 'npc-bot-water']);
+    $wageWallet = \common\modules\world\modules\economy\value\Money::parse((string)(new Query())->select('credit')->from('persone')->where(['user_id' => $freshUser])->scalar($db));
+    $startedNpc = economySourceCommand($freshUser, (int)$waterNode->id, 'start', ['action_code' => 'gather-water']);
+    economyCheck($startedNpc['working'] && $startedNpc['employment']['enabled'] && !$startedNpc['employment']['owner'], 'a participant can accept paid work at a public NPC source');
+    $db->createCommand()->update('world_mining_worker', ['accounted_at' => time() - 60, 'last_seen_at' => time()], ['user_id' => $freshUser])->execute();
+    $npcBeatKey = bin2hex(random_bytes(16)); $npcBeatPayload = ['mining_node_id' => (int)$waterNode->id];
+    $npcBeat = static function ($op) use ($waterNode, $freshUser) { return \common\modules\world\models\Mining::heartbeat((int)$waterNode->id, $freshUser, $op); };
+    $completedNpc = \common\modules\world\models\Command::run($freshUser, $npcBeatKey, 'world.mining.heartbeat', $npcBeatPayload, $npcBeat);
+    economyCheck(!$completedNpc['working'] && \common\modules\world\modules\economy\value\Money::parse((string)(new Query())->select('credit')->from('persone')->where(['user_id' => $freshUser])->scalar($db))->compare($wageWallet->add(\common\modules\world\modules\economy\value\Money::parse('1'))) === 0, 'one finished source batch pays the reserved one-credit wage');
+    economyCheck(\common\modules\world\models\Command::run($freshUser, $npcBeatKey, 'world.mining.heartbeat', $npcBeatPayload, $npcBeat) === $completedNpc && $npcTotal() === $npcMoneyBefore, 'source completion replay preserves wages and total money');
+    $waterStorage = \common\modules\world\models\domain\HiredExtraction::storages($waterNode)[0];
+    $shop = new \common\modules\world\models\domain\GardenHarvest($db, $flags); $shopState = $shop->state($freshUser, (int)$waterStorage['node_id']);
+    economyCheck($shopState['npc_supply'] && !$shopState['owned_by_me'] && count($shopState['items']) === 1 && $shopState['items'][0]['quantity'] === 2 && $shopState['items'][0]['price'] === '2.0000' && !$shopState['items'][0]['spoiled'], 'actual hired output goes into the NPC mini-storage and receives a nonperishable public sale price');
+    $saleInput = ['inventory_id' => $shopState['items'][0]['inventory_id'], 'quantity' => 1];
+    $saleQuote = $shop->preview($freshUser, (int)$waterStorage['node_id'], 'buy', $saleInput); $saleKey = bin2hex(random_bytes(16));
+    $sold = $shop->execute($freshUser, (int)$waterStorage['node_id'], 'buy', $saleInput, $saleKey, $saleQuote['quote_id'], (array)$saleQuote['expected_revisions']);
+    economyCheck($shop->execute($freshUser, (int)$waterStorage['node_id'], 'buy', $saleInput, $saleKey, $saleQuote['quote_id'], (array)$saleQuote['expected_revisions']) === $sold && $npcTotal() === $npcMoneyBefore && $shop->state($freshUser, (int)$waterStorage['node_id'])['items'][0]['quantity'] === 1, 'NPC sale transfers real stock and buyer funds exactly once');
+    $forgeNode = \common\modules\world\models\Node::requireOne(['code' => 'npc-bot-forge']);
+    $workspace = new \common\modules\world\modules\craft\models\domain\CraftWorkspace($db, $flags);
+    $ingotRecipe = (int)(new Query())->select('id')->from('craft_recipe')->where(['code' => 'classic-ingot'])->scalar($db);
+    $workshopState = $workspace->state($freshUser, (int)$forgeNode->id, $ingotRecipe);
+    economyCheck(!$workshopState['object_budget_payment'] && count($workshopState['equipment'][0]['candidates']) === 1 && !in_array((int)$waterStorage['id'], array_column($workshopState['storages'], 'id'), true), 'NPC forge lends its station while hiding its budget and inventory');
+    $db->transaction(static function () use ($db, $freshStock, $freshUser) { foreach (['classic-ore', 'classic-coal'] as $material) $freshStock->move($freshUser, (new Query())->from('craft_item')->where(['code' => $material])->one($db), 2); });
+    $forgeInput = ['node_id' => (int)$forgeNode->id, 'recipe_id' => $ingotRecipe, 'quantity' => 1, 'source_storage_ids' => [$backpackId], 'output_storage_id' => $backpackId,
+        'equipment_instance_ids' => [(int)$workshopState['equipment'][0]['candidates'][0]['instance_id']], 'use_object_budget' => false];
+    $forgeQuote = $workspace->preview($freshUser, $forgeInput);
+    economyCheck(!$forgeQuote['terms']['reasons'], 'public NPC forge accepts the participant materials and placed station');
+    $forgeKey = bin2hex(random_bytes(16)); $forged = $workspace->craft($freshUser, $forgeKey, $forgeInput, $forgeQuote['quote_id'], (array)$forgeQuote['expected_revisions']);
+    economyCheck($workspace->craft($freshUser, $forgeKey, $forgeInput, $forgeQuote['quote_id'], (array)$forgeQuote['expected_revisions']) === $forged && $forged['craft_result']['output']['quantity'] === 1 && $npcTotal() === $npcMoneyBefore, 'NPC station craft and replay produce one ingot without taking NPC materials or money');
+    $forbiddenForge = $forgeInput; $forbiddenForge['source_storage_ids'] = [(int)$waterStorage['id']];
+    try { $workspace->preview($freshUser, $forbiddenForge); throw new \RuntimeException('NPC inventory access was accepted.'); }
+    catch (\yii\web\HttpException $error) { economyCheck(in_array($error->statusCode, [403, 404], true), 'public workshop does not grant access to NPC stock'); }
+    $npcPrivate = static function () use ($db, $npcUser): array {
+        return (new Query())->select(['a.id', 'a.amount', 'a.reserved'])->from(['a' => 'economy_account'])->innerJoin(['s' => 'economy_subject'], 's.id=a.subject_id')->innerJoin(['n' => 'world_node'], 'n.id=s.node_id')
+            ->where(['not', ['n.owner_user_id' => $npcUser]])->orderBy('a.id')->all($db);
+    };
+    $privateBefore = $npcPrivate();
+    $maintenance = new \common\modules\world\models\domain\NpcMaintenance($db);
+    $npcRefresh = static function () use ($db, $maintenance, $policy) {
+        return Command::run(9001, bin2hex(random_bytes(16)), 'fixture.npc.refresh', ['node_id' => (int)$policy['world_id']], static function ($operation) use ($maintenance, $policy) { $maintenance->refresh($policy, $operation); return []; });
+    };
+    $npcRefresh();
+    economyCheck($npcTotal() === $npcMoneyBefore && $npcPrivate() === $privateBefore
+        && \common\modules\world\modules\economy\value\Money::parse((string)(new Query())->select('amount')->from('economy_account')->where(['subject_id' => (new Query())->select('id')->from('economy_subject')->where(['node_id' => $waterStorage['node_id']]), 'role' => 'treasury'])->scalar($db))->isZero(), 'maintenance collects NPC sale proceeds without touching private accounts or issuing credits');
+    economySourceCommand($freshUser, (int)$waterNode->id, 'start', ['action_code' => 'gather-water']);
+    $npcRefresh();
+    $waterAccounts = (new \common\modules\world\modules\economy\models\domain\EconomyHierarchy($db))->accounts((int)$waterNode->id);
+    economyCheck(\common\modules\world\modules\economy\value\Money::parse($waterAccounts['budget']['reserved'])->decimal() === '1.0000'
+        && (new \common\modules\world\modules\economy\models\domain\BudgetSpending($db))->available((int)$waterAccounts['budget']['id'])->decimal() === '20.0000', 'refill tops up free funds while preserving the accepted wage reserve');
+    $db->createCommand()->update('world_mining_worker', ['accounted_at' => time() - 60, 'last_seen_at' => time()], ['user_id' => $freshUser])->execute();
+    \common\modules\world\models\Mining::discover();
+    economyCheck(!\common\modules\world\models\Mining::state((int)$waterNode->id, $freshUser)['working'] && !EconomyRuntime::admission($db, $npcUser)['allowed'] && $npcTotal() === $npcMoneyBefore, 'trusted background completion works for bot without granting it participant access');
+    $db->createCommand()->update('world_npc_policy', ['last_refill_at' => 0], ['id' => $policy['id']])->execute();
+    $maintenance->discover(); $queue = new \common\modules\world\support\JobQueue($db); $job = $queue->claim(['world.npc.maintain']);
+    economyCheck($job !== null && $queue->perform($job, static function ($payload, $row) use ($maintenance) { $maintenance->perform($payload, $row); }) && $npcTotal() === $npcMoneyBefore, 'recurring NPC maintenance runs through the leased job queue');
+    Command::run(9001, bin2hex(random_bytes(16)), 'fixture.npc.exhaust-free-pool', ['node_id' => (int)$policy['world_id']], static function ($operation) use ($db, $npcUser, $policy, $maintenance) {
+        $wallet = \common\modules\world\modules\economy\value\Money::parse((string)(new Query())->select('credit')->from('persone')->where(['user_id' => $npcUser])->scalar($db));
+        if (!$wallet->isZero()) (new \common\modules\world\modules\economy\models\domain\BudgetFunding($db))->contribute($npcUser, (int)$policy['world_id'], $wallet, 'Fixture existing money', $operation);
+        $spending = new \common\modules\world\modules\economy\models\domain\BudgetSpending($db);
+        $accounts = (new Query())->select('a.id')->from(['a' => 'economy_account'])->innerJoin(['s' => 'economy_subject'], 's.id=a.subject_id')->innerJoin(['n' => 'world_node'], 'n.id=s.node_id')->where(['n.root_id' => $policy['world_id'], 'n.owner_user_id' => $npcUser, 'a.role' => 'budget'])->column($db);
+        foreach ($accounts as $id) {
+            $free = $spending->available((int)$id); if ($free->isZero()) continue;
+            $holdOperation = bin2hex(random_bytes(16));
+            $db->createCommand()->insert('game_operation', ['id' => $holdOperation, 'user_id' => $npcUser, 'type' => 'fixture.npc.reserve', 'created_at' => time()] + EconomyRuntime::operationContext($db, ['node_id' => (int)$policy['world_id']]))->execute();
+            $spending->reserve((int)$id, $free, 'Fixture protected reserve', $holdOperation);
+        }
+        $maintenance->refresh($policy, $operation); return [];
+    });
+    economyCheck(\common\modules\world\modules\economy\value\Money::parse($infrastructure->policy()['last_shortfall_cr'])->compare(\common\modules\world\modules\economy\value\Money::parse('0')) > 0
+        && \common\modules\world\models\domain\HiredExtraction::configuration($waterNode)['enabled'] && $npcTotal() === $npcMoneyBefore && $npcPrivate() === $privateBefore, 'finite pool exhaustion reports a shortfall while retaining public work policy, private money and every protected reserve');
+    $overviewNpc = (new \common\modules\world\models\domain\WorldBalanceOverview($db))->report()['npc'];
+    economyCheck($overviewNpc['available_pool_cr'] === '0.0000' && $overviewNpc['protected_cr'] !== '0.0000' && $overviewNpc['shortfall_cr'] !== '0.0000', 'admin overview separates spendable NPC funds from protected obligations and funding shortfall');
+}

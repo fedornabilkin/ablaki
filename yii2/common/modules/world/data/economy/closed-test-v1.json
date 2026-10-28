@@ -3,7 +3,7 @@
   "code": "economy-closed-test-v1",
   "status": "candidate",
   "created_on": "2026-10-16",
-  "updated_on": "2026-10-23",
+  "updated_on": "2026-10-28",
   "effective_from": null,
   "activation": "explicit_versioned_publication",
   "currency": "Cr",
@@ -64,6 +64,12 @@
       ],
       "classic-water": [
         "water-source"
+      ],
+      "classic-sand": [
+        "sand-plot"
+      ],
+      "classic-clay": [
+        "clay-plot"
       ]
     },
     "items": {
@@ -71,11 +77,14 @@
       "classic-stone": 2,
       "classic-fibre": 2,
       "classic-water": 2,
-      "classic-herb": 1
+      "classic-herb": 1,
+      "classic-sand": 1,
+      "classic-clay": 1
     },
     "credits_cr": "0.0000",
     "timezone": "Europe/Moscow",
-    "night_efficiency_applies": true
+    "night_efficiency_applies": true,
+    "minimum_quantity": 1
   },
   "map": {
     "starter_open_square": [

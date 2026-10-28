@@ -94,7 +94,7 @@ class Node extends LockedRecord
         }
         if (!$this->isNewRecord && ($this->isAttributeChanged('code') || $this->isAttributeChanged('parent_id') || $this->isAttributeChanged('template_id') || $this->isAttributeChanged('owner_user_id')))
             $this->addError('parent_id', 'Для существующего объекта родитель, шаблон и владелец фиксированы.');
-        if ($parent && $parent->owner_user_id !== null && (int)$parent->owner_user_id !== (int)$this->owner_user_id)
+        if ($parent && (int)$parent->hierarchy_level >= 4 && $parent->owner_user_id !== null && (int)$parent->owner_user_id !== (int)$this->owner_user_id)
             $this->addError('owner_user_id', 'Объект должен принадлежать владельцу территории.');
         $this->hierarchy_level = $parent ? (int)$parent->hierarchy_level + 1 : 1;
         $this->depth = $this->hierarchy_level - 1;

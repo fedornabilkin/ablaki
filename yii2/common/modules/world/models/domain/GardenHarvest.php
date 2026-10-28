@@ -66,6 +66,7 @@ class GardenHarvest
     {
         return (new FinanceReadSnapshot($this->db))->run(function () use ($user, $garden) {
             $c = $this->context($garden, $user); $owner = (int)$c['node']['owner_user_id'] === $user; $now = time(); $items = [];
+            $npc = (new NpcInfrastructure($this->db))->managed($c['node'], ['store', 'warehouse']);
             $rows = (new Query())->select(['i.*', 'l.harvested_at', 'l.spoiled_at', 'l.price', 'name' => 'd.name', 'icon' => 'd.icon'])->from(['i' => 'craft_inventory'])
                 ->leftJoin(['l' => 'world_harvest_lot'], '[[l.inventory_id]]=[[i.id]]')->innerJoin(['d' => 'craft_item'], '[[d.id]]=[[i.item_id]]')
                 ->where(['i.storage_id' => $c['storage']['id']])->andWhere(['>', 'i.item_quantity', 0])->orderBy(['i.slot' => SORT_ASC])->all($this->db);
@@ -73,11 +74,11 @@ class GardenHarvest
                 if ($row['harvested_at'] === null) { $row['harvested_at'] = 2147483647 - self::FRESH_SECONDS; $row['spoiled_at'] = $now; }
                 $lost = self::spoiled($row, (int)$row['item_quantity'], $now);
                 $items[] = ['inventory_id' => (int)$row['id'], 'position' => (int)$row['slot'], 'name' => $row['name'], 'icon' => $row['icon'], 'quantity' => (int)$row['item_quantity'] - $lost,
-                    'harvested_at' => (int)$row['harvested_at'], 'fresh_until' => (int)$row['harvested_at'] + self::FRESH_SECONDS, 'spoiled' => $row['spoiled_at'] !== null || $now >= (int)$row['harvested_at'] + self::FRESH_SECONDS,
+                    'harvested_at' => (int)$row['harvested_at'], 'fresh_until' => $npc ? 2147483647 : (int)$row['harvested_at'] + self::FRESH_SECONDS, 'spoiled' => !$npc && ($row['spoiled_at'] !== null || $now >= (int)$row['harvested_at'] + self::FRESH_SECONDS),
                     'price' => $row['price'] === null ? null : Money::parse((string)$row['price'])->decimal()];
             }
             $settings = json_decode($c['node']['settings_json'] ?? '{}', true);
-            return ['node_id' => $garden, 'name' => $c['node']['name'], 'capacity' => (int)$c['storage']['capacity'], 'allow_sales' => ($settings['allow_sales'] ?? false) === true, 'owned_by_me' => $owner, 'items' => $items, 'destinations' => $owner ? $this->destinations($user, $garden) : [], 'writable' => $this->flags->capabilities()['world_write'], 'server_time' => $now];
+            return ['node_id' => $garden, 'name' => $c['node']['name'], 'capacity' => (int)$c['storage']['capacity'], 'npc_supply' => $npc, 'allow_sales' => ($settings['allow_sales'] ?? false) === true, 'owned_by_me' => $owner, 'items' => $items, 'destinations' => $owner ? $this->destinations($user, $garden) : [], 'writable' => $this->flags->capabilities()['world_write'], 'server_time' => $now];
         });
     }
     private function destinations(int $user, int $garden): array
@@ -186,8 +187,10 @@ class GardenHarvest
                 if ($action === 'buy') {
                     $profile = EconomyRuntime::current($this->db);
                     if ($profile && $payload['quantity'] > $profile['profile']['limits']['sales_daily']['same_item_per_operation']) throw new GameError('SALE_QUANTITY_LIMIT', 'Превышен предел одинаковых предметов в одной продаже.', 422);
-                    EconomyQuota::consume($this->db, $p['owner'], 'sales_daily', 1, $operation, $terms['total']);
-                    (new TreasuryLedger($this->db))->receivePersonalPayment($user, $garden, Money::parse($terms['total']), $operation, 'Покупка урожая: ' . $terms['name']);
+                    $seller = $this->one('world_node', ['id' => $garden]);
+                    $npc = (new NpcInfrastructure($this->db))->managed($seller, ['store', 'warehouse']);
+                    if (!$npc) EconomyQuota::consume($this->db, $p['owner'], 'sales_daily', 1, $operation, $terms['total']);
+                    (new TreasuryLedger($this->db))->receivePersonalPayment($user, $garden, Money::parse($terms['total']), $operation, ($npc ? 'Покупка сырья: ' : 'Покупка урожая: ') . $terms['name']);
                 }
                 $inventory->consumeHarvest($p['owner'], $payload['inventory_id'], $payload['quantity'], $action === 'buy' ? 'harvest.sold' : 'harvest.withdrawn');
                 $inventory->applyCraft($user, $p['plan'], $p['target'], [], $p['item'], 'harvest.' . $action);
