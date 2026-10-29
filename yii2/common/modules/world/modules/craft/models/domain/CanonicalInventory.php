@@ -13,6 +13,12 @@ class CanonicalInventory
     private $equipment;
     public function __construct(CraftStorage $store) { $this->s = $store; $this->db = $store->db; $this->equipment = new EquipmentInstances($this->db); }
     private function transaction(): void { if (!$this->db->getTransaction()) throw new \LogicException('Inventory writes require a transaction.'); }
+    private function stackSize(array $storage, array $item): int
+    {
+        $stack = ($item['storage_kind'] ?? '') === 'chest' ? 1 : (int)$item['stack_size'];
+        if ($stack < 1 || $stack > 10000) throw new ConflictHttpException('Некорректный размер стопки.');
+        return min($stack, \common\modules\world\models\domain\MiniStorage::slotLimit($this->db, $storage) ?? $stack);
+    }
     public function backpack(int $user): ?array { return (new Query())->from('craft_storage')->where(['identity_key' => 'backpack:user:' . $user, 'owner_user_id' => $user, 'status' => 'active'])->one($this->db) ?: null; }
     /** Dedicated lifecycle writer. Generic storage routes cannot access kind=shelter. */
     public function shelter(int $user, array $item, array $target, int $position, ?array $source = null): array
@@ -134,8 +140,7 @@ class CanonicalInventory
             throw new ConflictHttpException('Не хватает доступных предметов. Установленные вещи и содержимое сундуков не расходуются из рюкзака.');
         }
         if ($slot !== null) throw new \InvalidArgumentException('Positive slot targeting is unsupported.');
-        $stack = ($item['storage_kind'] ?? '') === 'chest' ? 1 : (int)$item['stack_size'];
-        if ($stack < 1 || $stack > 10000) throw new ConflictHttpException('Некорректный размер стопки.');
+        $stack = $this->stackSize($storage, $item);
         $occupied = [];
         foreach ($this->rows((int)$storage['id']) as $row) {
             $occupied[(int)$row['slot']] = true;
@@ -288,8 +293,7 @@ class CanonicalInventory
         $remainingRows = [];
         foreach ($this->rows((int)$target['id']) as $row) $remainingRows[(int)$row['id']] = $row;
         foreach ($consumed as $take) if (isset($remainingRows[$take['inventory_id']])) $remainingRows[$take['inventory_id']]['item_quantity'] -= $take['quantity'];
-        $stack = ($output['storage_kind'] ?? '') === 'chest' ? 1 : (int)$output['stack_size'];
-        if ($stack < 1 || $stack > 10000) throw new ConflictHttpException('Некорректный размер стопки.');
+        $stack = $this->stackSize($target, $output);
         $canStore = !(($output['storage_kind'] ?? '') === 'chest' && $target['kind'] === 'chest');
         $left = $quantity; $grants = []; $occupied = [];
         foreach ($remainingRows as $row) {
@@ -370,7 +374,7 @@ class CanonicalInventory
         $occupied = (new Query())->from('craft_inventory')->where(['storage_id' => $destination, 'slot' => $position])->andWhere(['>', 'item_quantity', 0])->one($this->db);
         if ($occupied && (int)$occupied['id'] === $inventory) throw new ConflictHttpException('Предмет уже в этом слоте.');
         if ($occupied && (int)$occupied['item_id'] !== (int)$item['id']) throw new ConflictHttpException('Слот занят другим предметом.');
-        $stack = $chest ? 1 : (int)$item['stack_size'];
+        $stack = $this->stackSize($target, $item);
         if ($target['kind'] === 'placement') {
             \common\modules\world\models\domain\EconomyPlacement::check($this->db, $user, $item, $source, $target);
             $slot = (new Query())->from('world_slot')->where(['storage_id' => $destination, 'position' => $position, 'status' => 'active'])->one($this->db);
