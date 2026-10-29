@@ -1,6 +1,6 @@
 # Профиль экономики закрытого теста v1
 
-Дата: 2026-10-16. Код: `economy-closed-test-v1`. Статус: **candidate, не опубликован в игре**. Основание — [economy.md](../tz/economy.md), решения владельца и [CONTENT](../plan/2026-10-16-world-economy-content.md). Машиночитаемые значения: [closed-test-v1.json](../../yii2/common/modules/world/data/economy/closed-test-v1.json).
+Дата: 2026-10-16. Код: `economy-closed-test-v1`. Статус: **candidate, не опубликован в игре**. Основание — [economy.md](../tz/economy.md), решения владельца и [CONTENT](../plan/done/2026-10-16-world-economy-content.md). Машиночитаемые значения: [closed-test-v1.json](../../yii2/common/modules/world/data/economy/closed-test-v1.json).
 
 Профиль содержит 57 предметов, 44 рецепта (40 существующих и 4 новых), 22 новых/изменяемых объекта и 14 действий источников/культивации. Это контракт будущих изменений, а не второй каталог с остатками. Его нельзя напрямую импортировать через CraftCatalog: существующие ID, состояния, изучение рецептов и правки администратора сохраняются будущим адаптером применения.
 
