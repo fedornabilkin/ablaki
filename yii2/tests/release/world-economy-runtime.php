@@ -11,7 +11,8 @@ use common\modules\world\support\GameError;
 use yii\db\Query;
 
 foreach (['m261008_120000_world_mvp_facilities', 'm261008_160000_world_construction_mining', 'm261008_210000_world_object_repair', 'm261009_170000_world_common_foundation'] as $migrationClass) {
-    ob_start(); try { (new $migrationClass(['db' => $db]))->up(); } finally { ob_end_clean(); }
+    ob_start(); try { $migrationOk = (new $migrationClass(['db' => $db]))->up(); } finally { $migrationLog = ob_get_clean(); }
+    if ($migrationOk === false) throw new RuntimeException('Migration failed: ' . $migrationClass . PHP_EOL . $migrationLog);
 }
 $db->schema->refresh();
 require_once $yiiRoot . '/console/world-migrations/m261023_120000_world_starter_funding.php';

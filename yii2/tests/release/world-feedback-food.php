@@ -573,8 +573,11 @@ echo 'Node-context, single-builder and one-click lodging checks passed.' . PHP_E
     $infrastructure = new \common\modules\world\models\domain\NpcInfrastructure($db);
     economyReject(static function () use ($infrastructure, $freshUser) { $infrastructure->install($freshUser); }, 'NPC_ADMIN_REQUIRED');
     $installed = $infrastructure->install(9001); $policy = $infrastructure->policy();
-    economyCheck($installed['changed'] && count($infrastructure->nodes($policy)) === 26 && $npcTotal() === $npcMoneyBefore, 'NPC setup builds the complete starting infrastructure using existing money only');
+    economyCheck($installed['changed'] && count($infrastructure->nodes($policy)) === 25 && $npcTotal() === $npcMoneyBefore, 'NPC setup builds the complete starting infrastructure without a redundant mini inside the warehouse, using existing money only');
     economyCheck(!$infrastructure->install(9001)['changed'] && $npcTotal() === $npcMoneyBefore, 'NPC setup is repeatable without duplicate buildings, equipment or funding');
+    $npcWarehouse = Node::requireOne(['code' => 'npc-bot-warehouse']);
+    $miniTemplate = NodeTemplate::requireOne(['code' => 'mini-storage-level-6']);
+    economyCheck(!$miniTemplate->permits($npcWarehouse) && !(new Query())->from('world_node')->where(['parent_id' => $npcWarehouse->id, 'node_type' => 'CHEST', 'status' => 'active'])->exists($db), 'a full warehouse neither contains nor permits a mini-storage');
     economyCheck(!(new Query())->from('world_node')->where(['root_id' => $policy['world_id'], 'node_type' => ['WORLD', 'REGION', 'SETTLEMENT']])->andWhere(['or', ['owner_user_id' => null], ['<>', 'owner_user_id', $npcUser]])->exists($db), 'world, regions and settlements belong to bot');
     if (!$app->authManager->getAssignment('world-tester', $freshUser)) $app->authManager->assign($testRole, $freshUser);
     $db->createCommand()->update('world_player_health', ['hp' => 100], ['user_id' => $freshUser])->execute();
@@ -589,12 +592,75 @@ echo 'Node-context, single-builder and one-click lodging checks passed.' . PHP_E
     economyCheck(!$completedNpc['working'] && \common\modules\world\modules\economy\value\Money::parse((string)(new Query())->select('credit')->from('persone')->where(['user_id' => $freshUser])->scalar($db))->compare($wageWallet->add(\common\modules\world\modules\economy\value\Money::parse('1'))) === 0, 'one finished source batch pays the reserved one-credit wage');
     economyCheck(\common\modules\world\models\Command::run($freshUser, $npcBeatKey, 'world.mining.heartbeat', $npcBeatPayload, $npcBeat) === $completedNpc && $npcTotal() === $npcMoneyBefore, 'source completion replay preserves wages and total money');
     $waterStorage = \common\modules\world\models\domain\HiredExtraction::storages($waterNode)[0];
+    economyCheck((int)$waterStorage['capacity'] === 5 && !NodeTemplate::requireOne(['code' => 'mini-storage-level-7'])->permits(Node::requireOne((int)$waterStorage['node_id'])), 'mini-storages have five resource cells and cannot contain another mini-storage');
     $shop = new \common\modules\world\models\domain\GardenHarvest($db, $flags); $shopState = $shop->state($freshUser, (int)$waterStorage['node_id']);
     economyCheck($shopState['npc_supply'] && !$shopState['owned_by_me'] && count($shopState['items']) === 1 && $shopState['items'][0]['quantity'] === 2 && $shopState['items'][0]['price'] === '2.0000' && !$shopState['items'][0]['spoiled'], 'actual hired output goes into the NPC mini-storage and receives a nonperishable public sale price');
+    economyCheck($shopState['capacity'] === 5 && $shopState['slot_limit'] === 100, 'public stock response describes five slots of up to one hundred units');
+    economyCheck(!(new \common\modules\world\models\domain\WorldQuery($db, new \common\modules\world\models\domain\WorldAccessPolicy($freshUser)))->map((int)$waterNode->id)['can_expand'], 'public mining access never grants exploration or purchase rights over the NPC map');
     $saleInput = ['inventory_id' => $shopState['items'][0]['inventory_id'], 'quantity' => 1];
     $saleQuote = $shop->preview($freshUser, (int)$waterStorage['node_id'], 'buy', $saleInput); $saleKey = bin2hex(random_bytes(16));
     $sold = $shop->execute($freshUser, (int)$waterStorage['node_id'], 'buy', $saleInput, $saleKey, $saleQuote['quote_id'], (array)$saleQuote['expected_revisions']);
     economyCheck($shop->execute($freshUser, (int)$waterStorage['node_id'], 'buy', $saleInput, $saleKey, $saleQuote['quote_id'], (array)$saleQuote['expected_revisions']) === $sold && $npcTotal() === $npcMoneyBefore && $shop->state($freshUser, (int)$waterStorage['node_id'])['items'][0]['quantity'] === 1, 'NPC sale transfers real stock and buyer funds exactly once');
+    // Reproduce the previously shipped 50-slot NPC layout, including the empty nested warehouse.
+    $tx = $db->beginTransaction();
+    try {
+        $layoutOperation = bin2hex(random_bytes(16));
+        $db->createCommand()->insert('game_operation', ['id' => $layoutOperation, 'user_id' => 9001, 'type' => 'fixture.storage-layout', 'created_at' => time()])->execute();
+        $db->createCommand()->update('craft_storage', ['capacity' => 50], ['id' => $waterStorage['id']])->execute();
+        $db->createCommand()->update('world_warehouse_policy', ['initial_capacity' => 50, 'max_capacity' => 200], ['storage_id' => $waterStorage['id']])->execute();
+        $warehouseSettings = $npcWarehouse->settings_json;
+        $db->createCommand()->update('world_node', ['settings_json' => '{}'], ['id' => $npcWarehouse->id])->execute(); $npcWarehouse->refresh();
+        $redundant = NodeFactory::create($miniTemplate, $npcWarehouse, $npcUser, 'Historical redundant mini', 'npc-bot-mini-' . $npcWarehouse->id, null, 'constructing');
+        $db->createCommand()->update('world_node', ['settings_json' => $warehouseSettings], ['id' => $npcWarehouse->id])->execute(); $npcWarehouse->refresh();
+        $db->createCommand()->update('world_node', ['status' => 'active', 'condition' => $redundant->max_condition, 'settings_json' => '{"npc_role":"store","storage_capacity":50,"allow_sales":true}'], ['id' => $redundant->id])->execute(); $redundant->refresh();
+        (new \common\modules\world\modules\economy\models\domain\EconomyHierarchy($db))->provision((int)$redundant->id, $layoutOperation);
+        $redundantStock = \common\modules\world\models\domain\BuildingFacilities::stockpile($db, (int)$redundant->id, $npcUser, 'warehouse');
+        $stockBefore = (new Query())->from('craft_inventory')->where(['storage_id' => $waterStorage['id']])->orderBy('id')->all($db);
+        $lotsBefore = (new Query())->from('world_harvest_lot')->where(['inventory_id' => array_column($stockBefore, 'id')])->orderBy('inventory_id')->all($db);
+        $db->createCommand()->update('craft_inventory', ['slot' => 6], ['id' => $saleInput['inventory_id']])->execute();
+        economyReject(static fn() => $infrastructure->install(9001), 'NPC_STORAGE_REVIEW_REQUIRED');
+        economyCheck((int)(new Query())->select('capacity')->from('craft_storage')->where(['id' => $waterStorage['id']])->scalar($db) === 50 && $npcTotal() === $npcMoneyBefore, 'an incompatible old layout is preserved atomically instead of hiding stock or losing money');
+        $db->createCommand()->update('craft_inventory', ['slot' => 1], ['id' => $saleInput['inventory_id']])->execute();
+        $guard = $db->beginTransaction();
+        try {
+            (new \common\modules\world\modules\economy\models\domain\BudgetFunding($db))->contribute($npcUser, (int)$redundant->id, \common\modules\world\modules\economy\value\Money::parse('1'), 'Fixture protected money', $layoutOperation);
+            economyReject(static fn() => $infrastructure->install(9001), 'NPC_STORAGE_REVIEW_REQUIRED');
+            economyCheck(Node::requireOne((int)$redundant->id)->status === 'active' && $npcTotal() === $npcMoneyBefore, 'layout correction cannot archive a nested storage containing existing money');
+        } finally { $guard->rollBack(); }
+        economyCheck($infrastructure->install(9001)['changed'], 'existing fifty-slot NPC layout is repaired without reinstalling the world');
+        economyCheck((int)(new Query())->select('capacity')->from('craft_storage')->where(['id' => $waterStorage['id']])->scalar($db) === 5
+            && (new Query())->from('craft_inventory')->where(['storage_id' => $waterStorage['id']])->orderBy('id')->all($db) === $stockBefore
+            && (new Query())->from('world_harvest_lot')->where(['inventory_id' => array_column($stockBefore, 'id')])->orderBy('inventory_id')->all($db) === $lotsBefore
+            && Node::requireOne((int)$redundant->id)->status === 'archived' && $npcTotal() === $npcMoneyBefore, 'layout repair preserves inventory identities, quantities, sale lots and all money while archiving the empty nested mini');
+        economyCheck(!$infrastructure->install(9001)['changed'], 'the corrected NPC storage layout is repeatable without another write');
+    } finally { $tx->rollBack(); }
+    // A catalogue stack larger than 100 must still obey the physical mini-storage limit.
+    $tx = $db->beginTransaction();
+    try {
+        $capacityOperation = bin2hex(random_bytes(16));
+        $db->createCommand()->insert('game_operation', ['id' => $capacityOperation, 'user_id' => $npcUser, 'type' => 'fixture.storage-capacity', 'created_at' => time()])->execute();
+        $stone = (new Query())->from('craft_item')->where(['code' => 'classic-stone'])->one($db);
+        $db->createCommand()->update('craft_item', ['stack_size' => 500], ['id' => $stone['id']])->execute(); $stone['stack_size'] = 500;
+        $mineStock = \common\modules\world\models\domain\HiredExtraction::storages(Node::requireOne(['code' => 'npc-bot-mine']))[0];
+        $inventoryStore = new \common\modules\world\modules\craft\models\domain\CraftStorage($db); $inventoryStore->operationId = $capacityOperation;
+        $inventory = new \common\modules\world\modules\craft\models\domain\CanonicalInventory($inventoryStore);
+        $plan = $inventory->planCraft([], $mineStock, [], [], $stone, 500);
+        economyCheck($plan['output_fits'] && array_column($plan['grant'], 'quantity') === [100, 100, 100, 100, 100] && !$inventory->planCraft([], $mineStock, [], [], $stone, 501)['output_fits'], 'mini-storage plans exactly five hundred resources in five stacks even when the catalogue permits larger stacks');
+        $inventory->applyCraft($npcUser, $plan, $mineStock, [], $stone, 'fixture.capacity');
+        economyCheck(!$inventory->planCraft([], $mineStock, [], [], $stone, 1)['output_fits'], 'full mini-storage refuses another crafted or extracted unit');
+        $inventory->initialize($npcUser); $backpack = $inventory->backpack($npcUser);
+        $inventoryStore->move($npcUser, $stone, 20);
+        $source = (new Query())->from('craft_inventory')->where(['storage_id' => $backpack['id'], 'item_id' => $stone['id']])->andWhere(['>', 'item_quantity', 0])->one($db);
+        $cell = (new Query())->from('craft_inventory')->where(['storage_id' => $mineStock['id'], 'slot' => 1])->one($db);
+        $inventory->consumeHarvest($npcUser, (int)$cell['id'], 10, 'harvest.withdrawn');
+        try { $inventory->inspectTransfer($npcUser, (int)$source['id'], (int)$mineStock['id'], 1, 11); throw new RuntimeException('Oversized mini-storage transfer accepted.'); }
+        catch (\yii\web\ConflictHttpException $error) { economyCheck(true, 'manual transfer cannot exceed one hundred resources per mini-storage slot'); }
+        economyCheck($inventory->inspectTransfer($npcUser, (int)$source['id'], (int)$mineStock['id'], 1, 11, null, true)['quantity'] === 10, 'partial transfer reports only the remaining physical room');
+        $inventory->transfer($npcUser, (int)$source['id'], (int)$mineStock['id'], 1, 10);
+        economyCheck((int)(new Query())->select('item_quantity')->from('craft_inventory')->where(['id' => $cell['id']])->scalar($db) === 100, 'the actual transfer fills the mini-storage slot to its exact limit');
+        $warehouseStock = (new Query())->from('craft_storage')->where(['node_id' => $npcWarehouse->id, 'kind' => 'stockpile', 'status' => 'active'])->one($db);
+        economyCheck($inventory->planCraft([], $warehouseStock, [], [], $stone, 500)['grant'][0]['quantity'] === 500, 'the mini-storage stack cap does not change a full warehouse catalogue stack');
+    } finally { $tx->rollBack(); }
     $forgeNode = \common\modules\world\models\Node::requireOne(['code' => 'npc-bot-forge']);
     $workspace = new \common\modules\world\modules\craft\models\domain\CraftWorkspace($db, $flags);
     $ingotRecipe = (int)(new Query())->select('id')->from('craft_recipe')->where(['code' => 'classic-ingot'])->scalar($db);

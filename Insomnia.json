@@ -2610,7 +2610,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/crops",
       "name": "GET /world/crops",
-      "description": "Growth never pauses. Missed watering halves yield; expired crops cannot be harvested. Dig requires a shovel and wears it once. Harvest enters five-slot garden storage.\n2026-10-28: NPC stockpiles expose npc_supply=true, sell actual extracted raw stock at profile reference prices and recycle proceeds. NPC seller does not consume the personal daily sale quota; buyer funds, per-operation quantity, capacity, quotes and replay checks remain enforced.",
+      "description": "Growth never pauses. Missed watering halves yield; expired crops cannot be harvested. Dig requires a shovel and wears it once. Harvest enters five-slot garden storage.\n2026-10-28: NPC stockpiles expose npc_supply=true, sell actual extracted raw stock at profile reference prices and recycle proceeds. NPC seller does not consume the personal daily sale quota; buyer funds, per-operation quantity, capacity, quotes and replay checks remain enforced.\n2026-10-29: mini-storage capacity is 5 slots, optional nullable slot_limit is 100 (null for other stockpiles). The mini-storage selected on a parent map uses these same stock and purchase endpoints with the selected CHILD node ID, without routing away. Existing quote, rights, stock, wallet, treasury and idempotency checks remain authoritative.",
       "method": "GET",
       "body": {},
       "parameters": [
@@ -2648,7 +2648,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/beds/{{ _.world_bed_id }}/cultivation",
       "name": "GET /world/beds/{id}/cultivation",
-      "description": "Growth never pauses. Missed watering halves yield; expired crops cannot be harvested. Dig requires a shovel and wears it once. Harvest enters five-slot garden storage.\n2026-10-28: NPC stockpiles expose npc_supply=true, sell actual extracted raw stock at profile reference prices and recycle proceeds. NPC seller does not consume the personal daily sale quota; buyer funds, per-operation quantity, capacity, quotes and replay checks remain enforced.",
+      "description": "Growth never pauses. Missed watering halves yield; expired crops cannot be harvested. Dig requires a shovel and wears it once. Harvest enters five-slot garden storage.\n2026-10-28: NPC stockpiles expose npc_supply=true, sell actual extracted raw stock at profile reference prices and recycle proceeds. NPC seller does not consume the personal daily sale quota; buyer funds, per-operation quantity, capacity, quotes and replay checks remain enforced.\n2026-10-29: mini-storage capacity is 5 slots, optional nullable slot_limit is 100 (null for other stockpiles). The mini-storage selected on a parent map uses these same stock and purchase endpoints with the selected CHILD node ID, without routing away. Existing quote, rights, stock, wallet, treasury and idempotency checks remain authoritative.",
       "method": "GET",
       "body": {},
       "parameters": [],
@@ -2675,7 +2675,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/beds/{{ _.world_bed_id }}/sow-preview",
       "name": "POST /world/beds/{id}/sow-preview",
-      "description": "Growth never pauses. Missed watering halves yield; expired crops cannot be harvested. Dig requires a shovel and wears it once. Harvest enters five-slot garden storage.\n2026-10-28: NPC stockpiles expose npc_supply=true, sell actual extracted raw stock at profile reference prices and recycle proceeds. NPC seller does not consume the personal daily sale quota; buyer funds, per-operation quantity, capacity, quotes and replay checks remain enforced.",
+      "description": "Growth never pauses. Missed watering halves yield; expired crops cannot be harvested. Dig requires a shovel and wears it once. Harvest enters five-slot garden storage.\n2026-10-28: NPC stockpiles expose npc_supply=true, sell actual extracted raw stock at profile reference prices and recycle proceeds. NPC seller does not consume the personal daily sale quota; buyer funds, per-operation quantity, capacity, quotes and replay checks remain enforced.\n2026-10-29: mini-storage capacity is 5 slots, optional nullable slot_limit is 100 (null for other stockpiles). The mini-storage selected on a parent map uses these same stock and purchase endpoints with the selected CHILD node ID, without routing away. Existing quote, rights, stock, wallet, treasury and idempotency checks remain authoritative.",
       "method": "POST",
       "body": {
         "mimeType": "application/json",
@@ -2710,7 +2710,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/beds/{{ _.world_bed_id }}/sow",
       "name": "POST /world/beds/{id}/sow",
-      "description": "Growth never pauses. Missed watering halves yield; expired crops cannot be harvested. Dig requires a shovel and wears it once. Harvest enters five-slot garden storage.\n2026-10-28: NPC stockpiles expose npc_supply=true, sell actual extracted raw stock at profile reference prices and recycle proceeds. NPC seller does not consume the personal daily sale quota; buyer funds, per-operation quantity, capacity, quotes and replay checks remain enforced.",
+      "description": "Growth never pauses. Missed watering halves yield; expired crops cannot be harvested. Dig requires a shovel and wears it once. Harvest enters five-slot garden storage.\n2026-10-28: NPC stockpiles expose npc_supply=true, sell actual extracted raw stock at profile reference prices and recycle proceeds. NPC seller does not consume the personal daily sale quota; buyer funds, per-operation quantity, capacity, quotes and replay checks remain enforced.\n2026-10-29: mini-storage capacity is 5 slots, optional nullable slot_limit is 100 (null for other stockpiles). The mini-storage selected on a parent map uses these same stock and purchase endpoints with the selected CHILD node ID, without routing away. Existing quote, rights, stock, wallet, treasury and idempotency checks remain authoritative.",
       "method": "POST",
       "body": {
         "mimeType": "application/json",
@@ -2745,7 +2745,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/beds/{{ _.world_bed_id }}/water-preview",
       "name": "POST /world/beds/{id}/water-preview",
-      "description": "Growth never pauses. Missed watering halves yield; expired crops cannot be harvested. Dig requires a shovel and wears it once. Harvest enters five-slot garden storage.\n2026-10-28: NPC stockpiles expose npc_supply=true, sell actual extracted raw stock at profile reference prices and recycle proceeds. NPC seller does not consume the personal daily sale quota; buyer funds, per-operation quantity, capacity, quotes and replay checks remain enforced.",
+      "description": "Growth never pauses. Missed watering halves yield; expired crops cannot be harvested. Dig requires a shovel and wears it once. Harvest enters five-slot garden storage.\n2026-10-28: NPC stockpiles expose npc_supply=true, sell actual extracted raw stock at profile reference prices and recycle proceeds. NPC seller does not consume the personal daily sale quota; buyer funds, per-operation quantity, capacity, quotes and replay checks remain enforced.\n2026-10-29: mini-storage capacity is 5 slots, optional nullable slot_limit is 100 (null for other stockpiles). The mini-storage selected on a parent map uses these same stock and purchase endpoints with the selected CHILD node ID, without routing away. Existing quote, rights, stock, wallet, treasury and idempotency checks remain authoritative.",
       "method": "POST",
       "body": {
         "mimeType": "application/json",
@@ -2780,7 +2780,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/beds/{{ _.world_bed_id }}/water",
       "name": "POST /world/beds/{id}/water",
-      "description": "Growth never pauses. Missed watering halves yield; expired crops cannot be harvested. Dig requires a shovel and wears it once. Harvest enters five-slot garden storage.\n2026-10-28: NPC stockpiles expose npc_supply=true, sell actual extracted raw stock at profile reference prices and recycle proceeds. NPC seller does not consume the personal daily sale quota; buyer funds, per-operation quantity, capacity, quotes and replay checks remain enforced.",
+      "description": "Growth never pauses. Missed watering halves yield; expired crops cannot be harvested. Dig requires a shovel and wears it once. Harvest enters five-slot garden storage.\n2026-10-28: NPC stockpiles expose npc_supply=true, sell actual extracted raw stock at profile reference prices and recycle proceeds. NPC seller does not consume the personal daily sale quota; buyer funds, per-operation quantity, capacity, quotes and replay checks remain enforced.\n2026-10-29: mini-storage capacity is 5 slots, optional nullable slot_limit is 100 (null for other stockpiles). The mini-storage selected on a parent map uses these same stock and purchase endpoints with the selected CHILD node ID, without routing away. Existing quote, rights, stock, wallet, treasury and idempotency checks remain authoritative.",
       "method": "POST",
       "body": {
         "mimeType": "application/json",
@@ -2815,7 +2815,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/beds/{{ _.world_bed_id }}/harvest-preview",
       "name": "POST /world/beds/{id}/harvest-preview",
-      "description": "Growth never pauses. Missed watering halves yield; expired crops cannot be harvested. Dig requires a shovel and wears it once. Harvest enters five-slot garden storage.\n2026-10-28: NPC stockpiles expose npc_supply=true, sell actual extracted raw stock at profile reference prices and recycle proceeds. NPC seller does not consume the personal daily sale quota; buyer funds, per-operation quantity, capacity, quotes and replay checks remain enforced.",
+      "description": "Growth never pauses. Missed watering halves yield; expired crops cannot be harvested. Dig requires a shovel and wears it once. Harvest enters five-slot garden storage.\n2026-10-28: NPC stockpiles expose npc_supply=true, sell actual extracted raw stock at profile reference prices and recycle proceeds. NPC seller does not consume the personal daily sale quota; buyer funds, per-operation quantity, capacity, quotes and replay checks remain enforced.\n2026-10-29: mini-storage capacity is 5 slots, optional nullable slot_limit is 100 (null for other stockpiles). The mini-storage selected on a parent map uses these same stock and purchase endpoints with the selected CHILD node ID, without routing away. Existing quote, rights, stock, wallet, treasury and idempotency checks remain authoritative.",
       "method": "POST",
       "body": {
         "mimeType": "application/json",
@@ -2850,7 +2850,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/beds/{{ _.world_bed_id }}/harvest",
       "name": "POST /world/beds/{id}/harvest",
-      "description": "Growth never pauses. Missed watering halves yield; expired crops cannot be harvested. Dig requires a shovel and wears it once. Harvest enters five-slot garden storage.\n2026-10-28: NPC stockpiles expose npc_supply=true, sell actual extracted raw stock at profile reference prices and recycle proceeds. NPC seller does not consume the personal daily sale quota; buyer funds, per-operation quantity, capacity, quotes and replay checks remain enforced.",
+      "description": "Growth never pauses. Missed watering halves yield; expired crops cannot be harvested. Dig requires a shovel and wears it once. Harvest enters five-slot garden storage.\n2026-10-28: NPC stockpiles expose npc_supply=true, sell actual extracted raw stock at profile reference prices and recycle proceeds. NPC seller does not consume the personal daily sale quota; buyer funds, per-operation quantity, capacity, quotes and replay checks remain enforced.\n2026-10-29: mini-storage capacity is 5 slots, optional nullable slot_limit is 100 (null for other stockpiles). The mini-storage selected on a parent map uses these same stock and purchase endpoints with the selected CHILD node ID, without routing away. Existing quote, rights, stock, wallet, treasury and idempotency checks remain authoritative.",
       "method": "POST",
       "body": {
         "mimeType": "application/json",
@@ -2885,7 +2885,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/beds/{{ _.world_bed_id }}/cancel-preview",
       "name": "POST /world/beds/{id}/cancel-preview",
-      "description": "Growth never pauses. Missed watering halves yield; expired crops cannot be harvested. Dig requires a shovel and wears it once. Harvest enters five-slot garden storage.\n2026-10-28: NPC stockpiles expose npc_supply=true, sell actual extracted raw stock at profile reference prices and recycle proceeds. NPC seller does not consume the personal daily sale quota; buyer funds, per-operation quantity, capacity, quotes and replay checks remain enforced.",
+      "description": "Growth never pauses. Missed watering halves yield; expired crops cannot be harvested. Dig requires a shovel and wears it once. Harvest enters five-slot garden storage.\n2026-10-28: NPC stockpiles expose npc_supply=true, sell actual extracted raw stock at profile reference prices and recycle proceeds. NPC seller does not consume the personal daily sale quota; buyer funds, per-operation quantity, capacity, quotes and replay checks remain enforced.\n2026-10-29: mini-storage capacity is 5 slots, optional nullable slot_limit is 100 (null for other stockpiles). The mini-storage selected on a parent map uses these same stock and purchase endpoints with the selected CHILD node ID, without routing away. Existing quote, rights, stock, wallet, treasury and idempotency checks remain authoritative.",
       "method": "POST",
       "body": {
         "mimeType": "application/json",
@@ -2920,7 +2920,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/beds/{{ _.world_bed_id }}/cancel",
       "name": "POST /world/beds/{id}/cancel",
-      "description": "Growth never pauses. Missed watering halves yield; expired crops cannot be harvested. Dig requires a shovel and wears it once. Harvest enters five-slot garden storage.\n2026-10-28: NPC stockpiles expose npc_supply=true, sell actual extracted raw stock at profile reference prices and recycle proceeds. NPC seller does not consume the personal daily sale quota; buyer funds, per-operation quantity, capacity, quotes and replay checks remain enforced.",
+      "description": "Growth never pauses. Missed watering halves yield; expired crops cannot be harvested. Dig requires a shovel and wears it once. Harvest enters five-slot garden storage.\n2026-10-28: NPC stockpiles expose npc_supply=true, sell actual extracted raw stock at profile reference prices and recycle proceeds. NPC seller does not consume the personal daily sale quota; buyer funds, per-operation quantity, capacity, quotes and replay checks remain enforced.\n2026-10-29: mini-storage capacity is 5 slots, optional nullable slot_limit is 100 (null for other stockpiles). The mini-storage selected on a parent map uses these same stock and purchase endpoints with the selected CHILD node ID, without routing away. Existing quote, rights, stock, wallet, treasury and idempotency checks remain authoritative.",
       "method": "POST",
       "body": {
         "mimeType": "application/json",
@@ -2955,7 +2955,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/crops/publish-preview",
       "name": "POST /world/crops/publish-preview",
-      "description": "Growth never pauses. Missed watering halves yield; expired crops cannot be harvested. Dig requires a shovel and wears it once. Harvest enters five-slot garden storage.\n2026-10-28: NPC stockpiles expose npc_supply=true, sell actual extracted raw stock at profile reference prices and recycle proceeds. NPC seller does not consume the personal daily sale quota; buyer funds, per-operation quantity, capacity, quotes and replay checks remain enforced.",
+      "description": "Growth never pauses. Missed watering halves yield; expired crops cannot be harvested. Dig requires a shovel and wears it once. Harvest enters five-slot garden storage.\n2026-10-28: NPC stockpiles expose npc_supply=true, sell actual extracted raw stock at profile reference prices and recycle proceeds. NPC seller does not consume the personal daily sale quota; buyer funds, per-operation quantity, capacity, quotes and replay checks remain enforced.\n2026-10-29: mini-storage capacity is 5 slots, optional nullable slot_limit is 100 (null for other stockpiles). The mini-storage selected on a parent map uses these same stock and purchase endpoints with the selected CHILD node ID, without routing away. Existing quote, rights, stock, wallet, treasury and idempotency checks remain authoritative.",
       "method": "POST",
       "body": {
         "mimeType": "application/json",
@@ -2990,7 +2990,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/crops/publish",
       "name": "POST /world/crops/publish",
-      "description": "Growth never pauses. Missed watering halves yield; expired crops cannot be harvested. Dig requires a shovel and wears it once. Harvest enters five-slot garden storage.\n2026-10-28: NPC stockpiles expose npc_supply=true, sell actual extracted raw stock at profile reference prices and recycle proceeds. NPC seller does not consume the personal daily sale quota; buyer funds, per-operation quantity, capacity, quotes and replay checks remain enforced.",
+      "description": "Growth never pauses. Missed watering halves yield; expired crops cannot be harvested. Dig requires a shovel and wears it once. Harvest enters five-slot garden storage.\n2026-10-28: NPC stockpiles expose npc_supply=true, sell actual extracted raw stock at profile reference prices and recycle proceeds. NPC seller does not consume the personal daily sale quota; buyer funds, per-operation quantity, capacity, quotes and replay checks remain enforced.\n2026-10-29: mini-storage capacity is 5 slots, optional nullable slot_limit is 100 (null for other stockpiles). The mini-storage selected on a parent map uses these same stock and purchase endpoints with the selected CHILD node ID, without routing away. Existing quote, rights, stock, wallet, treasury and idempotency checks remain authoritative.",
       "method": "POST",
       "body": {
         "mimeType": "application/json",
@@ -6081,7 +6081,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/storages",
       "name": "GET /world/storages",
-      "description": "\n\n2026-10-09: карта возвращает названия, иконки и characteristics размещённых предметов в equipment_cells; inventory_id/storage_id доступны владельцу. Возврат в рюкзак использует transfer-preview + transfer. Хранилища подписаны названием объекта; закрытые ячейки карты недоступны для размещения. Денежный контракт сохраняет точность четырёх знаков, интерфейс округляет до десятых.",
+      "description": "\n\n2026-10-09: карта возвращает названия, иконки и characteristics размещённых предметов в equipment_cells; inventory_id/storage_id доступны владельцу. Возврат в рюкзак использует transfer-preview + transfer. Хранилища подписаны названием объекта; закрытые ячейки карты недоступны для размещения. Денежный контракт сохраняет точность четырёх знаков, интерфейс округляет до десятых.\n2026-10-29: public work/purchases grant no map expansion rights. Hide exploration/purchase controls when node is not owned or can_expand is false; the server still rechecks ownership.",
       "method": "GET",
       "body": {},
       "parameters": [
@@ -6114,7 +6114,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/storage/{{ _.world_storage_id }}",
       "name": "GET /world/storage/{id}",
-      "description": "\n\n2026-10-09: карта возвращает названия, иконки и characteristics размещённых предметов в equipment_cells; inventory_id/storage_id доступны владельцу. Возврат в рюкзак использует transfer-preview + transfer. Хранилища подписаны названием объекта; закрытые ячейки карты недоступны для размещения. Денежный контракт сохраняет точность четырёх знаков, интерфейс округляет до десятых.",
+      "description": "\n\n2026-10-09: карта возвращает названия, иконки и characteristics размещённых предметов в equipment_cells; inventory_id/storage_id доступны владельцу. Возврат в рюкзак использует transfer-preview + transfer. Хранилища подписаны названием объекта; закрытые ячейки карты недоступны для размещения. Денежный контракт сохраняет точность четырёх знаков, интерфейс округляет до десятых.\n2026-10-29: public work/purchases grant no map expansion rights. Hide exploration/purchase controls when node is not owned or can_expand is false; the server still rechecks ownership.",
       "method": "GET",
       "body": {},
       "parameters": [
@@ -6462,7 +6462,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/storage/recovery",
       "name": "GET /world/storage/recovery",
-      "description": "\n\n2026-10-09: карта возвращает названия, иконки и characteristics размещённых предметов в equipment_cells; inventory_id/storage_id доступны владельцу. Возврат в рюкзак использует transfer-preview + transfer. Хранилища подписаны названием объекта; закрытые ячейки карты недоступны для размещения. Денежный контракт сохраняет точность четырёх знаков, интерфейс округляет до десятых.",
+      "description": "\n\n2026-10-09: карта возвращает названия, иконки и characteristics размещённых предметов в equipment_cells; inventory_id/storage_id доступны владельцу. Возврат в рюкзак использует transfer-preview + transfer. Хранилища подписаны названием объекта; закрытые ячейки карты недоступны для размещения. Денежный контракт сохраняет точность четырёх знаков, интерфейс округляет до десятых.\n2026-10-29: public work/purchases grant no map expansion rights. Hide exploration/purchase controls when node is not owned or can_expand is false; the server still rechecks ownership.",
       "method": "GET",
       "body": {},
       "parameters": [
@@ -6710,7 +6710,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/nodes/{{ _.world_node_id }}/map",
       "name": "GET /world/nodes/{id}/map",
-      "description": "\n\n2026-10-09: карта возвращает названия, иконки и characteristics размещённых предметов в equipment_cells; inventory_id/storage_id доступны владельцу. Возврат в рюкзак использует transfer-preview + transfer. Хранилища подписаны названием объекта; закрытые ячейки карты недоступны для размещения. Денежный контракт сохраняет точность четырёх знаков, интерфейс округляет до десятых.",
+      "description": "\n\n2026-10-09: карта возвращает названия, иконки и characteristics размещённых предметов в equipment_cells; inventory_id/storage_id доступны владельцу. Возврат в рюкзак использует transfer-preview + transfer. Хранилища подписаны названием объекта; закрытые ячейки карты недоступны для размещения. Денежный контракт сохраняет точность четырёх знаков, интерфейс округляет до десятых.\n2026-10-29: public work/purchases grant no map expansion rights. Hide exploration/purchase controls when node is not owned or can_expand is false; the server still rechecks ownership.",
       "method": "GET",
       "body": {},
       "parameters": [],
@@ -6737,7 +6737,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/nodes/{{ _.world_node_id }}/map-explore-preview",
       "name": "POST /world/nodes/{id}/map-explore-preview",
-      "description": "Select 1-100 unique cells on the same owned expandable map. Batch exploration is atomic; each selected cell must be free and unexplored. Required level is checked per cell; use_elixir=true consumes one elixir for each cell above current level. Batch terms.elixir_quantity gives the exact amount. Qualified cells cost no elixir. Buy only discovered free cells; from 3 cells discount is 5%. Preview first; execute with identical cells, quote_id, expected_revisions and request_key. Retries do not repeat charges. Legacy x/y still supported for a single cell.\n\nMVP 2026-10-07: одинаковый цикл ячеек для владельца действующего объекта на любом уровне. Новые карты 5×5, начальная ячейка открыта. Базовый уровень исследования 1 доступен без вступления в профессию; для следующих уровней нужна профессия или эликсиры. Ранее купленные грядки сохраняют garden-expand.\n\n2026-10-09: карта возвращает названия, иконки и characteristics размещённых предметов в equipment_cells; inventory_id/storage_id доступны владельцу. Возврат в рюкзак использует transfer-preview + transfer. Хранилища подписаны названием объекта; закрытые ячейки карты недоступны для размещения. Денежный контракт сохраняет точность четырёх знаков, интерфейс округляет до десятых.",
+      "description": "Select 1-100 unique cells on the same owned expandable map. Batch exploration is atomic; each selected cell must be free and unexplored. Required level is checked per cell; use_elixir=true consumes one elixir for each cell above current level. Batch terms.elixir_quantity gives the exact amount. Qualified cells cost no elixir. Buy only discovered free cells; from 3 cells discount is 5%. Preview first; execute with identical cells, quote_id, expected_revisions and request_key. Retries do not repeat charges. Legacy x/y still supported for a single cell.\n\nMVP 2026-10-07: одинаковый цикл ячеек для владельца действующего объекта на любом уровне. Новые карты 5×5, начальная ячейка открыта. Базовый уровень исследования 1 доступен без вступления в профессию; для следующих уровней нужна профессия или эликсиры. Ранее купленные грядки сохраняют garden-expand.\n\n2026-10-09: карта возвращает названия, иконки и characteristics размещённых предметов в equipment_cells; inventory_id/storage_id доступны владельцу. Возврат в рюкзак использует transfer-preview + transfer. Хранилища подписаны названием объекта; закрытые ячейки карты недоступны для размещения. Денежный контракт сохраняет точность четырёх знаков, интерфейс округляет до десятых.\n2026-10-29: public work/purchases grant no map expansion rights. Hide exploration/purchase controls when node is not owned or can_expand is false; the server still rechecks ownership.",
       "method": "POST",
       "body": {
         "mimeType": "application/json",
@@ -6772,7 +6772,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/nodes/{{ _.world_node_id }}/map-explore",
       "name": "POST /world/nodes/{id}/map-explore",
-      "description": "Select 1-100 unique cells on the same owned expandable map. Batch exploration is atomic; each selected cell must be free and unexplored. Required level is checked per cell; use_elixir=true consumes one elixir for each cell above current level. Batch terms.elixir_quantity gives the exact amount. Qualified cells cost no elixir. Buy only discovered free cells; from 3 cells discount is 5%. Preview first; execute with identical cells, quote_id, expected_revisions and request_key. Retries do not repeat charges. Legacy x/y still supported for a single cell.\n\nMVP 2026-10-07: одинаковый цикл ячеек для владельца действующего объекта на любом уровне. Новые карты 5×5, начальная ячейка открыта. Базовый уровень исследования 1 доступен без вступления в профессию; для следующих уровней нужна профессия или эликсиры. Ранее купленные грядки сохраняют garden-expand.\n\n2026-10-09: карта возвращает названия, иконки и characteristics размещённых предметов в equipment_cells; inventory_id/storage_id доступны владельцу. Возврат в рюкзак использует transfer-preview + transfer. Хранилища подписаны названием объекта; закрытые ячейки карты недоступны для размещения. Денежный контракт сохраняет точность четырёх знаков, интерфейс округляет до десятых.",
+      "description": "Select 1-100 unique cells on the same owned expandable map. Batch exploration is atomic; each selected cell must be free and unexplored. Required level is checked per cell; use_elixir=true consumes one elixir for each cell above current level. Batch terms.elixir_quantity gives the exact amount. Qualified cells cost no elixir. Buy only discovered free cells; from 3 cells discount is 5%. Preview first; execute with identical cells, quote_id, expected_revisions and request_key. Retries do not repeat charges. Legacy x/y still supported for a single cell.\n\nMVP 2026-10-07: одинаковый цикл ячеек для владельца действующего объекта на любом уровне. Новые карты 5×5, начальная ячейка открыта. Базовый уровень исследования 1 доступен без вступления в профессию; для следующих уровней нужна профессия или эликсиры. Ранее купленные грядки сохраняют garden-expand.\n\n2026-10-09: карта возвращает названия, иконки и characteristics размещённых предметов в equipment_cells; inventory_id/storage_id доступны владельцу. Возврат в рюкзак использует transfer-preview + transfer. Хранилища подписаны названием объекта; закрытые ячейки карты недоступны для размещения. Денежный контракт сохраняет точность четырёх знаков, интерфейс округляет до десятых.\n2026-10-29: public work/purchases grant no map expansion rights. Hide exploration/purchase controls when node is not owned or can_expand is false; the server still rechecks ownership.",
       "method": "POST",
       "body": {
         "mimeType": "application/json",
@@ -6807,7 +6807,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/nodes/{{ _.world_node_id }}/map-buy-preview",
       "name": "POST /world/nodes/{id}/map-buy-preview",
-      "description": "Select 1-100 unique cells on the same owned expandable map. Batch exploration is atomic; each selected cell must be free and unexplored. Required level is checked per cell; use_elixir=true consumes one elixir for each cell above current level. Batch terms.elixir_quantity gives the exact amount. Qualified cells cost no elixir. Buy only discovered free cells; from 3 cells discount is 5%. Preview first; execute with identical cells, quote_id, expected_revisions and request_key. Retries do not repeat charges. Legacy x/y still supported for a single cell.\n\nMVP 2026-10-07: одинаковый цикл ячеек для владельца действующего объекта на любом уровне. Новые карты 5×5, начальная ячейка открыта. Базовый уровень исследования 1 доступен без вступления в профессию; для следующих уровней нужна профессия или эликсиры. Ранее купленные грядки сохраняют garden-expand.\n\n2026-10-09: карта возвращает названия, иконки и characteristics размещённых предметов в equipment_cells; inventory_id/storage_id доступны владельцу. Возврат в рюкзак использует transfer-preview + transfer. Хранилища подписаны названием объекта; закрытые ячейки карты недоступны для размещения. Денежный контракт сохраняет точность четырёх знаков, интерфейс округляет до десятых.",
+      "description": "Select 1-100 unique cells on the same owned expandable map. Batch exploration is atomic; each selected cell must be free and unexplored. Required level is checked per cell; use_elixir=true consumes one elixir for each cell above current level. Batch terms.elixir_quantity gives the exact amount. Qualified cells cost no elixir. Buy only discovered free cells; from 3 cells discount is 5%. Preview first; execute with identical cells, quote_id, expected_revisions and request_key. Retries do not repeat charges. Legacy x/y still supported for a single cell.\n\nMVP 2026-10-07: одинаковый цикл ячеек для владельца действующего объекта на любом уровне. Новые карты 5×5, начальная ячейка открыта. Базовый уровень исследования 1 доступен без вступления в профессию; для следующих уровней нужна профессия или эликсиры. Ранее купленные грядки сохраняют garden-expand.\n\n2026-10-09: карта возвращает названия, иконки и characteristics размещённых предметов в equipment_cells; inventory_id/storage_id доступны владельцу. Возврат в рюкзак использует transfer-preview + transfer. Хранилища подписаны названием объекта; закрытые ячейки карты недоступны для размещения. Денежный контракт сохраняет точность четырёх знаков, интерфейс округляет до десятых.\n2026-10-29: public work/purchases grant no map expansion rights. Hide exploration/purchase controls when node is not owned or can_expand is false; the server still rechecks ownership.",
       "method": "POST",
       "body": {
         "mimeType": "application/json",
@@ -6842,7 +6842,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/nodes/{{ _.world_node_id }}/map-buy",
       "name": "POST /world/nodes/{id}/map-buy",
-      "description": "Select 1-100 unique cells on the same owned expandable map. Batch exploration is atomic; each selected cell must be free and unexplored. Required level is checked per cell; use_elixir=true consumes one elixir for each cell above current level. Batch terms.elixir_quantity gives the exact amount. Qualified cells cost no elixir. Buy only discovered free cells; from 3 cells discount is 5%. Preview first; execute with identical cells, quote_id, expected_revisions and request_key. Retries do not repeat charges. Legacy x/y still supported for a single cell.\n\nMVP 2026-10-07: одинаковый цикл ячеек для владельца действующего объекта на любом уровне. Новые карты 5×5, начальная ячейка открыта. Базовый уровень исследования 1 доступен без вступления в профессию; для следующих уровней нужна профессия или эликсиры. Ранее купленные грядки сохраняют garden-expand.\n\n2026-10-09: карта возвращает названия, иконки и characteristics размещённых предметов в equipment_cells; inventory_id/storage_id доступны владельцу. Возврат в рюкзак использует transfer-preview + transfer. Хранилища подписаны названием объекта; закрытые ячейки карты недоступны для размещения. Денежный контракт сохраняет точность четырёх знаков, интерфейс округляет до десятых.",
+      "description": "Select 1-100 unique cells on the same owned expandable map. Batch exploration is atomic; each selected cell must be free and unexplored. Required level is checked per cell; use_elixir=true consumes one elixir for each cell above current level. Batch terms.elixir_quantity gives the exact amount. Qualified cells cost no elixir. Buy only discovered free cells; from 3 cells discount is 5%. Preview first; execute with identical cells, quote_id, expected_revisions and request_key. Retries do not repeat charges. Legacy x/y still supported for a single cell.\n\nMVP 2026-10-07: одинаковый цикл ячеек для владельца действующего объекта на любом уровне. Новые карты 5×5, начальная ячейка открыта. Базовый уровень исследования 1 доступен без вступления в профессию; для следующих уровней нужна профессия или эликсиры. Ранее купленные грядки сохраняют garden-expand.\n\n2026-10-09: карта возвращает названия, иконки и characteristics размещённых предметов в equipment_cells; inventory_id/storage_id доступны владельцу. Возврат в рюкзак использует transfer-preview + transfer. Хранилища подписаны названием объекта; закрытые ячейки карты недоступны для размещения. Денежный контракт сохраняет точность четырёх знаков, интерфейс округляет до десятых.\n2026-10-29: public work/purchases grant no map expansion rights. Hide exploration/purchase controls when node is not owned or can_expand is false; the server still rechecks ownership.",
       "method": "POST",
       "body": {
         "mimeType": "application/json",
@@ -10222,7 +10222,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/beds/{{ _.world_bed_id }}/dig-preview",
       "name": "POST /world/beds/{id}/dig-preview",
-      "description": "Growth never pauses. Missed watering halves yield; expired crops cannot be harvested. Dig requires a shovel and wears it once. Harvest enters five-slot garden storage.\n2026-10-28: NPC stockpiles expose npc_supply=true, sell actual extracted raw stock at profile reference prices and recycle proceeds. NPC seller does not consume the personal daily sale quota; buyer funds, per-operation quantity, capacity, quotes and replay checks remain enforced.",
+      "description": "Growth never pauses. Missed watering halves yield; expired crops cannot be harvested. Dig requires a shovel and wears it once. Harvest enters five-slot garden storage.\n2026-10-28: NPC stockpiles expose npc_supply=true, sell actual extracted raw stock at profile reference prices and recycle proceeds. NPC seller does not consume the personal daily sale quota; buyer funds, per-operation quantity, capacity, quotes and replay checks remain enforced.\n2026-10-29: mini-storage capacity is 5 slots, optional nullable slot_limit is 100 (null for other stockpiles). The mini-storage selected on a parent map uses these same stock and purchase endpoints with the selected CHILD node ID, without routing away. Existing quote, rights, stock, wallet, treasury and idempotency checks remain authoritative.",
       "method": "POST",
       "body": {
         "mimeType": "application/json",
@@ -10257,7 +10257,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/beds/{{ _.world_bed_id }}/dig",
       "name": "POST /world/beds/{id}/dig",
-      "description": "Growth never pauses. Missed watering halves yield; expired crops cannot be harvested. Dig requires a shovel and wears it once. Harvest enters five-slot garden storage.\n2026-10-28: NPC stockpiles expose npc_supply=true, sell actual extracted raw stock at profile reference prices and recycle proceeds. NPC seller does not consume the personal daily sale quota; buyer funds, per-operation quantity, capacity, quotes and replay checks remain enforced.",
+      "description": "Growth never pauses. Missed watering halves yield; expired crops cannot be harvested. Dig requires a shovel and wears it once. Harvest enters five-slot garden storage.\n2026-10-28: NPC stockpiles expose npc_supply=true, sell actual extracted raw stock at profile reference prices and recycle proceeds. NPC seller does not consume the personal daily sale quota; buyer funds, per-operation quantity, capacity, quotes and replay checks remain enforced.\n2026-10-29: mini-storage capacity is 5 slots, optional nullable slot_limit is 100 (null for other stockpiles). The mini-storage selected on a parent map uses these same stock and purchase endpoints with the selected CHILD node ID, without routing away. Existing quote, rights, stock, wallet, treasury and idempotency checks remain authoritative.",
       "method": "POST",
       "body": {
         "mimeType": "application/json",
@@ -10455,7 +10455,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/nodes/{{ _.world_node_id }}/harvest",
       "name": "GET /world/nodes/{id}/harvest",
-      "description": "Склад урожая: пять ячеек, данные партий и цен. Для владельца destinations содержит доступные собственные рюкзак, сундуки и склады на территории огорода.\n2026-10-28: NPC stockpiles expose npc_supply=true, sell actual extracted raw stock at profile reference prices and recycle proceeds. NPC seller does not consume the personal daily sale quota; buyer funds, per-operation quantity, capacity, quotes and replay checks remain enforced.",
+      "description": "Склад урожая: пять ячеек, данные партий и цен. Для владельца destinations содержит доступные собственные рюкзак, сундуки и склады на территории огорода.\n2026-10-28: NPC stockpiles expose npc_supply=true, sell actual extracted raw stock at profile reference prices and recycle proceeds. NPC seller does not consume the personal daily sale quota; buyer funds, per-operation quantity, capacity, quotes and replay checks remain enforced.\n2026-10-29: mini-storage capacity is 5 slots, optional nullable slot_limit is 100 (null for other stockpiles). The mini-storage selected on a parent map uses these same stock and purchase endpoints with the selected CHILD node ID, without routing away. Existing quote, rights, stock, wallet, treasury and idempotency checks remain authoritative.",
       "method": "GET",
       "body": {},
       "parameters": [],
@@ -10482,7 +10482,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/nodes/{{ _.world_node_id }}/harvest-price-preview",
       "name": "POST /world/nodes/{id}/harvest-price-preview",
-      "description": "placement-options: GET /v1/world/nodes/{id}/placement-options.\n2026-10-28: NPC stockpiles expose npc_supply=true, sell actual extracted raw stock at profile reference prices and recycle proceeds. NPC seller does not consume the personal daily sale quota; buyer funds, per-operation quantity, capacity, quotes and replay checks remain enforced.",
+      "description": "placement-options: GET /v1/world/nodes/{id}/placement-options.\n2026-10-28: NPC stockpiles expose npc_supply=true, sell actual extracted raw stock at profile reference prices and recycle proceeds. NPC seller does not consume the personal daily sale quota; buyer funds, per-operation quantity, capacity, quotes and replay checks remain enforced.\n2026-10-29: mini-storage capacity is 5 slots, optional nullable slot_limit is 100 (null for other stockpiles). The mini-storage selected on a parent map uses these same stock and purchase endpoints with the selected CHILD node ID, without routing away. Existing quote, rights, stock, wallet, treasury and idempotency checks remain authoritative.",
       "method": "POST",
       "body": {
         "mimeType": "application/json",
@@ -10517,7 +10517,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/nodes/{{ _.world_node_id }}/harvest-price",
       "name": "POST /world/nodes/{id}/harvest-price",
-      "description": "placement-options: GET /v1/world/nodes/{id}/placement-options.\n2026-10-28: NPC stockpiles expose npc_supply=true, sell actual extracted raw stock at profile reference prices and recycle proceeds. NPC seller does not consume the personal daily sale quota; buyer funds, per-operation quantity, capacity, quotes and replay checks remain enforced.",
+      "description": "placement-options: GET /v1/world/nodes/{id}/placement-options.\n2026-10-28: NPC stockpiles expose npc_supply=true, sell actual extracted raw stock at profile reference prices and recycle proceeds. NPC seller does not consume the personal daily sale quota; buyer funds, per-operation quantity, capacity, quotes and replay checks remain enforced.\n2026-10-29: mini-storage capacity is 5 slots, optional nullable slot_limit is 100 (null for other stockpiles). The mini-storage selected on a parent map uses these same stock and purchase endpoints with the selected CHILD node ID, without routing away. Existing quote, rights, stock, wallet, treasury and idempotency checks remain authoritative.",
       "method": "POST",
       "body": {
         "mimeType": "application/json",
@@ -10552,7 +10552,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/nodes/{{ _.world_node_id }}/harvest-buy-preview",
       "name": "POST /world/nodes/{id}/harvest-buy-preview",
-      "description": "placement-options: GET /v1/world/nodes/{id}/placement-options.\n2026-10-28: NPC stockpiles expose npc_supply=true, sell actual extracted raw stock at profile reference prices and recycle proceeds. NPC seller does not consume the personal daily sale quota; buyer funds, per-operation quantity, capacity, quotes and replay checks remain enforced.",
+      "description": "placement-options: GET /v1/world/nodes/{id}/placement-options.\n2026-10-28: NPC stockpiles expose npc_supply=true, sell actual extracted raw stock at profile reference prices and recycle proceeds. NPC seller does not consume the personal daily sale quota; buyer funds, per-operation quantity, capacity, quotes and replay checks remain enforced.\n2026-10-29: mini-storage capacity is 5 slots, optional nullable slot_limit is 100 (null for other stockpiles). The mini-storage selected on a parent map uses these same stock and purchase endpoints with the selected CHILD node ID, without routing away. Existing quote, rights, stock, wallet, treasury and idempotency checks remain authoritative.",
       "method": "POST",
       "body": {
         "mimeType": "application/json",
@@ -10587,7 +10587,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/nodes/{{ _.world_node_id }}/harvest-buy",
       "name": "POST /world/nodes/{id}/harvest-buy",
-      "description": "placement-options: GET /v1/world/nodes/{id}/placement-options.\n2026-10-28: NPC stockpiles expose npc_supply=true, sell actual extracted raw stock at profile reference prices and recycle proceeds. NPC seller does not consume the personal daily sale quota; buyer funds, per-operation quantity, capacity, quotes and replay checks remain enforced.",
+      "description": "placement-options: GET /v1/world/nodes/{id}/placement-options.\n2026-10-28: NPC stockpiles expose npc_supply=true, sell actual extracted raw stock at profile reference prices and recycle proceeds. NPC seller does not consume the personal daily sale quota; buyer funds, per-operation quantity, capacity, quotes and replay checks remain enforced.\n2026-10-29: mini-storage capacity is 5 slots, optional nullable slot_limit is 100 (null for other stockpiles). The mini-storage selected on a parent map uses these same stock and purchase endpoints with the selected CHILD node ID, without routing away. Existing quote, rights, stock, wallet, treasury and idempotency checks remain authoritative.",
       "method": "POST",
       "body": {
         "mimeType": "application/json",
@@ -10622,7 +10622,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/nodes/{{ _.world_node_id }}/harvest-withdraw-preview",
       "name": "POST /world/nodes/{id}/harvest-withdraw-preview",
-      "description": "Перемещение урожая в выбранное собственное хранилище из destinations GET harvest. Необязательный destination_storage_id; без него — рюкзак. Preview проверяет вместимость и право доступа; execute с теми же входом, quote_id, expected_revisions и request_key. Повтор не дублирует выдачу.\n2026-10-28: NPC stockpiles expose npc_supply=true, sell actual extracted raw stock at profile reference prices and recycle proceeds. NPC seller does not consume the personal daily sale quota; buyer funds, per-operation quantity, capacity, quotes and replay checks remain enforced.",
+      "description": "Перемещение урожая в выбранное собственное хранилище из destinations GET harvest. Необязательный destination_storage_id; без него — рюкзак. Preview проверяет вместимость и право доступа; execute с теми же входом, quote_id, expected_revisions и request_key. Повтор не дублирует выдачу.\n2026-10-28: NPC stockpiles expose npc_supply=true, sell actual extracted raw stock at profile reference prices and recycle proceeds. NPC seller does not consume the personal daily sale quota; buyer funds, per-operation quantity, capacity, quotes and replay checks remain enforced.\n2026-10-29: mini-storage capacity is 5 slots, optional nullable slot_limit is 100 (null for other stockpiles). The mini-storage selected on a parent map uses these same stock and purchase endpoints with the selected CHILD node ID, without routing away. Existing quote, rights, stock, wallet, treasury and idempotency checks remain authoritative.",
       "method": "POST",
       "body": {
         "mimeType": "application/json",
@@ -10657,7 +10657,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/nodes/{{ _.world_node_id }}/harvest-withdraw",
       "name": "POST /world/nodes/{id}/harvest-withdraw",
-      "description": "Перемещение урожая в выбранное собственное хранилище из destinations GET harvest. Необязательный destination_storage_id; без него — рюкзак. Preview проверяет вместимость и право доступа; execute с теми же входом, quote_id, expected_revisions и request_key. Повтор не дублирует выдачу.\n2026-10-28: NPC stockpiles expose npc_supply=true, sell actual extracted raw stock at profile reference prices and recycle proceeds. NPC seller does not consume the personal daily sale quota; buyer funds, per-operation quantity, capacity, quotes and replay checks remain enforced.",
+      "description": "Перемещение урожая в выбранное собственное хранилище из destinations GET harvest. Необязательный destination_storage_id; без него — рюкзак. Preview проверяет вместимость и право доступа; execute с теми же входом, quote_id, expected_revisions и request_key. Повтор не дублирует выдачу.\n2026-10-28: NPC stockpiles expose npc_supply=true, sell actual extracted raw stock at profile reference prices and recycle proceeds. NPC seller does not consume the personal daily sale quota; buyer funds, per-operation quantity, capacity, quotes and replay checks remain enforced.\n2026-10-29: mini-storage capacity is 5 slots, optional nullable slot_limit is 100 (null for other stockpiles). The mini-storage selected on a parent map uses these same stock and purchase endpoints with the selected CHILD node ID, without routing away. Existing quote, rights, stock, wallet, treasury and idempotency checks remain authoritative.",
       "method": "POST",
       "body": {
         "mimeType": "application/json",

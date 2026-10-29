@@ -78,7 +78,7 @@ class GardenHarvest
                     'price' => $row['price'] === null ? null : Money::parse((string)$row['price'])->decimal()];
             }
             $settings = json_decode($c['node']['settings_json'] ?? '{}', true);
-            return ['node_id' => $garden, 'name' => $c['node']['name'], 'capacity' => (int)$c['storage']['capacity'], 'npc_supply' => $npc, 'allow_sales' => ($settings['allow_sales'] ?? false) === true, 'owned_by_me' => $owner, 'items' => $items, 'destinations' => $owner ? $this->destinations($user, $garden) : [], 'writable' => $this->flags->capabilities()['world_write'], 'server_time' => $now];
+            return ['node_id' => $garden, 'name' => $c['node']['name'], 'capacity' => (int)$c['storage']['capacity'], 'slot_limit' => MiniStorage::slotLimit($this->db, $c['storage']), 'npc_supply' => $npc, 'allow_sales' => ($settings['allow_sales'] ?? false) === true, 'owned_by_me' => $owner, 'items' => $items, 'destinations' => $owner ? $this->destinations($user, $garden) : [], 'writable' => $this->flags->capabilities()['world_write'], 'server_time' => $now];
         });
     }
     private function destinations(int $user, int $garden): array

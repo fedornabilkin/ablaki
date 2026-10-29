@@ -48,7 +48,7 @@ final class NpcInfrastructure
         $nodes = array_column($this->nodes($policy), null, 'code');
         $codes = ['mine', 'forge', 'workshop', 'water', 'meadow', 'sand', 'clay', 'stone', 'forest', 'trap-1', 'trap-2', 'warehouse'];
         if (!isset($nodes['npc-bot-north-site'], $nodes['npc-bot-drilling'])) return false;
-        foreach ($codes as $code) if (!isset($nodes['npc-bot-' . $code]) || !isset($nodes['npc-bot-mini-' . $nodes['npc-bot-' . $code]['id']])) return false;
+        foreach ($codes as $code) if (!isset($nodes['npc-bot-' . $code]) || ($code !== 'warehouse' && !isset($nodes['npc-bot-mini-' . $nodes['npc-bot-' . $code]['id']]))) return false;
         if ((new Query())->from('world_node')->where(['root_id' => $policy['world_id'], 'status' => 'active', 'node_type' => ['WORLD', 'REGION', 'SETTLEMENT']])
             ->andWhere(['or', ['owner_user_id' => null], ['<>', 'owner_user_id', $policy['bot_user_id']]])->exists($this->db)) return false;
         $stations = (new Query())->select(['s.node_id', 'd.code'])->from(['i' => 'craft_inventory'])->innerJoin(['s' => 'craft_storage'], 's.id=i.storage_id')->innerJoin(['d' => 'craft_item'], 'd.id=i.item_id')
@@ -63,7 +63,7 @@ final class NpcInfrastructure
         if (!$bot) throw new GameError('NPC_ACCOUNT_REQUIRED', 'Нужен существующий пользователь с логином bot.', 409);
         if (!$this->db->schema->getTableSchema('world_npc_policy')) throw new GameError('SCHEMA_NOT_READY', 'Сначала установите схему NPC.', 503);
         $world = EconomyRuntime::world($this->db); $existing = $this->policy($world);
-        if ($existing && $this->ready($existing)) return ['changed' => false, 'world_id' => $world, 'site_node_id' => (int)$existing['site_node_id']];
+        if ($existing && $this->ready($existing) && $this->storageLayoutReady($existing)) return ['changed' => false, 'world_id' => $world, 'site_node_id' => (int)$existing['site_node_id']];
         return $this->db->transaction(function () use ($author, $bot, $world) {
             $locks = new Locks($this->db); $locks->row('craft_meta', ['id' => 1]); $locks->row('world_registry', ['id' => 1]);
             $city = Node::findOne(['code' => 'north-city', 'root_id' => $world, 'status' => 'active']);
@@ -71,7 +71,7 @@ final class NpcInfrastructure
             $configured = (new Query())->from('world_npc_policy')->where(['world_id' => $world])->one($this->db);
             if ($configured && !(int)$configured['enabled']) throw new GameError('NPC_POLICY_DISABLED', 'Политика NPC отключена администратором.', 409);
             $policy = $this->policy($world);
-            if ($policy && $this->ready($policy)) return ['changed' => false, 'world_id' => $world, 'site_node_id' => (int)$policy['site_node_id']];
+            if ($policy && $this->ready($policy) && $this->storageLayoutReady($policy)) return ['changed' => false, 'world_id' => $world, 'site_node_id' => (int)$policy['site_node_id']];
             if (!$policy) {
                 $this->db->createCommand()->insert('world_npc_policy', ['world_id' => $world, 'bot_user_id' => $bot['id'], 'city_node_id' => $city->id,
                     'created_by' => $author, 'created_at' => time()])->execute();
@@ -105,8 +105,9 @@ final class NpcInfrastructure
             $objects = [];
             foreach ($specs as [$template, $name, $code, $role]) {
                 $node = $this->object($template, $site, (int)$bot['id'], $name, 'npc-bot-' . $code, $role, $author, $operation); $objects[$code] = $node;
-                $this->mini($node, (int)$bot['id'], $author, $operation);
+                if ($role !== 'warehouse') $this->mini($node, (int)$bot['id'], $author, $operation);
             }
+            $this->retireWarehouseMini($objects['warehouse'], (int)$bot['id'], $author, $operation);
             $drill = $this->object('drilling-rig', $objects['mine'], (int)$bot['id'], 'Буровая установка', 'npc-bot-drilling', 'equipment', $author, $operation);
             $this->stations($objects['forge'], ['classic-furnace', 'classic-anvil'], (int)$bot['id'], $operation);
             $this->stations($objects['workshop'], ['classic-bench'], (int)$bot['id'], $operation);
@@ -168,15 +169,49 @@ final class NpcInfrastructure
     {
         $node = $this->object('mini-storage-level-' . ((int)$parent->hierarchy_level + 1), $parent, $bot, 'Мини-склад: ' . $parent->name,
             'npc-bot-mini-' . $parent->id, 'store', $author, $operation);
-        $settings = json_decode($node->settings_json, true); $settings['storage_capacity'] = 50; $settings['allow_sales'] = true;
+        $settings = json_decode($node->settings_json, true); $settings['storage_capacity'] = MiniStorage::CAPACITY; $settings['allow_sales'] = true;
         $node->settings_json = CanonicalJson::encode($settings); $node->persist();
-        $this->stockpile($node, $bot, 50);
+        $this->stockpile($node, $bot, MiniStorage::CAPACITY);
     }
     private function stockpile(Node $node, int $bot, int $capacity): void
     {
         $id = BuildingFacilities::stockpile($this->db, (int)$node->id, $bot, 'warehouse');
+        if ($node->node_type === 'CHEST' && (new Query())->from('craft_inventory')->where(['storage_id' => $id])->andWhere(['>', 'item_quantity', 0])
+            ->andWhere(['or', ['>', 'slot', $capacity], ['>', 'item_quantity', MiniStorage::STACK_LIMIT]])->exists($this->db))
+            throw new GameError('NPC_STORAGE_REVIEW_REQUIRED', 'В старом мини-складе есть запасы сверх 5×100. Сначала перенесите излишки в большой склад; товары сохранены.', 409);
         $this->db->createCommand()->update('craft_storage', ['capacity' => $capacity], ['id' => $id])->execute();
-        $this->db->createCommand()->update('world_warehouse_policy', ['initial_capacity' => $capacity, 'max_capacity' => max(200, $capacity)], ['storage_id' => $id])->execute();
+        $this->db->createCommand()->update('world_warehouse_policy', ['initial_capacity' => $capacity, 'max_capacity' => $node->node_type === 'CHEST' ? $capacity : max(200, $capacity)], ['storage_id' => $id])->execute();
+    }
+    /** Checked independently from installation readiness so a data correction keeps the warm release path. */
+    private function storageLayoutReady(array $policy): bool
+    {
+        $nodes = array_column($this->nodes($policy), null, 'id');
+        foreach ($nodes as $node) if (self::role($node) === 'store') {
+            if (isset($nodes[$node['parent_id']]) && self::role($nodes[$node['parent_id']]) === 'warehouse') return false;
+            if ((json_decode($node['settings_json'] ?: '{}', true)['storage_capacity'] ?? null) !== MiniStorage::CAPACITY) return false;
+            $storage = (new Query())->select(['s.*', 'p.max_capacity'])->from(['s' => 'craft_storage'])->leftJoin(['p' => 'world_warehouse_policy'], 'p.storage_id=s.id')
+                ->where(['s.node_id' => $node['id'], 's.owner_user_id' => $policy['bot_user_id'], 's.kind' => 'stockpile', 's.status' => 'active'])->one($this->db);
+            if (!$storage || (int)$storage['capacity'] !== MiniStorage::CAPACITY || (int)$storage['max_capacity'] !== MiniStorage::CAPACITY) return false;
+        }
+        return true;
+    }
+    private function retireWarehouseMini(Node $warehouse, int $bot, int $author, string $operation): void
+    {
+        foreach (Node::find()->where(['parent_id' => $warehouse->id, 'node_type' => 'CHEST', 'status' => 'active', 'owner_user_id' => $bot])->all() as $mini) {
+            if (!$this->managed($mini->getAttributes(), ['store'])) continue;
+            $references = array_diff((new WorldNodeEditor($this->db, new WorldFlags($this->db, \Yii::$app->getModule('world'))))->usage((int)$mini->id, true, true), ['economy_subject']);
+            $storageIds = (new Query())->select('id')->from('craft_storage')->where(['node_id' => $mini->id])->column($this->db);
+            $accepted = $storageIds && (new Query())->from('world_source_work')->where(['target_storage_id' => $storageIds])->andWhere(['not', ['active_key' => null]])->exists($this->db);
+            // Never archive property, funds, reservations or accepted work as a side effect of a layout repair.
+            if (\common\modules\world\models\NodeUsage::hasAssets((int)$mini->id) || $references || $accepted
+                || $mini->getChildren()->andWhere(['<>', 'status', 'archived'])->exists())
+                throw new GameError('NPC_STORAGE_REVIEW_REQUIRED', 'Мини-склад внутри большого склада ещё используется. Завершите операции и перенесите запасы; имущество и средства сохранены.', 409);
+            $before = $mini->getAttributes();
+            $this->db->createCommand()->update('craft_storage', ['status' => 'retired', 'capacity' => 0, 'revision' => new Expression('[[revision]]+1')], ['node_id' => $mini->id, 'owner_user_id' => $bot, 'status' => 'active'])->execute();
+            if ($this->db->createCommand()->update('world_node', ['status' => 'archived', 'revision' => new Expression('[[revision]]+1'), 'updated_at' => time()], ['id' => $mini->id, 'status' => 'active'])->execute() !== 1) throw new \RuntimeException('NPC redundant storage write failed.');
+            $mini->refresh();
+            (new WorldTree($this->db))->audit($author, 'world.npc.storage-layout', 'Пустой мини-склад внутри большого склада убран в архив', $before, $mini->getAttributes(), $operation);
+        }
     }
     private function stations(Node $node, array $codes, int $bot, string $operation): void
     {

@@ -15,7 +15,8 @@ final class TemplateParents
         foreach (['forest-plot', 'stone-plot', 'clay-plot', 'sand-plot', 'meadow-plot', 'water-source', 'campfire-place', 'cookfire', 'trap', 'workshop-building', 'storage-building', 'small-greenhouse', 'field-kitchen'] as $code) $parents[$code] = ['starter-site', 'estate'];
         $parents['garden-bed'][] = 'small-greenhouse';
         foreach ($templates as $code => $template) if (preg_match('/^mini-storage-level-([2-7])$/D', $code, $match)) {
-            foreach ($templates as $parentCode => $parent) if ((int)$parent['hierarchy_level'] === (int)$match[1] - 1) $parents[$code][] = $parentCode;
+            foreach ($templates as $parentCode => $parent) if ((int)$parent['hierarchy_level'] === (int)$match[1] - 1
+                && $parent['kind'] !== 'CHEST' && empty((json_decode($parent['defaults_json'] ?: '{}', true) ?: [])['storage_capacity'])) $parents[$code][] = $parentCode;
         }
         foreach ($parents as $code => $codes) if (isset($templates[$code])) foreach (array_unique($codes) as $parent) if (isset($templates[$parent])) {
             $edge = ['template_id' => $templates[$code]['id'], 'parent_template_id' => $templates[$parent]['id']];
