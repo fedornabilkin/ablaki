@@ -11880,7 +11880,7 @@
       "name": "GET - State",
       "url": "{{ _.baseUrl }}/v1/world/economy",
       "method": "GET",
-      "description": "Contract: docs/architecture/economy-runtime-api.md. Read-only state with dish-specific backpack restore_hp (at most 8), kitchen_restore_hp, repeat_limit, repeat_remaining, repeat_seconds, restores_at, can_eat and disorder_until. Goals include completed, blocked_reason and funding_settlement_id; can_fund_goals requires world-manage. Completed goals still require an existing funded reserve. Feedback leads to /forum.",
+      "description": "Contract: docs/architecture/economy-runtime-api.md. Read-only state with dish-specific backpack restore_hp (at most 8), kitchen_restore_hp, repeat_limit, repeat_remaining, repeat_seconds, restores_at, can_eat and disorder_until. Goals include completed, blocked_reason and funding_settlement_id; can_fund_goals requires world-manage. Completed goals still require an existing funded reserve. Feedback leads to /forum. world_instance is the active root id:created_at string (or null); browser acceptance-checklist results are isolated by user and world instance.",
       "body": {},
       "parameters": [],
       "headers": [

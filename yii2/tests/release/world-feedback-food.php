@@ -83,6 +83,17 @@ try {
     economyCheck($workspace->craft($freshUser, $key, $payload, $quote['quote_id'], (array)$quote['expected_revisions']) === $result
         && $freshStock->quantities($freshUser)[(int)$log['id']] === $beforeLogs - 2, 'craft retry preserves its result without consuming materials again');
 } finally { $tx->rollBack(); }
+$economyController = new \common\modules\world\apiControllers\EconomyApiController('economy', $app->getModule('world'));
+$rootIdentity = (new Query())->from('world_node')->where(['id' => EconomyRuntime::world($db)])->one($db);
+$economyState = $economyController->actionIndex();
+economyCheck($economyState['world_instance'] === $rootIdentity['id'] . ':' . $rootIdentity['created_at'], 'economy state identifies the active world instance independently of the current page');
+$identityTx = $db->beginTransaction();
+try {
+    $db->createCommand()->update('world_node', ['created_at' => (int)$rootIdentity['created_at'] + 1], ['id' => $rootIdentity['id']])->execute();
+    $recreatedState = $economyController->actionIndex();
+    economyCheck($recreatedState['world_instance'] !== $economyState['world_instance'] && $recreatedState['profile_version'] === $economyState['profile_version'], 'recreating a root with the same numerical ID starts a separate browser checklist without changing the economy profile');
+} finally { $identityTx->rollBack(); }
+
 echo 'World feedback and food checks passed.' . PHP_EOL;
 
 $overview = (new \common\modules\world\models\domain\WorldBalanceOverview($db))->report(2);

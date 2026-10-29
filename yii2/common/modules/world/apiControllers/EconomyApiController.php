@@ -45,7 +45,10 @@ class EconomyApiController extends CoreController
     {
         $user = (int)Yii::$app->user->id; $db = Yii::$app->db;
         $revision = EconomyRuntime::current($db);
+        $world = (new \yii\db\Query())->select(['n.id', 'n.created_at'])->from(['r' => 'world_registry'])
+            ->innerJoin(['n' => 'world_node'], 'n.id=r.active_world_id')->where(['r.id' => 1])->one($db);
         return ['enabled' => $revision !== null, 'profile_version' => $revision ? $revision['version'] : null,
+            'world_instance' => $world ? $world['id'] . ':' . $world['created_at'] : null,
             'can_fund_goals' => Yii::$app->user->can('world-manage'),
             'personal_credit_cr' => \common\modules\world\modules\economy\value\Money::parse((string)((new \yii\db\Query())->select('credit')->from('persone')->where(['user_id' => $user])->scalar($db) ?: '0'))->decimal(),
             'target_start_credit_cr' => $revision['profile']['starter']['credits_cr'] ?? null,
