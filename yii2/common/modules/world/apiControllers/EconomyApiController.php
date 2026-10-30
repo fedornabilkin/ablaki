@@ -19,8 +19,11 @@ class EconomyApiController extends CoreController
             ->innerJoin(['c' => 'craft_category'], 'c.id=s.category_id')->where(['s.user_id' => $user])->orderBy('c.id')->all($db);
         $professions = (new \yii\db\Query())->select(['p.name', 't.level', 't.xp'])->from(['t' => 'actor_profession'])
             ->innerJoin(['a' => 'game_actor'], 'a.id=t.actor_id')->innerJoin(['p' => 'profession'], 'p.id=t.profession_id')->where(['a.user_id' => $user, 'a.kind' => 'player'])->orderBy('p.id')->all($db);
+        $extraction = $db->schema->getTableSchema('world_mining_worker') ? (new \yii\db\Query())->select(['w.node_id', 'n.name', 'w.last_seen_at'])->from(['w' => 'world_mining_worker'])
+            ->innerJoin(['n' => 'world_node'], 'n.id=w.node_id')->where(['w.user_id' => $user])->one($db) : false;
         return ['craft' => array_map(static function ($skill) { $xp = (int)$skill['experience']; return ['name' => trim($skill['name']), 'level' => 1 + intdiv($xp, 100), 'xp' => $xp]; }, $skills),
-            'professions' => array_map(static function ($track) { return ['name' => $track['name'], 'level' => (int)$track['level'], 'xp' => (int)$track['xp']]; }, $professions), 'server_time' => time()];
+            'professions' => array_map(static function ($track) { return ['name' => $track['name'], 'level' => (int)$track['level'], 'xp' => (int)$track['xp']]; }, $professions),
+            'extraction_work' => $extraction ? ['node_id' => (int)$extraction['node_id'], 'name' => $extraction['name'], 'last_seen_at' => (int)$extraction['last_seen_at']] : null, 'server_time' => time()];
     }
     private function storageService(): \common\modules\world\models\domain\EconomyStorage { return new \common\modules\world\models\domain\EconomyStorage(Yii::$app->db, $this->flags()); }
     public function actionStorage($id): array { return $this->storageService()->state((int)Yii::$app->user->id, $this->id($id)); }

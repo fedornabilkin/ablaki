@@ -3,6 +3,7 @@ namespace common\modules\world\models\domain;
 
 use common\modules\world\support\GameError;
 use yii\db\Connection;
+use yii\db\Expression;
 use yii\db\Query;
 
 /** Bounded queries; privacy filtering precedes counts, limits and aggregates. */
@@ -146,6 +147,8 @@ class WorldQuery
             }
         }
         $builds = $this->db->schema->getTableSchema('world_build') ? \common\modules\world\models\Build::find()->where(['node_id' => $ids, 'status' => 'building'])->indexBy('node_id')->all() : [];
+        $lastBuilds = $this->db->schema->getTableSchema('world_build') ? (new Query())->select(['id', 'node_id'])->from('world_build')->where(['id' => (new Query())->select(new Expression('MAX([[id]])'))->from('world_build')->where(['node_id' => $ids])
+            ->andWhere(['or', ['owner_user_id' => $this->policy->userId()], ['id' => (new Query())->select('build_id')->from('world_build_work')->where(['user_id' => $this->policy->userId()])]])->groupBy('node_id')])->indexBy('node_id')->all($this->db) : [];
         $liveWork = [];
         if ($builds) foreach ((new Query())->from('world_build_work')->where(['build_id' => array_map(static function ($build) { return $build->id; }, $builds), 'ended_at' => null])->all($this->db) as $work)
             $liveWork[$work['build_id']] = ($liveWork[$work['build_id']] ?? 0) + max(0, min(time(), (int)$work['last_seen_at'] + 60) - (int)$work['accounted_at']);
@@ -170,6 +173,7 @@ class WorldQuery
                 $detail['max_condition'] = (int)$row['max_condition'];
                 $detail['repair_active'] = $build->isRepair();
             }
+            if (isset($lastBuilds[$row['id']])) $detail['last_build_id'] = (int)$lastBuilds[$row['id']]['id'];
             unset($detail['node_id']);
             foreach (['template_revision_id', 'level', 'condition', 'max_condition', 'area', 'fertility', 'ordinal', 'unlocked', 'population', 'plot_limit', 'allow_building', 'garden_node_id', 'active_project_id'] as $field) if (isset($detail[$field])) $detail[$field] = (int)$detail[$field];
             $label = ($row['label'] ?? '') ?: $row['name'];

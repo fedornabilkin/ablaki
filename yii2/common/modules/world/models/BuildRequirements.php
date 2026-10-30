@@ -27,8 +27,6 @@ final class BuildRequirements
         $quantities = []; foreach (BuildMaterials::plan($user, $parent, $materials)['materials'] as $material) $quantities[$material['item_id']] = $material['have'];
         $resolver = new StationResolver($store);
         $result = []; $equipment = [];
-        $world = (int)Node::requireOne($parent)->root_id;
-        $building = Build::find()->alias('b')->innerJoin(['n' => 'world_node'], 'n.id=b.node_id')->where(['b.owner_user_id' => $user, 'b.status' => 'building', 'n.root_id' => $world])->exists();
         foreach ($templates as $template) {
             $defaults = $template->defaults(); $missing = [];
             foreach (['material' => $template->materials(), 'tool' => $defaults['build_tools'] ?? [], 'station' => $defaults['build_stations'] ?? []] as $kind => $entries) {
@@ -39,7 +37,7 @@ final class BuildRequirements
                     if ($have < $quantity) $missing[] = ($item ? $item->name : $code) . ': ' . $have . ' / ' . $quantity;
                 }
             }
-            $result[(int)$template->id] = ['available' => !$missing && !$building, 'unavailable_reason' => $building ? 'Сначала завершите или отмените текущую стройку или ремонт.' : ($missing ? 'Не хватает: ' . implode(', ', $missing) : '')];
+            $result[(int)$template->id] = ['available' => !$missing, 'unavailable_reason' => $missing ? 'Не хватает: ' . implode(', ', $missing) : ''];
         }
         return $result;
     }

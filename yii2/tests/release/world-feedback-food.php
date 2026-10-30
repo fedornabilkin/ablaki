@@ -506,11 +506,109 @@ try {
     economyReject(static function () use ($b, $freshUser) { \common\modules\world\models\BuildWork::start($b, $freshUser); }, 'BUILDER_BUSY');
     $db->createCommand()->insert('world_build_work', ['build_id' => $b->id, 'user_id' => $freshUser, 'started_at' => time(), 'last_seen_at' => time(), 'accounted_at' => time(), 'seconds' => 0, 'paid_amount' => '0.0000'])->execute();
     economyReject(static function () use ($b, $freshUser, $fixtures) { \common\modules\world\models\BuildWork::heartbeat($b, $freshUser, $fixtures['operation_id'], false); }, 'BUILDER_BUSY');
-    economyReject(static function () use ($freshUser, $siteId) { \common\modules\world\models\Build::requireAvailableProject($freshUser, (int)Node::requireOne($siteId)->root_id); }, 'CONSTRUCTION_LIMIT');
     economyCheck((int)(new Query())->from('world_builder')->where(['user_id' => $freshUser])->count('*', $db) === 1 && (int)\common\modules\world\models\Build::requireOne($b->id)->worked_seconds === 0, 'legacy suspended work cannot renew a second construction session');
     $price = \common\modules\world\models\domain\WorldMapCells::purchasePricing(['base_price' => '0.5000', 'outer_ring_multiplier' => 10, 'bulk_minimum' => 3, 'discount_bps' => 500], [['x' => 1, 'y' => 0], ['x' => 2, 'y' => 0]]);
     economyCheck(array_column($price['unit_prices'], 'price') === ['0.5000', '10.0000'], 'distant rings cost twenty times the adjacent ring without changing starting cells');
     economyCheck(\common\modules\world\models\domain\EconomyProfile::load()['objects']['forge']['price_cr'] === '40.0000' && 250 - (20 + 50 + 10 + 120 + 40 + 3.8 + 4) > 0, '250 starting credits cover shelter, garden, bed, mine, forge, eight adjacent cells and two waterings');
+} finally { $tx->rollBack(); }
+$tx = $db->beginTransaction();
+try {
+    // Real placement and payroll, isolated from the manual/local world and later fixtures.
+    $helpers = [9030, 9031];
+    foreach ($helpers as $helper) {
+        $db->createCommand()->insert('user', ['id' => $helper, 'username' => 'JointBuilder' . $helper])->execute();
+        $db->createCommand()->insert('persone', ['id' => $helper, 'user_id' => $helper, 'credit' => '0.0000', 'balance' => '0.0000'])->execute();
+        $app->authManager->assign($app->authManager->getRole('world-tester'), $helper);
+    }
+    foreach ((new Query())->select('build_id')->from('world_build_work')->where(['user_id' => $freshUser, 'ended_at' => null])->column($db) as $id) \common\modules\world\models\BuildWork::closeAll((int)$id);
+    $db->createCommand()->delete('world_mining_worker', ['user_id' => $freshUser])->execute();
+    $db->createCommand()->update('persone', ['credit' => '1000.0000'], ['user_id' => $freshUser])->execute();
+    $log = (new Query())->from('craft_item')->where(['code' => 'classic-log'])->one($db);
+    $freshStock->move($freshUser, $log, 40);
+    $materialQuantity = static function () use ($db, $freshUser, $log) { return (int)(new Query())->from('craft_inventory')->where(['user_id' => $freshUser, 'item_id' => $log['id']])->sum('item_quantity', $db); };
+    $materialBefore = $materialQuantity();
+    $definition = new NodeTemplate();
+    $attributes = NodeTemplate::requireOne(['code' => 'forest-plot'])->getAttributes(); unset($attributes['id']);
+    $definition->setAttributes(array_replace($attributes, ['code' => 'fixture-joint-building', 'name' => 'Joint building', 'build_seconds' => 100, 'materials_json' => '{"classic-log":10}', 'defaults_json' => '{"price_cr":"5.0000"}']), false);
+    if (!$definition->save(false)) throw new RuntimeException('Joint template write failed.');
+    $db->createCommand()->insert('world_template_parent', ['template_id' => $definition->id, 'parent_template_id' => Node::requireOne($siteId)->template_id])->execute();
+    $projects = [];
+    for ($i = 0; $i < 3; $i++) {
+        $cell = (new \common\modules\world\models\domain\WorldTree($db))->nextPosition($siteId);
+        $where = ['parent_id' => $siteId] + $cell;
+        if ((new Query())->from('world_map_cell')->where($where)->exists($db)) $db->createCommand()->update('world_map_cell', ['state' => 'open'], $where)->execute();
+        else $db->createCommand()->insert('world_map_cell', $where + ['state' => 'open', 'price' => '0.0000', 'created_at' => time(), 'updated_at' => time()])->execute();
+        $input = ['parent_id' => $siteId, 'template_id' => (int)$definition->id, 'name' => 'Joint project ' . $i, 'labor_budget' => '10', 'top_up' => true, 'terms_digest' => \common\modules\world\models\domain\EconomyConstruction::terms($definition)['terms_digest']] + $cell;
+        $result = Command::run($freshUser, bin2hex(random_bytes(16)), 'world.build.create', $input, static function ($op) use ($freshUser, $input) { return ['build' => \common\modules\world\models\Build::begin($freshUser, $input, $op)->toArray()]; });
+        $projects[] = \common\modules\world\models\Build::requireOne($result['build']['id']);
+    }
+    economyCheck(count($projects) === 3 && array_reduce($projects, static function ($ok, $build) { return $ok && $build->status === 'building'; }, true)
+        && \common\modules\world\models\BuildRequirements::availability($freshUser, $siteId, $definition)['available'], 'three pending placements and the catalog remain available before any project is completed');
+    economyCheck($materialQuantity() === $materialBefore - 30, 'every pending project consumes its own accepted materials on placement');
+    $project = $projects[0]; $at = time();
+    foreach ([$freshUser => 20, $helpers[0] => 30, $helpers[1] => 50] as $builder => $seconds) {
+        \common\modules\world\models\BuildWork::start($project, $builder);
+        $db->createCommand()->update('world_build_work', ['accounted_at' => $at - $seconds, 'last_seen_at' => $at, 'started_at' => $at - $seconds], ['build_id' => $project->id, 'user_id' => $builder])->execute();
+    }
+    economyReject(static function () use ($projects, $freshUser) { \common\modules\world\models\BuildWork::start($projects[1], $freshUser); }, 'BUILDER_BUSY');
+    $payload = ['build_id' => (int)$project->id];
+    Command::run($freshUser, bin2hex(random_bytes(16)), 'fixture.joint.finish', $payload, static function ($op) use ($project, $at) { \common\modules\world\models\BuildClock::checkpoint($project, $at); $project->finish($op); return ['build' => $project->toArray()]; });
+    $receipt = $project->result();
+    $oldSettings = json_decode($project->node->settings_json, true); unset($oldSettings['accepted_build_price_cr']);
+    $db->createCommand()->update('world_node', ['settings_json' => json_encode($oldSettings)], ['id' => $project->node_id])->execute(); $project->refresh();
+    economyCheck($project->result()['object_price_cr'] === '5.0000', 'historical completed projects recover the actual object price from their creation ledger');
+    economyCheck($receipt['paid_cr'] === '8.0000' && $receipt['released_cr'] === '2.0000' && $receipt['spent_cr'] === '13.0000' && array_column($receipt['participants'], 'seconds') === [20, 30, 50]
+        && array_column($receipt['participants'], 'paid_cr') === ['0.0000', '3.0000', '5.0000'], 'owner and two helpers receive the exact proportional payroll and the unused owner share is released');
+    foreach ($helpers as $helper) {
+        $key = bin2hex(random_bytes(16));
+        $late = static function () use ($payload, $helper, $key) { return Command::run($helper, $key, 'world.build.heartbeat', $payload, static function ($op) use ($payload, $helper) { return \common\modules\world\models\BuildWork::heartbeat(\common\modules\world\models\Build::requireOne($payload['build_id']), $helper, $op, false); }); };
+        $result = $late();
+        economyCheck($result === $late() && $result['build']['status'] === 'completed' && $result['work']['ended_at'] !== null && $result['build']['result']['paid_cr'] === '8.0000', 'late helper heartbeat and replay return the settled result without a second wage');
+        $list = \common\modules\world\models\Build::listing($helper, ['node_id' => $project->node_id])->getModels();
+        economyCheck(count($list) === 1 && $list[0]->result() === $receipt, 'a helper can reload their completed construction receipt');
+        $view = (new \common\modules\world\models\domain\WorldQuery($db, new \common\modules\world\models\domain\WorldAccessPolicy($helper)))->node((int)$project->node_id);
+        economyCheck(((array)$view['details'])['last_build_id'] === (int)$project->id, 'the completed node snapshot retains the helper result panel');
+    }
+    $second = $projects[1]; \common\modules\world\models\BuildWork::start($second, $helpers[0]);
+    $db->createCommand()->update('world_build_work', ['accounted_at' => $at - 60, 'last_seen_at' => $at - 60], ['build_id' => $second->id])->execute();
+    $cancelKey = bin2hex(random_bytes(16));
+    $cancel = static function () use ($freshUser, $second, $cancelKey) { return Command::run($freshUser, $cancelKey, 'world.build.cancel', ['build_id' => (int)$second->id], static function ($op) use ($second) { $build = \common\modules\world\models\Build::requireOne($second->id); $build->finish($op, true); return ['build' => $build->toArray()]; }); };
+    $cancelled = $cancel(); $second->refresh();
+    economyCheck($second->result()['paid_cr'] === '6.0000' && $second->result()['released_cr'] === '4.0000' && $second->result()['object_price_cr'] === '5.0000', 'cancellation pays completed helper work, releases unused labor funds and keeps the paid object price');
+    economyCheck($cancel() === $cancelled && $materialQuantity() === $materialBefore - 23 && $second->result()['material_refund_percent'] === 70, 'cancelling one of three projects returns exactly seven of ten logs once and never returns all consumed materials');
+    $third = $projects[2]; $helper = $helpers[1];
+    foreach ([60, 40] as $seconds) {
+        \common\modules\world\models\BuildWork::start($third, $helper);
+        $db->createCommand()->update('world_build_work', ['accounted_at' => time() - $seconds, 'last_seen_at' => time() - $seconds], ['build_id' => $third->id, 'ended_at' => null])->execute();
+        $closed = Command::run($helper, bin2hex(random_bytes(16)), 'world.build.stop', ['build_id' => (int)$third->id], static function ($op) use ($third, $helper) { return \common\modules\world\models\BuildWork::heartbeat($third, $helper, $op, true); });
+    }
+    economyCheck($closed['build']['status'] === 'completed' && $third->result()['paid_cr'] === '10.0000' && $third->result()['released_cr'] === '0.0000'
+        && $third->result()['participants'] === [['user_id' => $helper, 'name' => 'JointBuilder' . $helper, 'owner' => false, 'seconds' => 100, 'paid_cr' => '10.0000']],
+        'a helper alone completes the project across two sessions and receives the full budget exactly once in the combined receipt');
+    $map = new \common\modules\world\models\domain\MapExploration($db);
+    foreach ([[2,0],[-2,0],[0,2],[0,-2],[2,2],[-2,-2],[3,1]] as [$x,$y]) {
+        $db->createCommand()->delete('world_map_cell', ['parent_id' => $siteId, 'x' => $x, 'y' => $y])->execute();
+        $needed = \common\modules\world\models\domain\MapExploration::predecessors($x, $y);
+        foreach ($needed as $point) $db->createCommand()->delete('world_map_cell', ['parent_id' => $siteId] + $point)->execute();
+        economyReject(static function () use ($map, $siteId, $x, $y) { $map->requirePredecessors($siteId, $x, $y); }, 'MAP_PREDECESSOR_REQUIRED');
+        foreach ($needed as $index => $point) {
+            $db->createCommand()->insert('world_map_cell', ['parent_id' => $siteId] + $point + ['state' => 'discovered', 'price' => '0', 'created_at' => time(), 'updated_at' => time()])->execute();
+            if (count($needed) === 2 && $index === 0) economyReject(static function () use ($map, $siteId, $x, $y) { $map->requirePredecessors($siteId, $x, $y); }, 'MAP_PREDECESSOR_REQUIRED');
+        }
+        $map->requirePredecessors($siteId, $x, $y);
+    }
+    economyCheck(true, 'both sides of every diagonal and the nearer predecessor on every axis are required, including negative coordinates and farther rings');
+    $explorationNode = Node::requireOne($projects[0]->node_id);
+    $mapService = new \common\modules\world\models\domain\WorldMapCells($db, new \common\modules\world\models\domain\WorldFlags($db, $app->getModule('world')), new \common\modules\world\models\domain\WorldAccessPolicy($freshUser));
+    $input = $mapService->input((int)$explorationNode->id, ['cells' => [['x' => 2, 'y' => 2]], 'top_up' => false, 'use_elixir' => true]);
+    economyReject(static function () use ($mapService, $freshUser, $input) { $mapService->preview($freshUser, $input, 'explore'); }, 'MAP_PREDECESSOR_REQUIRED');
+    $db->createCommand()->insert('world_map_cell', ['parent_id' => $explorationNode->id, 'x' => 1, 'y' => 2, 'state' => 'discovered', 'price' => '0', 'created_at' => time(), 'updated_at' => time()])->execute();
+    economyReject(static function () use ($mapService, $freshUser, $input) { $mapService->preview($freshUser, $input, 'explore'); }, 'MAP_PREDECESSOR_REQUIRED');
+    $apiUser = (int)$app->user->id;
+    $db->createCommand()->delete('world_mining_worker', ['user_id' => $apiUser])->execute();
+    $db->createCommand()->insert('world_mining_worker', ['user_id' => $apiUser, 'node_id' => $mine->id, 'accounted_at' => time(), 'last_seen_at' => time()])->execute();
+    $progression = $economyController->actionProgression();
+    economyCheck($progression['extraction_work']['node_id'] === (int)$mine->id && is_int($progression['extraction_work']['last_seen_at']), 'character progression includes only the authenticated character extraction assignment');
 } finally { $tx->rollBack(); }
 $tx = $db->beginTransaction();
 try {

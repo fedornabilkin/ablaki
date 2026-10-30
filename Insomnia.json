@@ -6354,7 +6354,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/workspace",
       "name": "GET /world/workspace",
-      "description": "Изготовление временно доступно только в собственной действующей стоянке PLOT/campsite. node_id — ID стоянки. Инструменты, станции и склады дочерних помещений входят в её область. Для других объектов WORKSPACE_UNAVAILABLE. recipes[].icon содержит иконку выходного предмета для плиток мастерской.",
+      "description": "Изготовление временно доступно только в собственной действующей стоянке PLOT/campsite. node_id — ID стоянки. Инструменты, станции и склады дочерних помещений входят в её область. Для других объектов WORKSPACE_UNAVAILABLE. recipes[].icon содержит иконку выходного предмета для плиток мастерской.\n\n2026-10-30: Each recipe additionally returns category, a group name. Client filters the loaded catalogue by category, text and availability without extra requests. Contract: docs/architecture/simple-world-api.md.",
       "method": "GET",
       "body": {},
       "parameters": [
@@ -6737,7 +6737,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/nodes/{{ _.world_node_id }}/map-explore-preview",
       "name": "POST /world/nodes/{id}/map-explore-preview",
-      "description": "Select 1-100 unique cells on the same owned expandable map. Batch exploration is atomic; each selected cell must be free and unexplored. Required level is checked per cell; use_elixir=true consumes one elixir for each cell above current level. Batch terms.elixir_quantity gives the exact amount. Qualified cells cost no elixir. Buy only discovered free cells; from 3 cells discount is 5%. Preview first; execute with identical cells, quote_id, expected_revisions and request_key. Retries do not repeat charges. Legacy x/y still supported for a single cell.\n\nMVP 2026-10-07: одинаковый цикл ячеек для владельца действующего объекта на любом уровне. Новые карты 5×5, начальная ячейка открыта. Базовый уровень исследования 1 доступен без вступления в профессию; для следующих уровней нужна профессия или эликсиры. Ранее купленные грядки сохраняют garden-expand.\n\n2026-10-09: карта возвращает названия, иконки и characteristics размещённых предметов в equipment_cells; inventory_id/storage_id доступны владельцу. Возврат в рюкзак использует transfer-preview + transfer. Хранилища подписаны названием объекта; закрытые ячейки карты недоступны для размещения. Денежный контракт сохраняет точность четырёх знаков, интерфейс округляет до десятых.\n2026-10-29: public work/purchases grant no map expansion rights. Hide exploration/purchase controls when node is not owned or can_expand is false; the server still rechecks ownership.",
+      "description": "Select 1-100 unique cells on the same owned expandable map. Batch exploration is atomic; each selected cell must be free and unexplored. Required level is checked per cell; use_elixir=true consumes one elixir for each cell above current level. Batch terms.elixir_quantity gives the exact amount. Qualified cells cost no elixir. Buy only discovered free cells; from 3 cells discount is 5%. Preview first; execute with identical cells, quote_id, expected_revisions and request_key. Retries do not repeat charges. Legacy x/y still supported for a single cell.\n\nMVP 2026-10-07: одинаковый цикл ячеек для владельца действующего объекта на любом уровне. Новые карты 5×5, начальная ячейка открыта. Базовый уровень исследования 1 доступен без вступления в профессию; для следующих уровней нужна профессия или эликсиры. Ранее купленные грядки сохраняют garden-expand.\n\n2026-10-09: карта возвращает названия, иконки и characteristics размещённых предметов в equipment_cells; inventory_id/storage_id доступны владельцу. Возврат в рюкзак использует transfer-preview + transfer. Хранилища подписаны названием объекта; закрытые ячейки карты недоступны для размещения. Денежный контракт сохраняет точность четырёх знаков, интерфейс округляет до десятых.\n2026-10-29: public work/purchases grant no map expansion rights. Hide exploration/purchase controls when node is not owned or can_expand is false; the server still rechecks ownership.\n\n2026-10-30: Outer rings require previously researched predecessor cells towards the center; corners need both sides. For (2,2), research (1,2) and (2,1) first. discovered/open both qualify. Prerequisites cannot be satisfied by including them in the same batch. MAP_PREDECESSOR_REQUIRED returns required_cells. Level/elixir never bypasses this rule. Contract: docs/architecture/simple-world-api.md.",
       "method": "POST",
       "body": {
         "mimeType": "application/json",
@@ -6772,7 +6772,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/nodes/{{ _.world_node_id }}/map-explore",
       "name": "POST /world/nodes/{id}/map-explore",
-      "description": "Select 1-100 unique cells on the same owned expandable map. Batch exploration is atomic; each selected cell must be free and unexplored. Required level is checked per cell; use_elixir=true consumes one elixir for each cell above current level. Batch terms.elixir_quantity gives the exact amount. Qualified cells cost no elixir. Buy only discovered free cells; from 3 cells discount is 5%. Preview first; execute with identical cells, quote_id, expected_revisions and request_key. Retries do not repeat charges. Legacy x/y still supported for a single cell.\n\nMVP 2026-10-07: одинаковый цикл ячеек для владельца действующего объекта на любом уровне. Новые карты 5×5, начальная ячейка открыта. Базовый уровень исследования 1 доступен без вступления в профессию; для следующих уровней нужна профессия или эликсиры. Ранее купленные грядки сохраняют garden-expand.\n\n2026-10-09: карта возвращает названия, иконки и characteristics размещённых предметов в equipment_cells; inventory_id/storage_id доступны владельцу. Возврат в рюкзак использует transfer-preview + transfer. Хранилища подписаны названием объекта; закрытые ячейки карты недоступны для размещения. Денежный контракт сохраняет точность четырёх знаков, интерфейс округляет до десятых.\n2026-10-29: public work/purchases grant no map expansion rights. Hide exploration/purchase controls when node is not owned or can_expand is false; the server still rechecks ownership.",
+      "description": "Select 1-100 unique cells on the same owned expandable map. Batch exploration is atomic; each selected cell must be free and unexplored. Required level is checked per cell; use_elixir=true consumes one elixir for each cell above current level. Batch terms.elixir_quantity gives the exact amount. Qualified cells cost no elixir. Buy only discovered free cells; from 3 cells discount is 5%. Preview first; execute with identical cells, quote_id, expected_revisions and request_key. Retries do not repeat charges. Legacy x/y still supported for a single cell.\n\nMVP 2026-10-07: одинаковый цикл ячеек для владельца действующего объекта на любом уровне. Новые карты 5×5, начальная ячейка открыта. Базовый уровень исследования 1 доступен без вступления в профессию; для следующих уровней нужна профессия или эликсиры. Ранее купленные грядки сохраняют garden-expand.\n\n2026-10-09: карта возвращает названия, иконки и characteristics размещённых предметов в equipment_cells; inventory_id/storage_id доступны владельцу. Возврат в рюкзак использует transfer-preview + transfer. Хранилища подписаны названием объекта; закрытые ячейки карты недоступны для размещения. Денежный контракт сохраняет точность четырёх знаков, интерфейс округляет до десятых.\n2026-10-29: public work/purchases grant no map expansion rights. Hide exploration/purchase controls when node is not owned or can_expand is false; the server still rechecks ownership.\n\n2026-10-30: Outer rings require previously researched predecessor cells towards the center; corners need both sides. For (2,2), research (1,2) and (2,1) first. discovered/open both qualify. Prerequisites cannot be satisfied by including them in the same batch. MAP_PREDECESSOR_REQUIRED returns required_cells. Level/elixir never bypasses this rule. Contract: docs/architecture/simple-world-api.md.",
       "method": "POST",
       "body": {
         "mimeType": "application/json",
@@ -10936,7 +10936,7 @@
       "name": "GET · Доступные стройки",
       "url": "{{ _.baseUrl }}/v1/world/builds?envelope=1",
       "method": "GET",
-      "description": "Контракт: docs/architecture/simple-world-api.md. ID в окружении — примеры: сначала получите действительные ID из GET.",
+      "description": "Контракт: docs/architecture/simple-world-api.md. ID в окружении — примеры: сначала получите действительные ID из GET.\n\n2026-10-30: Multiple pending projects may be placed, each with its own labor budget. One active personal work session remains. Completed/cancelled Build has result with per-user seconds and paid_cr, labor_budget_cr, paid_cr, released_cr, object_price_cr and spent_cr. Late participant heartbeat/stop returns the settled receipt without another payment. Completed projects are listed for their contributors. Cancellation returns floor(70% of each material); the paid object price is not refunded and earned wages are paid. Contract: docs/architecture/simple-world-api.md.",
       "body": {},
       "parameters": [],
       "headers": [
@@ -10967,7 +10967,7 @@
       "name": "GET · Стройка и труд",
       "url": "{{ _.baseUrl }}/v1/world/builds/{{ _.simple_build_id }}",
       "method": "GET",
-      "description": "Контракт: docs/architecture/simple-world-api.md. ID в окружении — примеры: сначала получите действительные ID из GET.",
+      "description": "Контракт: docs/architecture/simple-world-api.md. ID в окружении — примеры: сначала получите действительные ID из GET.\n\n2026-10-30: Multiple pending projects may be placed, each with its own labor budget. One active personal work session remains. Completed/cancelled Build has result with per-user seconds and paid_cr, labor_budget_cr, paid_cr, released_cr, object_price_cr and spent_cr. Late participant heartbeat/stop returns the settled receipt without another payment. Completed projects are listed for their contributors. Cancellation returns floor(70% of each material); the paid object price is not refunded and earned wages are paid. Contract: docs/architecture/simple-world-api.md.",
       "body": {},
       "parameters": [],
       "headers": [
@@ -11119,7 +11119,7 @@
       "name": "POST · Начать стройку",
       "url": "{{ _.baseUrl }}/v1/world/builds",
       "method": "POST",
-      "description": "Contract: docs/architecture/simple-world-api.md. Existing budget is reserved first; top_up=true permits only the missing amount from the personal wallet. Funding, materials and construction are atomic. Retry with the same Idempotency-Key and body. Schema 42: labor_budget=0 permits self-construction; a positive amount must meet the accepted minimum. Decrease only before helpers accept/earn work (can_reduce_budget). top_up charges only the shortfall. Schema 43: одна незавершённая стройка/ремонт на игрока, иначе CONSTRUCTION_LIMIT; неподходящий родитель INVALID_TEMPLATE.",
+      "description": "Contract: docs/architecture/simple-world-api.md. Existing budget is reserved first; top_up=true permits only the missing amount from the personal wallet. Funding, materials and construction are atomic. Retry with the same Idempotency-Key and body. Schema 42: labor_budget=0 permits self-construction; a positive amount must meet the accepted minimum. Decrease only before helpers accept/earn work (can_reduce_budget). top_up charges only the shortfall. Schema 43: одна незавершённая стройка/ремонт на игрока, иначе CONSTRUCTION_LIMIT; неподходящий родитель INVALID_TEMPLATE.\n\n2026-10-30: Multiple pending projects may be placed, each with its own labor budget. One active personal work session remains. Completed/cancelled Build has result with per-user seconds and paid_cr, labor_budget_cr, paid_cr, released_cr, object_price_cr and spent_cr. Late participant heartbeat/stop returns the settled receipt without another payment. Completed projects are listed for their contributors. Cancellation returns floor(70% of each material); the paid object price is not refunded and earned wages are paid. Contract: docs/architecture/simple-world-api.md.",
       "body": {
         "mimeType": "application/json",
         "text": "{\"parent_id\": {{ _.simple_parent_id }}, \"template_id\": {{ _.simple_template_id }}, \"name\": \"Мой дом\", \"labor_budget\": \"0\", \"x\": 0, \"y\": 0,\n  \"top_up\": false\n}"
@@ -11161,7 +11161,7 @@
       "name": "POST · Начать работу",
       "url": "{{ _.baseUrl }}/v1/world/builds/{{ _.simple_build_id }}/start",
       "method": "POST",
-      "description": "Контракт: docs/architecture/simple-world-api.md. ID в окружении — примеры: сначала получите действительные ID из GET. Новый ключ для нового действия; тот же ключ и тело при повторе.\n2026-10-28: onboarding may create the participant starter site in an active public city owned by bot. It does not permit ordinary construction on foreign property or create credits; payout still requires the dedicated funded settlement reserve.",
+      "description": "Контракт: docs/architecture/simple-world-api.md. ID в окружении — примеры: сначала получите действительные ID из GET. Новый ключ для нового действия; тот же ключ и тело при повторе.\n2026-10-28: onboarding may create the participant starter site in an active public city owned by bot. It does not permit ordinary construction on foreign property or create credits; payout still requires the dedicated funded settlement reserve.\n\n2026-10-30: Multiple pending projects may be placed, each with its own labor budget. One active personal work session remains. Completed/cancelled Build has result with per-user seconds and paid_cr, labor_budget_cr, paid_cr, released_cr, object_price_cr and spent_cr. Late participant heartbeat/stop returns the settled receipt without another payment. Completed projects are listed for their contributors. Cancellation returns floor(70% of each material); the paid object price is not refunded and earned wages are paid. Contract: docs/architecture/simple-world-api.md.",
       "body": {
         "mimeType": "application/json",
         "text": "{}"
@@ -11203,7 +11203,7 @@
       "name": "POST · Учесть труд",
       "url": "{{ _.baseUrl }}/v1/world/builds/{{ _.simple_build_id }}/heartbeat",
       "method": "POST",
-      "description": "Контракт: docs/architecture/simple-world-api.md. ID в окружении — примеры: сначала получите действительные ID из GET. Новый ключ для нового действия; тот же ключ и тело при повторе.\n2026-10-28: onboarding may create the participant starter site in an active public city owned by bot. It does not permit ordinary construction on foreign property or create credits; payout still requires the dedicated funded settlement reserve.",
+      "description": "Контракт: docs/architecture/simple-world-api.md. ID в окружении — примеры: сначала получите действительные ID из GET. Новый ключ для нового действия; тот же ключ и тело при повторе.\n2026-10-28: onboarding may create the participant starter site in an active public city owned by bot. It does not permit ordinary construction on foreign property or create credits; payout still requires the dedicated funded settlement reserve.\n\n2026-10-30: Multiple pending projects may be placed, each with its own labor budget. One active personal work session remains. Completed/cancelled Build has result with per-user seconds and paid_cr, labor_budget_cr, paid_cr, released_cr, object_price_cr and spent_cr. Late participant heartbeat/stop returns the settled receipt without another payment. Completed projects are listed for their contributors. Cancellation returns floor(70% of each material); the paid object price is not refunded and earned wages are paid. Contract: docs/architecture/simple-world-api.md.",
       "body": {
         "mimeType": "application/json",
         "text": "{}"
@@ -11245,7 +11245,7 @@
       "name": "POST · Остановить работу",
       "url": "{{ _.baseUrl }}/v1/world/builds/{{ _.simple_build_id }}/stop",
       "method": "POST",
-      "description": "Контракт: docs/architecture/simple-world-api.md. ID в окружении — примеры: сначала получите действительные ID из GET. Новый ключ для нового действия; тот же ключ и тело при повторе.\n2026-10-28: onboarding may create the participant starter site in an active public city owned by bot. It does not permit ordinary construction on foreign property or create credits; payout still requires the dedicated funded settlement reserve.",
+      "description": "Контракт: docs/architecture/simple-world-api.md. ID в окружении — примеры: сначала получите действительные ID из GET. Новый ключ для нового действия; тот же ключ и тело при повторе.\n2026-10-28: onboarding may create the participant starter site in an active public city owned by bot. It does not permit ordinary construction on foreign property or create credits; payout still requires the dedicated funded settlement reserve.\n\n2026-10-30: Multiple pending projects may be placed, each with its own labor budget. One active personal work session remains. Completed/cancelled Build has result with per-user seconds and paid_cr, labor_budget_cr, paid_cr, released_cr, object_price_cr and spent_cr. Late participant heartbeat/stop returns the settled receipt without another payment. Completed projects are listed for their contributors. Cancellation returns floor(70% of each material); the paid object price is not refunded and earned wages are paid. Contract: docs/architecture/simple-world-api.md.",
       "body": {
         "mimeType": "application/json",
         "text": "{}"
@@ -11287,7 +11287,7 @@
       "name": "POST · Отменить стройку",
       "url": "{{ _.baseUrl }}/v1/world/builds/{{ _.simple_build_id }}/cancel",
       "method": "POST",
-      "description": "Контракт: docs/architecture/simple-world-api.md. Новая стройка: объект архивируется и исчезает с карты; возвращается floor(quantity * 0.7) каждого материала даже до начала работ. Ответ {build, return_node_id}; клиент открывает родительскую карту. Ремонт: объект сохраняется, ответ {build}. Только владелец. Новый ключ для нового действия; тот же ключ и тело при повторе.",
+      "description": "Контракт: docs/architecture/simple-world-api.md. Новая стройка: объект архивируется и исчезает с карты; возвращается floor(quantity * 0.7) каждого материала даже до начала работ. Ответ {build, return_node_id}; клиент открывает родительскую карту. Ремонт: объект сохраняется, ответ {build}. Только владелец. Новый ключ для нового действия; тот же ключ и тело при повторе.\n\n2026-10-30: Multiple pending projects may be placed, each with its own labor budget. One active personal work session remains. Completed/cancelled Build has result with per-user seconds and paid_cr, labor_budget_cr, paid_cr, released_cr, object_price_cr and spent_cr. Late participant heartbeat/stop returns the settled receipt without another payment. Completed projects are listed for their contributors. Cancellation returns floor(70% of each material); the paid object price is not refunded and earned wages are paid. Contract: docs/architecture/simple-world-api.md.",
       "body": {
         "mimeType": "application/json",
         "text": "{}"
@@ -11444,7 +11444,7 @@
       "name": "GET · Текущая работа",
       "url": "{{ _.baseUrl }}/v1/world/builds/active",
       "method": "GET",
-      "description": "{build: Build|null}. Восстановление активной работы после перезагрузки, перед переходом на другую карту требуется stop.",
+      "description": "{build: Build|null}. Восстановление активной работы после перезагрузки, перед переходом на другую карту требуется stop.\n\n2026-10-30: Multiple pending projects may be placed, each with its own labor budget. One active personal work session remains. Completed/cancelled Build has result with per-user seconds and paid_cr, labor_budget_cr, paid_cr, released_cr, object_price_cr and spent_cr. Late participant heartbeat/stop returns the settled receipt without another payment. Completed projects are listed for their contributors. Cancellation returns floor(70% of each material); the paid object price is not refunded and earned wages are paid. Contract: docs/architecture/simple-world-api.md.",
       "body": {},
       "parameters": [],
       "headers": [
@@ -11506,7 +11506,7 @@
       "name": "POST · Имя и бюджет стройки",
       "url": "{{ _.baseUrl }}/v1/world/builds/{{ _.simple_build_id }}/settings",
       "method": "POST",
-      "description": "Contract: docs/architecture/simple-world-api.md. Existing budget is reserved first; top_up=true permits only the missing amount from the personal wallet. Funding, materials and construction are atomic. Retry with the same Idempotency-Key and body. Schema 42: labor_budget=0 permits self-construction; a positive amount must meet the accepted minimum. Decrease only before helpers accept/earn work (can_reduce_budget). top_up charges only the shortfall.",
+      "description": "Contract: docs/architecture/simple-world-api.md. Existing budget is reserved first; top_up=true permits only the missing amount from the personal wallet. Funding, materials and construction are atomic. Retry with the same Idempotency-Key and body. Schema 42: labor_budget=0 permits self-construction; a positive amount must meet the accepted minimum. Decrease only before helpers accept/earn work (can_reduce_budget). top_up charges only the shortfall.\n\n2026-10-30: Multiple pending projects may be placed, each with its own labor budget. One active personal work session remains. Completed/cancelled Build has result with per-user seconds and paid_cr, labor_budget_cr, paid_cr, released_cr, object_price_cr and spent_cr. Late participant heartbeat/stop returns the settled receipt without another payment. Completed projects are listed for their contributors. Cancellation returns floor(70% of each material); the paid object price is not refunded and earned wages are paid. Contract: docs/architecture/simple-world-api.md.",
       "body": {
         "mimeType": "application/json",
         "text": "{\"name\":\"Мой дом\", \"labor_budget\":\"0\",\n  \"top_up\": false\n}"
@@ -12177,7 +12177,7 @@
       "name": "GET - Character progression",
       "url": "{{ _.baseUrl }}/v1/world/economy/progression",
       "method": "GET",
-      "description": "Own craft levels and profession XP without inventory loading. Returns craft, professions and server_time.",
+      "description": "Own craft levels and profession XP without inventory loading. Returns craft, professions and server_time.\n\n2026-10-30: Adds extraction_work: {node_id,name,last_seen_at}|null for the authenticated character. Read-only: never starts, resumes or heartbeats extraction. Used by /world/character and the person popover. Contract: docs/architecture/simple-world-api.md.",
       "body": {},
       "parameters": [],
       "headers": [

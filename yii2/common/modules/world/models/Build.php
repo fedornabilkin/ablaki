@@ -28,7 +28,6 @@ class Build extends Record
             && $parent->visibility === 'public' && $parent->status === 'active' && (int)$parent->root_id === Registry::worldId();
         if ($onboarding && !$publicStarter) $parent->requireOwner($user);
         if (!$template->player_buildable || !$template->enabled || !$template->permits($parent)) throw new GameError('INVALID_TEMPLATE', 'Этот объект здесь строить нельзя.', 422);
-        self::requireAvailableProject($user, (int)$parent->root_id);
         $economyTerms = domain\EconomyConstruction::check($template, $user, $input, $onboarding);
         $cell = isset($input['x'], $input['y']) ? ['x' => $input['x'], 'y' => $input['y']]
             : ($onboarding ? null : (new \common\modules\world\models\domain\WorldTree(self::getDb()))->nextPosition((int)$parent->id));
@@ -49,6 +48,7 @@ class Build extends Record
         $node = NodeFactory::create($template, $parent, $user, $input['name'], 'build-' . $operation, $cell, 'constructing');
         $settings = json_decode($node->settings_json ?: '{}', true) ?: [];
         $settings['accepted_build_minimum_cr'] = $minimum->decimal(); $settings['builder_limit_enabled'] = $minimumEnabled;
+        $settings['accepted_build_price_cr'] = $economyTerms['price_cr'] ?? '0.0000';
         $node->settings_json = Json::encode((object)$settings);
         if (!$node->save(false)) throw new \RuntimeException('Construction terms write failed.');
         $accounts = (new EconomyHierarchy(self::getDb()))->provision((int)$node->id, $operation);
@@ -66,11 +66,6 @@ class Build extends Record
         return $build;
     }
     public function isRepair(): bool { return $this->getAttribute('job_kind') === 'repair'; }
-    public static function requireAvailableProject(int $user, int $world): void
-    {
-        if (self::find()->alias('b')->innerJoin(['n' => 'world_node'], 'n.id=b.node_id')->where(['b.owner_user_id' => $user, 'b.status' => 'building', 'n.root_id' => $world])->exists())
-            throw new GameError('CONSTRUCTION_LIMIT', 'Сначала завершите или отмените текущую стройку или ремонт.', 409);
-    }
     public function minimumLaborBudget(): string { return (string)((json_decode($this->node->settings_json ?: '{}', true) ?: [])['accepted_build_minimum_cr'] ?? '0.0000'); }
     public function builderLimit(): ?int
     {
@@ -84,7 +79,6 @@ class Build extends Record
         $node = Node::readable($nodeId, $user); $node->requireOwner($user);
         if ($node->status !== 'active') throw new GameError('REPAIR_UNAVAILABLE', 'Ремонт доступен только завершённому объекту.', 422);
         if (self::find()->where(['active_node_id'=>$nodeId])->exists()) throw new GameError('REPAIR_ALREADY_STARTED', 'Ремонт уже запущен.', 409);
-        self::requireAvailableProject($user, (int)$node->root_id);
         if ((new \yii\db\Query())->from(['n'=>'world_node'])->innerJoin(['c'=>'world_node_closure'], 'c.ancestor_id=n.id')->where(['c.descendant_id'=>$nodeId])->andWhere(['<>','n.status','active'])->exists()) throw new GameError('REPAIR_UNAVAILABLE', 'Родительский объект недоступен.', 409);
         $instance = BuildStrength::shelterInstance($nodeId);
         if ($instance) {
@@ -195,6 +189,34 @@ class Build extends Record
     {
         return (new BuildSearch())->search($user, $filter);
     }
+    public function result(): ?array
+    {
+        if ($this->status === 'building') return null;
+        $works = $this->getWork()->orderBy(['user_id' => SORT_ASC, 'id' => SORT_ASC])->asArray()->all();
+        $names = (new \yii\db\Query())->select('username')->from('user')->where(['id' => array_unique(array_column($works, 'user_id'))])->indexBy('id')->column(self::getDb());
+        $participants = []; $paid = Money::parse('0');
+        foreach ($works as $work) {
+            $id = (int)$work['user_id'];
+            if (!isset($participants[$id])) $participants[$id] = ['user_id' => $id, 'name' => $names[$id] ?? ('Участник #' . $id), 'owner' => $id === (int)$this->owner_user_id, 'seconds' => 0, 'paid_cr' => '0.0000'];
+            $amount = Money::parse((string)$work['paid_amount']);
+            $participants[$id]['seconds'] += (int)$work['seconds'];
+            $participants[$id]['paid_cr'] = Money::parse($participants[$id]['paid_cr'])->add($amount)->decimal();
+            $paid = $paid->add($amount);
+        }
+        $budget = Money::parse((string)$this->labor_budget);
+        $settings = json_decode($this->node->settings_json ?: '{}', true) ?: [];
+        $price = Money::parse($this->isRepair() ? '0' : ($settings['accepted_build_price_cr'] ?? '0'));
+        // Older projects predate the settings snapshot. Read their actual fee,
+        // never the current template price, from the immutable creation operation.
+        if (!$this->isRepair() && !isset($settings['accepted_build_price_cr']) && preg_match('/^build-([a-f0-9]{32})$/D', $this->node->code, $match)) {
+            $amount = (new \yii\db\Query())->select('amount')->from('economy_transfer')->where(['operation_id' => $match[1], 'kind' => 'mandatory_fee'])->scalar(self::getDb());
+            $price = Money::parse($amount === false ? '0' : (string)$amount);
+        }
+        return ['finished_at' => (int)$this->finished_at, 'participants' => array_values($participants),
+            'labor_budget_cr' => $budget->decimal(), 'paid_cr' => $paid->decimal(), 'released_cr' => $budget->subtract($paid)->decimal(),
+            'object_price_cr' => $price->decimal(), 'spent_cr' => $price->add($paid)->decimal(),
+            'materials' => json_decode($this->materials_json ?: '{}', true) ?: [], 'material_refund_percent' => $this->status === 'cancelled' && !$this->isRepair() ? 70 : 0];
+    }
     public function fields(): array
     {
         return ['id', 'node_id', 'parent_id', 'owner_user_id', 'required_seconds', 'worked_seconds', 'labor_budget', 'status', 'revision', 'created_at',
@@ -209,6 +231,7 @@ class Build extends Record
             'condition' => function () { return BuildStrength::forProject($this, (int)$this->worked_seconds); },
             'funding_node_id' => function () { return (int)$this->fundingNode()->id; },
             'budget_available' => function () { $accounts = (new EconomyHierarchy(self::getDb()))->accounts((int)$this->fundingNode()->id); return empty($accounts['budget']) ? '0.0000' : (new BudgetSpending(self::getDb()))->available((int)$accounts['budget']['id'])->decimal(); },
-            'live_work' => function () { return $this->getWork()->select(['accounted_at', 'last_seen_at'])->andWhere(['ended_at' => null])->asArray()->all(); }];
+            'live_work' => function () { return $this->getWork()->select(['accounted_at', 'last_seen_at'])->andWhere(['ended_at' => null])->asArray()->all(); },
+            'result' => function () { return $this->result(); }];
     }
 }

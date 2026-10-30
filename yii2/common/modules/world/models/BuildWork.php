@@ -45,6 +45,14 @@ class BuildWork extends Record
     public static function heartbeat(Build $build, int $user, string $operation, bool $stop): array
     {
         self::requireTransaction();
+        Node::readable((int)$build->node_id, $user);
+        if ($build->status !== 'building') {
+            $work = self::find()->where(['build_id' => $build->id, 'user_id' => $user])->orderBy(['id' => SORT_DESC])->one();
+            if (!$work) throw new GameError('WORK_NOT_STARTED', 'Вы не участвовали в этой стройке.', 409);
+            // Completion already checkpointed and paid every participant under the
+            // command lock. A late heartbeat reads that receipt, never pays again.
+            return ['build' => $build->toArray(), 'work' => $work->toArray()];
+        }
         $build->assertOpen();
         $work = self::find()->where(['build_id' => $build->id, 'user_id' => $user, 'ended_at' => null])->one();
         if (!$work) throw new GameError('WORK_NOT_STARTED', 'Сначала начните работу.', 409);
@@ -61,6 +69,7 @@ class BuildWork extends Record
         if (!$work->save(false)) throw new \RuntimeException('Work checkpoint failed.');
         if ($stop) self::getDb()->createCommand()->delete('world_builder', ['user_id' => $user, 'work_id' => $work->id])->execute();
         $build->finish($operation);
+        $work->refresh();
         return ['build' => $build->toArray(), 'work' => $work->toArray()];
     }
     public static function closeAll(int $build): void
