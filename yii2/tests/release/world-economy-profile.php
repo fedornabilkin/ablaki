@@ -23,7 +23,10 @@ function rejectsProfile(array $data, string $message): void
     throw new RuntimeException('Expected rejection: ' . $message);
 }
 
-$profile = EconomyProfile::load();
+// Regression of already-published terms; the new candidate is exercised by world-balance.php.
+$profile = EconomyProfile::load(__DIR__ . '/fixtures/economy-before-2026-10-31.json');
+// These analytic reference scenarios predate the starter pick (runtime coverage includes it).
+unset($profile['starter']['items']['world-stone-pickaxe']);
 $original = serialize($profile);
 $report = EconomyProfile::report($profile);
 profileCheck($report['counts'] === ['items' => 57, 'objects' => 23, 'recipes' => 44, 'actions' => 14], 'candidate contains existing catalog and concrete additions');
@@ -189,7 +192,7 @@ profileCheck($fourDays['final']['wallet_cr'] === '41.8000' && $fourDays['final']
     && $fourDays['final']['budgets']['garden']['available_cr'] === '0.5000', 'reward collection preserves account destinations and does not refill the wallet');
 profileCheck(array_values($fourDays['final']['extraction']) === [20, 20, 20, 13], 'four-day route respects twenty extraction batches per Moscow day');
 profileCheck($fourDays['final']['peak_backpack_slots'] === 16 && $fourDays['final']['stations'] === ['classic-bench' => 99, 'classic-furnace' => 99]
-    && min($fourDays['final']['tools']['world-stone-pickaxe']) === 52, 'route accounts for stacks placement and actual tool station wear');
+    && min($fourDays['final']['tools']['world-stone-pickaxe']) === 52, 'historical route accounts for stacks placement and actual tool station wear');
 profileCheck($fourDays['final']['money_conserved'] && $fourDays['initial_total_cr'] === '810.0000'
     && $fourDays['final']['money_total_with_sinks_cr'] === '810.0000', 'all cash flows conserve personal and pre-funded municipal money');
 profileCheck($fourDays['final']['remaining_orders'] === ['classic-stone' => 32, 'classic-coal' => 22, 'world-carrot' => 16]
@@ -410,6 +413,7 @@ class EconomyAuditFixture extends \common\modules\world\commands\WorldAuditContr
 $app = new \yii\console\Application(['id' => 'economy-profile-test', 'basePath' => dirname(__DIR__, 2),
     'components' => ['db' => static function () { throw new RuntimeException('Profile audit must not access a database.'); }]]);
 $controller = new EconomyAuditFixture('world-audit', $app);
+$profile = EconomyProfile::load(); $report = EconomyProfile::report($profile);
 profileCheck($controller->actionEconomyProfile() === 0, 'CLI succeeds without a database');
 profileCheck(json_decode($controller->captured, true, 64, JSON_THROW_ON_ERROR) === $report, 'CLI emits the exact audited JSON contract');
 $scenarioController = new EconomyAuditFixture('world-audit', $app);

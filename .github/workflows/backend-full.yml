@@ -96,6 +96,9 @@ jobs:
             if [[ -f tests/release/world-development-route.php ]]; then
               suites="$suites world-development-route"
             fi
+            if [[ -f tests/release/world-balance.php ]]; then
+              suites=${suites//world-feedback-food/world-balance}
+            fi
             if [[ -f tests/release/world-craft-refactor.php ]]; then
               suites="$suites world-craft-refactor"
             elif [[ -f tests/release/world-command-pipeline.php ]]; then

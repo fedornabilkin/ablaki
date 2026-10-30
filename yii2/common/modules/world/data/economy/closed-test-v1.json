@@ -749,7 +749,7 @@
     },
     "garden": {
       "name": "Огород",
-      "price_cr": "50.0000",
+      "price_cr": "30.0000",
       "work_seconds": 60,
       "materials": {},
       "description": "Огород для выращивания культур. Постройте грядки, подготовьте землю, затем посейте семена и следите за поливом."
@@ -766,10 +766,10 @@
     },
     "mine": {
       "name": "Шахта",
-      "price_cr": "120.0000",
-      "work_seconds": 300,
+      "price_cr": "70.0000",
+      "work_seconds": 120,
       "materials": {
-        "classic-plank": 8,
+        "classic-plank": 6,
         "classic-stone": 6
       },
       "description": "Шахта открывает добычу камня, угля и руды партиями. Для выбранной работы нужен подходящий исправный инструмент."
@@ -777,54 +777,54 @@
     "forge": {
       "name": "Кузница",
       "price_cr": "40.0000",
-      "work_seconds": 300,
+      "work_seconds": 180,
       "materials": {
-        "classic-plank": 10,
-        "classic-stone": 12
+        "classic-plank": 6,
+        "classic-stone": 8
       },
       "description": "Кузница для работы с металлом. Установите необходимые станции и используйте рецепты изготовления."
     },
     "house": {
       "name": "Дом",
-      "price_cr": "80.0000",
-      "work_seconds": 7200,
+      "price_cr": "180.0000",
+      "work_seconds": 600,
       "materials": {
-        "classic-plank": 6,
-        "classic-stone": 3,
-        "classic-rope": 2
+        "classic-plank": 20,
+        "classic-stone": 12,
+        "classic-rope": 6
       },
-      "description": "Постоянный дом для ночлега. Требует больше материалов и кредитов, чем временный шалаш; ночлег назначается после завершения стройки."
+      "description": "Дом защищает от ночного урона и открывает комнаты. Проживание на кровати в собственном действующем доме или его комнате даёт ещё 5 партий добычи или наёмной работы в день. Бонус не складывается от нескольких домов."
     },
     "warehouse": {
       "name": "Склад",
-      "price_cr": "500.0000",
-      "work_seconds": 3600,
+      "price_cr": "250.0000",
+      "work_seconds": 600,
       "materials": {
-        "classic-plank": 80,
-        "classic-stone": 60,
-        "classic-rope": 25
+        "classic-plank": 30,
+        "classic-stone": 20,
+        "classic-rope": 8
       },
       "storage_slots": 100,
       "description": "Склад для запасов хозяйства. Вместимость и доступные расширения показаны в разделе вещей."
     },
     "drilling-rig": {
       "name": "Буровая установка",
-      "price_cr": "2500.0000",
-      "work_seconds": 86400,
+      "price_cr": "650.0000",
+      "work_seconds": 3600,
       "materials": {
-        "classic-plank": 250,
-        "classic-stone": 300,
-        "classic-ingot": 80,
-        "classic-rope": 60
+        "classic-plank": 60,
+        "classic-stone": 60,
+        "classic-ingot": 12,
+        "classic-rope": 12
       },
       "capability_requirements": [
         "mine"
       ],
-      "description": "Исправная буровая заменяет кирку в этой шахте и увеличивает выход ресурсов и оплату новых партий. Коэффициенты показаны в блоке добычи."
+      "description": "Долгосрочная цель: 650 кредитов, 60 досок, 60 камня, 12 слитков и 12 верёвок; час самостоятельной стройки с перерывами. Действующая буровая в своей шахте утраивает добычу за партию и заменяет кирку. Оплата наёмного работника удваивается за счёт бюджета владельца."
     },
     "forest-plot": {
       "name": "Лесной участок",
-      "price_cr": "30.0000",
+      "price_cr": "20.0000",
       "work_seconds": 60,
       "materials": {
         "classic-plank": 2
@@ -833,7 +833,7 @@
     },
     "stone-plot": {
       "name": "Каменистый участок",
-      "price_cr": "30.0000",
+      "price_cr": "20.0000",
       "work_seconds": 60,
       "materials": {
         "classic-plank": 2
@@ -842,7 +842,7 @@
     },
     "clay-plot": {
       "name": "Глиняный участок",
-      "price_cr": "35.0000",
+      "price_cr": "25.0000",
       "work_seconds": 60,
       "materials": {
         "classic-plank": 2
@@ -851,7 +851,7 @@
     },
     "sand-plot": {
       "name": "Песчаный участок",
-      "price_cr": "30.0000",
+      "price_cr": "20.0000",
       "work_seconds": 60,
       "materials": {
         "classic-plank": 2
@@ -860,7 +860,7 @@
     },
     "meadow-plot": {
       "name": "Луговой участок",
-      "price_cr": "25.0000",
+      "price_cr": "15.0000",
       "work_seconds": 60,
       "materials": {
         "classic-plank": 1
@@ -869,8 +869,8 @@
     },
     "water-source": {
       "name": "Источник воды",
-      "price_cr": "40.0000",
-      "work_seconds": 120,
+      "price_cr": "25.0000",
+      "work_seconds": 90,
       "materials": {
         "classic-stone": 3
       },
@@ -886,8 +886,8 @@
     },
     "cookfire": {
       "name": "Очаг",
-      "price_cr": "50.0000",
-      "work_seconds": 120,
+      "price_cr": "25.0000",
+      "work_seconds": 90,
       "materials": {
         "classic-stone": 4,
         "classic-log": 2
@@ -897,8 +897,8 @@
     },
     "trap": {
       "name": "Ловушка",
-      "price_cr": "60.0000",
-      "work_seconds": 180,
+      "price_cr": "40.0000",
+      "work_seconds": 120,
       "materials": {
         "classic-plank": 3,
         "classic-rope": 2
@@ -907,18 +907,18 @@
     },
     "workshop-building": {
       "name": "Ремесленная мастерская",
-      "price_cr": "70.0000",
-      "work_seconds": 600,
+      "price_cr": "50.0000",
+      "work_seconds": 180,
       "materials": {
-        "classic-plank": 12,
-        "classic-stone": 5
+        "classic-plank": 8,
+        "classic-stone": 4
       },
       "description": "Ремесленная мастерская для размещения оборудования и изготовления предметов по доступным рецептам."
     },
     "storage-building": {
       "name": "Хозсклад",
-      "price_cr": "30.0000",
-      "work_seconds": 900,
+      "price_cr": "20.0000",
+      "work_seconds": 180,
       "materials": {
         "classic-plank": 4,
         "classic-stone": 2,
@@ -929,11 +929,11 @@
     },
     "small-greenhouse": {
       "name": "Малая теплица",
-      "price_cr": "250.0000",
-      "work_seconds": 1200,
+      "price_cr": "200.0000",
+      "work_seconds": 600,
       "materials": {
         "classic-plank": 20,
-        "classic-glass": 10,
+        "classic-glass": 6,
         "classic-rope": 5
       },
       "capability_requirements": [
@@ -949,8 +949,8 @@
     },
     "field-kitchen": {
       "name": "Полевая кухня",
-      "price_cr": "40.0000",
-      "work_seconds": 180,
+      "price_cr": "25.0000",
+      "work_seconds": 120,
       "materials": {
         "classic-plank": 6,
         "classic-stone": 4,
@@ -964,12 +964,12 @@
       "node": "forest-plot",
       "ingredients": {},
       "output": {
-        "classic-log": 1
+        "classic-log": 3
       },
       "tools": [
         "classic-hammer"
       ],
-      "work_seconds": 120,
+      "work_seconds": 45,
       "cooldown_seconds": 0,
       "fee_cr": "0.0000",
       "experience": 5,
@@ -980,12 +980,12 @@
       "node": "stone-plot",
       "ingredients": {},
       "output": {
-        "classic-stone": 2
+        "classic-stone": 4
       },
       "tools": [
         "classic-hammer"
       ],
-      "work_seconds": 120,
+      "work_seconds": 45,
       "cooldown_seconds": 0,
       "fee_cr": "0.0000",
       "experience": 5,
@@ -996,12 +996,12 @@
       "node": "clay-plot",
       "ingredients": {},
       "output": {
-        "classic-clay": 2
+        "classic-clay": 4
       },
       "tools": [
         "world-shovel"
       ],
-      "work_seconds": 180,
+      "work_seconds": 45,
       "cooldown_seconds": 0,
       "fee_cr": "0.0000",
       "experience": 5,
@@ -1012,12 +1012,12 @@
       "node": "sand-plot",
       "ingredients": {},
       "output": {
-        "classic-sand": 4
+        "classic-sand": 6
       },
       "tools": [
         "world-shovel"
       ],
-      "work_seconds": 180,
+      "work_seconds": 45,
       "cooldown_seconds": 0,
       "fee_cr": "0.0000",
       "experience": 5,
@@ -1028,10 +1028,10 @@
       "node": "meadow-plot",
       "ingredients": {},
       "output": {
-        "classic-fibre": 2
+        "classic-fibre": 6
       },
       "tools": [],
-      "work_seconds": 120,
+      "work_seconds": 45,
       "cooldown_seconds": 0,
       "fee_cr": "0.0000",
       "experience": 5,
@@ -1042,10 +1042,10 @@
       "node": "meadow-plot",
       "ingredients": {},
       "output": {
-        "classic-herb": 1
+        "classic-herb": 2
       },
       "tools": [],
-      "work_seconds": 180,
+      "work_seconds": 45,
       "cooldown_seconds": 0,
       "fee_cr": "0.0000",
       "experience": 5,
@@ -1056,10 +1056,10 @@
       "node": "water-source",
       "ingredients": {},
       "output": {
-        "classic-water": 2
+        "classic-water": 4
       },
       "tools": [],
-      "work_seconds": 60,
+      "work_seconds": 30,
       "cooldown_seconds": 0,
       "fee_cr": "0.0000",
       "experience": 3,
@@ -1070,12 +1070,12 @@
       "node": "mine",
       "ingredients": {},
       "output": {
-        "classic-stone": 3
+        "classic-stone": 6
       },
       "tools": [
         "world-stone-pickaxe"
       ],
-      "work_seconds": 180,
+      "work_seconds": 60,
       "cooldown_seconds": 0,
       "fee_cr": "0.0000",
       "experience": 8,
@@ -1086,12 +1086,12 @@
       "node": "mine",
       "ingredients": {},
       "output": {
-        "classic-coal": 3
+        "classic-coal": 4
       },
       "tools": [
         "world-stone-pickaxe"
       ],
-      "work_seconds": 300,
+      "work_seconds": 60,
       "cooldown_seconds": 0,
       "fee_cr": "0.0000",
       "experience": 8,
@@ -1102,12 +1102,12 @@
       "node": "mine",
       "ingredients": {},
       "output": {
-        "classic-ore": 1
+        "classic-ore": 3
       },
       "tools": [
         "world-stone-pickaxe"
       ],
-      "work_seconds": 300,
+      "work_seconds": 60,
       "cooldown_seconds": 0,
       "fee_cr": "0.0000",
       "experience": 8,
@@ -1118,13 +1118,13 @@
       "node": "mine",
       "ingredients": {},
       "output": {
-        "classic-ore": 2,
-        "classic-coal": 2
+        "classic-ore": 6,
+        "classic-coal": 4
       },
       "tools": [
         "classic-pickaxe"
       ],
-      "work_seconds": 900,
+      "work_seconds": 120,
       "cooldown_seconds": 0,
       "fee_cr": "0.0000",
       "experience": 10,
@@ -1152,7 +1152,7 @@
         "world-magic-herb": 2
       },
       "tools": [],
-      "work_seconds": 600,
+      "work_seconds": 120,
       "cooldown_seconds": 0,
       "fee_cr": "0.0000",
       "experience": 5,
@@ -2100,12 +2100,23 @@
   "source_equipment": {
     "drilling-rig": {
       "source": "mine",
-      "output_multiplier": 5,
-      "reward_multiplier": 3,
+      "output_multiplier": 3,
+      "reward_multiplier": 2,
       "replaces_tools": [
         "world-stone-pickaxe",
         "classic-pickaxe"
       ]
+    }
+  },
+  "npc": {
+    "reward_cr": "3.0000",
+    "target_budget_cr": "90.0000",
+    "idle_budget_cr": "0.0000",
+    "settle_public_obligations": true
+  },
+  "housing_benefits": {
+    "house": {
+      "extraction_daily_bonus": 5
     }
   }
 }

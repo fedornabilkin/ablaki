@@ -15,7 +15,13 @@ final class NpcInfrastructure
     public function policy(?int $world = null): ?array
     {
         if (!$this->db->schema->getTableSchema('world_npc_policy')) return null;
-        return (new Query())->from('world_npc_policy')->where(['world_id' => $world ?? EconomyRuntime::world($this->db), 'enabled' => 1])->one($this->db) ?: null;
+        $world = $world ?? EconomyRuntime::world($this->db);
+        $policy = (new Query())->from('world_npc_policy')->where(['world_id' => $world, 'enabled' => 1])->one($this->db) ?: null;
+        if ($policy && $world === EconomyRuntime::world($this->db)) {
+            $revision = EconomyRuntime::current($this->db);
+            $policy = array_replace($policy, $revision['profile']['npc'] ?? []);
+        }
+        return $policy;
     }
     public static function role(array $node): ?string
     {

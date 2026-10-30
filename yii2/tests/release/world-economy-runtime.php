@@ -36,7 +36,8 @@ function economyReject(callable $action, string $code): void
 }
 
 economyCheck(EconomyRuntime::current($db) === null, 'schema installation does not publish an economy profile');
-$profile = EconomyProfile::load(); $publisher = new EconomyProfilePublisher($db);
+// Regression of already-published terms; the new candidate is exercised by world-balance.php.
+$profile = EconomyProfile::load(__DIR__ . '/fixtures/economy-before-2026-10-31.json'); $publisher = new EconomyProfilePublisher($db);
 $preview = $publisher->preview($profile);
 economyCheck(!$preview['applied'] && EconomyRuntime::current($db) === null, 'profile preview is read-only');
 $published = $publisher->publish($profile, $preview['digest'], 9001, 'Disposable MVP acceptance fixture');

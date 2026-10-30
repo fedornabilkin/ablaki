@@ -59,6 +59,21 @@ final class EconomyProfile
             }
         }
         self::moneyFields($data);
+        if (isset($data['npc'])) {
+            $npc = $data['npc'];
+            if (!is_array($npc) || array_diff(array_keys($npc), ['reward_cr', 'target_budget_cr', 'idle_budget_cr', 'settle_public_obligations'])) throw new \InvalidArgumentException('Unsupported NPC policy fields.');
+            foreach (['reward_cr', 'target_budget_cr', 'idle_budget_cr'] as $field)
+                if (!is_string($npc[$field] ?? null)) throw new \InvalidArgumentException('NPC policy requires exact credit amounts.');
+            if (Money::parse($npc['reward_cr'])->isZero() || Money::parse($npc['target_budget_cr'])->compare(Money::parse($npc['reward_cr'])) < 0
+                || Money::parse($npc['idle_budget_cr'])->compare(Money::parse($npc['target_budget_cr'])) > 0 || !is_bool($npc['settle_public_obligations'] ?? null)) throw new \InvalidArgumentException('Invalid NPC wage or funding buffer.');
+        }
+        if (isset($data['housing_benefits'])) {
+            $housing = $data['housing_benefits'];
+            $bonus = $housing['house']['extraction_daily_bonus'] ?? null;
+            if (!is_array($housing) || array_keys($housing) !== ['house'] || !is_array($housing['house'])
+                || array_keys($housing['house']) !== ['extraction_daily_bonus'] || !is_int($bonus) || $bonus < 1 || $bonus > 20
+                || !isset($data['objects']['house'])) throw new \InvalidArgumentException('Invalid occupied home benefit.');
+        }
         if (isset($data['map']['outer_ring_multiplier']) && (!is_int($data['map']['outer_ring_multiplier']) || $data['map']['outer_ring_multiplier'] < 1 || $data['map']['outer_ring_multiplier'] > 100)) throw new \InvalidArgumentException('Invalid outer map ring multiplier.');
         if (isset($data['starter']['funding']) && !in_array($data['starter']['funding'], ['parent_budget', 'personal_transfer'], true)) throw new \InvalidArgumentException('Unknown starter funding mode.');
         if (isset($data['closed_test']['all_templates']) && !is_bool($data['closed_test']['all_templates'])) throw new \InvalidArgumentException('Expected test catalogue flag.');
