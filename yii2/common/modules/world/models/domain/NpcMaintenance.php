@@ -46,10 +46,13 @@ final class NpcMaintenance
         if (!$this->db->getTransaction()) throw new \LogicException('NPC maintenance needs a locked world transaction.');
         $infrastructure = new NpcInfrastructure($this->db); $nodes = $infrastructure->nodes($policy);
         $public = (new Query())->from('world_node')->where(['root_id' => $policy['world_id'], 'owner_user_id' => $policy['bot_user_id'], 'status' => 'active', 'node_type' => ['WORLD', 'REGION', 'SETTLEMENT']])->all($this->db);
-        foreach (array_merge($nodes, $public) as $node) {
+        $circulation = array_merge($nodes, $public);
+        // Collect and settle children first so their receipts reach the parent in this pass.
+        usort($circulation, static fn($a, $b) => [$b['hierarchy_level'], $b['id']] <=> [$a['hierarchy_level'], $a['id']]);
+        foreach ($circulation as $node) {
             $this->priceStorage((int)$node['id'], $operation);
             $accounts = (new EconomyHierarchy($this->db))->accounts((int)$node['id']);
-            if (!isset($accounts['treasury']) || Money::parse((string)$accounts['treasury']['amount'])->isZero()) continue;
+            if (!isset($accounts['treasury'])) continue;
             try {
                 $ledger = new TreasuryLedger($this->db); $plan = $ledger->planCollection((int)$node['id'], $accounts, time());
                 $receiptOperation = $this->operation((int)$policy['bot_user_id'], (int)$policy['world_id'], 'world.npc.collect');
@@ -57,6 +60,7 @@ final class NpcMaintenance
             } catch (GameError $error) {
                 if (!in_array($error->reason, ['TREASURY_EMPTY', 'TREASURY_CATCHING_UP'], true)) throw $error;
             }
+            if (!empty($policy['settle_public_obligations'])) $this->settleObligations($node, $accounts, $policy);
         }
         // Keep one new batch funded at every source before filling larger buffers.
         foreach ($nodes as $node) if (NpcInfrastructure::role($node) === 'source') $this->fund($node, $policy, $operation, $this->minimumWage((int)$node['id'], $policy), true);
@@ -70,6 +74,18 @@ final class NpcMaintenance
         }
         $this->db->createCommand()->update('world_npc_policy', ['last_refill_at' => time(), 'last_shortfall_cr' => $shortfall->decimal()], ['id' => $policy['id']])->execute();
     }
+    private function settleObligations(array $node, array $accounts, array $policy): void
+    {
+        // Only actual invoices of the bot's public/managed nodes; other reservations stay intact.
+        $invoices = (new Query())->select('id')->from('economy_obligation')
+            ->where(['budget_account_id' => $accounts['budget']['id'], 'status' => 'pending'])->orderBy('id')->column($this->db);
+        $ledger = new TreasuryLedger($this->db);
+        foreach ($invoices as $invoice) {
+            $plan = $ledger->planPayment((int)$node['id'], $accounts, (int)$invoice);
+            $operation = $this->operation((int)$policy['bot_user_id'], (int)$policy['world_id'], 'world.npc.parent-payment');
+            $ledger->pay($accounts, $plan, $operation);
+        }
+    }
     public function ensureBudget(Node $node, string $operation): void
     {
         $infrastructure = new NpcInfrastructure($this->db);
@@ -82,7 +98,7 @@ final class NpcMaintenance
     }
     private function targetBudget(array $node, array $policy): Money
     {
-        $target = Money::parse($policy['target_budget_cr']);
+        $target = Money::parse(NpcInfrastructure::role($node) === 'source' ? $policy['target_budget_cr'] : ($policy['idle_budget_cr'] ?? $policy['target_budget_cr']));
         $wage = NpcInfrastructure::role($node) === 'source' ? $this->minimumWage((int)$node['id'], $policy) : Money::parse('0');
         return $wage->compare($target) > 0 ? $wage : $target;
     }
@@ -104,7 +120,8 @@ final class NpcMaintenance
             $free = $spending->available((int)$source['id']);
             if ($role !== null && $role !== 'store') {
                 $minimum = $role === 'source' ? $this->minimumWage((int)$source['node_id'], $policy) : Money::parse('0');
-                $retained = $useBuffers || $minimum->compare($buffer) > 0 ? $minimum : $buffer;
+                $roleBuffer = $role === 'source' ? $buffer : Money::parse($policy['idle_budget_cr'] ?? $policy['target_budget_cr']);
+                $retained = $useBuffers || $minimum->compare($roleBuffer) > 0 ? $minimum : $roleBuffer;
                 $free = $free->compare($retained) > 0 ? $free->subtract($retained) : Money::parse('0');
             }
             $amount = $free->compare($needed) < 0 ? $free : $needed;

@@ -64,6 +64,7 @@ final class WorldProgress
         $existing['explorer-level'] = (int)$explorer;
         $lodging = $actor ? (new LodgingAssignments($this->db))->current($actor) : null;
         $existing['lodged'] = $lodging && in_array($lodging['node_id'], array_map('intval', $ids), true) ? 1 : 0;
+        $existing['lodged-house'] = HousingBenefits::extractionBonus($this->db, $user, EconomyRuntime::current($this->db)['profile'] ?? []) > 0 ? 1 : 0;
         $existing['paid_work'] = (int)(new Query())->from(['w' => 'world_source_work'])->innerJoin(['n' => 'world_node'], 'n.id=w.node_id')
             ->where(['w.user_id' => $user, 'w.status' => 'completed', 'n.root_id' => $world])->andWhere(['like', 'w.definition_json', '"employment"'])->count('*', $this->db);
         $existing['own-source:mine-stone'] = (int)(new Query())->from(['w' => 'world_source_work'])->innerJoin(['n' => 'world_node'], 'n.id=w.node_id')

@@ -1,0 +1,2111 @@
+{
+  "schema_version": 1,
+  "code": "economy-closed-test-v1",
+  "status": "candidate",
+  "created_on": "2026-10-16",
+  "updated_on": "2026-10-30",
+  "effective_from": null,
+  "activation": "explicit_versioned_publication",
+  "currency": "Cr",
+  "money_scale": 4,
+  "time_basis": "real_seconds",
+  "crafting_mode": "instant",
+  "payments_enabled": false,
+  "bank_enabled": false,
+  "closed_test": {
+    "restricted": true,
+    "permission": "world-closed-test",
+    "role": "world-tester",
+    "verified_second_milestone_day": 5,
+    "verified_with_one_missed_day": 6,
+    "feedback_path": "/forum",
+    "all_templates": true
+  },
+  "health": {
+    "maximum_hp": 100,
+    "unprotected_night_damage_hp": 15,
+    "hunger_after_seconds": 259200,
+    "hunger_period_seconds": 86400,
+    "hunger_damage_hp": 2,
+    "food_removes_night_illness": false,
+    "zero_hp_destroys_items": false
+  },
+  "starter": {
+    "credits_cr": "250.0000",
+    "credit_source": "existing_transfer",
+    "items": {
+      "classic-log": 4,
+      "classic-stone": 6,
+      "classic-fibre": 6,
+      "classic-water": 4,
+      "world-carrot-seed": 2,
+      "classic-hammer": 1,
+      "world-stone-pickaxe": 1,
+      "world-explorer-elixir": 1
+    },
+    "lifetime_claim": "world_start_claim",
+    "funding": "parent_budget"
+  },
+  "daily": {
+    "claim_limit": 5,
+    "initial_multiplier": 7,
+    "suppressed_by": {
+      "classic-log": [
+        "forest-plot"
+      ],
+      "classic-stone": [
+        "stone-plot",
+        "mine"
+      ],
+      "classic-fibre": [
+        "meadow-plot"
+      ],
+      "classic-herb": [
+        "meadow-plot"
+      ],
+      "classic-water": [
+        "water-source"
+      ],
+      "classic-sand": [
+        "sand-plot"
+      ],
+      "classic-clay": [
+        "clay-plot"
+      ]
+    },
+    "items": {
+      "classic-log": 2,
+      "classic-stone": 2,
+      "classic-fibre": 2,
+      "classic-water": 2,
+      "classic-herb": 1,
+      "classic-sand": 1,
+      "classic-clay": 1
+    },
+    "credits_cr": "0.0000",
+    "timezone": "Europe/Moscow",
+    "night_efficiency_applies": true,
+    "minimum_quantity": 1
+  },
+  "map": {
+    "starter_open_square": [
+      0,
+      0
+    ],
+    "starter_open_cells": 1,
+    "bounds": [
+      -2,
+      2
+    ],
+    "max_cells": 25,
+    "other_nodes_initial_open": 1,
+    "curve": "rings",
+    "base_price_cr": "0.5000",
+    "bulk_minimum": 3,
+    "discount_bps": 500,
+    "fee_receiver": "existing_settlement_budget",
+    "outer_ring_multiplier": 10
+  },
+  "construction": {
+    "minimum_budgets": true,
+    "credits_per_builder_cr": "2.0000"
+  },
+  "craft_fees": {
+    "object_budget_payment": true,
+    "object_budget_fee_receiver": "existing_settlement_budget",
+    "mode": "fixed_existing_whole_credits",
+    "station_surcharge_bps": 0,
+    "settlement": "existing_craft_debit",
+    "tools": "existing_durability_rules",
+    "note": "10% station fee deferred; no second implicit charge"
+  },
+  "operating_costs": {
+    "equipment_max_durability": 100,
+    "craft_base_work_wear": 0,
+    "source_tool_wear_per_batch": 1,
+    "crop_dig_tool_wear_per_cycle": 1,
+    "wear_valuation": "sale_value_replacement_reserve_not_cash_payment",
+    "tool_repair": "no_generic_route_replace_by_recipe",
+    "chest_repair": "ceil_recipe_ingredient_times_damage_over_2_maximum_output",
+    "shelter_repair": "ceil_raw_plank_and_rope_batch_inputs_times_damage_over_maximum",
+    "premises_repair": "accepted_contract_price_and_materials_scaled_up_by_damage",
+    "premises_repair_time": "instant_existing_contract_owner_no_work_fee",
+    "premises_repair_receiver": "existing_contractor_settlement_treasury",
+    "common_node_repair": "existing_world_repair_create_zero_materials_owner_work",
+    "common_node_repair_seconds": "ceil_missing_condition_times_60_over_100_minimum_1_real_second",
+    "common_node_repair_fee_cr": "0.0000",
+    "new_objects_daily_upkeep_cr": "0.0000",
+    "new_objects_passive_condition_loss": 0,
+    "existing_published_terms": "preserved",
+    "treasury_example": {
+      "gross_cr": "100.0000",
+      "rate_bps": 1000,
+      "protected_seconds": 3600,
+      "loss_period_seconds": 3600,
+      "loss_rate_bps": 100,
+      "tax_due_seconds": 86400,
+      "income_destination": "object_treasury_then_object_budget_not_personal_wallet",
+      "funding": "existing_finite_reserved_settlement_purchase_order",
+      "guaranteed_daily_income": null
+    }
+  },
+  "limits": {
+    "timezone": "Europe/Moscow",
+    "scope": "user_active_world_all_cities",
+    "crafting_hourly": {
+      "maximum": 30,
+      "unit": "recipe_batches",
+      "window": "rolling_3600_seconds"
+    },
+    "extraction_daily": {
+      "maximum": 20,
+      "unit": "successful_source_batches"
+    },
+    "daily_supply": 1,
+    "active_constructions": 1,
+    "active_labor_sessions": 1,
+    "sales_daily": {
+      "operations": 20,
+      "gross_cr": "500.0000",
+      "same_item_per_operation": 10
+    },
+    "objects": {
+      "starter-site": 1,
+      "estate": 1,
+      "classic-campfire": 2,
+      "cookfire": 2,
+      "mine": 2,
+      "garden": 3,
+      "garden-bed": 9,
+      "classic-chest": 5,
+      "mini-storage-*": 5
+    },
+    "object_count": "active_placed_instances_and_non_cancelled_construction_claims",
+    "existing_excess": "preserved_new_placement_blocked",
+    "replay_and_failure_consume_quota": false
+  },
+  "storage": {
+    "backpack_slots": 20,
+    "chest_slots": 20,
+    "mini_storage_slots": 5,
+    "middle_storage_slots": 50,
+    "warehouse_slots": 100,
+    "existing_rights": "preserve",
+    "expansions": {
+      "backpack-5": {
+        "kind": "backpack",
+        "node_code": null,
+        "slots": 5,
+        "price_cr": "50.0000",
+        "maximum": 50
+      },
+      "backpack-10": {
+        "kind": "backpack",
+        "node_code": null,
+        "slots": 10,
+        "price_cr": "90.0000",
+        "maximum": 50
+      },
+      "chest-10": {
+        "kind": "chest",
+        "node_code": null,
+        "slots": 10,
+        "price_cr": "40.0000",
+        "maximum": 100
+      },
+      "middle-25": {
+        "kind": "stockpile",
+        "node_code": "storage-building",
+        "slots": 25,
+        "price_cr": "100.0000",
+        "maximum": 200
+      },
+      "warehouse-50": {
+        "kind": "stockpile",
+        "node_code": "warehouse",
+        "slots": 50,
+        "price_cr": "250.0000",
+        "maximum": 200
+      }
+    }
+  },
+  "crop": {
+    "code": "starter-carrot",
+    "seed": "world-carrot-seed",
+    "seed_quantity": 1,
+    "water": "classic-water",
+    "water_quantity_per_action": 1,
+    "water_actions_per_cycle": 2,
+    "yield": "world-carrot",
+    "yield_quantity": 3,
+    "grow_seconds": 1800,
+    "water_interval_seconds": 900,
+    "water_window_seconds": 900,
+    "harvest_window_seconds": 86400,
+    "dig_fee_cr": "0.0000",
+    "water_fee_cr": "2.0000",
+    "sow_fee_cr": "0.0000",
+    "harvest_fee_cr": "0.0000",
+    "fee_receiver": "existing_settlement_budget",
+    "dig_wage_cr": "1.0000"
+  },
+  "items": {
+    "classic-alchemy": {
+      "name": "Алхимический стол",
+      "kind": "station",
+      "change": "existing",
+      "reference_price_cr": null,
+      "sale_price_cr": null,
+      "stack_size": 10
+    },
+    "classic-anvil": {
+      "name": "Наковальня",
+      "kind": "station",
+      "change": "existing",
+      "reference_price_cr": null,
+      "sale_price_cr": null,
+      "stack_size": 10
+    },
+    "classic-axe": {
+      "name": "Топор",
+      "kind": "tool",
+      "change": "existing",
+      "reference_price_cr": null,
+      "sale_price_cr": null,
+      "stack_size": 10
+    },
+    "classic-bag": {
+      "name": "Сумка",
+      "kind": "product",
+      "change": "existing",
+      "reference_price_cr": null,
+      "sale_price_cr": null,
+      "stack_size": 100
+    },
+    "classic-bed": {
+      "name": "Кровать",
+      "kind": "product",
+      "change": "existing",
+      "reference_price_cr": null,
+      "sale_price_cr": "80.0000",
+      "stack_size": 100
+    },
+    "classic-bench": {
+      "name": "Верстак",
+      "kind": "station",
+      "change": "existing",
+      "reference_price_cr": null,
+      "sale_price_cr": "75.0000",
+      "stack_size": 10
+    },
+    "classic-boots": {
+      "name": "Кожаные сапоги",
+      "kind": "equipment",
+      "change": "existing",
+      "reference_price_cr": null,
+      "sale_price_cr": null,
+      "stack_size": 10
+    },
+    "classic-bottle": {
+      "name": "Бутылка",
+      "kind": "product",
+      "change": "existing",
+      "reference_price_cr": null,
+      "sale_price_cr": null,
+      "stack_size": 100
+    },
+    "classic-brick": {
+      "name": "Кирпич",
+      "kind": "material",
+      "change": "existing",
+      "reference_price_cr": "8.0000",
+      "sale_price_cr": "8.0000",
+      "stack_size": 100
+    },
+    "classic-campfire": {
+      "name": "Костёр",
+      "kind": "product",
+      "change": "existing",
+      "reference_price_cr": null,
+      "sale_price_cr": "45.0000",
+      "stack_size": 100
+    },
+    "classic-chair": {
+      "name": "Стул",
+      "kind": "product",
+      "change": "existing",
+      "reference_price_cr": null,
+      "sale_price_cr": null,
+      "stack_size": 100
+    },
+    "classic-chest": {
+      "name": "Сундук",
+      "kind": "product",
+      "change": "existing",
+      "reference_price_cr": null,
+      "sale_price_cr": "70.0000",
+      "stack_size": 1
+    },
+    "classic-clay": {
+      "name": "Глина",
+      "kind": "material",
+      "change": "existing",
+      "reference_price_cr": "4.0000",
+      "sale_price_cr": "2.0000",
+      "stack_size": 100
+    },
+    "classic-cloth": {
+      "name": "Ткань",
+      "kind": "material",
+      "change": "existing",
+      "reference_price_cr": null,
+      "sale_price_cr": null,
+      "stack_size": 100
+    },
+    "classic-coal": {
+      "name": "Уголь",
+      "kind": "material",
+      "change": "existing",
+      "reference_price_cr": "6.0000",
+      "sale_price_cr": "3.0000",
+      "stack_size": 100
+    },
+    "classic-door": {
+      "name": "Дверь",
+      "kind": "product",
+      "change": "existing",
+      "reference_price_cr": null,
+      "sale_price_cr": null,
+      "stack_size": 100
+    },
+    "classic-extract": {
+      "name": "Травяной экстракт",
+      "kind": "material",
+      "change": "existing",
+      "reference_price_cr": null,
+      "sale_price_cr": null,
+      "stack_size": 100
+    },
+    "classic-fibre": {
+      "name": "Волокно",
+      "kind": "material",
+      "change": "existing",
+      "reference_price_cr": "3.0000",
+      "sale_price_cr": "1.5000",
+      "stack_size": 100
+    },
+    "classic-furnace": {
+      "name": "Плавильня",
+      "kind": "station",
+      "change": "existing",
+      "reference_price_cr": null,
+      "sale_price_cr": "150.0000",
+      "stack_size": 10
+    },
+    "classic-glass": {
+      "name": "Стекло",
+      "kind": "material",
+      "change": "existing",
+      "reference_price_cr": "10.0000",
+      "sale_price_cr": "10.0000",
+      "stack_size": 100
+    },
+    "classic-hammer": {
+      "name": "Каменный молоток",
+      "kind": "tool",
+      "change": "existing",
+      "reference_price_cr": null,
+      "sale_price_cr": "15.0000",
+      "stack_size": 10
+    },
+    "classic-helmet": {
+      "name": "Железный шлем",
+      "kind": "equipment",
+      "change": "existing",
+      "reference_price_cr": null,
+      "sale_price_cr": null,
+      "stack_size": 10
+    },
+    "classic-herb": {
+      "name": "Лечебная трава",
+      "kind": "material",
+      "change": "existing",
+      "reference_price_cr": "5.0000",
+      "sale_price_cr": "2.5000",
+      "stack_size": 100
+    },
+    "classic-hide": {
+      "name": "Шкура",
+      "kind": "material",
+      "change": "existing",
+      "reference_price_cr": "10.0000",
+      "sale_price_cr": "6.0000",
+      "stack_size": 100
+    },
+    "classic-ingot": {
+      "name": "Железный слиток",
+      "kind": "material",
+      "change": "existing",
+      "reference_price_cr": "24.0000",
+      "sale_price_cr": "24.0000",
+      "stack_size": 100
+    },
+    "classic-ink": {
+      "name": "Чернила",
+      "kind": "material",
+      "change": "existing",
+      "reference_price_cr": null,
+      "sale_price_cr": null,
+      "stack_size": 100
+    },
+    "classic-ladder": {
+      "name": "Лестница",
+      "kind": "product",
+      "change": "existing",
+      "reference_price_cr": null,
+      "sale_price_cr": null,
+      "stack_size": 100
+    },
+    "classic-lantern": {
+      "name": "Фонарь",
+      "kind": "product",
+      "change": "existing",
+      "reference_price_cr": null,
+      "sale_price_cr": null,
+      "stack_size": 100
+    },
+    "classic-leather": {
+      "name": "Кожа",
+      "kind": "material",
+      "change": "existing",
+      "reference_price_cr": "15.0000",
+      "sale_price_cr": "15.0000",
+      "stack_size": 100
+    },
+    "classic-log": {
+      "name": "Бревно",
+      "kind": "material",
+      "change": "existing",
+      "reference_price_cr": "4.0000",
+      "sale_price_cr": "2.0000",
+      "stack_size": 100
+    },
+    "classic-manual": {
+      "name": "Учебник ремесленника",
+      "kind": "consumable",
+      "change": "existing",
+      "reference_price_cr": null,
+      "sale_price_cr": null,
+      "stack_size": 100
+    },
+    "classic-nails": {
+      "name": "Гвозди",
+      "kind": "material",
+      "change": "existing",
+      "reference_price_cr": "4.0000",
+      "sale_price_cr": "4.0000",
+      "stack_size": 100
+    },
+    "classic-ore": {
+      "name": "Железная руда",
+      "kind": "material",
+      "change": "existing",
+      "reference_price_cr": "8.0000",
+      "sale_price_cr": "4.0000",
+      "stack_size": 100
+    },
+    "classic-paper": {
+      "name": "Бумага",
+      "kind": "material",
+      "change": "existing",
+      "reference_price_cr": null,
+      "sale_price_cr": null,
+      "stack_size": 100
+    },
+    "classic-pickaxe": {
+      "name": "Кирка",
+      "kind": "tool",
+      "change": "existing",
+      "reference_price_cr": null,
+      "sale_price_cr": null,
+      "stack_size": 10
+    },
+    "classic-plank": {
+      "name": "Доска",
+      "kind": "material",
+      "change": "existing",
+      "reference_price_cr": "3.0000",
+      "sale_price_cr": "1.5000",
+      "stack_size": 100
+    },
+    "classic-potion": {
+      "name": "Настой мастерства",
+      "kind": "consumable",
+      "change": "existing",
+      "reference_price_cr": null,
+      "sale_price_cr": null,
+      "stack_size": 100
+    },
+    "classic-rope": {
+      "name": "Верёвка",
+      "kind": "material",
+      "change": "existing",
+      "reference_price_cr": "8.0000",
+      "sale_price_cr": "8.0000",
+      "stack_size": 100
+    },
+    "classic-sand": {
+      "name": "Песок",
+      "kind": "material",
+      "change": "existing",
+      "reference_price_cr": "3.0000",
+      "sale_price_cr": "1.5000",
+      "stack_size": 100
+    },
+    "classic-saw": {
+      "name": "Пила",
+      "kind": "tool",
+      "change": "existing",
+      "reference_price_cr": null,
+      "sale_price_cr": null,
+      "stack_size": 10
+    },
+    "classic-shield": {
+      "name": "Деревянный щит",
+      "kind": "equipment",
+      "change": "existing",
+      "reference_price_cr": null,
+      "sale_price_cr": null,
+      "stack_size": 10
+    },
+    "classic-space-elixir": {
+      "name": "Эликсир пространства",
+      "kind": "consumable",
+      "change": "existing",
+      "reference_price_cr": null,
+      "sale_price_cr": null,
+      "stack_size": 100
+    },
+    "classic-stick": {
+      "name": "Палка",
+      "kind": "material",
+      "change": "existing",
+      "reference_price_cr": "1.0000",
+      "sale_price_cr": "0.5000",
+      "stack_size": 100
+    },
+    "classic-stone": {
+      "name": "Камень",
+      "kind": "material",
+      "change": "existing",
+      "reference_price_cr": "3.0000",
+      "sale_price_cr": "1.5000",
+      "stack_size": 100
+    },
+    "classic-sword": {
+      "name": "Железный меч",
+      "kind": "equipment",
+      "change": "existing",
+      "reference_price_cr": null,
+      "sale_price_cr": null,
+      "stack_size": 10
+    },
+    "classic-table": {
+      "name": "Стол",
+      "kind": "product",
+      "change": "existing",
+      "reference_price_cr": null,
+      "sale_price_cr": null,
+      "stack_size": 100
+    },
+    "classic-water": {
+      "name": "Вода",
+      "kind": "material",
+      "change": "existing",
+      "reference_price_cr": "2.0000",
+      "sale_price_cr": "1.0000",
+      "stack_size": 100
+    },
+    "world-carrot": {
+      "name": "Морковь",
+      "kind": "material",
+      "change": "existing",
+      "reference_price_cr": "5.0000",
+      "sale_price_cr": "2.5000",
+      "stack_size": 100
+    },
+    "world-carrot-seed": {
+      "name": "Семена моркови",
+      "kind": "material",
+      "change": "existing",
+      "reference_price_cr": "4.0000",
+      "sale_price_cr": "2.0000",
+      "stack_size": 100
+    },
+    "world-explorer-elixir": {
+      "name": "Эликсир исследователя",
+      "kind": "consumable",
+      "change": "existing",
+      "reference_price_cr": null,
+      "sale_price_cr": "35.0000",
+      "stack_size": 100
+    },
+    "world-magic-herb": {
+      "name": "Волшебные травы",
+      "kind": "material",
+      "change": "existing",
+      "reference_price_cr": null,
+      "sale_price_cr": null,
+      "stack_size": 100
+    },
+    "world-shovel": {
+      "name": "Огородная лопата",
+      "kind": "tool",
+      "change": "existing",
+      "reference_price_cr": null,
+      "sale_price_cr": "20.0000",
+      "stack_size": 10
+    },
+    "world-starter-shelter": {
+      "name": "Походный шалаш",
+      "kind": "equipment",
+      "change": "existing",
+      "reference_price_cr": null,
+      "sale_price_cr": null,
+      "stack_size": 1
+    },
+    "world-stone-pickaxe": {
+      "name": "Каменная кирка",
+      "kind": "tool",
+      "change": "new",
+      "reference_price_cr": null,
+      "sale_price_cr": null,
+      "stack_size": 10
+    },
+    "world-cooked-carrot": {
+      "name": "Печёная морковь",
+      "kind": "consumable",
+      "change": "new",
+      "reference_price_cr": null,
+      "sale_price_cr": "8.0000",
+      "restore_health": 15,
+      "stack_size": 100,
+      "backpack_restore_hp": 4,
+      "repeat_limit": 2,
+      "repeat_seconds": 21600
+    },
+    "world-vegetable-broth": {
+      "name": "Овощной отвар",
+      "kind": "consumable",
+      "change": "new",
+      "reference_price_cr": null,
+      "sale_price_cr": "18.0000",
+      "restore_health": 30,
+      "stack_size": 100,
+      "backpack_restore_hp": 8,
+      "repeat_limit": 1,
+      "repeat_seconds": 28800
+    },
+    "world-travel-ration": {
+      "name": "Походный паёк",
+      "kind": "consumable",
+      "change": "new",
+      "reference_price_cr": null,
+      "sale_price_cr": "12.0000",
+      "restore_health": 20,
+      "stack_size": 100,
+      "backpack_restore_hp": 6,
+      "repeat_limit": 3,
+      "repeat_seconds": 43200
+    }
+  },
+  "objects": {
+    "starter-site": {
+      "name": "Стоянка",
+      "price_cr": "0.0000",
+      "work_seconds": 30,
+      "materials": {},
+      "description": "Личная стоянка для начала жизни в мире: храните вещи, изготавливайте инструменты и развивайте территорию."
+    },
+    "estate": {
+      "name": "Усадьба",
+      "price_cr": "80.0000",
+      "work_seconds": 120,
+      "materials": {
+        "classic-plank": 8
+      },
+      "description": "Усадьба расширяет возможности личного хозяйства. Размещайте постройки внутри её карты."
+    },
+    "starter-shelter": {
+      "name": "Шалаш",
+      "price_cr": "20.0000",
+      "work_seconds": 60,
+      "materials": {
+        "classic-plank": 4,
+        "classic-rope": 2
+      },
+      "exposure_class": "covered",
+      "description": "Простой шалаш даёт место для ночлега и помогает защититься от последствий ночи. После постройки отдельно назначьте ночлег."
+    },
+    "garden": {
+      "name": "Огород",
+      "price_cr": "50.0000",
+      "work_seconds": 60,
+      "materials": {},
+      "description": "Огород для выращивания культур. Постройте грядки, подготовьте землю, затем посейте семена и следите за поливом."
+    },
+    "garden-bed": {
+      "name": "Грядка",
+      "price_cr": "10.0000",
+      "work_seconds": 30,
+      "materials": {},
+      "capability_requirements": [
+        "garden"
+      ],
+      "description": "Место для одного посева. Для нового цикла подготовьте землю исправной лопатой, посейте семена и поливайте вовремя."
+    },
+    "mine": {
+      "name": "Шахта",
+      "price_cr": "120.0000",
+      "work_seconds": 300,
+      "materials": {
+        "classic-plank": 8,
+        "classic-stone": 6
+      },
+      "description": "Шахта открывает добычу камня, угля и руды партиями. Для выбранной работы нужен подходящий исправный инструмент."
+    },
+    "forge": {
+      "name": "Кузница",
+      "price_cr": "40.0000",
+      "work_seconds": 300,
+      "materials": {
+        "classic-plank": 10,
+        "classic-stone": 12
+      },
+      "description": "Кузница для работы с металлом. Установите необходимые станции и используйте рецепты изготовления."
+    },
+    "house": {
+      "name": "Дом",
+      "price_cr": "80.0000",
+      "work_seconds": 7200,
+      "materials": {
+        "classic-plank": 6,
+        "classic-stone": 3,
+        "classic-rope": 2
+      },
+      "description": "Постоянный дом для ночлега. Требует больше материалов и кредитов, чем временный шалаш; ночлег назначается после завершения стройки."
+    },
+    "warehouse": {
+      "name": "Склад",
+      "price_cr": "500.0000",
+      "work_seconds": 3600,
+      "materials": {
+        "classic-plank": 80,
+        "classic-stone": 60,
+        "classic-rope": 25
+      },
+      "storage_slots": 100,
+      "description": "Склад для запасов хозяйства. Вместимость и доступные расширения показаны в разделе вещей."
+    },
+    "drilling-rig": {
+      "name": "Буровая установка",
+      "price_cr": "2500.0000",
+      "work_seconds": 86400,
+      "materials": {
+        "classic-plank": 250,
+        "classic-stone": 300,
+        "classic-ingot": 80,
+        "classic-rope": 60
+      },
+      "capability_requirements": [
+        "mine"
+      ],
+      "description": "Исправная буровая заменяет кирку в этой шахте и увеличивает выход ресурсов и оплату новых партий. Коэффициенты показаны в блоке добычи."
+    },
+    "forest-plot": {
+      "name": "Лесной участок",
+      "price_cr": "30.0000",
+      "work_seconds": 60,
+      "materials": {
+        "classic-plank": 2
+      },
+      "description": "Лесной участок даёт брёвна. Работайте над партиями с исправным молотком; добыча расходует общий дневной лимит."
+    },
+    "stone-plot": {
+      "name": "Каменистый участок",
+      "price_cr": "30.0000",
+      "work_seconds": 60,
+      "materials": {
+        "classic-plank": 2
+      },
+      "description": "Каменистый участок для добычи камня. Подготовьте нужный инструмент и свободное место для результата."
+    },
+    "clay-plot": {
+      "name": "Глиняный участок",
+      "price_cr": "35.0000",
+      "work_seconds": 60,
+      "materials": {
+        "classic-plank": 2
+      },
+      "description": "Глинистый участок для добычи глины. Ресурс поступает в выбранное хранилище после завершения партии."
+    },
+    "sand-plot": {
+      "name": "Песчаный участок",
+      "price_cr": "30.0000",
+      "work_seconds": 60,
+      "materials": {
+        "classic-plank": 2
+      },
+      "description": "Песчаный участок для добычи песка. Полученные материалы подходят для дальнейшего изготовления."
+    },
+    "meadow-plot": {
+      "name": "Луговой участок",
+      "price_cr": "25.0000",
+      "work_seconds": 60,
+      "materials": {
+        "classic-plank": 1
+      },
+      "description": "Луговой участок даёт растительное сырьё. Выберите нужный ресурс в блоке получения ресурсов."
+    },
+    "water-source": {
+      "name": "Источник воды",
+      "price_cr": "40.0000",
+      "work_seconds": 120,
+      "materials": {
+        "classic-stone": 3
+      },
+      "description": "Источник воды для хозяйства, полива и приготовления еды. Освободите место в хранилище перед получением партии."
+    },
+    "campfire-place": {
+      "name": "Место костра",
+      "price_cr": "0.0000",
+      "work_seconds": 10,
+      "materials": {},
+      "description": "Площадка для костра и приготовления еды. Изготовьте и разместите необходимый предмет на её карте.",
+      "exposure_class": "outdoor"
+    },
+    "cookfire": {
+      "name": "Очаг",
+      "price_cr": "50.0000",
+      "work_seconds": 120,
+      "materials": {
+        "classic-stone": 4,
+        "classic-log": 2
+      },
+      "description": "Очаг для приготовления пищи. Еда восстанавливает здоровье и позволяет поддерживать сытость.",
+      "exposure_class": "outdoor"
+    },
+    "trap": {
+      "name": "Ловушка",
+      "price_cr": "60.0000",
+      "work_seconds": 180,
+      "materials": {
+        "classic-plank": 3,
+        "classic-rope": 2
+      },
+      "description": "Ловушка даёт добычу после восстановления источника. Время следующей доступной партии показывает сервер."
+    },
+    "workshop-building": {
+      "name": "Ремесленная мастерская",
+      "price_cr": "70.0000",
+      "work_seconds": 600,
+      "materials": {
+        "classic-plank": 12,
+        "classic-stone": 5
+      },
+      "description": "Ремесленная мастерская для размещения оборудования и изготовления предметов по доступным рецептам."
+    },
+    "storage-building": {
+      "name": "Хозсклад",
+      "price_cr": "30.0000",
+      "work_seconds": 900,
+      "materials": {
+        "classic-plank": 4,
+        "classic-stone": 2,
+        "classic-rope": 1
+      },
+      "storage_slots": 50,
+      "description": "Кладовая для хранения запасов. Доступные ячейки и содержимое открываются в разделе вещей."
+    },
+    "small-greenhouse": {
+      "name": "Малая теплица",
+      "price_cr": "250.0000",
+      "work_seconds": 1200,
+      "materials": {
+        "classic-plank": 20,
+        "classic-glass": 10,
+        "classic-rope": 5
+      },
+      "capability_requirements": [
+        "garden"
+      ],
+      "grow_duration_bps": 8000,
+      "event_protection": {
+        "code": "light_crop_damage",
+        "max_event_loss_bps": 2500,
+        "loss_reduction_bps": 5000
+      },
+      "description": "Малая теплица ускоряет рост культур и полив на 20%, а также вдвое снижает лёгкие погодные повреждения посевов."
+    },
+    "field-kitchen": {
+      "name": "Полевая кухня",
+      "price_cr": "40.0000",
+      "work_seconds": 180,
+      "materials": {
+        "classic-plank": 6,
+        "classic-stone": 4,
+        "classic-rope": 2
+      },
+      "description": "Хорошая еда по расписанию Москвы: завтрак 06–10, обед 12–16, ужин 18–22. Один приём в каждом окне; порция из вашего рюкзака даёт полное восстановление блюда."
+    }
+  },
+  "actions": {
+    "gather-log": {
+      "node": "forest-plot",
+      "ingredients": {},
+      "output": {
+        "classic-log": 1
+      },
+      "tools": [
+        "classic-hammer"
+      ],
+      "work_seconds": 120,
+      "cooldown_seconds": 0,
+      "fee_cr": "0.0000",
+      "experience": 5,
+      "quota": "extraction_daily",
+      "delivery": "canonical_storage"
+    },
+    "gather-stone": {
+      "node": "stone-plot",
+      "ingredients": {},
+      "output": {
+        "classic-stone": 2
+      },
+      "tools": [
+        "classic-hammer"
+      ],
+      "work_seconds": 120,
+      "cooldown_seconds": 0,
+      "fee_cr": "0.0000",
+      "experience": 5,
+      "quota": "extraction_daily",
+      "delivery": "canonical_storage"
+    },
+    "gather-clay": {
+      "node": "clay-plot",
+      "ingredients": {},
+      "output": {
+        "classic-clay": 2
+      },
+      "tools": [
+        "world-shovel"
+      ],
+      "work_seconds": 180,
+      "cooldown_seconds": 0,
+      "fee_cr": "0.0000",
+      "experience": 5,
+      "quota": "extraction_daily",
+      "delivery": "canonical_storage"
+    },
+    "gather-sand": {
+      "node": "sand-plot",
+      "ingredients": {},
+      "output": {
+        "classic-sand": 4
+      },
+      "tools": [
+        "world-shovel"
+      ],
+      "work_seconds": 180,
+      "cooldown_seconds": 0,
+      "fee_cr": "0.0000",
+      "experience": 5,
+      "quota": "extraction_daily",
+      "delivery": "canonical_storage"
+    },
+    "gather-fibre": {
+      "node": "meadow-plot",
+      "ingredients": {},
+      "output": {
+        "classic-fibre": 2
+      },
+      "tools": [],
+      "work_seconds": 120,
+      "cooldown_seconds": 0,
+      "fee_cr": "0.0000",
+      "experience": 5,
+      "quota": "extraction_daily",
+      "delivery": "canonical_storage"
+    },
+    "gather-herb": {
+      "node": "meadow-plot",
+      "ingredients": {},
+      "output": {
+        "classic-herb": 1
+      },
+      "tools": [],
+      "work_seconds": 180,
+      "cooldown_seconds": 0,
+      "fee_cr": "0.0000",
+      "experience": 5,
+      "quota": "extraction_daily",
+      "delivery": "canonical_storage"
+    },
+    "gather-water": {
+      "node": "water-source",
+      "ingredients": {},
+      "output": {
+        "classic-water": 2
+      },
+      "tools": [],
+      "work_seconds": 60,
+      "cooldown_seconds": 0,
+      "fee_cr": "0.0000",
+      "experience": 3,
+      "quota": "extraction_daily",
+      "delivery": "canonical_storage"
+    },
+    "mine-stone": {
+      "node": "mine",
+      "ingredients": {},
+      "output": {
+        "classic-stone": 3
+      },
+      "tools": [
+        "world-stone-pickaxe"
+      ],
+      "work_seconds": 180,
+      "cooldown_seconds": 0,
+      "fee_cr": "0.0000",
+      "experience": 8,
+      "quota": "extraction_daily",
+      "delivery": "canonical_storage"
+    },
+    "gather-coal": {
+      "node": "mine",
+      "ingredients": {},
+      "output": {
+        "classic-coal": 3
+      },
+      "tools": [
+        "world-stone-pickaxe"
+      ],
+      "work_seconds": 300,
+      "cooldown_seconds": 0,
+      "fee_cr": "0.0000",
+      "experience": 8,
+      "quota": "extraction_daily",
+      "delivery": "canonical_storage"
+    },
+    "gather-ore": {
+      "node": "mine",
+      "ingredients": {},
+      "output": {
+        "classic-ore": 1
+      },
+      "tools": [
+        "world-stone-pickaxe"
+      ],
+      "work_seconds": 300,
+      "cooldown_seconds": 0,
+      "fee_cr": "0.0000",
+      "experience": 8,
+      "quota": "extraction_daily",
+      "delivery": "canonical_storage"
+    },
+    "deep-mining": {
+      "node": "mine",
+      "ingredients": {},
+      "output": {
+        "classic-ore": 2,
+        "classic-coal": 2
+      },
+      "tools": [
+        "classic-pickaxe"
+      ],
+      "work_seconds": 900,
+      "cooldown_seconds": 0,
+      "fee_cr": "0.0000",
+      "experience": 10,
+      "quota": "extraction_daily",
+      "delivery": "canonical_storage"
+    },
+    "make-raw-hide": {
+      "node": "trap",
+      "ingredients": {},
+      "output": {
+        "classic-hide": 1
+      },
+      "tools": [],
+      "work_seconds": 0,
+      "cooldown_seconds": 21600,
+      "fee_cr": "0.0000",
+      "experience": 10,
+      "quota": "extraction_daily",
+      "delivery": "canonical_storage"
+    },
+    "gather-magic-herb": {
+      "node": "meadow-plot",
+      "ingredients": {},
+      "output": {
+        "world-magic-herb": 2
+      },
+      "tools": [],
+      "work_seconds": 600,
+      "cooldown_seconds": 0,
+      "fee_cr": "0.0000",
+      "experience": 5,
+      "quota": "extraction_daily",
+      "delivery": "canonical_storage",
+      "daily_limit": 1
+    },
+    "harvest-carrot": {
+      "node": "garden-bed",
+      "ingredients": {
+        "world-carrot-seed": 1,
+        "classic-water": 2
+      },
+      "output": {
+        "world-carrot": 3
+      },
+      "tools": [
+        "world-shovel"
+      ],
+      "work_seconds": 180,
+      "cooldown_seconds": 1800,
+      "fee_cr": "2.0000",
+      "experience": 5,
+      "quota": null,
+      "delivery": "canonical_storage",
+      "implementation": "world.crop.*"
+    }
+  },
+  "recipes": {
+    "classic-alchemy": {
+      "output": "classic-alchemy",
+      "quantity": 1,
+      "ingredients": {
+        "classic-plank": 6,
+        "classic-brick": 4,
+        "classic-ingot": 1
+      },
+      "tools": [
+        "classic-hammer"
+      ],
+      "requires": [
+        "classic-bench",
+        "classic-ingot"
+      ],
+      "station": "classic-bench",
+      "context": null,
+      "fee_cr": "0.0000",
+      "experience": 20,
+      "min_level": 1,
+      "work_seconds": 0
+    },
+    "classic-anvil": {
+      "output": "classic-anvil",
+      "quantity": 1,
+      "ingredients": {
+        "classic-ingot": 5,
+        "classic-stone": 4
+      },
+      "tools": [
+        "classic-hammer"
+      ],
+      "requires": [
+        "classic-ingot"
+      ],
+      "station": "classic-bench",
+      "context": null,
+      "fee_cr": "0.0000",
+      "experience": 20,
+      "min_level": 1,
+      "work_seconds": 0
+    },
+    "classic-axe": {
+      "output": "classic-axe",
+      "quantity": 1,
+      "ingredients": {
+        "classic-ingot": 2,
+        "classic-stick": 2,
+        "classic-rope": 1
+      },
+      "tools": [
+        "classic-hammer"
+      ],
+      "requires": [
+        "classic-anvil"
+      ],
+      "station": "classic-anvil",
+      "context": null,
+      "fee_cr": "0.0000",
+      "experience": 20,
+      "min_level": 1,
+      "work_seconds": 0
+    },
+    "classic-bag": {
+      "output": "classic-bag",
+      "quantity": 1,
+      "ingredients": {
+        "classic-cloth": 4,
+        "classic-rope": 2,
+        "classic-leather": 1
+      },
+      "tools": [],
+      "requires": [
+        "classic-leather"
+      ],
+      "station": "classic-bench",
+      "context": null,
+      "fee_cr": "0.0000",
+      "experience": 20,
+      "min_level": 1,
+      "work_seconds": 0
+    },
+    "classic-bed": {
+      "output": "classic-bed",
+      "quantity": 1,
+      "ingredients": {
+        "classic-plank": 6,
+        "classic-rope": 2,
+        "classic-fibre": 4
+      },
+      "tools": [],
+      "requires": [],
+      "station": null,
+      "context": null,
+      "fee_cr": "0.0000",
+      "experience": 20,
+      "min_level": 1,
+      "work_seconds": 0
+    },
+    "classic-bench": {
+      "output": "classic-bench",
+      "quantity": 1,
+      "ingredients": {
+        "classic-plank": 6,
+        "classic-stone": 4,
+        "classic-rope": 2
+      },
+      "tools": [
+        "classic-hammer"
+      ],
+      "requires": [
+        "classic-plank",
+        "classic-rope",
+        "classic-hammer"
+      ],
+      "station": null,
+      "context": null,
+      "fee_cr": "0.0000",
+      "experience": 20,
+      "min_level": 1,
+      "work_seconds": 0
+    },
+    "classic-boots": {
+      "output": "classic-boots",
+      "quantity": 1,
+      "ingredients": {
+        "classic-leather": 3,
+        "classic-cloth": 2,
+        "classic-rope": 1
+      },
+      "tools": [],
+      "requires": [
+        "classic-bag"
+      ],
+      "station": "classic-bench",
+      "context": null,
+      "fee_cr": "1.0000",
+      "experience": 20,
+      "min_level": 2,
+      "work_seconds": 0
+    },
+    "classic-bottle": {
+      "output": "classic-bottle",
+      "quantity": 2,
+      "ingredients": {
+        "classic-glass": 2
+      },
+      "tools": [],
+      "requires": [
+        "classic-glass"
+      ],
+      "station": "classic-furnace",
+      "context": null,
+      "fee_cr": "0.0000",
+      "experience": 20,
+      "min_level": 1,
+      "work_seconds": 0
+    },
+    "classic-brick": {
+      "output": "classic-brick",
+      "quantity": 2,
+      "ingredients": {
+        "classic-clay": 2,
+        "classic-sand": 1
+      },
+      "tools": [
+        "classic-hammer"
+      ],
+      "requires": [
+        "classic-hammer"
+      ],
+      "station": null,
+      "context": null,
+      "fee_cr": "0.0000",
+      "experience": 20,
+      "min_level": 1,
+      "work_seconds": 0
+    },
+    "classic-campfire": {
+      "output": "classic-campfire",
+      "quantity": 1,
+      "ingredients": {
+        "classic-log": 3,
+        "classic-stone": 4
+      },
+      "tools": [],
+      "requires": [],
+      "station": null,
+      "context": null,
+      "fee_cr": "0.0000",
+      "experience": 20,
+      "min_level": 1,
+      "work_seconds": 0
+    },
+    "classic-chair": {
+      "output": "classic-chair",
+      "quantity": 1,
+      "ingredients": {
+        "classic-plank": 4,
+        "classic-stick": 4,
+        "classic-nails": 4
+      },
+      "tools": [
+        "classic-hammer"
+      ],
+      "requires": [
+        "classic-bench",
+        "classic-nails"
+      ],
+      "station": "classic-bench",
+      "context": null,
+      "fee_cr": "0.0000",
+      "experience": 20,
+      "min_level": 1,
+      "work_seconds": 0
+    },
+    "classic-chest": {
+      "output": "classic-chest",
+      "quantity": 1,
+      "ingredients": {
+        "classic-plank": 8,
+        "classic-nails": 8
+      },
+      "tools": [
+        "classic-saw"
+      ],
+      "requires": [
+        "classic-nails"
+      ],
+      "station": "classic-bench",
+      "context": null,
+      "fee_cr": "1.0000",
+      "experience": 20,
+      "min_level": 1,
+      "work_seconds": 0
+    },
+    "classic-cloth": {
+      "output": "classic-cloth",
+      "quantity": 2,
+      "ingredients": {
+        "classic-fibre": 4
+      },
+      "tools": [],
+      "requires": [
+        "classic-rope"
+      ],
+      "station": "classic-bench",
+      "context": null,
+      "fee_cr": "0.0000",
+      "experience": 20,
+      "min_level": 1,
+      "work_seconds": 0
+    },
+    "classic-door": {
+      "output": "classic-door",
+      "quantity": 1,
+      "ingredients": {
+        "classic-plank": 6,
+        "classic-nails": 6,
+        "classic-ingot": 1
+      },
+      "tools": [
+        "classic-saw"
+      ],
+      "requires": [
+        "classic-chest"
+      ],
+      "station": "classic-bench",
+      "context": null,
+      "fee_cr": "1.0000",
+      "experience": 20,
+      "min_level": 2,
+      "work_seconds": 0
+    },
+    "classic-extract": {
+      "output": "classic-extract",
+      "quantity": 1,
+      "ingredients": {
+        "classic-herb": 3,
+        "classic-water": 1
+      },
+      "tools": [],
+      "requires": [
+        "classic-alchemy"
+      ],
+      "station": "classic-alchemy",
+      "context": null,
+      "fee_cr": "0.0000",
+      "experience": 20,
+      "min_level": 1,
+      "work_seconds": 0
+    },
+    "classic-furnace": {
+      "output": "classic-furnace",
+      "quantity": 1,
+      "ingredients": {
+        "classic-brick": 8,
+        "classic-stone": 8
+      },
+      "tools": [
+        "classic-hammer"
+      ],
+      "requires": [
+        "classic-bench",
+        "classic-brick"
+      ],
+      "station": "classic-bench",
+      "context": null,
+      "fee_cr": "0.0000",
+      "experience": 20,
+      "min_level": 1,
+      "work_seconds": 0
+    },
+    "classic-glass": {
+      "output": "classic-glass",
+      "quantity": 2,
+      "ingredients": {
+        "classic-sand": 3,
+        "classic-coal": 1
+      },
+      "tools": [],
+      "requires": [
+        "classic-furnace"
+      ],
+      "station": "classic-furnace",
+      "context": null,
+      "fee_cr": "0.0000",
+      "experience": 20,
+      "min_level": 1,
+      "work_seconds": 0
+    },
+    "classic-hammer": {
+      "output": "classic-hammer",
+      "quantity": 1,
+      "ingredients": {
+        "classic-stone": 2,
+        "classic-stick": 1
+      },
+      "tools": [],
+      "requires": [
+        "classic-stick"
+      ],
+      "station": null,
+      "context": null,
+      "fee_cr": "0.0000",
+      "experience": 20,
+      "min_level": 1,
+      "work_seconds": 0
+    },
+    "classic-helmet": {
+      "output": "classic-helmet",
+      "quantity": 1,
+      "ingredients": {
+        "classic-ingot": 3,
+        "classic-leather": 1
+      },
+      "tools": [
+        "classic-hammer"
+      ],
+      "requires": [
+        "classic-anvil",
+        "classic-leather"
+      ],
+      "station": "classic-anvil",
+      "context": null,
+      "fee_cr": "2.0000",
+      "experience": 20,
+      "min_level": 2,
+      "work_seconds": 0
+    },
+    "classic-ingot": {
+      "output": "classic-ingot",
+      "quantity": 1,
+      "ingredients": {
+        "classic-ore": 2,
+        "classic-coal": 1
+      },
+      "tools": [],
+      "requires": [
+        "classic-furnace"
+      ],
+      "station": "classic-furnace",
+      "context": null,
+      "fee_cr": "0.0000",
+      "experience": 20,
+      "min_level": 1,
+      "work_seconds": 0
+    },
+    "classic-ink": {
+      "output": "classic-ink",
+      "quantity": 2,
+      "ingredients": {
+        "classic-coal": 1,
+        "classic-extract": 1,
+        "classic-water": 1
+      },
+      "tools": [],
+      "requires": [
+        "classic-extract"
+      ],
+      "station": "classic-alchemy",
+      "context": null,
+      "fee_cr": "0.0000",
+      "experience": 20,
+      "min_level": 1,
+      "work_seconds": 0
+    },
+    "classic-ladder": {
+      "output": "classic-ladder",
+      "quantity": 1,
+      "ingredients": {
+        "classic-stick": 8,
+        "classic-rope": 2
+      },
+      "tools": [],
+      "requires": [
+        "classic-bench"
+      ],
+      "station": "classic-bench",
+      "context": null,
+      "fee_cr": "0.0000",
+      "experience": 20,
+      "min_level": 1,
+      "work_seconds": 0
+    },
+    "classic-lantern": {
+      "output": "classic-lantern",
+      "quantity": 1,
+      "ingredients": {
+        "classic-ingot": 2,
+        "classic-glass": 2,
+        "classic-coal": 1
+      },
+      "tools": [
+        "classic-hammer"
+      ],
+      "requires": [
+        "classic-anvil",
+        "classic-glass"
+      ],
+      "station": "classic-anvil",
+      "context": null,
+      "fee_cr": "1.0000",
+      "experience": 20,
+      "min_level": 2,
+      "work_seconds": 0
+    },
+    "classic-leather": {
+      "output": "classic-leather",
+      "quantity": 1,
+      "ingredients": {
+        "classic-hide": 1,
+        "classic-water": 1
+      },
+      "tools": [],
+      "requires": [
+        "classic-bench"
+      ],
+      "station": "classic-bench",
+      "context": null,
+      "fee_cr": "0.0000",
+      "experience": 20,
+      "min_level": 1,
+      "work_seconds": 0
+    },
+    "classic-manual": {
+      "output": "classic-manual",
+      "quantity": 1,
+      "ingredients": {
+        "classic-paper": 6,
+        "classic-ink": 2,
+        "classic-leather": 1
+      },
+      "tools": [],
+      "requires": [
+        "classic-leather",
+        "classic-ink",
+        "classic-paper"
+      ],
+      "station": "classic-bench",
+      "context": null,
+      "fee_cr": "2.0000",
+      "experience": 30,
+      "min_level": 2,
+      "work_seconds": 0
+    },
+    "classic-nails": {
+      "output": "classic-nails",
+      "quantity": 10,
+      "ingredients": {
+        "classic-ingot": 1
+      },
+      "tools": [
+        "classic-hammer"
+      ],
+      "requires": [
+        "classic-anvil"
+      ],
+      "station": "classic-anvil",
+      "context": null,
+      "fee_cr": "0.0000",
+      "experience": 20,
+      "min_level": 1,
+      "work_seconds": 0
+    },
+    "classic-paper": {
+      "output": "classic-paper",
+      "quantity": 3,
+      "ingredients": {
+        "classic-plank": 1,
+        "classic-water": 2
+      },
+      "tools": [],
+      "requires": [
+        "classic-bench"
+      ],
+      "station": "classic-bench",
+      "context": null,
+      "fee_cr": "0.0000",
+      "experience": 20,
+      "min_level": 1,
+      "work_seconds": 0
+    },
+    "classic-pickaxe": {
+      "output": "classic-pickaxe",
+      "quantity": 1,
+      "ingredients": {
+        "classic-ingot": 3,
+        "classic-stick": 2
+      },
+      "tools": [
+        "classic-hammer"
+      ],
+      "requires": [
+        "classic-anvil"
+      ],
+      "station": "classic-anvil",
+      "context": null,
+      "fee_cr": "0.0000",
+      "experience": 20,
+      "min_level": 1,
+      "work_seconds": 0
+    },
+    "classic-plank": {
+      "output": "classic-plank",
+      "quantity": 2,
+      "ingredients": {
+        "classic-log": 1
+      },
+      "tools": [],
+      "requires": [],
+      "station": null,
+      "context": null,
+      "fee_cr": "0.0000",
+      "experience": 20,
+      "min_level": 1,
+      "work_seconds": 0
+    },
+    "classic-potion": {
+      "output": "classic-potion",
+      "quantity": 1,
+      "ingredients": {
+        "classic-extract": 1,
+        "classic-bottle": 1,
+        "classic-water": 1
+      },
+      "tools": [],
+      "requires": [
+        "classic-bottle",
+        "classic-extract"
+      ],
+      "station": "classic-alchemy",
+      "context": null,
+      "fee_cr": "1.0000",
+      "experience": 20,
+      "min_level": 1,
+      "work_seconds": 0
+    },
+    "classic-rope": {
+      "output": "classic-rope",
+      "quantity": 1,
+      "ingredients": {
+        "classic-fibre": 3
+      },
+      "tools": [],
+      "requires": [],
+      "station": null,
+      "context": null,
+      "fee_cr": "0.0000",
+      "experience": 20,
+      "min_level": 1,
+      "work_seconds": 0
+    },
+    "classic-saw": {
+      "output": "classic-saw",
+      "quantity": 1,
+      "ingredients": {
+        "classic-ingot": 2,
+        "classic-stick": 2
+      },
+      "tools": [
+        "classic-hammer"
+      ],
+      "requires": [
+        "classic-nails"
+      ],
+      "station": "classic-anvil",
+      "context": null,
+      "fee_cr": "0.0000",
+      "experience": 20,
+      "min_level": 1,
+      "work_seconds": 0
+    },
+    "classic-shield": {
+      "output": "classic-shield",
+      "quantity": 1,
+      "ingredients": {
+        "classic-plank": 4,
+        "classic-ingot": 2,
+        "classic-leather": 1
+      },
+      "tools": [
+        "classic-saw"
+      ],
+      "requires": [
+        "classic-chest",
+        "classic-leather"
+      ],
+      "station": "classic-bench",
+      "context": null,
+      "fee_cr": "2.0000",
+      "experience": 20,
+      "min_level": 2,
+      "work_seconds": 0
+    },
+    "classic-space-elixir": {
+      "output": "classic-space-elixir",
+      "quantity": 1,
+      "ingredients": {
+        "classic-extract": 2,
+        "classic-bottle": 1,
+        "classic-water": 2
+      },
+      "tools": [],
+      "requires": [
+        "classic-bottle",
+        "classic-extract"
+      ],
+      "station": "classic-alchemy",
+      "context": null,
+      "fee_cr": "0.0000",
+      "experience": 20,
+      "min_level": 1,
+      "work_seconds": 0
+    },
+    "classic-stick": {
+      "output": "classic-stick",
+      "quantity": 4,
+      "ingredients": {
+        "classic-log": 1
+      },
+      "tools": [],
+      "requires": [],
+      "station": null,
+      "context": null,
+      "fee_cr": "0.0000",
+      "experience": 20,
+      "min_level": 1,
+      "work_seconds": 0
+    },
+    "classic-sword": {
+      "output": "classic-sword",
+      "quantity": 1,
+      "ingredients": {
+        "classic-ingot": 4,
+        "classic-stick": 1,
+        "classic-leather": 1
+      },
+      "tools": [
+        "classic-hammer"
+      ],
+      "requires": [
+        "classic-helmet"
+      ],
+      "station": "classic-anvil",
+      "context": null,
+      "fee_cr": "3.0000",
+      "experience": 20,
+      "min_level": 2,
+      "work_seconds": 0
+    },
+    "classic-table": {
+      "output": "classic-table",
+      "quantity": 1,
+      "ingredients": {
+        "classic-plank": 6,
+        "classic-stick": 4,
+        "classic-nails": 4
+      },
+      "tools": [
+        "classic-saw"
+      ],
+      "requires": [
+        "classic-chair"
+      ],
+      "station": "classic-bench",
+      "context": null,
+      "fee_cr": "1.0000",
+      "experience": 20,
+      "min_level": 1,
+      "work_seconds": 0
+    },
+    "starter-carrot-seeds": {
+      "output": "world-carrot-seed",
+      "quantity": 2,
+      "ingredients": {
+        "world-carrot": 1
+      },
+      "tools": [],
+      "requires": [],
+      "station": null,
+      "context": null,
+      "fee_cr": "0.0000",
+      "experience": 1,
+      "min_level": 1,
+      "work_seconds": 0
+    },
+    "world-explorer-elixir": {
+      "output": "world-explorer-elixir",
+      "quantity": 1,
+      "ingredients": {
+        "classic-bottle": 1,
+        "world-magic-herb": 3
+      },
+      "tools": [],
+      "requires": [],
+      "station": null,
+      "context": null,
+      "fee_cr": "0.0000",
+      "experience": 20,
+      "min_level": 1,
+      "work_seconds": 0
+    },
+    "world-shovel": {
+      "output": "world-shovel",
+      "quantity": 1,
+      "ingredients": {
+        "classic-plank": 2,
+        "classic-stone": 1
+      },
+      "tools": [],
+      "requires": [],
+      "station": null,
+      "context": null,
+      "fee_cr": "0.0000",
+      "experience": 20,
+      "min_level": 1,
+      "work_seconds": 0
+    },
+    "world-stone-pickaxe": {
+      "output": "world-stone-pickaxe",
+      "quantity": 1,
+      "ingredients": {
+        "classic-stone": 3,
+        "classic-stick": 2
+      },
+      "tools": [],
+      "requires": [
+        "classic-stick"
+      ],
+      "station": null,
+      "context": null,
+      "fee_cr": "0.0000",
+      "experience": 20,
+      "min_level": 1,
+      "work_seconds": 0
+    },
+    "world-cooked-carrot": {
+      "output": "world-cooked-carrot",
+      "quantity": 1,
+      "ingredients": {
+        "world-carrot": 2
+      },
+      "tools": [],
+      "requires": [],
+      "station": null,
+      "context": "cookfire",
+      "fee_cr": "0.0000",
+      "experience": 8,
+      "min_level": 1,
+      "work_seconds": 0
+    },
+    "world-vegetable-broth": {
+      "output": "world-vegetable-broth",
+      "quantity": 1,
+      "ingredients": {
+        "world-carrot": 1,
+        "classic-water": 1,
+        "classic-herb": 1
+      },
+      "tools": [],
+      "requires": [],
+      "station": null,
+      "context": "cookfire",
+      "fee_cr": "0.0000",
+      "experience": 8,
+      "min_level": 1,
+      "work_seconds": 0
+    },
+    "world-travel-ration": {
+      "output": "world-travel-ration",
+      "quantity": 1,
+      "ingredients": {
+        "world-carrot": 1,
+        "classic-fibre": 1
+      },
+      "tools": [],
+      "requires": [],
+      "station": null,
+      "context": "cookfire",
+      "fee_cr": "0.0000",
+      "experience": 8,
+      "min_level": 1,
+      "work_seconds": 0
+    }
+  },
+  "goals": {
+    "day-1": {
+      "facts": [
+        "city_joined",
+        "starter_site_active",
+        "explore_3_owned_map_cells",
+        "shelter_built",
+        "hammer_crafted",
+        "gather_5_logs",
+        "gather_5_stones",
+        "campfire_placed",
+        "garden_built",
+        "shovel_crafted",
+        "bed_dug",
+        "carrot_sown"
+      ],
+      "credits_cr": "50.0000",
+      "experience": 20,
+      "items": {
+        "world-explorer-elixir": 1
+      },
+      "credit_source": "reserved_existing_settlement_budget",
+      "credit_destination": "existing_starter_site_treasury"
+    },
+    "day-2": {
+      "facts": [
+        "daily_supply_claimed",
+        "carrot_harvested",
+        "mine_built",
+        "stone_pickaxe_crafted",
+        "stone_mined",
+        "coal_mined",
+        "ore_mined",
+        "forge_built",
+        "bench_crafted",
+        "furnace_crafted",
+        "ingot_crafted"
+      ],
+      "credits_cr": "100.0000",
+      "experience": 30,
+      "items": {
+        "classic-ingot": 1
+      },
+      "credit_source": "reserved_existing_settlement_budget",
+      "credit_destination": "existing_starter_site_treasury"
+    }
+  },
+  "bootstrap_targets": [
+    "world-shovel",
+    "world-stone-pickaxe",
+    "classic-bench",
+    "classic-furnace",
+    "classic-ingot",
+    "classic-anvil",
+    "classic-nails",
+    "classic-saw",
+    "classic-chest",
+    "classic-bed",
+    "classic-pickaxe",
+    "classic-leather",
+    "world-cooked-carrot",
+    "world-vegetable-broth",
+    "world-travel-ration",
+    "world-explorer-elixir"
+  ],
+  "first_day_objects": [
+    "forest-plot",
+    "stone-plot",
+    "starter-shelter",
+    "campfire-place",
+    "garden",
+    "garden-bed"
+  ],
+  "preserve": [
+    "player_inventory",
+    "paid_map_and_storage_rights",
+    "accepted_operation_terms",
+    "started_crop_cycles",
+    "existing_start_claims",
+    "completed_ledger_entries"
+  ],
+  "pending_release_checks": [
+    "BAL:A4",
+    "BAL:B-D",
+    "ECO:A-C",
+    "CONTENT:B-F",
+    "UI/CONUI",
+    "ACC:A-C"
+  ],
+  "source_equipment": {
+    "drilling-rig": {
+      "source": "mine",
+      "output_multiplier": 5,
+      "reward_multiplier": 3,
+      "replaces_tools": [
+        "world-stone-pickaxe",
+        "classic-pickaxe"
+      ]
+    }
+  }
+}

@@ -22,6 +22,7 @@ final class EconomyQuota
         $used = 0; $gross = Money::parse('0');
         foreach ($rows as $row) { $used += (int)$row['quantity']; $gross = $gross->add(Money::parse((string)$row['gross_cr'])); }
         $maximum = $kind === 'sales_daily' ? $profile['limits'][$kind]['operations'] : $profile['limits'][$kind]['maximum'];
+        if ($kind === 'extraction_daily') $maximum += HousingBenefits::extractionBonus($db, $user, $profile);
         return ['kind' => $kind, 'maximum' => $maximum, 'used' => $used, 'remaining' => max(0, $maximum - $used),
             'gross_cr' => $gross->decimal(), 'gross_remaining_cr' => $kind === 'sales_daily' ? ($gross->compare(Money::parse($profile['limits'][$kind]['gross_cr'])) >= 0 ? '0.0000' : Money::parse($profile['limits'][$kind]['gross_cr'])->subtract($gross)->decimal()) : null,
             'restores_at' => $kind === 'crafting_hourly' ? ($rows ? $clock::realAt($db, $clock::gameAt($db, min(array_column($rows, 'created_at'))) + 3600) : $now) : $period['end'],

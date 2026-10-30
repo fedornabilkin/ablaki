@@ -41,6 +41,10 @@ final class EconomyBootstrapBound
         EconomyProfile::validate($profile);
         if ($days < 1 || $days > 7) throw new \InvalidArgumentException('Bound covers one to seven Moscow calendar days.');
         if (count($contract['objects']) !== count(array_unique($contract['objects']))) throw new \InvalidArgumentException('Duplicate mandatory object.');
+        if (isset($profile['npc']) || isset($profile['housing_benefits'])) {
+            return ['status' => 'not_applicable', 'days' => $days,
+                'reason' => 'The historical raw-sales bound does not model NPC wages or occupied-home quotas. Use the full command-based development route.'];
+        }
         $recipes = []; $weights = []; $frontier = []; $excluded = [];
         foreach ($profile['recipes'] as $row) {
             if (isset($recipes[$row['output']])) throw new \InvalidArgumentException('Bound requires a unique published recipe per output.');
