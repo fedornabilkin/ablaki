@@ -15,7 +15,8 @@ class BuildForm extends \yii\base\Model
     {
         return [[['parent_id', 'template_id', 'name'], 'required'], [['parent_id', 'template_id'], 'integer', 'min' => 1],
             ['terms_digest', 'match', 'pattern' => '/^[a-f0-9]{64}$/D'],
-            ['name', 'trim'], ['name', 'string', 'min' => 1, 'max' => 120],
+            ['name', 'trim'], ['name', 'string', 'min' => 1, 'max' => \common\modules\world\domain\WorldName::MAX_LENGTH,
+                'tooLong' => 'Название: не более 24 символов.'],
             [['x', 'y'], 'integer', 'min' => -1000000, 'max' => 1000000, 'skipOnEmpty' => false,
                 'when' => function () { return $this->x !== null || $this->y !== null; }],
             ['top_up', 'boolean', 'trueValue' => true, 'falseValue' => false, 'strict' => true],

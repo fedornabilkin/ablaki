@@ -1,6 +1,12 @@
 <?php
 namespace common\modules\world\models\domain;
 
+use common\modules\world\domain\EntityReference;
+use common\modules\world\domain\WorldEntity;
+use common\modules\world\domain\characteristics\CharacteristicSet;
+use common\modules\world\domain\events\CropDamageCalculator;
+use common\modules\world\domain\events\EventRules;
+use common\modules\world\domain\events\WorldEvent;
 use yii\db\Connection;
 use yii\db\Query;
 
@@ -28,18 +34,23 @@ final class CultivationEnvironment
     public static function accepted(?array $cycle): array { return $cycle ? ((json_decode($cycle['terms_json'], true) ?: [])['environment'] ?? ['grow_duration_bps' => 10000, 'event_protection' => null]) : []; }
     public static function damage(Connection $db, array $cycle, array $environment, int $now): array
     {
-        $ancestors = (new Query())->select('ancestor_id')->from('world_node_closure')->where(['descendant_id' => $cycle['bed_id']]);
+        $ancestors = array_map('intval', (new Query())->select('ancestor_id')->from('world_node_closure')
+            ->where(['descendant_id' => $cycle['bed_id']])->column($db));
         $events = (new Query())->from('world_event')->where(['scope_node_id' => $ancestors, 'status' => ['active', 'closed']])->andWhere(['<', 'starts_at', min($now + 1, (int)$cycle['ready_at'])])
             ->andWhere(['or', ['ends_at' => null], ['>', 'ends_at', (int)$cycle['planted_at']]])->orderBy('id')->all($db);
-        $effects = []; $total = 0;
+        $definitions = [];
+        $rules = EventRules::standard();
         foreach ($events as $event) {
-            $damage = (json_decode($event['rules_json'], true) ?: [])['crop_damage'] ?? null;
-            if (!is_array($damage) || ($damage['code'] ?? null) !== 'light_crop_damage' || !is_int($damage['loss_bps'] ?? null) || $damage['loss_bps'] < 1 || $damage['loss_bps'] > 2500) continue;
-            if ($event['status'] === 'closed' && ($event['ends_at'] === null || (int)$event['ends_at'] > $now)) continue;
-            $protection = $environment['event_protection'] ?? null; $loss = $damage['loss_bps'];
-            if ($protection && $protection['code'] === $damage['code'] && $loss <= $protection['max_event_loss_bps']) $loss = intdiv($loss * (10000 - $protection['loss_reduction_bps']), 10000);
-            $effects[] = ['event_id' => (int)$event['id'], 'raw_loss_bps' => $damage['loss_bps'], 'loss_bps' => $loss]; $total = min(10000, $total + $loss);
+            $definitions[] = new WorldEvent(
+                (int)$event['id'], (int)$event['scope_node_id'], $event['status'], (int)$event['starts_at'],
+                $event['ends_at'] === null ? null : (int)$event['ends_at'],
+                $rules->characteristics($event['rules_json'])
+            );
         }
-        return ['loss_bps' => $total, 'effects' => $effects];
+        $features = empty($environment['event_protection']) ? [] : ['event.protection' => $environment['event_protection']];
+        $bed = new WorldEntity(new EntityReference('node', (int)$cycle['bed_id']), new CharacteristicSet($features));
+        return (new CropDamageCalculator())->calculate(
+            $definitions, $bed, $ancestors, (int)$cycle['planted_at'], (int)$cycle['ready_at'], $now
+        );
     }
 }

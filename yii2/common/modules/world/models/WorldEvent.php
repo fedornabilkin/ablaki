@@ -1,6 +1,8 @@
 <?php
 namespace common\modules\world\models;
 
+use common\modules\world\domain\events\EventRules;
+
 class WorldEvent extends LockedRecord
 {
     public static function tableName() { return 'world_event'; }
@@ -12,11 +14,11 @@ class WorldEvent extends LockedRecord
             ['status', 'in', 'range' => ['draft', 'active', 'closed']], ['scope_node_id', 'validateScope'],
             ['ends_at', 'compare', 'compareAttribute' => 'starts_at', 'operator' => '>', 'type' => 'number'], ['rules_json', 'validateRules']];
     }
-    public function validateRules(): void {
-        $rules = json_decode($this->rules_json ?: '{}', true);
-        if (!is_array($rules) || array_diff(array_keys($rules), ['crop_damage'])) { $this->addError('rules_json', 'Ожидается JSON правил события.'); return; }
-        if (isset($rules['crop_damage']) && (!is_array($rules['crop_damage']) || ($rules['crop_damage']['code'] ?? null) !== 'light_crop_damage'
-            || !is_int($rules['crop_damage']['loss_bps'] ?? null) || $rules['crop_damage']['loss_bps'] < 1 || $rules['crop_damage']['loss_bps'] > 2500)) $this->addError('rules_json', 'Лёгкий урон урожаю: код light_crop_damage и loss_bps от 1 до 2500.');
+    public function validateRules(): void
+    {
+        foreach (EventRules::standard()->errors($this->rules_json) as $error) {
+            $this->addError('rules_json', $error);
+        }
     }
     public function validateScope(): void
     {
@@ -35,9 +37,10 @@ class WorldEvent extends LockedRecord
     public static function atNode(int $id, int $user)
     {
         Node::readable($id, $user);
+        $now = time();
         $ancestors = (new \yii\db\Query())->select('ancestor_id')->from('world_node_closure')->where(['descendant_id' => $id]);
-        return self::find()->where(['scope_node_id' => $ancestors, 'status' => 'active'])->andWhere(['<=', 'starts_at', time()])
-            ->andWhere(['or', ['ends_at' => null], ['>', 'ends_at', time()]]);
+        return self::find()->where(['scope_node_id' => $ancestors, 'status' => 'active'])->andWhere(['<=', 'starts_at', $now])
+            ->andWhere(['or', ['ends_at' => null], ['>', 'ends_at', $now]]);
     }
     public function fields(): array { return ['id', 'name', 'scope_node_id', 'description', 'starts_at', 'ends_at', 'status']; }
     public function beforeDelete() { $this->status = 'closed'; $this->save(); return false; }

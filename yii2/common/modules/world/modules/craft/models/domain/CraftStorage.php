@@ -1,6 +1,8 @@
 <?php
 namespace common\modules\world\modules\craft\models\domain;
 
+use common\modules\world\modules\craft\domain\InventoryPlacement;
+use common\modules\world\support\Locks;
 use yii\db\Connection;
 use yii\db\Query;
 use yii\web\ConflictHttpException;
@@ -24,15 +26,8 @@ class CraftStorage
     public function lock(string $table,array $where): array
     {
         if (!$this->db->getTransaction()) throw new \RuntimeException('Transaction required.');
-        $query=(new Query())->from($table)->where($where);
-        if ($this->db->driverName==='sqlite') {
-            $this->db->createCommand()->update($table,['id'=>new \yii\db\Expression('[[id]]')],$where)->execute();
-            $row=$query->one($this->db);
-        } else {
-            if (!in_array($this->db->driverName,['mysql','pgsql'],true)) throw new \RuntimeException('Unsupported database.');
-            $command=$query->createCommand($this->db);
-            $row=$this->db->createCommand($command->sql.' FOR UPDATE',$command->params)->queryOne();
-        }
+        if (!in_array($this->db->driverName, ['sqlite', 'mysql', 'pgsql'], true)) throw new \RuntimeException('Unsupported database.');
+        $row = (new Locks($this->db))->row($table, $where);
         if (!$row) throw new ConflictHttpException('Данные крафта недоступны.');
         return $row;
     }
@@ -77,22 +72,25 @@ class CraftStorage
             if($slotId!==null)throw new \InvalidArgumentException('Positive slot targeting is unsupported.');
             $limit=($item['storage_kind']??'none')==='chest'?1:(int)$item['stack_size'];
             if($limit<1||$limit>10000)throw new ConflictHttpException('Неверный размер стопки.');
-            $occupied=[];
-            foreach($slots as $slot) {
-                $position=(int)$slot['slot'];$occupied[$position]=true;
-                if($position>$active||(int)$slot['item_id']!==(int)$item['id'])continue;
-                $add=min($delta,max(0,$limit-(int)$slot['item_quantity']));if(!$add)continue;
-                $inventory->write((int)$slot['id'],['item_quantity'=>(int)$slot['item_quantity']+$add]);
-                $delta-=$add;if(!$delta)return;
+            $rows = array_column($slots, null, 'id');
+            $placement = InventoryPlacement::plan($rows, $active, (int)$item['id'], $delta, $limit);
+            foreach ($placement['grant'] as $grant) {
+                if ($grant['inventory_id'] !== null) {
+                    $row = $rows[$grant['inventory_id']];
+                    $inventory->write((int)$row['id'], ['item_quantity' => (int)$row['item_quantity'] + $grant['quantity']]);
+                    continue;
+                }
+                $empty = (new Query())->from('craft_inventory')
+                    ->where(['user_id' => $userId, 'container_id' => null, 'item_id' => null])
+                    ->orderBy('id')->one($this->db);
+                $values = ['item_id' => $item['id'], 'item_quantity' => $grant['quantity'], 'slot' => $grant['position']];
+                if ($empty) {
+                    $inventory->write((int)$empty['id'], $values);
+                } else {
+                    $this->insert('craft_inventory', $values + ['user_id' => $userId]);
+                }
             }
-            for($position=1;$position<=$active&&$delta>0;$position++) {
-                if(isset($occupied[$position]))continue;$add=min($delta,$limit);
-                $empty=(new Query())->from('craft_inventory')->where(['user_id'=>$userId,'container_id'=>null,'item_id'=>null])->orderBy('id')->one($this->db);
-                $values=['item_id'=>$item['id'],'item_quantity'=>$add,'slot'=>$position];
-                if($empty)$inventory->write((int)$empty['id'],$values);else $this->insert('craft_inventory',$values+['user_id'=>$userId]);
-                $delta-=$add;
-            }
-            if($delta>0)throw new ConflictHttpException('Активные слоты заполнены. Объедините предметы, используйте сундук или откройте дополнительные слоты.');
+            if ($placement['missing_quantity']) throw new ConflictHttpException('Активные слоты заполнены. Объедините предметы, используйте сундук или откройте дополнительные слоты.');
         }
     }
     public function merge(int $userId,array $item,int $sourceId,int $targetId): int

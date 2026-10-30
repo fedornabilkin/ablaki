@@ -811,6 +811,17 @@ echo 'Node-context, single-builder and one-click lodging checks passed.' . PHP_E
         } finally { $rigTx->rollBack(); }
     }
     $pickItems = (new Query())->select('id')->from('craft_item')->where(['code' => ['world-stone-pickaxe', 'classic-pickaxe']])->column($db);
+    economyCheck((int)(new Query())->from('craft_inventory')->where(['user_id' => $drillUser, 'item_id' => (new Query())->select('id')->from('craft_item')->where(['code' => 'world-stone-pickaxe'])])->sum('item_quantity', $db) === 1, 'new participants receive one starter stone pick');
+    Command::run($drillUser, bin2hex(random_bytes(16)), 'fixture.repeat-starter', [], static function ($operation) use ($drillUser) {
+        \common\modules\world\models\StarterPack::claim($drillUser, $operation); return [];
+    });
+    economyCheck((int)(new Query())->select('quantity')->from('world_economy_fact')->where(['user_id' => $drillUser, 'code' => 'acquired:world-stone-pickaxe'])->scalar($db) === 1
+        && (int)(new Query())->from('craft_inventory')->where(['user_id' => $drillUser, 'item_id' => (new Query())->select('id')->from('craft_item')->where(['code' => 'world-stone-pickaxe'])])->sum('item_quantity', $db) === 1, 'retrying starter claim preserves a single pick and its acquisition fact');
+    Command::run($drillUser, bin2hex(random_bytes(16)), 'fixture.consume-starter-pick', [], static function ($operation) use ($db, $drillUser) {
+        $store = new \common\modules\world\modules\craft\models\domain\CraftStorage($db); $store->operationId = $operation;
+        $item = (new Query())->from('craft_item')->where(['code' => 'world-stone-pickaxe'])->one($db);
+        $store->move($drillUser, $item, -1); return [];
+    });
     economyCheck(!(new Query())->from('craft_inventory')->where(['user_id' => $drillUser, 'item_id' => $pickItems])->andWhere(['>', 'item_quantity', 0])->exists($db), 'drill worker starts without either kind of pick');
     $drillStock = \common\modules\world\models\domain\HiredExtraction::storages($mineNpc)[0];
     $stoneItem = (int)(new Query())->select('id')->from('craft_item')->where(['code' => 'classic-stone'])->scalar($db);
@@ -860,9 +871,26 @@ echo 'Node-context, single-builder and one-click lodging checks passed.' . PHP_E
     $privateBefore = $npcPrivate();
     $maintenance = new \common\modules\world\models\domain\NpcMaintenance($db);
     $npcRefresh = static function () use ($db, $maintenance, $policy) {
-        return Command::run(9001, bin2hex(random_bytes(16)), 'fixture.npc.refresh', ['node_id' => (int)$policy['world_id']], static function ($operation) use ($maintenance, $policy) { $maintenance->refresh($policy, $operation); return []; });
+        return Command::run(9001, bin2hex(random_bytes(16)), 'fixture.npc.refresh', ['node_id' => (int)$policy['world_id']], static function ($operation) use ($db, $maintenance, $policy) {
+            $nodes = (new \common\modules\world\models\domain\NpcInfrastructure($db))->nodes($policy);
+            (new \common\modules\world\models\domain\NpcStockLogistics($db))->consolidate($policy, $nodes, $operation);
+            $maintenance->refresh($policy, $operation);
+            return [];
+        });
     };
+    $npcStock = static function () use ($db, $npcUser): array {
+        return (new Query())->select(['item_id', 'quantity' => new \yii\db\Expression('SUM(item_quantity)')])->from('craft_inventory')
+            ->where(['user_id' => $npcUser])->andWhere(['>', 'item_quantity', 0])->groupBy('item_id')->orderBy('item_id')->all($db);
+    };
+    $stockBeforeLogistics = $npcStock();
+    $sourceQuantity = static fn() => (int)(new Query())->from('craft_inventory')->where(['storage_id' => $drillStock['id'], 'item_id' => $stoneItem])->sum('item_quantity', $db);
+    economyCheck($sourceQuantity() > 0, 'the source mini-store contains delivered mining output before maintenance');
     $npcRefresh();
+    economyCheck($npcStock() === $stockBeforeLogistics, 'NPC consolidation preserves every resource quantity');
+    economyCheck($sourceQuantity() === 0, 'NPC logistics frees source slots by moving delivered output to its warehouse');
+    $layoutAfterLogistics = (new Query())->select(['id', 'storage_id', 'slot', 'item_quantity'])->from('craft_inventory')->where(['user_id' => $npcUser])->andWhere(['>', 'item_quantity', 0])->orderBy('id')->all($db);
+    $npcRefresh();
+    economyCheck($layoutAfterLogistics === (new Query())->select(['id', 'storage_id', 'slot', 'item_quantity'])->from('craft_inventory')->where(['user_id' => $npcUser])->andWhere(['>', 'item_quantity', 0])->orderBy('id')->all($db), 'repeated NPC consolidation does not duplicate or reshuffle stock');
     economyCheck($npcTotal() === $npcMoneyBefore && $npcPrivate() === $privateBefore
         && \common\modules\world\modules\economy\value\Money::parse((string)(new Query())->select('amount')->from('economy_account')->where(['subject_id' => (new Query())->select('id')->from('economy_subject')->where(['node_id' => $waterStorage['node_id']]), 'role' => 'treasury'])->scalar($db))->isZero(), 'maintenance collects NPC sale proceeds without touching private accounts or issuing credits');
     economySourceCommand($freshUser, (int)$waterNode->id, 'start', ['action_code' => 'gather-water']);

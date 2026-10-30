@@ -37,6 +37,8 @@ final class NpcMaintenance
         if (!$policy || (int)$job['owner_user_id'] !== (int)$policy['bot_user_id']) return;
         if ((int)$policy['last_refill_at'] + (int)$policy['refill_interval_seconds'] > time()) return;
         $operation = $this->operation((int)$policy['bot_user_id'], (int)$policy['world_id'], 'world.npc.maintain');
+        $nodes = (new NpcInfrastructure($this->db))->nodes($policy);
+        (new NpcStockLogistics($this->db))->consolidate($policy, $nodes, $operation);
         $this->refresh($policy, $operation);
     }
     public function refresh(array $policy, string $operation): void

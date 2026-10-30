@@ -1,6 +1,8 @@
 <?php
 namespace common\modules\world\modules\craft\models\domain;
 
+use common\modules\world\modules\craft\domain\CraftExperience;
+use common\modules\world\modules\craft\domain\CraftCommandInput;
 use yii\db\Query;
 use yii\web\ConflictHttpException;
 use yii\web\UnprocessableEntityHttpException;
@@ -15,9 +17,9 @@ class Crafting
     {
         $where=['user_id'=>$user,'category_id'=>$category]; $row=$this->one('craft_skill',$where);
         if($row) {
-            $next=min(9900,(int)$row['experience']+$add);
+            $next = CraftExperience::add((int)$row['experience'], $add);
             if($next!==(int)$row['experience']&&$this->s->db->createCommand()->update('craft_skill',['experience'=>$next],$where)->execute()!==1)throw new \RuntimeException('Skill write failed.');
-        } elseif($this->s->db->createCommand()->insert('craft_skill',$where+['experience'=>min(9900,$add)])->execute()!==1)throw new \RuntimeException('Skill write failed.');
+        } elseif($this->s->db->createCommand()->insert('craft_skill',$where+['experience'=>CraftExperience::add(0, $add)])->execute()!==1)throw new \RuntimeException('Skill write failed.');
     }
     public function requirements(int $user,array $recipe): array
     {
@@ -31,7 +33,7 @@ class Crafting
         $reasons = [];
         foreach ($recipes as $recipe) {
             $skill = $skills[$recipe['category_id']] ?? [];
-            $reasons[(int)$recipe['id']] = 1 + intdiv((int)($skill['experience'] ?? 0), 100) < (int)$recipe['min_level'] ? ['Нужен уровень ' . $recipe['min_level']] : [];
+            $reasons[(int)$recipe['id']] = CraftExperience::level((int)($skill['experience'] ?? 0)) < (int)$recipe['min_level'] ? ['Нужен уровень ' . $recipe['min_level']] : [];
         }
         $dependencies = (new Query())->select(['d.recipe_id', 'd.requires_id', 'recipe_name' => 'r.name', 'output_name' => 'i.name', 'output_id' => 'i.id'])->from(['d' => 'craft_dependency'])
             ->leftJoin(['k' => 'craft_known'], '[[k.recipe_id]]=[[d.requires_id]] AND [[k.user_id]]=:requirementUser', [':requirementUser' => $user])
@@ -57,86 +59,128 @@ class Crafting
     {
         $this->s->insert('craft_event',$extra+['user_id'=>$user,'action'=>$action,'quantity'=>$qty,'credit_change'=>0,'created_at'=>time()]);
     }
-    public function command(int $user,string $key,string $action,array $payload): array
+    public function command(int $user, string $key, string $action, array $payload): array
     {
-        if($user<1||!preg_match('/^[A-Za-z0-9_-]{16,80}$/D',$key))throw new UnprocessableEntityHttpException('Нужен корректный ключ команды.');
-        if(!in_array($action,['craft','starter','gather','discard','use','merge','transfer','buy_slots','repair'],true))throw new UnprocessableEntityHttpException('Неизвестная операция.');
-        $qty=array_key_exists('quantity',$payload)?$payload['quantity']:1; $id=$payload['id']??0;
-        $maxQty=in_array($action,['use','discard','transfer'],true)?10000:100;
-        if(!is_int($qty)||$qty<1||$qty>$maxQty||!is_int($id)||$id<0)throw new UnprocessableEntityHttpException('Количество должно быть целым от 1 до '.$maxQty.'.');
-        $slotId=$payload['slot_id']??null;
-        if($slotId!==null&&(!is_int($slotId)||$slotId<1||!in_array($action,['use','discard','merge','transfer','repair'],true)))throw new UnprocessableEntityHttpException('Некорректный слот инвентаря.');
-        if(in_array($action,['starter','gather','repair'],true)&&$qty!==1)throw new UnprocessableEntityHttpException('Для этой операции количество должно быть равно 1.');
-        if($action==='repair'&&$slotId===null)throw new UnprocessableEntityHttpException('Выберите сундук для ремонта.');
-        $targetId=$payload['target_slot_id']??null;
-        if(($targetId!==null&&($action!=='merge'||!is_int($targetId)||$targetId<1))||($action==='merge'&&($slotId===null||$targetId===null||$slotId===$targetId||$qty!==1)))throw new UnprocessableEntityHttpException('Выберите два разных слота для объединения.');
-        $identity=[$action,$id,$qty];if($slotId!==null)$identity[]=$slotId;
-        if($targetId!==null)$identity[]=$targetId;
-        $destination=$payload['container_id']??0;$position=$payload['position']??0;$price=$payload['unit_price']??null;$total=$payload['total_price']??null;
-        if($action==='transfer') {
-            if($slotId===null||!is_int($destination)||$destination<0||!is_int($position)||$position<1||$position>100)throw new UnprocessableEntityHttpException('Выберите исходный предмет и целевой слот.');
-            $identity[]=['container_id'=>$destination,'position'=>$position];
-        } elseif(isset($payload['container_id'])||isset($payload['position']))throw new UnprocessableEntityHttpException('Целевой слот не поддерживается этой операцией.');
-        if($action==='buy_slots') {
-            if(!is_int($price)||$price<0)throw new UnprocessableEntityHttpException('Подтвердите цену слота.');
-            $identity[]=['unit_price'=>$price];
-            if(array_key_exists('total_price',$payload)) {
-                if(!is_int($total)||$total<0)throw new UnprocessableEntityHttpException('Подтвердите полную стоимость слотов.');
-                $identity[]=['total_price'=>$total];
-            }
-        } elseif($price!==null)throw new UnprocessableEntityHttpException('Цена не поддерживается этой операцией.');
-        if($action!=='buy_slots'&&array_key_exists('total_price',$payload))throw new UnprocessableEntityHttpException('Стоимость не поддерживается этой операцией.');
-        $fingerprint=hash('sha256',json_encode($identity));
-        $result=$this->s->db->transaction(function() use($user,$key,$action,$id,$qty,$slotId,$targetId,$fingerprint,$destination,$position,$price,$total) {
-            // Catalog imports and player commands use the same short, deterministic lock order.
-            $meta=$this->s->lock('craft_meta',['id'=>1]);
-            if ($this->s->isCanonical()) (new \common\modules\world\support\Locks($this->s->db))->owners([$user]);
-            $person=$this->s->lock('persone',['user_id'=>$user]);
-            if ($this->s->isCanonical()) $this->s->lock('world_registry',['id'=>1]);
-            $old=$this->one('craft_command',['user_id'=>$user,'request_key'=>$key]);
-            if($old) { if(!hash_equals($old['fingerprint'],$fingerprint))throw new ConflictHttpException('Этот ключ уже использован для другой команды.'); return json_decode($old['result'],true)+['replayed'=>true]; }
-            \common\modules\world\models\domain\EconomyRuntime::requireAccess($this->s->db, $user);
-            $this->s->operationId = null; $this->s->protectedInstances = [];
-            StorageMaintenance::writable($this->s->db);
-            $inventory=new CraftInventory($this->s);$inventory->synchronize($user);
-            $recent=(new Query())->from('craft_command')->where(['user_id'=>$user])->andWhere(['>=','created_at',time()-60])->count('*',$this->s->db);
-            if((int)$recent>=30)throw new \yii\web\TooManyRequestsHttpException('Слишком много операций. Попробуйте через минуту.');
-            if($action==='repair') {
-                (new ChestRepair($this->s))->repair($user,$slotId,$id);
-                $this->event($user,'repair',1,['item_id'=>$id]);$message='Сундук починен.';
-            } elseif($action==='buy_slots') {
-                $cost=$inventory->buy($user,$qty,$price,$total);$this->event($user,$action,$qty,['credit_change'=>-$cost]);$message='Открыто постоянных слотов: '.$qty;
-            } elseif($action==='transfer') {
-                $source=$this->one('craft_inventory',['id'=>$slotId,'user_id'=>$user,'item_id'=>$id]);
-                if(!$source)throw new ConflictHttpException('Предмет в исходном слоте изменился.');
-                $moved=$inventory->transfer($user,$slotId,$destination,$position,$qty);$this->event($user,$action,$moved,['item_id'=>$id]);$message='Перемещено предметов: '.$moved;
-            } elseif($action==='craft')$message=$this->craft($user,$person,$id,$qty,(int)($meta['charge_credits']??0)===1);
-            elseif($action==='starter'||$action==='gather')$message=$this->supplies($user,$action);
-            elseif($action==='merge') {
-                $item=$this->item($id,false);
-                $moved=$this->s->merge($user,$item,$slotId,$targetId);
-                $this->event($user,'merge',$moved,['item_id'=>$id]);
-                $message='Объединено: '.trim($item['name']).' × '.$moved;
-            }
-            else {
-                $item=$this->item($id,$action!=='discard');
-                if($action==='discard'&&!(int)$item['destroyable'])throw new ConflictHttpException('Этот предмет нельзя удалить.');
-                $elixir=($item['storage_kind']??'none')==='elixir';
-                if($action==='use'&&(trim($item['kind'])!=='consumable'||((int)$item['use_xp']<1&&!$elixir)))throw new ConflictHttpException('Этот предмет нельзя использовать.');
-                if($action==='use'&&$elixir)$inventory->unlock($user,$qty);
-                $this->s->move($user,$item,-$qty,$slotId);
-                if($action==='use')$this->xp($user,(int)$item['category_id'],(int)$item['use_xp']*$qty);
-                $this->event($user,$action,$qty,['item_id'=>$id]); $message=($action==='use'?'Использовано: ':'Удалено: ').trim($item['name']).' × '.$qty;
-            }
-            $result=['message'=>$message];
-            if ($this->s->operationId) $this->s->db->createCommand()->update('game_operation', ['type' => 'craft.' . $action],
-                ['id' => $this->s->operationId, 'user_id' => $user, 'type' => 'inventory.legacy'])->execute();
-            $this->s->insert('craft_command',['user_id'=>$user,'request_key'=>$key,'fingerprint'=>$fingerprint,'result'=>json_encode($result,JSON_UNESCAPED_UNICODE),'created_at'=>time()]);
-            return $result+['replayed'=>false];
-        });
-        $this->s->protectedInstances = [];
-        return $result+['state'=>$this->state($user)];
+        try {
+            $input = CraftCommandInput::parse($user, $key, $action, $payload);
+        } catch (\InvalidArgumentException $error) {
+            throw new UnprocessableEntityHttpException($error->getMessage(), 0, $error);
+        }
+        try {
+            $result = $this->s->db->transaction(function () use ($user, $key, $input) {
+                // Catalog imports and commands retain the same deterministic lock order.
+                $meta = $this->s->lock('craft_meta', ['id' => 1]);
+                if ($this->s->isCanonical()) {
+                    (new \common\modules\world\support\Locks($this->s->db))->owners([$user]);
+                }
+                $person = $this->s->lock('persone', ['user_id' => $user]);
+                if ($this->s->isCanonical()) {
+                    $this->s->lock('world_registry', ['id' => 1]);
+                }
+                $old = $this->one('craft_command', ['user_id' => $user, 'request_key' => $key]);
+                if ($old) {
+                    if (!hash_equals($old['fingerprint'], $input->fingerprint)) {
+                        throw new ConflictHttpException('Этот ключ уже использован для другой команды.');
+                    }
+                    return json_decode($old['result'], true) + ['replayed' => true];
+                }
+                \common\modules\world\models\domain\EconomyRuntime::requireAccess($this->s->db, $user);
+                $this->s->operationId = null;
+                $this->s->protectedInstances = [];
+                StorageMaintenance::writable($this->s->db);
+                $inventory = new CraftInventory($this->s);
+                $inventory->synchronize($user);
+                $recent = (new Query())->from('craft_command')
+                    ->where(['user_id' => $user])
+                    ->andWhere(['>=', 'created_at', time() - 60])
+                    ->count('*', $this->s->db);
+                if ((int)$recent >= 30) {
+                    throw new \yii\web\TooManyRequestsHttpException('Слишком много операций. Попробуйте через минуту.');
+                }
+                $result = ['message' => $this->performCommand(
+                    $user, $person, $input, $inventory, (int)($meta['charge_credits'] ?? 0) === 1
+                )];
+                if ($this->s->operationId) {
+                    $this->s->db->createCommand()->update('game_operation', [
+                        'type' => 'craft.' . $input->action,
+                    ], ['id' => $this->s->operationId, 'user_id' => $user, 'type' => 'inventory.legacy'])->execute();
+                }
+                $this->s->insert('craft_command', [
+                    'user_id' => $user,
+                    'request_key' => $key,
+                    'fingerprint' => $input->fingerprint,
+                    'result' => json_encode($result, JSON_UNESCAPED_UNICODE),
+                    'created_at' => time(),
+                ]);
+                return $result + ['replayed' => false];
+            });
+        } finally {
+            $this->s->protectedInstances = [];
+        }
+        return $result + ['state' => $this->state($user)];
     }
+
+    private function performCommand(
+        int $user,
+        array $person,
+        CraftCommandInput $input,
+        CraftInventory $inventory,
+        bool $chargeCredits
+    ): string {
+        $id = $input->itemId;
+        $quantity = $input->quantity;
+        $action = $input->action;
+        if ($action === 'repair') {
+            (new ChestRepair($this->s))->repair($user, $input->slotId, $id);
+            $this->event($user, 'repair', 1, ['item_id' => $id]);
+            return 'Сундук починен.';
+        }
+        if ($action === 'buy_slots') {
+            $cost = $inventory->buy($user, $quantity, $input->unitPrice, $input->totalPrice);
+            $this->event($user, $action, $quantity, ['credit_change' => -$cost]);
+            return 'Открыто постоянных слотов: ' . $quantity;
+        }
+        if ($action === 'transfer') {
+            $source = $this->one('craft_inventory', ['id' => $input->slotId, 'user_id' => $user, 'item_id' => $id]);
+            if (!$source) {
+                throw new ConflictHttpException('Предмет в исходном слоте изменился.');
+            }
+            $moved = $inventory->transfer($user, $input->slotId, $input->containerId, $input->position, $quantity);
+            $this->event($user, $action, $moved, ['item_id' => $id]);
+            return 'Перемещено предметов: ' . $moved;
+        }
+        if ($action === 'craft') {
+            return $this->craft($user, $person, $id, $quantity, $chargeCredits);
+        }
+        if ($action === 'starter' || $action === 'gather') {
+            return $this->supplies($user, $action);
+        }
+        if ($action === 'merge') {
+            $item = $this->item($id, false);
+            $moved = $this->s->merge($user, $item, $input->slotId, $input->targetSlotId);
+            $this->event($user, 'merge', $moved, ['item_id' => $id]);
+            return 'Объединено: ' . trim($item['name']) . ' × ' . $moved;
+        }
+
+        $item = $this->item($id, $action !== 'discard');
+        if ($action === 'discard' && !(int)$item['destroyable']) {
+            throw new ConflictHttpException('Этот предмет нельзя удалить.');
+        }
+        $elixir = ($item['storage_kind'] ?? 'none') === 'elixir';
+        if ($action === 'use' && (trim($item['kind']) !== 'consumable' || ((int)$item['use_xp'] < 1 && !$elixir))) {
+            throw new ConflictHttpException('Этот предмет нельзя использовать.');
+        }
+        if ($action === 'use' && $elixir) {
+            $inventory->unlock($user, $quantity);
+        }
+        $this->s->move($user, $item, -$quantity, $input->slotId);
+        if ($action === 'use') {
+            $this->xp($user, (int)$item['category_id'], (int)$item['use_xp'] * $quantity);
+        }
+        $this->event($user, $action, $quantity, ['item_id' => $id]);
+        return ($action === 'use' ? 'Использовано: ' : 'Удалено: ') . trim($item['name']) . ' × ' . $quantity;
+    }
+
     private function supplies(int $user,string $action): string
     {
         if ($action === 'gather' && $this->s->isCanonical()) {
@@ -218,19 +262,15 @@ class Crafting
         $where=['user_id'=>$user,'recipe_id'=>$id]; $known=$this->one('craft_known',$where);
         $write=$known?$this->s->db->createCommand()->update('craft_known',['quantity'=>(int)$known['quantity']+$qty],$where):$this->s->db->createCommand()->insert('craft_known',$where+['quantity'=>$qty]);
         if($write->execute()!==1)throw new \RuntimeException('Recipe progress write failed.');
-        $baseXp = (int)$recipe['experience']*$qty;
         $efficiency = (new \common\modules\world\models\domain\NightWorkEfficiency($this->s->db))->basisPoints($user);
-        $this->xp($user,(int)$recipe['category_id'],$baseXp ? max(1, intdiv($baseXp*$efficiency, 10000)) : 0);
+        $this->xp($user, (int)$recipe['category_id'], CraftExperience::recipeAward((int)$recipe['experience'], $qty, $efficiency));
         $this->s->insert('craft_history',['user_id'=>$user,'recipe_id'=>$id,'item_id'=>$output['id'],'created_at'=>time()]);
         $this->event($user,'craft',(int)$recipe['output_quantity']*$qty,['recipe_id'=>$id,'item_id'=>$output['id'],'credit_change'=>-$cost]);
         $module = \Yii::$app->getModule('world');
         if ($module instanceof \common\modules\world\Module) {
             $flags = new \common\modules\world\models\domain\WorldFlags($this->s->db, $module);
             if ($flags->capabilities()['world_write']) {
-                if (!$this->s->operationId) {
-                    $this->s->operationId = bin2hex(random_bytes(16));
-                    $this->s->db->createCommand()->insert('game_operation', ['id' => $this->s->operationId, 'user_id' => $user, 'type' => 'craft.completed', 'created_at' => time()] + \common\modules\world\models\domain\EconomyRuntime::operationContext($this->s->db, ['node_id' => $this->s->workspaceNodeId]))->execute();
-                }
+                (new CraftOperationJournal($this->s))->operation($user, 'craft.completed');
                 \common\modules\world\models\domain\EconomyQuota::consume($this->s->db, $user, 'crafting_hourly', $qty, $this->s->operationId);
                 \common\modules\world\models\domain\EconomyRuntime::fact($this->s->db, $user, 'crafted:' . trim($recipe['code']), $qty, $this->s->operationId);
                 (new \common\modules\world\support\CommandBus($this->s->db, $flags))->emit($this->s->operationId, $user, 'craft.completed', ['node_id' => $this->s->workspaceNodeId, 'recipe_id' => $id, 'batches' => $qty, 'output' => ['item_id' => (int)$output['id'], 'quantity' => (int)$recipe['output_quantity'] * $qty]]);
@@ -256,7 +296,7 @@ class Crafting
         }
         $categories=array_map(static function($r){return ['id'=>(int)$r['id'],'name'=>trim($r['name']),'code'=>trim($r['code']),'description'=>trim((string)$r['description'])];},$s->rows('craft_category'));
         $stations=array_map(static function($r){return ['id'=>(int)$r['id'],'name'=>trim($r['name']),'item_id'=>$r['item_id']===null?null:(int)$r['item_id']];},$s->rows('craft_station',['active'=>1]));
-        $skills=array_map(static function($r){$xp=(int)$r['experience'];return ['category_id'=>(int)$r['category_id'],'experience'=>$xp,'level'=>1+intdiv($xp,100)];},$s->rows('craft_skill',['user_id'=>$user]));
+        $skills=array_map(static function($r){$xp=(int)$r['experience'];return ['category_id'=>(int)$r['category_id'],'experience'=>$xp,'level'=>CraftExperience::level($xp)];},$s->rows('craft_skill',['user_id'=>$user]));
         $inventory=[]; foreach($s->quantities($user) as $id=>$qty)if($qty>0)$inventory[]=['item_id'=>$id,'quantity'=>$qty];
         $storage=(new CraftInventory($s))->state($user);
         $today=(new \DateTimeImmutable('@'.time()))->setTimezone(new \DateTimeZone('Europe/Moscow'))->setTime(0,0)->getTimestamp();
