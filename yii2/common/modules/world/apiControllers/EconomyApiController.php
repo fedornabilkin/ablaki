@@ -19,8 +19,11 @@ class EconomyApiController extends CoreController
             ->innerJoin(['c' => 'craft_category'], 'c.id=s.category_id')->where(['s.user_id' => $user])->orderBy('c.id')->all($db);
         $professions = (new \yii\db\Query())->select(['p.name', 't.level', 't.xp'])->from(['t' => 'actor_profession'])
             ->innerJoin(['a' => 'game_actor'], 'a.id=t.actor_id')->innerJoin(['p' => 'profession'], 'p.id=t.profession_id')->where(['a.user_id' => $user, 'a.kind' => 'player'])->orderBy('p.id')->all($db);
+        $extraction = $db->schema->getTableSchema('world_mining_worker') ? (new \yii\db\Query())->select(['w.node_id', 'n.name', 'w.last_seen_at'])->from(['w' => 'world_mining_worker'])
+            ->innerJoin(['n' => 'world_node'], 'n.id=w.node_id')->where(['w.user_id' => $user])->one($db) : false;
         return ['craft' => array_map(static function ($skill) { $xp = (int)$skill['experience']; return ['name' => trim($skill['name']), 'level' => 1 + intdiv($xp, 100), 'xp' => $xp]; }, $skills),
-            'professions' => array_map(static function ($track) { return ['name' => $track['name'], 'level' => (int)$track['level'], 'xp' => (int)$track['xp']]; }, $professions), 'server_time' => time()];
+            'professions' => array_map(static function ($track) { return ['name' => $track['name'], 'level' => (int)$track['level'], 'xp' => (int)$track['xp']]; }, $professions),
+            'extraction_work' => $extraction ? ['node_id' => (int)$extraction['node_id'], 'name' => $extraction['name'], 'last_seen_at' => (int)$extraction['last_seen_at']] : null, 'server_time' => time()];
     }
     private function storageService(): \common\modules\world\models\domain\EconomyStorage { return new \common\modules\world\models\domain\EconomyStorage(Yii::$app->db, $this->flags()); }
     public function actionStorage($id): array { return $this->storageService()->state((int)Yii::$app->user->id, $this->id($id)); }
@@ -45,7 +48,10 @@ class EconomyApiController extends CoreController
     {
         $user = (int)Yii::$app->user->id; $db = Yii::$app->db;
         $revision = EconomyRuntime::current($db);
+        $world = (new \yii\db\Query())->select(['n.id', 'n.created_at'])->from(['r' => 'world_registry'])
+            ->innerJoin(['n' => 'world_node'], 'n.id=r.active_world_id')->where(['r.id' => 1])->one($db);
         return ['enabled' => $revision !== null, 'profile_version' => $revision ? $revision['version'] : null,
+            'world_instance' => $world ? $world['id'] . ':' . $world['created_at'] : null,
             'can_fund_goals' => Yii::$app->user->can('world-manage'),
             'personal_credit_cr' => \common\modules\world\modules\economy\value\Money::parse((string)((new \yii\db\Query())->select('credit')->from('persone')->where(['user_id' => $user])->scalar($db) ?: '0'))->decimal(),
             'target_start_credit_cr' => $revision['profile']['starter']['credits_cr'] ?? null,

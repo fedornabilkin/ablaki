@@ -59,11 +59,12 @@ class CraftWorkspace
         $recipes = []; $selected = null;
         $catalog = (new Query())->from('craft_recipe')->where(['active' => 1])->orderBy(['id' => SORT_ASC])->limit(2000)->all($this->db);
         $outputs = $catalog ? (new Query())->from('craft_item')->where(['id' => array_values(array_unique(array_column($catalog, 'item_id'))), 'active' => 1])->indexBy('id')->all($this->db) : [];
+        $categories = (new Query())->select(['id', 'name'])->from('craft_category')->indexBy('id')->all($this->db);
         $requirements = $craft->requirementsBatch($user, $catalog);
         foreach ($catalog as $recipe) {
             $output = $outputs[$recipe['item_id']] ?? null; if (!$output) continue;
             if (($recipeId === null && $selected === null) || (int)$recipe['id'] === $recipeId) $selected = $recipe;
-            $recipes[] = ['id' => (int)$recipe['id'], 'name' => trim($output['name']), 'icon' => trim((string)$output['icon']), 'quantity' => (int)$recipe['output_quantity'], 'locked_reasons' => $requirements[(int)$recipe['id']]];
+            $recipes[] = ['id' => (int)$recipe['id'], 'name' => trim($output['name']), 'category' => trim($categories[$recipe['category_id']]['name'] ?? 'Прочее'), 'icon' => trim((string)$output['icon']), 'quantity' => (int)$recipe['output_quantity'], 'locked_reasons' => $requirements[(int)$recipe['id']]];
         }
         if ($recipeId !== null && (!$selected || (int)$selected['id'] !== $recipeId)) throw new GameError('RECIPE_UNAVAILABLE', 'Рецепт недоступен.');
         $equipment = [];

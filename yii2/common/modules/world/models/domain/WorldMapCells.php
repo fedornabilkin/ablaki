@@ -86,6 +86,7 @@ class WorldMapCells
             $tree->assertFreePosition((int)$node['id'], $point['x'], $point['y']);
             $cell = (new Query())->from('world_map_cell')->where(['parent_id' => $node['id']] + $point)->one($this->db);
             if ($action === 'explore' && $cell) throw new GameError('MAP_CELL_EXPLORED', 'Ячейка уже исследована.', 422);
+            if ($action === 'explore') (new MapExploration($this->db))->requirePredecessors((int)$node['id'], $point['x'], $point['y']);
             if ($action === 'buy' && (!$cell || $cell['state'] !== 'discovered')) throw new GameError('MAP_CELL_NOT_DISCOVERED', 'Сначала исследуйте все выбранные ячейки.', 422);
         }
         $terms = ['node_id' => (int)$node['id'], 'cells' => $input['cells'], 'action' => $action, 'currency' => 'Cr'];

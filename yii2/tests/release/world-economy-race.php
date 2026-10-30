@@ -35,6 +35,7 @@ if (($argv[1] ?? '') === 'economy-worker') {
             if ($action === 'paid-delivery') return common\modules\world\models\Mining::heartbeat($payload['mining_node_id'], $user, $op);
             if ($action === 'starter-reserve') return (new common\modules\world\models\domain\StarterReserve($app->db))->configure($user, $payload['node_id'], $payload['payout_cr'], $payload['add_amount_cr'], $op, true);
             if ($action === 'construction') return ['build' => common\modules\world\models\Build::begin($user, $payload['input'], $op)->toArray()];
+            if ($action === 'build-finish') return common\modules\world\models\BuildWork::heartbeat(common\modules\world\models\Build::requireOne($payload['build_id']), $user, $op, $user === ($payload['stop_user'] ?? 0));
             if ($action === 'supplies') return common\modules\world\models\Supplies::gather($payload['node_id'], 9004, $op);
             if ($action === 'kitchen') return common\modules\world\models\domain\WorldFood::consume($app->db, 9004, 'world-cooked-carrot', common\modules\world\models\domain\WorldFood::state($app->db, 9004)['revision'], $op, $payload['node_id']);
             if ($action === 'food') return common\modules\world\models\domain\WorldFood::consume($app->db, 9004, 'world-cooked-carrot', $payload['health_revision'], $op);
@@ -42,7 +43,7 @@ if (($argv[1] ?? '') === 'economy-worker') {
             common\modules\world\models\domain\EconomyQuota::consume($app->db, 9004, 'crafting_hourly', 1, $op);
             return ['accepted' => true];
         });
-        echo json_encode(['status' => 'ok', 'operation_id' => $result['operation_id'], 'duration_ms' => (int)round((microtime(true) - $started) * 1000)], JSON_THROW_ON_ERROR);
+        echo json_encode(['status' => 'ok', 'operation_id' => $result['operation_id'], 'build_status' => $result['build']['status'] ?? null, 'duration_ms' => (int)round((microtime(true) - $started) * 1000)], JSON_THROW_ON_ERROR);
     } catch (common\modules\world\support\GameError $error) {
         echo json_encode(['status' => 'rejected', 'reason' => $error->reason, 'duration_ms' => (int)round((microtime(true) - $started) * 1000)], JSON_THROW_ON_ERROR);
     }
@@ -213,8 +214,8 @@ $db->transaction(static function () use ($db, $siteId, &$constructionInput) {
     $constructionInput = ['parent_id' => $siteId, 'template_id' => (int)$template->id, 'name' => 'Single construction race', 'labor_budget' => '0', 'top_up' => false, 'terms_digest' => common\modules\world\models\domain\EconomyConstruction::terms($template)['terms_digest']] + $cell;
 });
 $results = economyRace('construction', false, ['input' => $constructionInput]);
-economyCheck(count(array_filter($results, static function ($r) { return $r['status'] === 'ok'; })) === 1 && count(array_filter($results, static function ($r) { return $r['status'] === 'rejected' && $r['reason'] === 'CONSTRUCTION_LIMIT'; })) === 5
-    && (int)(new Query())->from('world_build')->where(['owner_user_id' => $freshUser, 'status' => 'building'])->count('*', $db) === 1, 'six competing placement commands create exactly one unfinished construction');
+economyCheck(count(array_filter($results, static function ($r) { return $r['status'] === 'ok'; })) === 1 && count(array_filter($results, static function ($r) { return $r['status'] === 'rejected' && in_array($r['reason'], ['MAP_CELL_OCCUPIED', 'OBJECT_LIMIT'], true); })) === 5
+    && (int)(new Query())->from('world_build')->where(['owner_user_id' => $freshUser, 'status' => 'building'])->count('*', $db) === 1, 'six competing placements in one cell still create exactly one project without imposing a global project limit');
 
 $storageService = new common\modules\world\models\domain\EconomyStorage($db, $flags);
 $slotId = (int)(new common\modules\world\modules\craft\models\domain\CanonicalInventory($freshStock))->backpack($freshUser)['id'];
@@ -244,6 +245,40 @@ $db->schema->refresh();
 $found = false; foreach ($db->schema->getTableIndexes($table, true) as $candidate) if ($candidate->name === $index->name) $found = true;
 $restoredForeign = array_map(static function ($foreign) { return $foreign->name; }, $db->schema->getTableForeignKeys($table, true));
 economyCheck($found && !array_diff($removedForeign, $restoredForeign) && $beforeUsage === (new Query())->from($table)->orderBy('id')->all($db), 'partial DDL retry restores uniqueness and foreign keys while repeated migration preserves rows');
+$jointHelpers = [9028, 9029];
+foreach ($jointHelpers as $helper) {
+    $db->createCommand()->insert('user', ['id' => $helper, 'username' => 'RaceBuilder' . $helper])->execute();
+    $db->createCommand()->insert('persone', ['id' => $helper, 'user_id' => $helper, 'credit' => '0.0000', 'balance' => '0.0000'])->execute();
+    $app->authManager->assign($app->authManager->getRole('world-tester'), $helper);
+}
+$jointBuild = common\modules\world\models\Build::find()->where(['owner_user_id' => $freshUser, 'status' => 'building'])->orderBy(['id' => SORT_DESC])->one();
+if (!$jointBuild) throw new RuntimeException('Missing joint race project.');
+Command::run($freshUser, bin2hex(random_bytes(16)), 'fixture.joint.prepare', ['build_id' => (int)$jointBuild->id], static function ($op) use ($db, $freshUser, $jointHelpers, $jointBuild) {
+    $db->createCommand()->delete('world_mining_worker', ['user_id' => $freshUser])->execute();
+    $jointBuild->required_seconds = 60; if (!$jointBuild->save(false)) throw new RuntimeException('Joint race duration write failed.');
+    $jointBuild->configure($freshUser, 'Joint race project', '6.0000', $op, true);
+    foreach (array_merge([$freshUser], $jointHelpers) as $user) common\modules\world\models\BuildWork::start($jointBuild, $user);
+    // Every builder has exactly sixty payable seconds, even if process startup is slow.
+    $at = time() - 60;
+    $db->createCommand()->update('world_build_work', ['accounted_at' => $at, 'last_seen_at' => $at, 'started_at' => $at], ['build_id' => $jointBuild->id])->execute();
+    return [];
+});
+$creditTotal = static function () use ($db) { return round((float)(new Query())->from('persone')->sum('credit', $db) + (float)(new Query())->from('economy_account')->sum('amount', $db), 4); };
+$beforeJoint = $creditTotal();
+$jointPayload = ['build_id' => (int)$jointBuild->id, 'user_ids' => array_merge([$freshUser], $jointHelpers), 'stop_user' => $jointHelpers[1]];
+$results = economyRace('build-finish', false, $jointPayload);
+$jointBuild->refresh(); $receipt = $jointBuild->result();
+economyCheck(count(array_filter($results, static function ($row) { return $row['status'] === 'ok' && $row['build_status'] === 'completed'; })) === 6
+    && $receipt['paid_cr'] === '4.0000' && $receipt['released_cr'] === '2.0000' && array_column($receipt['participants'], 'seconds') === [20, 20, 20]
+    && array_column($receipt['participants'], 'paid_cr') === ['0.0000', '2.0000', '2.0000'] && $creditTotal() === $beforeJoint,
+    'owner heartbeat, helper heartbeat and helper stop compete safely: every caller sees completion and both helpers are paid once');
+$payCount = (int)(new Query())->from('economy_transfer')->where(['kind' => 'construction_wage', 'purpose' => 'Строительство #' . $jointBuild->id])->count('*', $db);
+$results = economyRace('build-finish', false, $jointPayload);
+economyCheck($payCount === 2 && count(array_filter($results, static function ($row) { return $row['status'] === 'ok'; })) === 6
+    && $jointBuild->result() === $receipt && $creditTotal() === $beforeJoint
+    && (int)(new Query())->from('economy_transfer')->where(['kind' => 'construction_wage', 'purpose' => 'Строительство #' . $jointBuild->id])->count('*', $db) === 2,
+    'six new late completion commands return the original receipts without minting credits or paying twice');
+
 echo 'Economy concurrency checks passed.' . PHP_EOL;
 
 }

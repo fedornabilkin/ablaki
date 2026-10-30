@@ -11,7 +11,8 @@ class BuildSearch extends \yii\base\Model
     }
     public function search(int $user, array $params): \yii\data\ActiveDataProvider
     {
-        $query = Build::find()->where(['or', ['owner_user_id' => $user], ['and', ['status' => 'building'], ['>', 'labor_budget', 0]]])
+        $query = Build::find()->where(['or', ['owner_user_id' => $user], ['and', ['status' => 'building'], ['>', 'labor_budget', 0]],
+            ['id' => BuildWork::find()->select('build_id')->where(['user_id' => $user])]])
             ->andWhere(['node_id' => Node::visibleTo($user)->select('id')]);
         $provider = new \yii\data\ActiveDataProvider(['query' => $query, 'pagination' => ['pageSize' => 20],
             'sort' => ['defaultOrder' => ['id' => SORT_DESC], 'attributes' => ['id', 'created_at', 'required_seconds']]]);

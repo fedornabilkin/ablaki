@@ -13,6 +13,22 @@ class MapExploration
     private $db;
     public function __construct(Connection $db) { $this->db = $db; }
     public static function requiredLevel(int $x, int $y): int { return max(1, min(3, max(abs($x), abs($y)))); }
+    public static function predecessors(int $x, int $y): array
+    {
+        $ring = max(abs($x), abs($y)); $points = [];
+        if ($ring < 2) return $points;
+        if (abs($x) === $ring) $points[] = ['x' => $x - ($x < 0 ? -1 : 1), 'y' => $y];
+        if (abs($y) === $ring) $points[] = ['x' => $x, 'y' => $y - ($y < 0 ? -1 : 1)];
+        return $points;
+    }
+    public function requirePredecessors(int $node, int $x, int $y): void
+    {
+        $missing = [];
+        foreach (self::predecessors($x, $y) as $point) {
+            if (!(new Query())->from('world_map_cell')->where(['parent_id' => $node, 'state' => ['open', 'discovered']] + $point)->exists($this->db)) $missing[] = $point;
+        }
+        if ($missing) throw new \common\modules\world\support\GameError('MAP_PREDECESSOR_REQUIRED', 'Сначала исследуйте соседние ячейки со стороны центра; для диагонали нужны обе стороны.', 422, ['required_cells' => $missing]);
+    }
     public function state(array $node, int $user): array
     {
         $commonObjects = isset($this->db->schema->getTableSchema('world_node')->columns['hierarchy_level']);
