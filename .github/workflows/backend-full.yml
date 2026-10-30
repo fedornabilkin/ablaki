@@ -84,7 +84,21 @@ jobs:
               suites=${suites//world-economy-profile/}
               suites="$suites classic-craft"
             fi
-            if [[ -f tests/release/world-command-pipeline.php ]]; then
+            if [[ -f tests/release/craft-domain.php ]]; then
+              suites="$suites craft-domain"
+            fi
+            if [[ -f tests/release/world-event-domain.php ]]; then
+              suites="$suites world-event-domain world-event-foundation"
+            fi
+            if [[ -f tests/release/world-build-input.php ]]; then
+              suites="$suites world-build-input"
+            fi
+            if [[ -f tests/release/world-development-route.php ]]; then
+              suites="$suites world-development-route"
+            fi
+            if [[ -f tests/release/world-craft-refactor.php ]]; then
+              suites="$suites world-craft-refactor"
+            elif [[ -f tests/release/world-command-pipeline.php ]]; then
               suites="$suites world-command-pipeline"
             fi
             for suite in $suites; do

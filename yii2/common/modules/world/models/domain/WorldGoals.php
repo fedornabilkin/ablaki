@@ -22,7 +22,7 @@ final class WorldGoals
     }
     private function facts(int $user): array
     {
-        $raw = (new Query())->from('world_economy_fact')->where(['world_id' => EconomyRuntime::world($this->db), 'user_id' => $user])->indexBy('code')->all($this->db);
+        $raw = (new WorldProgress($this->db))->quantities($user);
         $mapping = ['city_joined' => ['city_joined', 1], 'starter_site_active' => ['built:starter-site', 1],
             'explore_3_owned_map_cells' => ['map_cell_explored', 3], 'shelter_built' => ['built:starter-shelter', 1],
             'hammer_crafted' => ['crafted:classic-hammer', 1], 'gather_5_logs' => ['source:gather-log', 5], 'gather_5_stones' => ['source:gather-stone', 5],
@@ -31,45 +31,8 @@ final class WorldGoals
             'carrot_harvested' => ['carrot_harvested', 1], 'mine_built' => ['built:mine', 1], 'stone_pickaxe_crafted' => ['crafted:world-stone-pickaxe', 1],
             'stone_mined' => ['source:mine-stone', 1], 'coal_mined' => ['source:gather-coal', 1], 'ore_mined' => ['source:gather-ore', 1],
             'forge_built' => ['built:forge', 1], 'bench_crafted' => ['crafted:classic-bench', 1], 'furnace_crafted' => ['crafted:classic-furnace', 1], 'ingot_crafted' => ['crafted:classic-ingot', 1]];
-        // Reconcile players who joined or acquired items before the fact journal was introduced.
-        // Use max, never addition: possessions and historical events may describe the same action.
-        $world = EconomyRuntime::world($this->db); $existing = [];
-        $member = $this->membership($user);
-        if ($member) $existing['city_joined'] = 1;
-        $owned = (new Query())->select(['n.id', 'n.status', 't.code'])->from(['n' => 'world_node'])->leftJoin(['t' => 'world_template'], 't.id=n.template_id')
-            ->where(['n.owner_user_id' => $user, 'n.root_id' => $world])->all($this->db);
-        $ids = array_column($owned, 'id');
-        foreach ($owned as $node) if ($node['status'] === 'active') $existing['built:' . $node['code']] = ($existing['built:' . $node['code']] ?? 0) + 1;
-        if ($member) foreach ($owned as $node) if ((int)$node['id'] === (int)$member['starter_site_id'] && $node['status'] === 'active') $existing['built:starter-site'] = 1;
-        $stock = (new Query())->select(['d.code', 'quantity' => new Expression('SUM(i.item_quantity)')])->from(['i' => 'craft_inventory'])
-            ->innerJoin(['s' => 'craft_storage'], 's.id=i.storage_id')->innerJoin(['d' => 'craft_item'], 'd.id=i.item_id')
-            ->where(['i.user_id' => $user, 's.owner_user_id' => $user, 's.status' => 'active'])->andWhere(['>', 'i.item_quantity', 0])->groupBy('d.code')->all($this->db);
-        foreach ($stock as $item) $existing['crafted:' . $item['code']] = (int)$item['quantity'];
-        $existing['source:gather-log'] = $existing['crafted:classic-log'] ?? 0;
-        $existing['source:gather-stone'] = $existing['crafted:classic-stone'] ?? 0;
-        $historicalSources = [];
-        foreach ((new Query())->select(['w.action_code', 'w.definition_json'])->from(['w' => 'world_source_work'])->innerJoin(['n' => 'world_node'], 'n.id=w.node_id')
-            ->where(['w.user_id' => $user, 'w.status' => 'completed', 'n.root_id' => $world])->all($this->db) as $work) {
-            $definition = json_decode($work['definition_json'], true);
-            $key = 'source:' . $work['action_code'];
-            $historicalSources[$key] = ($historicalSources[$key] ?? 0) + array_sum($definition['output'] ?? []);
-        }
-        foreach ($historicalSources as $key => $quantity) $existing[$key] = max($existing[$key] ?? 0, $quantity);
-        $existing['daily_supply_claimed'] = $member ? (int)(new Query())->from('craft_event')->where(['user_id' => $user, 'action' => 'gather'])
-            ->andWhere(['>=', 'created_at', $member['joined_at']])->count('*', $this->db) : 0;
-        $existing['placed:classic-campfire'] = (int)(new Query())->from(['i' => 'craft_inventory'])->innerJoin(['s' => 'craft_storage'], 's.id=i.storage_id')
-            ->innerJoin(['d' => 'craft_item'], 'd.id=i.item_id')->where(['s.owner_user_id' => $user, 's.node_id' => $ids, 's.kind' => 'placement', 'd.code' => 'classic-campfire'])->andWhere(['>', 'i.item_quantity', 0])->count('*', $this->db);
-        // Initial open cells have no exploration operation and must not count as explored.
-        $existing['map_cell_explored'] = (int)(new Query())->from(['c' => 'world_map_cell'])->innerJoin(['o' => 'game_operation'], 'o.id=c.operation_id')
-            ->where(['c.parent_id' => $ids, 'o.user_id' => $user])->andWhere(['like', 'o.type', 'explore'])->count('*', $this->db);
-        $existing['bed_dug'] = (int)(new Query())->from('world_bed')->where(['node_id' => $ids])->andWhere(['not', ['dug_at' => null]])->count('*', $this->db);
-        $cycles = (new Query())->select('c.id')->from(['c' => 'world_crop_cycle'])->innerJoin(['r' => 'world_crop_revision'], 'r.id=c.crop_revision_id')
-            ->innerJoin(['d' => 'craft_item'], 'd.id=r.yield_item_id')->where(['c.owner_user_id' => $user, 'c.bed_id' => $ids, 'd.code' => 'world-carrot']);
-        $existing['carrot_sown'] = (int)(clone $cycles)->count('*', $this->db);
-        $existing['carrot_harvested'] = (int)(new Query())->from('world_harvest_result')->where(['cycle_id' => $cycles])->count('*', $this->db);
-        foreach ($existing as $code => $quantity) $raw[$code]['quantity'] = max((int)($raw[$code]['quantity'] ?? 0), $quantity);
-        $facts = []; foreach ($mapping as $fact => $source) $facts[$fact] = ['completed' => (int)($raw[$source[0]]['quantity'] ?? 0) >= $source[1],
-            'quantity' => (int)($raw[$source[0]]['quantity'] ?? 0), 'required' => $source[1]];
+        $facts = []; foreach ($mapping as $fact => $source) $facts[$fact] = ['completed' => (int)($raw[$source[0]] ?? 0) >= $source[1],
+            'quantity' => (int)($raw[$source[0]] ?? 0), 'required' => $source[1]];
         return $facts;
     }
     private function pool(int $site, string $code): ?array

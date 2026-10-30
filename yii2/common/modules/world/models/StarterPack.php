@@ -24,6 +24,7 @@ class StarterPack extends Record
             $item = CraftItem::find()->where(['code' => $code, 'active' => 1])->asArray()->one();
             if (!$item) throw new GameError('STARTER_NOT_READY', 'Стартовый каталог ещё не установлен: ' . $code, 503);
             $store->move($user, $item, $quantity);
+            domain\EconomyRuntime::fact(self::getDb(), $user, 'acquired:' . $code, $quantity, $operation);
         }
         self::getDb()->createCommand()->insert('craft_event', ['user_id' => $user, 'action' => 'starter', 'quantity' => array_sum($items), 'credit_change' => 0, 'created_at' => time()])->execute();
         $claim = new self(); $claim->setAttributes(['user_id' => $user, 'created_at' => time()], false);

@@ -1,6 +1,7 @@
 <?php
 namespace common\modules\world\modules\craft\models\domain;
 
+use common\modules\world\modules\craft\domain\InventoryPlacement;
 use yii\db\Expression;
 use yii\db\Query;
 use yii\web\ConflictHttpException;
@@ -84,11 +85,7 @@ class CanonicalInventory
     }
     private function record(int $user, array $row, int $quantity, ?int $source, ?int $destination, string $reason): void
     {
-        if (!$this->s->operationId) {
-            $this->s->operationId = bin2hex(random_bytes(16));
-            $this->db->createCommand()->insert('game_operation', ['id' => $this->s->operationId, 'user_id' => $user, 'type' => 'inventory.legacy', 'created_at' => time()] + \common\modules\world\models\domain\EconomyRuntime::operationContext($this->db, ['node_id' => $this->s->workspaceNodeId]))->execute();
-        }
-        $this->db->createCommand()->insert('inventory_movement', ['operation_id' => $this->s->operationId, 'inventory_id' => $row['id'], 'item_id' => $row['item_id'], 'source_storage_id' => $source, 'destination_storage_id' => $destination, 'quantity' => $quantity, 'reason' => $reason, 'created_at' => time()])->execute();
+        (new CraftOperationJournal($this->s))->movement($user, $row, $quantity, $source, $destination, $reason);
     }
     private function insert(int $user, array $storage, array $item, int $quantity, int $position): array
     {
@@ -141,23 +138,23 @@ class CanonicalInventory
         }
         if ($slot !== null) throw new \InvalidArgumentException('Positive slot targeting is unsupported.');
         $stack = $this->stackSize($storage, $item);
-        $occupied = [];
-        foreach ($this->rows((int)$storage['id']) as $row) {
-            $occupied[(int)$row['slot']] = true;
-            if ((int)$row['slot'] > (int)$storage['capacity'] || (int)$row['item_id'] !== (int)$item['id']) continue;
-            $add = min($delta, max(0, $stack - (int)$row['item_quantity'])); if (!$add) continue;
-            $this->write((int)$row['id'], ['item_quantity' => (int)$row['item_quantity'] + $add]);
-            $this->equipment->create($row, $item, $add); $this->record($user, $row, $add, null, (int)$storage['id'], 'grant');
-            $delta -= $add; if (!$delta) break;
-        }
-        for ($position = 1; $position <= (int)$storage['capacity'] && $delta > 0; $position++) {
-            if (isset($occupied[$position])) continue;
-            $add = min($delta, $stack); $row = $this->insert($user, $storage, $item, $add, $position);
+        $rows = array_column($this->rows((int)$storage['id']), null, 'id');
+        $placement = InventoryPlacement::plan($rows, (int)$storage['capacity'], (int)$item['id'], $delta, $stack);
+        foreach ($placement['grant'] as $grant) {
+            $add = $grant['quantity'];
+            if ($grant['inventory_id'] === null) {
+                $row = $this->insert($user, $storage, $item, $add, $grant['position']);
+            } else {
+                $row = $rows[$grant['inventory_id']];
+                $this->write((int)$row['id'], ['item_quantity' => (int)$row['item_quantity'] + $add]);
+            }
             $this->equipment->create($row, $item, $add);
-            if (($item['storage_kind'] ?? '') === 'chest') $this->createChest($user, $row);
-            $this->record($user, $row, $add, null, (int)$storage['id'], 'grant'); $delta -= $add;
+            if ($grant['inventory_id'] === null && ($item['storage_kind'] ?? '') === 'chest') {
+                $this->createChest($user, $row);
+            }
+            $this->record($user, $row, $add, null, (int)$storage['id'], 'grant');
         }
-        if ($delta) throw new ConflictHttpException('Активные слоты рюкзака заполнены.');
+        if ($placement['missing_quantity']) throw new ConflictHttpException('Активные слоты рюкзака заполнены.');
         $this->touch([(int)$storage['id']]);
     }
     /** Isolated construction reserve. Public storage routes cannot read or spend this kind. */
@@ -222,17 +219,19 @@ class CanonicalInventory
             $item = (new Query())->from('craft_item')->where(['id' => $id])->one($this->db);
             if (!$item || $this->equipment->tracked($item) || ($item['storage_kind'] ?? 'none') !== 'none' || (int)$item['stack_size'] < 1 || (int)$item['stack_size'] > 10000) throw new ConflictHttpException('Каталог материала изменился. Требуется восстановить его условия перед отменой стройки.');
             $items[$id] = $item;
-            // Fill existing stacks before occupying a free slot.
-            for ($pass = 0; $pass < 2 && $quantity; $pass++) for ($slot = 1; $slot <= (int)$target['capacity'] && $quantity; $slot++) {
-                $row = $positions[$slot] ?? null;
-                if (($pass === 0 && (!$row || (int)$row['item_id'] !== $id)) || ($pass === 1 && $row)) continue;
-                $take = min($quantity, max(0, (int)$item['stack_size'] - ($row ? (int)$row['item_quantity'] : 0)));
-                if (!$take) continue;
-                $grants[] = ['inventory_id' => $row ? (int)$row['id'] : null, 'position' => $slot, 'item_id' => $id, 'quantity' => $take];
-                $positions[$slot] = ['id' => $row['id'] ?? null, 'item_id' => $id, 'item_quantity' => ($row ? (int)$row['item_quantity'] : 0) + $take];
-                $quantity -= $take;
+            ksort($positions, SORT_NUMERIC);
+            $placement = InventoryPlacement::plan($positions, (int)$target['capacity'], $id, $quantity, (int)$item['stack_size']);
+            foreach ($placement['grant'] as $grant) {
+                $slot = $grant['position'];
+                $grants[] = ['inventory_id' => $grant['inventory_id'], 'position' => $slot, 'item_id' => $id, 'quantity' => $grant['quantity']];
+                $positions[$slot] = [
+                    'id' => $grant['inventory_id'],
+                    'item_id' => $id,
+                    'item_quantity' => (int)($positions[$slot]['item_quantity'] ?? 0) + $grant['quantity'],
+                    'slot' => $slot,
+                ];
             }
-            if ($quantity) throw new ConflictHttpException('Освободите место в рюкзаке для возврата всех материалов. Стройка и резервы сохранены.');
+            if ($placement['missing_quantity']) throw new ConflictHttpException('Освободите место в рюкзаке для возврата всех материалов. Стройка и резервы сохранены.');
         }
         if (count($grants) > 2000) throw new ConflictHttpException('Для возврата требуется слишком много ячеек. Объедините материалы в рюкзаке.');
         return compact('target', 'grants', 'items');
@@ -295,19 +294,12 @@ class CanonicalInventory
         foreach ($consumed as $take) if (isset($remainingRows[$take['inventory_id']])) $remainingRows[$take['inventory_id']]['item_quantity'] -= $take['quantity'];
         $stack = $this->stackSize($target, $output);
         $canStore = !(($output['storage_kind'] ?? '') === 'chest' && $target['kind'] === 'chest');
-        $left = $quantity; $grants = []; $occupied = [];
-        foreach ($remainingRows as $row) {
-            if ((int)$row['item_quantity'] < 1) continue;
-            $occupied[(int)$row['slot']] = true;
-            // Harvests have independent ageing/price lots; never merge different harvest dates.
-            if (!$canStore || $target['kind'] === 'harvest' || !empty($target['preserve_batches']) || (int)$row['slot'] > (int)$target['capacity'] || (int)$row['item_id'] !== (int)$output['id']) continue;
-            $add = min($left, max(0, $stack - (int)$row['item_quantity'])); if (!$add) continue;
-            $grants[] = ['inventory_id' => (int)$row['id'], 'position' => (int)$row['slot'], 'quantity' => $add]; $left -= $add;
-        }
-        for ($position = 1; $canStore && $position <= (int)$target['capacity'] && $left; $position++) {
-            if (isset($occupied[$position])) continue;
-            $add = min($left, $stack); $grants[] = ['inventory_id' => null, 'position' => $position, 'quantity' => $add]; $left -= $add;
-        }
+        // Harvests keep independent ageing/price lots instead of merging batches.
+        $placement = $canStore
+            ? InventoryPlacement::plan($remainingRows, (int)$target['capacity'], (int)$output['id'], $quantity, $stack, $target['kind'] !== 'harvest' && empty($target['preserve_batches']))
+            : ['grant' => [], 'missing_quantity' => $quantity];
+        $grants = $placement['grant'];
+        $left = $placement['missing_quantity'];
         if (count($consumed) + count($grants) > 2000) throw new ConflictHttpException('Слишком много ячеек для одной операции. Уменьшите количество изготовлений.');
         return ['materials' => $materials, 'consume' => $consumed, 'grant' => $grants, 'output_fits' => $left === 0, 'output_missing_quantity' => $left];
     }

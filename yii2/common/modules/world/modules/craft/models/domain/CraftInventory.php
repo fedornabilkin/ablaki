@@ -1,14 +1,15 @@
 <?php
 namespace common\modules\world\modules\craft\models\domain;
 
+use common\modules\world\modules\craft\domain\BackpackLayout;
 use yii\db\Query;
 use yii\web\ConflictHttpException;
 
 /** Owner/catalog locks are held by commands; state uses the same non-destructive layout projection. */
 class CraftInventory
 {
-    public const LIMIT=50;
-    public const BASE=20;
+    public const LIMIT = BackpackLayout::LIMIT;
+    public const BASE = BackpackLayout::BASE;
     private $s;
     public function __construct(CraftStorage $store) { $this->s=$store; }
     private function one(string $table,array $where): ?array { return (new Query())->from($table)->where($where)->one($this->s->db)?:null; }
@@ -33,11 +34,12 @@ class CraftInventory
     }
     public function capacity(int $user): array
     {
-        $row=$this->one('craft_capacity',['user_id'=>$user]);
-        $permanent=max(self::BASE,min(self::LIMIT,(int)($row['permanent_slots']??self::BASE)));
-        $leases=$this->s->rows('craft_slot_lease',['user_id'=>$user]);$temporary=0;$expires=null;
-        foreach($leases as $lease)if((int)$lease['expires_at']>time()){$temporary+=(int)$lease['slots'];$expires=$expires===null?(int)$lease['expires_at']:min($expires,(int)$lease['expires_at']);}
-        return ['permanent_slots'=>$permanent,'active_slots'=>min(self::LIMIT,$permanent+$temporary),'slots_expire_at'=>$expires];
+        $row = $this->one('craft_capacity', ['user_id' => $user]);
+        return BackpackLayout::capacity(
+            isset($row['permanent_slots']) ? (int)$row['permanent_slots'] : null,
+            $this->s->rows('craft_slot_lease', ['user_id' => $user]),
+            time()
+        );
     }
     /** One-time conversion retains IDs and every item, even beyond the visible 50 cells. */
     public function initialize(int $user): void
@@ -55,24 +57,14 @@ class CraftInventory
     }
     public function layout(int $user): array
     {
-        $active=$this->capacity($user)['active_slots'];$occupied=[];$held=[];
+        $active = $this->capacity($user)['active_slots'];
         $where = ['user_id'=>$user,'container_id'=>null];
         if ($this->s->isCanonical()) {
             $storage = (new CanonicalInventory($this->s))->backpack($user);
             if (!$storage) return [];
             $where = ['user_id' => $user, 'storage_id' => $storage['id']];
         }
-        foreach($this->s->rows('craft_inventory',$where) as $slot) {
-            if(!$slot['item_id']||(int)$slot['item_quantity']<1)continue;
-            $index=(int)$slot['slot'];
-            if($index>0&&$index<=$active&&!isset($occupied[$index]))$occupied[$index]=$slot;else $held[]=$slot;
-        }
-        foreach($held as $slot) {
-            $free=null;for($i=1;$i<=$active;$i++)if(!isset($occupied[$i])){$free=$i;break;}
-            $index=$free??max($active+1,(int)$slot['slot']);while(isset($occupied[$index]))$index++;
-            $slot['slot']=$index;$occupied[$index]=$slot;
-        }
-        ksort($occupied);return array_values($occupied);
+        return BackpackLayout::project($this->s->rows('craft_inventory', $where), $active);
     }
     public function synchronize(int $user): void
     {
@@ -118,12 +110,11 @@ class CraftInventory
     }
     private function slotsQuote(int $permanent, int $quantity, int $basePrice): array
     {
-        if($quantity<1||$quantity>self::LIMIT)throw new ConflictHttpException('Некорректное количество слотов.');
-        $next=$permanent+$quantity;
-        if($next>self::LIMIT)throw new ConflictHttpException('Все постоянные слоты уже открыты.');
-        $ordinal=$permanent-self::BASE+1;
-        return ['unit_price' => $basePrice*$ordinal, 'total_price' => $basePrice*intdiv($quantity*(2*$ordinal+$quantity-1),2),
-            'capacity_before' => $permanent, 'capacity_after' => $next];
+        try {
+            return BackpackLayout::purchaseQuote($permanent, $quantity, $basePrice);
+        } catch (\DomainException $error) {
+            throw new ConflictHttpException($error->getMessage(), 0, $error);
+        }
     }
     public function buy(int $user,int $quantity,int $quotedPrice,?int $quotedTotal=null): int
     {

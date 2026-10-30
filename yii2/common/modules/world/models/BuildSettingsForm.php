@@ -9,7 +9,8 @@ class BuildSettingsForm extends \yii\base\Model
     public $top_up = false;
     public function rules(): array
     {
-        return [['name', 'trim'], [['name','labor_budget'], 'required'], ['name', 'string', 'min'=>1, 'max'=>120],
+        return [['name', 'trim'], [['name','labor_budget'], 'required'], ['name', 'string', 'min'=>1, 'max'=>\common\modules\world\domain\WorldName::MAX_LENGTH,
+                'tooLong'=>'Название: не более 24 символов.'],
             ['labor_budget','match','pattern'=>'/^(0|[1-9][0-9]{0,10})(\.[0-9]{1,4})?$/D'],
             ['top_up','boolean','trueValue'=>true,'falseValue'=>false,'strict'=>true]];
     }

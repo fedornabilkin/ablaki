@@ -1,6 +1,7 @@
 <?php
 namespace common\modules\world\modules\craft\models\domain;
 
+use common\modules\world\modules\craft\domain\CraftExperience;
 use common\modules\world\models\domain\WorldAccessPolicy;
 use common\modules\world\models\domain\WorldQuery;
 use common\modules\world\models\domain\WorldFlags;
@@ -111,8 +112,7 @@ class CraftWorkspace
         $meta = (new Query())->from('craft_meta')->where(['id' => 1])->one($this->db);
         $cost = (int)$meta['charge_credits'] === 1 ? (int)$input['recipe']['cost_credits'] * $payload['quantity'] : 0;
         $efficiency = (new \common\modules\world\models\domain\NightWorkEfficiency($this->db))->basisPoints($user);
-        $baseExperience = (int)$input['recipe']['experience'] * $payload['quantity'];
-        $experience = $baseExperience ? max(1, intdiv($baseExperience * $efficiency, 10000)) : 0;
+        $experience = CraftExperience::recipeAward((int)$input['recipe']['experience'], $payload['quantity'], $efficiency);
         $person = (new Query())->from('persone')->where(['user_id' => $user])->one($this->db);
         $profile = \common\modules\world\models\domain\EconomyRuntime::current($this->db);
         $useBudget = $payload['use_object_budget'] ?? false;

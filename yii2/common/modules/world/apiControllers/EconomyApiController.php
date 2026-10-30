@@ -60,6 +60,7 @@ class EconomyApiController extends CoreController
             'second_milestone_day' => $revision['profile']['closed_test']['verified_second_milestone_day'] ?? null,
             'admission' => EconomyRuntime::admission($db, $user, Yii::$app->user->can('world-manage')),
             'health' => WorldFood::state($db, $user), 'goals' => (new WorldGoals($db))->state($user)['goals'],
+            'development' => $revision ? (new \common\modules\world\models\domain\WorldDevelopment($db))->state($user) : null,
             'quotas' => array_map(static function ($kind) use ($db, $user) { return EconomyQuota::state($db, $user, $kind); }, ['crafting_hourly', 'extraction_daily', 'sales_daily']),
             'feedback_path' => '/forum', 'server_time' => time()];
     }
