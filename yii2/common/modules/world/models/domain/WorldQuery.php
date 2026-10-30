@@ -98,6 +98,7 @@ class WorldQuery
     {
         if (!$rows) return [];
         $ids = array_column($rows, 'id');
+        $owners = \common\services\user\PublicProfile::identities($this->db, array_column($rows, 'owner_user_id'));
         $lodging = null;
         if ($this->db->schema->getTableSchema('world_lodging_interval') && $this->db->schema->getTableSchema('world_housing_interval')) {
             $actor = (new Query())->select('id')->from('game_actor')->where(['user_id' => $this->policy->userId()])->scalar($this->db);
@@ -198,7 +199,7 @@ class WorldQuery
             }
             if (($settings['npc_role'] ?? null) === 'workshop' && (new NpcInfrastructure($this->db))->managed($row, ['workshop'])) $dto['extensions'][] = 'public_workspace';
             if (($settings['npc_role'] ?? null) === 'source' && (new NpcInfrastructure($this->db))->managed($row, ['source'])) $dto['extensions'][] = 'public_work';
-            $dto['owner'] = ['id' => $row['owner_user_id'] === null ? null : (int)$row['owner_user_id'], 'owned_by_me' => $dto['owned_by_me'], 'has_finances' => $dto['has_finances']];
+            $dto['owner'] = ['id' => $row['owner_user_id'] === null ? null : (int)$row['owner_user_id'], 'user' => $owners[(int)$row['owner_user_id']] ?? null, 'owned_by_me' => $dto['owned_by_me'], 'has_finances' => $dto['has_finances']];
             $result[] = $dto;
         }
         return $result;

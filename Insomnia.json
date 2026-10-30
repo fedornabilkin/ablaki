@@ -10422,7 +10422,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/nodes/{{ _.world_node_id }}/navigation",
       "name": "GET /world/nodes/{id}/navigation?include=map — страница одним запросом",
-      "description": "Screen. Узел, хлебные крошки, соседи, карта и capabilities одним запросом. Архивные объекты и потомки архивных предков исключены, включая аккаунты с world-manage. Прямая ссылка на отменённую стройку возвращает NODE_NOT_FOUND (404).",
+      "description": "Screen. Узел, хлебные крошки, соседи, карта и capabilities одним запросом. owner.user содержит публичные id, username, is_online либо null; личные данные и баланс не передаются. include=tree возвращает вложенную проекцию с тем же owner. Архивные объекты и потомки архивных предков исключены, включая аккаунты с world-manage. Прямая ссылка на отменённую стройку возвращает NODE_NOT_FOUND (404).",
       "method": "GET",
       "body": {},
       "parameters": [

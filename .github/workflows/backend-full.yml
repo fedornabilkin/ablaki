@@ -84,6 +84,9 @@ jobs:
               suites=${suites//world-economy-profile/}
               suites="$suites classic-craft"
             fi
+            if [[ -f tests/release/world-command-pipeline.php ]]; then
+              suites="$suites world-command-pipeline"
+            fi
             for suite in $suites; do
               if ! php "tests/release/$suite.php" 2>&1 | tee "$RUNNER_TEMP/backend-$suite.log"; then
                 details=$(tail -n 15 "$RUNNER_TEMP/backend-$suite.log")
