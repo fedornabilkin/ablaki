@@ -17,6 +17,10 @@ name: Backend CI and deployment
         description: Read-only production schema/runtime preflight (no deployment)
         type: boolean
         default: false
+      progress_only:
+        description: Read saved migration progress only, without waiting for deployment
+        type: boolean
+        default: false
       target:
         description: Deployment environment (production requires master)
         type: choice
@@ -321,7 +325,7 @@ jobs:
     timeout-minutes: 5
     environment: production-backend
     concurrency:
-      group: production-backend
+      group: ${{ inputs.progress_only && 'production-progress' || 'production-backend' }}
       cancel-in-progress: false
     env:
       DEPLOY_HOST: ${{ secrets.BACKEND_DEPLOY_HOST }}
@@ -345,11 +349,16 @@ jobs:
           options=(-i "$HOME/.ssh/deploy_key" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=yes -o UserKnownHostsFile="$HOME/.ssh/known_hosts")
           mkdir -p "$RUNNER_TEMP/production-audit"
           ssh "${options[@]}" -p "$DEPLOY_PORT" "$DEPLOY_USER@$DEPLOY_HOST" 'cd /var/www/api.ablakin.ru && test "$(pwd -P)" = /var/www/api.ablakin.ru && git -c safe.directory=/var/www/api.ablakin.ru rev-parse HEAD && git -c safe.directory=/var/www/api.ablakin.ru symbolic-ref --short HEAD && git -c safe.directory=/var/www/api.ablakin.ru status --porcelain --untracked-files=no && docker-compose ps && docker-compose exec -T php php -v' > "$RUNNER_TEMP/production-audit/runtime.txt"
-          ssh "${options[@]}" -p "$DEPLOY_PORT" "$DEPLOY_USER@$DEPLOY_HOST" 'cd /var/www/api.ablakin.ru && test "$(pwd -P)" = /var/www/api.ablakin.ru && docker-compose exec -T php php' < deploy/world-production-inspect.php > "$RUNNER_TEMP/production-audit/database.json"
+          progress='${{ inputs.progress_only }}'
+          [[ "$progress" = true || "$progress" = false ]]
+          ssh "${options[@]}" -p "$DEPLOY_PORT" "$DEPLOY_USER@$DEPLOY_HOST" "cd /var/www/api.ablakin.ru && test \"\$(pwd -P)\" = /var/www/api.ablakin.ru && docker-compose exec -T -e WORLD_INSPECT_PROGRESS=$progress php php" < deploy/world-production-inspect.php > "$RUNNER_TEMP/production-audit/database.json"
           python3 - "$RUNNER_TEMP/production-audit/database.json" <<'PY'
           import json,sys
           report=json.load(open(sys.argv[1]))
           assert report['read_only'] is True
+          if report.get('progress_only'):
+              print(json.dumps(report))
+              sys.exit(0)
           print(json.dumps({k: report[k] for k in ['read_only','php','server','row_counts','wallet_guard_available']}))
           PY
       - uses: actions/upload-artifact@v4

@@ -18,6 +18,21 @@ $db = Yii::createObject($config['components']['db']);
 if (!$db instanceof yii\db\Connection || $db->driverName !== 'mysql') throw new RuntimeException('Unexpected database driver.');
 $db->open();
 $db->createCommand('SET SESSION TRANSACTION READ ONLY')->execute();
+if (getenv('WORLD_INSPECT_PROGRESS') === 'true') {
+    $report = ['read_only' => true, 'progress_only' => true,
+        'financial_pause' => is_file($root . '/common/runtime/financial-maintenance/paused'),
+        'preparation_completed' => is_file($root . '/common/runtime/financial-maintenance/completed')];
+    foreach (glob($root . '/common/runtime/financial-maintenance/engine-*.json') as $file) {
+        $checkpoint = json_decode(file_get_contents($file), true, 512, JSON_THROW_ON_ERROR);
+        $report['engines'][basename($file, '.json')] = (bool)$checkpoint['verified'];
+    }
+    if ($db->schema->getTableSchema('economy_wallet_rollout', true)) {
+        $report['wallet'] = (new yii\db\Query())->select(['phase', 'updated_at'])->from('economy_wallet_rollout')->where(['id' => 1])->one($db);
+        $report['columns'] = (new yii\db\Query())->select(['column_key', 'phase', 'row_count', 'last_source_id'])->from('economy_wallet_column')->all($db);
+    }
+    echo json_encode($report, JSON_PRETTY_PRINT | JSON_THROW_ON_ERROR), "\n";
+    exit(0);
+}
 $report = ['read_only' => true, 'php' => PHP_VERSION,
     'server' => $db->createCommand('SELECT VERSION() AS version,DATABASE() AS database_name')->queryOne(),
     'settings' => $db->createCommand("SHOW VARIABLES WHERE Variable_name IN ('sql_mode','lower_case_table_names','innodb_file_format','innodb_large_prefix','log_bin','time_zone','max_allowed_packet')")->queryAll(),
