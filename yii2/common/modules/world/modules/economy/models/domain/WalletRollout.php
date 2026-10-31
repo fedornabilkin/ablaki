@@ -272,12 +272,18 @@ class WalletRollout
     {
         $state = $this->column($run, $key);
         $rawHash = hash_init('sha256'); $exactHash = hash_init('sha256'); $count = 0;
-        $query = (new Query())->from('economy_wallet_snapshot')->where(['run_id' => $run['run_id'], 'column_key' => $key])->orderBy('source_id');
-        foreach ($query->each(500, $this->db) as $row) {
-            if ($this->amount($key, ['id' => $row['source_id'], 'raw_amount' => $row['raw_amount']]) !== $row['exact_amount']) throw new \RuntimeException('Snapshot precision decision changed.');
-            $this->digest($rawHash, $row['source_id'], $row['raw_amount']);
-            $this->digest($exactHash, $row['source_id'], $row['exact_amount']); $count++;
-        }
+        $cursor = null;
+        do {
+            $query = (new Query())->from('economy_wallet_snapshot')->where(['run_id' => $run['run_id'], 'column_key' => $key])->orderBy('source_id')->limit(500);
+            if ($cursor !== null) $query->andWhere(['>', 'source_id', $cursor]);
+            $rows = $query->all($this->db);
+            foreach ($rows as $row) {
+                if ($this->amount($key, ['id' => $row['source_id'], 'raw_amount' => $row['raw_amount']]) !== $row['exact_amount']) throw new \RuntimeException('Snapshot precision decision changed.');
+                $this->digest($rawHash, $row['source_id'], $row['raw_amount']);
+                $this->digest($exactHash, $row['source_id'], $row['exact_amount']); $count++;
+                $cursor = $row['source_id'];
+            }
+        } while (count($rows) === 500);
         if ((string)$count !== (string)$state['row_count'] || hash_final($rawHash) !== $state['raw_hash'] || hash_final($exactHash) !== $state['exact_hash']) throw new \RuntimeException('Wallet snapshot integrity check failed.');
     }
     private function definition(\yii\db\ColumnSchema $column): string

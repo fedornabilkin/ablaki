@@ -25,7 +25,14 @@ $report = ['read_only' => true, 'php' => PHP_VERSION,
     'columns' => $db->createCommand("SELECT TABLE_NAME,COLUMN_NAME,COLUMN_TYPE,IS_NULLABLE,COLUMN_DEFAULT FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND ((TABLE_NAME='persone' AND COLUMN_NAME='credit') OR (TABLE_NAME='history_balance' AND COLUMN_NAME IN ('credit','credit_up'))) ORDER BY TABLE_NAME,COLUMN_NAME")->queryAll(),
     'triggers' => $db->createCommand('SELECT EVENT_OBJECT_TABLE,ACTION_TIMING,EVENT_MANIPULATION FROM information_schema.TRIGGERS WHERE TRIGGER_SCHEMA=DATABASE()')->queryAll(),
     'wallet_guard_available' => is_file($root . '/common/modules/world/modules/economy/models/domain/WalletMaintenanceBootstrap.php'),
+    'financial_guard_available' => is_file($root . '/common/services/user/FinancialMaintenanceBootstrap.php'),
+    'financial_pause' => is_file($root . '/common/runtime/financial-maintenance/paused'),
+    'preparation_completed' => is_file($root . '/common/runtime/financial-maintenance/completed'),
+    'container_pid1' => trim((string)@file_get_contents('/proc/1/comm')),
 ];
+if (is_file($root . '/common/runtime/financial-maintenance/verified.json')) {
+    $report['preparation'] = json_decode(file_get_contents($root . '/common/runtime/financial-maintenance/verified.json'), true, 512, JSON_THROW_ON_ERROR);
+}
 foreach (['user','persone','history_balance','history_rating','craft_inventory'] as $table) $report['row_counts'][$table] = (int)$db->createCommand('SELECT COUNT(*) FROM ' . $db->quoteTableName($table))->queryScalar();
 foreach (['economy_wallet_rollout','world_registry','economy_registry'] as $table) {
     if (!$db->schema->getTableSchema($table, true)) continue;

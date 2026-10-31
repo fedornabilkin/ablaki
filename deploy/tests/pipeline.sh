@@ -379,3 +379,87 @@ for scenario in runtime_warm runtime_build runtime_install runtime_start runtime
   ! grep -Eq 'pg_dump|mysqldump|pg_restore|down |reset|stop.*postgres|stop.*mysql' "$TEST_LOG"
   printf 'PASS deployment scenario: %s\n' "$scenario"
 done
+# Preparation fixtures exercise shell sequencing without contacting a server.
+mkdir -p "$test_root/production-bin"
+cat > "$test_root/production-bin/git" <<'MOCK'
+#!/usr/bin/env bash
+set -eu
+while [[ "$1" = -c ]]; do shift 2; done
+printf 'git %s\n' "$*" >> "$TEST_LOG"
+case "$1" in
+  symbolic-ref) echo master ;;
+  status) [[ "$TEST_FAIL" != prep_dirty ]] || echo ' M file.php' ;;
+  rev-parse) printf '%040d\n' 1 ;;
+  fetch|merge-base|merge) ;;
+  diff) [[ "$TEST_FAIL" != prep_runtime_changed ]] ;;
+  *) exit 1 ;;
+esac
+MOCK
+cat > "$test_root/production-bin/docker-compose" <<'MOCK'
+#!/usr/bin/env bash
+[[ "$*" = 'ps -q php' ]] || exit 1
+printf 'abc123\n'
+MOCK
+cat > "$test_root/production-bin/docker" <<'MOCK'
+#!/usr/bin/env bash
+set -eu
+printf 'docker %s\n' "$*" >> "$TEST_LOG"
+case "$1" in
+  inspect) echo true ;;
+  kill) [[ "$*" = 'kill --signal=USR2 abc123' ]] ;;
+  exec)
+    if [[ "$*" = *memory_limit* ]]; then
+      cat >/dev/null
+      [[ -f "$TEST_REPO/yii2/common/runtime/financial-maintenance/paused" ]]
+      grep -Fxq 'flock -x -w 180 9' "$TEST_LOG"
+      [[ "$TEST_FAIL" != prep_conversion_failed ]] || exit 24
+      echo '{}' > "$TEST_REPO/yii2/common/runtime/financial-maintenance/verified.json"
+    fi
+    ;;
+  *) exit 1 ;;
+esac
+MOCK
+cat > "$test_root/production-bin/flock" <<'MOCK'
+#!/usr/bin/env bash
+printf 'flock %s\n' "$*" >> "$TEST_LOG"
+[[ "$*" != '-x -w 180 9' || "$TEST_FAIL" != prep_drain_failed ]]
+MOCK
+cat > "$test_root/production-bin/curl" <<'MOCK'
+#!/usr/bin/env bash
+printf 'read smoke\n' >> "$TEST_LOG"
+MOCK
+chmod +x "$test_root/production-bin/"*
+export PATH="$test_root/production-bin:$PATH"
+for scenario in prep_success prep_dirty prep_runtime_changed prep_conversion_failed prep_drain_failed; do
+  TEST_FAIL=$scenario
+  TEST_REPO="$test_root/$scenario"
+  TEST_LOG="$test_root/$scenario.log"
+  : > "$TEST_LOG"
+  mkdir -p "$TEST_REPO/.php-runtime-upgrade" "$TEST_REPO/docker/php" "$TEST_REPO/docker/composer" "$TEST_REPO/yii2/common/services/user" "$TEST_REPO/yii2/common/config" "$TEST_REPO/deploy"
+  for file in docker/php/Dockerfile docker/php/runtime.ini docker/php/security-fpm.conf docker/php/entrypoint.sh docker/composer/Dockerfile docker/composer/entrypoint.sh yii2/composer.json yii2/composer.lock yii2/common/services/user/FinancialMaintenanceBootstrap.php deploy/world-production-prepare.php; do
+    printf 'fixture\n' > "$TEST_REPO/$file"
+  done
+  echo FinancialMaintenanceBootstrap > "$TEST_REPO/yii2/common/config/main.php"
+  (cd "$TEST_REPO"; sha256sum docker/php/Dockerfile docker/php/runtime.ini docker/php/security-fpm.conf docker/php/entrypoint.sh docker/composer/Dockerfile docker/composer/entrypoint.sh yii2/composer.json yii2/composer.lock | sha256sum | cut -d' ' -f1) > "$TEST_REPO/.php-runtime-upgrade/active"
+  sed "s@repo=/var/www/api.ablakin.ru@repo=$TEST_REPO@" "$source_root/deploy/world-production-upgrade.sh" > "$TEST_REPO/runner.sh"
+  status=0
+  bash "$TEST_REPO/runner.sh" "$(printf '%040d' 1)" > "$TEST_REPO/output.log" 2>&1 || status=$?
+  control="$TEST_REPO/yii2/common/runtime/financial-maintenance"
+  case "$scenario" in
+    prep_success)
+      [[ "$status" = 0 && -f "$control/completed" && ! -f "$control/paused" ]] || { cat "$TEST_REPO/output.log"; exit 1; }
+      grep -Fxq 'flock -u 9' "$TEST_LOG"
+      grep -Fxq 'read smoke' "$TEST_LOG"
+      ;;
+    prep_dirty|prep_runtime_changed)
+      [[ "$status" != 0 && ! -e "$control/paused" ]]
+      ! grep -q '^docker ' "$TEST_LOG"
+      ;;
+    prep_conversion_failed|prep_drain_failed)
+      [[ "$status" != 0 && -f "$control/paused" && ! -f "$control/completed" ]]
+      ! grep -q 'cron start\|flock -u 9' "$TEST_LOG"
+      ;;
+  esac
+  ! grep -Eq '^docker (stop|restart|rm|run)|^make |reset|mysqldump|pg_restore' "$TEST_LOG"
+  printf 'PASS production preparation: %s\n' "$scenario"
+done

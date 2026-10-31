@@ -8,6 +8,42 @@ name: Extended backend checks
 permissions:
   contents: read
 jobs:
+  mariadb-compatibility:
+    name: MariaDB 10.1 production compatibility
+    runs-on: ubuntu-22.04
+    timeout-minutes: 15
+    services:
+      mariadb:
+        image: mariadb:10.1.48
+        env:
+          MYSQL_DATABASE: ablakin_ci
+          MYSQL_USER: ablakin_ci
+          MYSQL_PASSWORD: ci-only-password
+          MYSQL_ROOT_PASSWORD: ci-only-root
+        ports:
+          - 3306:3306
+        options: --health-cmd="mysqladmin ping -h 127.0.0.1 -pci-only-root" --health-interval=5s --health-timeout=5s --health-retries=20
+    steps:
+      - uses: actions/checkout@v7
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: 8.3.36
+          extensions: mbstring, pdo_mysql, intl, gd, curl, zip
+          tools: composer:2.10.3
+          coverage: none
+      - name: Install locked dependencies
+        working-directory: yii2
+        env:
+          COMPOSER_AUTH: '{"github-oauth":{"github.com":"${{ github.token }}"}}'
+        run: composer install --no-dev --no-interaction --prefer-dist --no-progress
+      - name: Verify legacy DDL, exact credits and concurrent financial operations
+        working-directory: yii2
+        env:
+          ABL_TEST_DSN: mysql:host=127.0.0.1;port=3306;dbname=ablakin_ci
+        run: |
+          php tests/release/world-test-credits.php
+          php tests/release/target-database.php
+          php tests/release/world-economy-race.php
   checks:
     name: Extended backend checks (SQLite, MySQL, PostgreSQL)
     runs-on: ubuntu-22.04

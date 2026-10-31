@@ -164,7 +164,7 @@ jobs:
       == 'test') && needs.full_before.result == 'skipped')) && github.event_name != 'pull_request' && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/test' || (github.event_name
       == 'workflow_dispatch' && inputs.target == 'test' && github.ref_type == 'branch'))
     runs-on: ubuntu-22.04
-    timeout-minutes: 10
+    timeout-minutes: 60
     environment: ${{ (inputs.target == 'test' || github.ref == 'refs/heads/test') && 'test-backend' || 'production-backend' }}
     concurrency:
       group: ${{ (inputs.target == 'test' || github.ref == 'refs/heads/test') && 'test-backend' || 'production-backend' }}
@@ -203,7 +203,7 @@ jobs:
           printf 'Host %s\n  ControlMaster auto\n  ControlPersist 60\n  ControlPath %s/backend-ssh-%%C\n' \
             "$DEPLOY_HOST" "$RUNNER_TEMP" > "$HOME/.ssh/config"
           chmod 600 "$HOME/.ssh/config"
-      - name: Run git pull and make up on the VPS
+      - name: Deploy the checked release and prepare production credits
         shell: bash
         run: |
           if [[ "$TARGET" = test ]]; then
@@ -224,8 +224,15 @@ jobs:
             scp "${options[@]}" -P "$DEPLOY_PORT" deploy/craft-prepare-test.sh "$DEPLOY_USER@$DEPLOY_HOST:$deploy_root/craft-prepare-test.sh"
             ssh "${options[@]}" -p "$DEPLOY_PORT" "$DEPLOY_USER@$DEPLOY_HOST" "bash '$deploy_root/craft-prepare-test.sh'"
           fi
-          ssh "${options[@]}" -p "$DEPLOY_PORT" "$DEPLOY_USER@$DEPLOY_HOST" \
-            "bash '$deploy_root/backend-deploy.sh' '$repo_root' '$GITHUB_REF_NAME' '$TARGET' '$GITHUB_SHA'"
+          if [[ "$TARGET" = production ]]; then
+            [[ "$GITHUB_REF_NAME" = master ]]
+            scp "${options[@]}" -P "$DEPLOY_PORT" deploy/world-production-upgrade.sh "$DEPLOY_USER@$DEPLOY_HOST:$deploy_root/world-production-upgrade.sh"
+            ssh "${options[@]}" -p "$DEPLOY_PORT" "$DEPLOY_USER@$DEPLOY_HOST" \
+              "bash '$deploy_root/world-production-upgrade.sh' '$GITHUB_SHA'"
+          else
+            ssh "${options[@]}" -p "$DEPLOY_PORT" "$DEPLOY_USER@$DEPLOY_HOST" \
+              "bash '$deploy_root/backend-deploy.sh' '$repo_root' '$GITHUB_REF_NAME' '$TARGET' '$GITHUB_SHA'"
+          fi
       - name: Apply additive activity, craft and forum migrations
         shell: bash
         run: |
