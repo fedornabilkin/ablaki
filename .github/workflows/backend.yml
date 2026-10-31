@@ -9,6 +9,10 @@ name: Backend CI and deployment
       - master
   workflow_dispatch:
     inputs:
+      checks_only:
+        description: Run all isolated checks without deploying
+        type: boolean
+        default: false
       production_audit:
         description: Read-only production schema/runtime preflight (no deployment)
         type: boolean
@@ -97,10 +101,10 @@ jobs:
           if [[ -f tests/release/world-economy-profile.php ]]; then php tests/release/world-economy-profile.php; fi
   full_before:
     name: Full checks before production
-    if: ${{ !inputs.production_audit && !(github.ref == 'refs/heads/test' || inputs.target == 'test') }}
+    if: ${{ !inputs.production_audit && (inputs.checks_only || !(github.ref == 'refs/heads/test' || inputs.target == 'test')) }}
     uses: ./.github/workflows/backend-full.yml
     with:
-      target: production
+      target: ${{ inputs.checks_only && 'test' || 'production' }}
   runtime-image:
     name: PHP 8.3.36 FPM and Composer images
     if: ${{ !inputs.production_audit }}
@@ -156,7 +160,7 @@ jobs:
       - minimum
       - full_before
       - runtime-image
-    if: always() && needs.minimum.result == 'success' && needs.runtime-image.result == 'success' && (needs.full_before.result == 'success' || ((github.ref == 'refs/heads/test' || inputs.target
+    if: always() && !inputs.checks_only && !inputs.production_audit && needs.minimum.result == 'success' && needs.runtime-image.result == 'success' && (needs.full_before.result == 'success' || ((github.ref == 'refs/heads/test' || inputs.target
       == 'test') && needs.full_before.result == 'skipped')) && github.event_name != 'pull_request' && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/test' || (github.event_name
       == 'workflow_dispatch' && inputs.target == 'test' && github.ref_type == 'branch'))
     runs-on: ubuntu-22.04
