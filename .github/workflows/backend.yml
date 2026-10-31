@@ -7,6 +7,10 @@ on:
     branches: [master]
   workflow_dispatch:
     inputs:
+      checks_only:
+        description: Run all isolated checks without deploying
+        type: boolean
+        default: false
       target:
         description: Deployment environment (production requires master)
         type: choice
@@ -174,7 +178,7 @@ jobs:
   deploy:
     name: Deploy backend to ${{ (github.ref == 'refs/heads/test' && 'test') || inputs.target || 'production' }}
     needs: [checks, runtime-image]
-    if: github.event_name != 'pull_request' && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/test' || (github.event_name == 'workflow_dispatch' && inputs.target == 'test' && github.ref_type == 'branch'))
+    if: ${{ !inputs.checks_only && github.event_name != 'pull_request' && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/test' || (github.event_name == 'workflow_dispatch' && inputs.target == 'test' && github.ref_type == 'branch')) }}
     runs-on: ubuntu-22.04
     timeout-minutes: 30
     environment: ${{ (inputs.target == 'test' || github.ref == 'refs/heads/test') && 'test-backend' || 'production-backend' }}

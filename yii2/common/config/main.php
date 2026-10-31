@@ -6,6 +6,7 @@ use common\modules\forum\Module;
 use yii\redis\Cache;
 
 $config = [
+    'bootstrap' => [\common\services\user\FinancialMaintenanceBootstrap::class],
     'language' => 'ru-RU',
     'charset' => 'UTF-8',
     'aliases' => [
