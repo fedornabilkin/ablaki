@@ -297,7 +297,7 @@
       "created": 1673120281248,
       "url": "{{ baseUrl }}/v1/history/balance-type",
       "name": "Balance-type",
-      "description": "",
+      "description": "Compatibility endpoint. Prefer history/balance or history/rating with include=types to load rows and types together. This separate endpoint remains supported for existing clients.",
       "method": "GET",
       "body": {},
       "parameters": [
@@ -385,7 +385,7 @@
       "created": 1673120844096,
       "url": "{{ baseUrl }}/v1/history/rating-type",
       "name": "Rating-type",
-      "description": "",
+      "description": "Compatibility endpoint. Prefer history/balance or history/rating with include=types to load rows and types together. This separate endpoint remains supported for existing clients.",
       "method": "GET",
       "body": {},
       "parameters": [
@@ -885,9 +885,9 @@
       "modified": 1640726788417,
       "created": 1639426557896,
       "url": "{{ baseUrl }}/v1/bonus/everyday",
-      "name": "everyday",
-      "description": "",
-      "method": "GET",
+      "name": "POST · everyday",
+      "description": "Canonical command method. No additional payload is required. Authorization and operation semantics are unchanged. GET is retained as a deprecated compatibility alias. See docs/architecture/api-consolidation.md.",
+      "method": "POST",
       "body": {},
       "parameters": [],
       "headers": [
@@ -930,9 +930,9 @@
       "modified": 1640726780654,
       "created": 1639426121409,
       "url": "{{ baseUrl }}/v1/rating/everyday",
-      "name": "everyday",
-      "description": "",
-      "method": "GET",
+      "name": "POST · everyday",
+      "description": "Canonical command method. No additional payload is required. Authorization and operation semantics are unchanged. GET is retained as a deprecated compatibility alias. See docs/architecture/api-consolidation.md.",
+      "method": "POST",
       "body": {},
       "parameters": [],
       "headers": [
@@ -8375,9 +8375,9 @@
       "modified": 1791009594237,
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/saper/start/{{ _.game_id }}",
-      "name": "start",
-      "description": "Существующий маршрут начала игры использует GET.",
-      "method": "GET",
+      "name": "POST · start",
+      "description": "Canonical command method. No additional payload is required. Authorization and operation semantics are unchanged. GET is retained as a deprecated compatibility alias. See docs/architecture/api-consolidation.md.",
+      "method": "POST",
       "body": {},
       "parameters": [],
       "headers": [],
@@ -12399,6 +12399,263 @@
         "disabled": false
       },
       "metaSortKey": 215,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_2673b41268755974f406526eba072f16",
+      "parentId": "fld_419561c07ede4c069745d1966e25507f",
+      "modified": 1673176186681,
+      "created": 1673117537317,
+      "url": "{{ baseUrl }}/v1/history/balance",
+      "name": "Balance + types (nested)",
+      "description": "Preferred SPA screen request: contract_version=1, history={items,_meta,_links}, filters={types:[{type,count}]}. Both sections belong to the authenticated user; types cover their complete history. See docs/architecture/api-consolidation.md.",
+      "method": "GET",
+      "body": {},
+      "parameters": [
+        {
+          "id": "pair_2f40f8886ccf4b8c893c646164654071",
+          "name": "filter[type]",
+          "value": "game_orel",
+          "description": "",
+          "disabled": true
+        },
+        {
+          "id": "pair_ff1e45aada0446c9923c52dc0cf6dcef",
+          "name": "filter[type]",
+          "value": "exchange",
+          "description": "",
+          "disabled": true
+        },
+        {
+          "name": "include",
+          "value": "types",
+          "disabled": false
+        },
+        {
+          "name": "page",
+          "value": "1",
+          "disabled": false
+        },
+        {
+          "name": "per-page",
+          "value": "20",
+          "disabled": false
+        }
+      ],
+      "headers": [
+        {
+          "id": "pair_e0de857d4f38438b83dc04466072975b",
+          "name": "Content-Type",
+          "value": "application/json",
+          "description": ""
+        }
+      ],
+      "authentication": {
+        "type": "bearer",
+        "token": "{{ _.bearer }}",
+        "disabled": false
+      },
+      "metaSortKey": -1625275602087.75,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_ac62363cc9ce221f60bab4e48bc18b63",
+      "parentId": "fld_419561c07ede4c069745d1966e25507f",
+      "modified": 1673120134038,
+      "created": 1673117751550,
+      "url": "{{ baseUrl }}/v1/history/rating",
+      "name": "Rating + types (nested)",
+      "description": "Preferred SPA screen request: contract_version=1, history={items,_meta,_links}, filters={types:[{type,count}]}. Both sections belong to the authenticated user; types cover their complete history. See docs/architecture/api-consolidation.md.",
+      "method": "GET",
+      "body": {},
+      "parameters": [
+        {
+          "id": "pair_8cf51e289e644218a8cc99e5c98ccc25",
+          "name": "filter[type]",
+          "value": "everyday",
+          "description": "",
+          "disabled": true
+        },
+        {
+          "id": "pair_d52a96da38fa495d823ee672aa9b8fd8",
+          "name": "filter[type]",
+          "value": "game_orel",
+          "description": "",
+          "disabled": true
+        },
+        {
+          "name": "include",
+          "value": "types",
+          "disabled": false
+        },
+        {
+          "name": "page",
+          "value": "1",
+          "disabled": false
+        },
+        {
+          "name": "per-page",
+          "value": "20",
+          "disabled": false
+        }
+      ],
+      "headers": [
+        {
+          "id": "pair_e0de857d4f38438b83dc04466072975b",
+          "name": "Content-Type",
+          "value": "application/json",
+          "description": ""
+        }
+      ],
+      "authentication": {
+        "type": "bearer",
+        "token": "{{ _.bearer }}"
+      },
+      "metaSortKey": -1622917182200.875,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_3d07f451723d0e4f330a33f01404b334",
+      "parentId": "fld_8b40a6262ab441968cca53cd34e63d68",
+      "modified": 1640726788417,
+      "created": 1639426557896,
+      "url": "{{ baseUrl }}/v1/bonus/everyday",
+      "name": "everyday (GET deprecated)",
+      "description": "Deprecated mutation through GET. Compatibility alias only; use POST at the same URL. Both methods execute the same action and retain its authorization and repeat protection. Never prefetch this GET.",
+      "method": "GET",
+      "body": {},
+      "parameters": [],
+      "headers": [
+        {
+          "id": "pair_e0de857d4f38438b83dc04466072975b",
+          "name": "Content-Type",
+          "value": "application/json",
+          "description": ""
+        }
+      ],
+      "authentication": {
+        "type": "bearer",
+        "token": "{{ _.bearer }}"
+      },
+      "metaSortKey": -1629992441861.5,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_97aeb12d49cdbe04cf3b38ab7c3e87ca",
+      "parentId": "fld_4cfb018be2304c3bb80faf1194b2b4ac",
+      "modified": 1640726780654,
+      "created": 1639426121409,
+      "url": "{{ baseUrl }}/v1/rating/everyday",
+      "name": "everyday (GET deprecated)",
+      "description": "Deprecated mutation through GET. Compatibility alias only; use POST at the same URL. Both methods execute the same action and retain its authorization and repeat protection. Never prefetch this GET.",
+      "method": "GET",
+      "body": {},
+      "parameters": [],
+      "headers": [
+        {
+          "id": "pair_e0de857d4f38438b83dc04466072975b",
+          "name": "Content-Type",
+          "value": "application/json",
+          "description": ""
+        }
+      ],
+      "authentication": {
+        "type": "bearer",
+        "token": "{{ _.bearer }}"
+      },
+      "metaSortKey": -1639426121409,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_9dcd04938ae55bba98775c35251dd5a6",
+      "parentId": "fld_fb23e6268237b6111f2a6138e622eab5",
+      "modified": 1791009594237,
+      "created": 1791009594237,
+      "url": "{{ _.baseUrl }}/v1/saper/start/{{ _.game_id }}",
+      "name": "start (GET deprecated)",
+      "description": "Deprecated mutation through GET. Compatibility alias only; use POST at the same URL. Both methods execute the same action and retain its authorization and repeat protection. Never prefetch this GET.",
+      "method": "GET",
+      "body": {},
+      "parameters": [],
+      "headers": [],
+      "authentication": {
+        "type": "bearer",
+        "token": "{{ _.bearer }}",
+        "disabled": false
+      },
+      "metaSortKey": 263,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_946d9a58c017b9be52c0219ddfccd583",
+      "parentId": "fld_e1a56479acb24b0fc1782280fd0c9402",
+      "modified": 1792195200000,
+      "created": 1792195200000,
+      "name": "GET - Character overview (nested)",
+      "url": "{{ _.baseUrl }}/v1/world/economy",
+      "method": "GET",
+      "description": "Current-player screen: {contract_version:1,economy:{...existing state...},character:{progression:{craft,professions,extraction_work,server_time},construction:{active:Build|null}}}. Replaces three requests on the character page; standalone state, progression and active-build reads remain compatible. See docs/architecture/api-consolidation.md.",
+      "body": {},
+      "parameters": [
+        {
+          "name": "include",
+          "value": "character",
+          "disabled": false
+        }
+      ],
+      "headers": [
+        {
+          "name": "Accept",
+          "value": "application/json"
+        }
+      ],
+      "authentication": {
+        "type": "bearer",
+        "token": "{{ _.bearer }}"
+      },
+      "metaSortKey": 1,
       "isPrivate": false,
       "settingStoreCookies": true,
       "settingSendCookies": true,

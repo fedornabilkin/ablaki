@@ -209,6 +209,30 @@ try {
         $rankingTransaction->rollBack();
     }
     routeCheck(dispatch('GET', 'v1/tips/random') === [200, null], 'random tip exact path returns null when existing facts are empty');
+    $historyTransaction = $db->beginTransaction();
+    try {
+        foreach (['balance', 'rating'] as $kind) {
+            $db->createCommand()->insert('history_' . $kind, ['user_id' => 1, 'type' => 'world', 'created_at' => 1])->execute();
+            $db->createCommand()->insert('history_' . $kind, ['user_id' => 2, 'type' => 'private-other', 'created_at' => 2])->execute();
+            $path = 'v1/history/' . $kind;
+            list($status, $screen) = dispatch('GET', $path, true, ['include' => 'types', 'filter' => ['type' => 'world']]);
+            routeCheck($status === 200 && $screen['contract_version'] === 1 && $screen['history']['_meta']['totalCount'] === 1
+                && count($screen['history']['items']) === 1 && $screen['filters']['types'] === [['type' => 'world', 'count' => 1]],
+                'nested history records and filters retain account scope: ' . $kind);
+            routeCheck(dispatch('GET', $path, false, ['include' => 'types'])[0] === 401, 'nested history rejects guests: ' . $kind);
+            routeCheck(dispatch('GET', $path, true, ['include' => ['types']])[0] === 400, 'history rejects malformed include: ' . $kind);
+            routeCheck(dispatch('GET', $path . '-type', true)[1] === $screen['filters']['types'], 'legacy history types share the same projection: ' . $kind);
+        }
+    } finally { $historyTransaction->rollBack(); }
+    routeCheck(dispatch('POST', 'v1/history', true)[0] === 404, 'history has no fictitious create route');
+    foreach (['v1/bonus/everyday', 'v1/rating/everyday', 'v1/saper/start/1'] as $path) {
+        routeCheck(dispatch('POST', $path)[0] === 401 && dispatch('GET', $path)[0] === 401,
+            'canonical POST and legacy GET commands retain authentication: ' . $path);
+    }
+    routeCheck(dispatch('GET', 'v1/exchange/remove')[0] === 401, 'legacy bulk cancellation requires authentication');
+    routeCheck(dispatch('GET', 'v1/exchange/remove', true)[0] === 204, 'legacy bulk cancellation has a valid action configuration');
+    routeCheck(dispatch('GET', 'v1/items')[0] === 404 && dispatch('GET', 'v1/recipes')[0] === 404
+        && dispatch('GET', 'v1/inventory')[0] === 404, 'unused catalog controllers are not registered');
     foreach (['v1/history/balance','v1/history/rating','v1/users/referrals','v1/transfer','v1/transfer/history',
         'v1/exchange','v1/exchange/my','v1/exchange/history','v1/orel','v1/orel/my','v1/orel/history','v1/orel/recent',
         'v1/saper','v1/saper/my','v1/saper/history','v1/saper/recent','v1/forum-theme/my','v1/forum-comment/my'] as $path) {

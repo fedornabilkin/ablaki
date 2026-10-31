@@ -26,8 +26,6 @@ abstract class CoreController extends LegacyController
     }
     protected function listing(\yii\data\ActiveDataProvider $provider): array
     {
-        return ['items' => array_map(static function ($model) { return $model->toArray(); }, $provider->getModels()),
-            '_meta' => ['totalCount' => $provider->getTotalCount(), 'pageCount' => $provider->pagination->pageCount,
-                'currentPage' => $provider->pagination->page + 1, 'perPage' => $provider->pagination->pageSize]];
+        return \api\components\ApiList::envelope($provider);
     }
 }

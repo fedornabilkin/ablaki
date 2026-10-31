@@ -25,6 +25,7 @@ return [
         'class' => UrlRule::class,
         'controller' => ['v1/forum-comment'],
         'pluralize' => false,
+        'except' => ['delete'],
         'extraPatterns' => [
             'GET my' => 'my',
             'POST <id:\d+>/gift' => 'gift',

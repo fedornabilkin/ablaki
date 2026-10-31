@@ -46,7 +46,12 @@ class HistoryController extends Controller
         if (isset($filter['type']) && $filter['type'] !== '') {
             $query->andWhere(['type' => $filter['type']]);
         }
-        return ApiList::provider($query, ['type', 'comment']);
+        $provider = ApiList::provider($query, ['type', 'comment']);
+        $include = Yii::$app->request->get('include');
+        if ($include === null) return $provider;
+        if ($include !== 'types') throw new BadRequestHttpException('Unsupported history include.');
+        return ['contract_version' => 1, 'history' => ApiList::envelope($provider),
+            'filters' => ['types' => $this->types($modelClass)]];
     }
 
     public function actionBalanceType(): array

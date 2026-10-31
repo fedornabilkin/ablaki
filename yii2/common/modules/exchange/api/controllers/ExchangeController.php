@@ -61,7 +61,8 @@ class ExchangeController extends ActiveController
         $actions['create']['class'] = CreateAction::class;
         $actions['update']['class'] = UpdateAction::class;
         $actions['delete']['class'] = DeleteAction::class;
-        $actions['remove']['class'] = RemoveAction::class;
+        $actions['remove'] = ['class' => RemoveAction::class, 'modelClass' => $this->modelClass,
+            'checkAccess' => [$this, 'checkAccess']];
 
         $actions['index']['dataFilter'] = $this->getFilter();
 

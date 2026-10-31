@@ -11,6 +11,12 @@ use yii\web\BadRequestHttpException;
 /** Shared, bounded server-side list contract. Authorization stays in the caller's query. */
 class ApiList
 {
+    /** Explicit nested collections use the same serializer as top-level API lists. */
+    public static function envelope(ActiveDataProvider $provider): array
+    {
+        return (new \yii\rest\Serializer(['collectionEnvelope' => 'items']))->serialize($provider);
+    }
+
     public static function provider($query, array $searchColumns = [], array $sortAttributes = ['id', 'created_at'], $searchCallback = null): ActiveDataProvider
     {
         foreach (['page', 'per-page'] as $parameter) {
