@@ -388,9 +388,16 @@ while [[ "$1" = -c ]]; do shift 2; done
 printf 'git %s\n' "$*" >> "$TEST_LOG"
 case "$1" in
   symbolic-ref) echo master ;;
-  status) [[ "$TEST_FAIL" != prep_dirty ]] || echo ' M file.php' ;;
+  status)
+    [[ "$TEST_FAIL" != prep_dirty ]] || echo ' M file.php'
+    [[ "$TEST_FAIL" != prep_local_compose ]] || echo ' M docker-compose.yaml'
+    ;;
   rev-parse) printf '%040d\n' 1 ;;
-  fetch|merge-base|merge) ;;
+  fetch|merge-base) ;;
+  merge)
+    if [[ "$TEST_FAIL" = prep_local_compose ]]; then printf 'repository config\n' > docker-compose.yaml; fi
+    ;;
+  stash) ;;
   diff) [[ "$TEST_FAIL" != prep_runtime_changed ]] ;;
   *) exit 1 ;;
 esac
@@ -431,7 +438,7 @@ printf 'read smoke\n' >> "$TEST_LOG"
 MOCK
 chmod +x "$test_root/production-bin/"*
 export PATH="$test_root/production-bin:$PATH"
-for scenario in prep_success prep_dirty prep_runtime_changed prep_conversion_failed prep_drain_failed; do
+for scenario in prep_success prep_local_compose prep_dirty prep_runtime_changed prep_conversion_failed prep_drain_failed; do
   TEST_FAIL=$scenario
   TEST_REPO="$test_root/$scenario"
   TEST_LOG="$test_root/$scenario.log"
@@ -441,6 +448,7 @@ for scenario in prep_success prep_dirty prep_runtime_changed prep_conversion_fai
     printf 'fixture\n' > "$TEST_REPO/$file"
   done
   echo FinancialMaintenanceBootstrap > "$TEST_REPO/yii2/common/config/main.php"
+  printf 'operator production config\n' > "$TEST_REPO/docker-compose.yaml"
   (cd "$TEST_REPO"; sha256sum docker/php/Dockerfile docker/php/runtime.ini docker/php/security-fpm.conf docker/php/entrypoint.sh docker/composer/Dockerfile docker/composer/entrypoint.sh yii2/composer.json yii2/composer.lock | sha256sum | cut -d' ' -f1) > "$TEST_REPO/.php-runtime-upgrade/active"
   printf 'drain fixture\n' > "$TEST_REPO/php-drain.sh"
   sed -e "s@repo=/var/www/api.ablakin.ru@repo=$TEST_REPO@" -e "s@deploy_root=/opt/ablaki-backend@deploy_root=$TEST_REPO@" "$source_root/deploy/world-production-upgrade.sh" > "$TEST_REPO/runner.sh"
@@ -448,10 +456,11 @@ for scenario in prep_success prep_dirty prep_runtime_changed prep_conversion_fai
   bash "$TEST_REPO/runner.sh" "$(printf '%040d' 1)" > "$TEST_REPO/output.log" 2>&1 || status=$?
   control="$TEST_REPO/yii2/common/runtime/financial-maintenance"
   case "$scenario" in
-    prep_success)
+    prep_success|prep_local_compose)
       [[ "$status" = 0 && -f "$control/completed" && ! -f "$control/paused" ]] || { cat "$TEST_REPO/output.log"; exit 1; }
       grep -Fxq 'flock -u 9' "$TEST_LOG"
       grep -Fxq 'read smoke' "$TEST_LOG"
+      [[ "$(cat "$TEST_REPO/docker-compose.yaml")" = 'operator production config' ]]
       ;;
     prep_dirty|prep_runtime_changed)
       [[ "$status" != 0 && ! -e "$control/paused" ]]

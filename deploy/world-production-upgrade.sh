@@ -6,18 +6,30 @@ expected_sha=${1:?Checked release SHA is required}
 [[ "$expected_sha" =~ ^[0-9a-f]{40}$ ]]
 repo=/var/www/api.ablakin.ru
 deploy_root=/opt/ablaki-backend
+phase='checking the production checkout'
+compose_backup=''
+restore_compose() {
+  if [[ -n "$compose_backup" ]]; then
+    cp -p -- "$compose_backup" "$repo/docker-compose.yaml"
+    [[ "$(sha256sum "$repo/docker-compose.yaml" | cut -d' ' -f1)" = "$compose_checksum" ]]
+  fi
+}
+trap 'code=$?; trap - ERR; restore_compose; printf "::error::Production preparation stopped during %s (line %s, exit %s). Keep any pause marker; rerun the checked release to resume.\n" "$phase" "$LINENO" "$code" >&2; exit "$code"' ERR
 cd "$repo"
 [[ "$(pwd -P)" = "$repo" && ! -L "$repo" ]]
 git() { command git -c safe.directory="$repo" "$@"; }
 [[ "$(git symbolic-ref --short HEAD)" = master ]]
-[[ -z "$(git status --porcelain --untracked-files=no)" ]]
+checkout_changes=$(git status --porcelain --untracked-files=no)
+# The VPS has an operator-owned Compose override. Preserve its exact bytes;
+# no other tracked edits or staged changes are accepted by this procedure.
+[[ -z "$checkout_changes" || "$checkout_changes" = ' M docker-compose.yaml' ]]
+git diff --cached --quiet
 control="$repo/yii2/common/runtime/financial-maintenance"
 [[ ! -L "$control" ]]
 if [[ -f "$control/completed" && ! -e "$control/paused" ]]; then
   exec bash "$deploy_root/backend-deploy.sh" "$repo" master production "$expected_sha"
 fi
 phase=preflight
-trap 'code=$?; printf "::error::Production preparation stopped during %s (exit %s). Keep the pause marker; rerun this checked release to resume.\n" "$phase" "$code" >&2' ERR
 git fetch origin master
 [[ "$(git rev-parse FETCH_HEAD)" = "$expected_sha" ]]
 git merge-base --is-ancestor HEAD "$expected_sha"
@@ -51,7 +63,16 @@ exec 9<"$control/writers.lock"
 flock -x -w 180 9
 curl --fail --silent --show-error --max-time 30 http://127.0.0.1:2180/v1/stat > /dev/null
 phase='updating the checked application code'
+if [[ -n "$checkout_changes" ]]; then
+  compose_checksum=$(sha256sum docker-compose.yaml | cut -d' ' -f1)
+  compose_backup="$control/compose-$(date -u '+%Y%m%dT%H%M%SZ')-$$.yaml"
+  cp -p -- docker-compose.yaml "$compose_backup"
+  # Retain a Git recovery point as well; never restore a guessed server config.
+  git -c user.name='Ablaki deploy' -c user.email='deploy@ablaki.ru' stash push -m 'world preparation: preserve production Compose' -- docker-compose.yaml
+fi
 git merge --ff-only "$expected_sha"
+restore_compose
+compose_backup=''
 [[ "$(git rev-parse HEAD)" = "$expected_sha" ]]
 phase='draining pages rendered with the previous code'
 # Legacy read pages can contain paid-ad widgets. Retire old widget code before DDL.
