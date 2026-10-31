@@ -75,7 +75,16 @@ final class ProductionDatabasePreparation
         }
         if ($status['rollout']['phase'] !== 'active' || !$status['wallet_ready']) throw new \RuntimeException('Wallet activation is incomplete.');
         (new WalletCompatibility($this->db))->requireCompatible();
-        return ['phase' => 'active', 'columns' => $status['columns']];
+        $rounded = 0;
+        $query = (new Query())->select('raw_amount')->from('economy_wallet_snapshot')
+            ->where(['run_id' => $status['rollout']['run_id'], 'column_key' => 'persone.credit']);
+        foreach ($query->each(500, $this->db) as $row) {
+            if (!preg_match('/^(-?)([0-9]+)(?:\.([0-9]*))?(?:[eE]([+-]?[0-9]{1,3}))?$/D', $row['raw_amount'], $parts)) throw new \RuntimeException('Invalid verified snapshot.');
+            $digits = $parts[2] . ($parts[3] ?? '');
+            $trailingZeros = strlen($digits) - strlen(rtrim($digits, '0'));
+            if (trim($digits, '0') !== '' && strlen($parts[3] ?? '') - (int)($parts[4] ?? 0) - $trailingZeros > 4) $rounded++;
+        }
+        return ['phase' => 'active', 'personal_rounded' => $rounded, 'columns' => $status['columns']];
     }
 
     /** Ordered streaming avoids loading the million-row ledger into PHP memory. */

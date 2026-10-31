@@ -61,6 +61,7 @@ docker exec "$php_id" sh -ec '
 '
 exec 9<"$control/writers.lock"
 flock -x -w 180 9
+curl --fail --silent --show-error --max-time 30 http://127.0.0.1:2180/v1/stat > /dev/null
 phase='updating the checked application code'
 git merge --ff-only "$expected_sha"
 [[ "$(git rev-parse HEAD)" = "$expected_sha" ]]

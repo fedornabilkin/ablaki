@@ -25,6 +25,11 @@ jobs:
         options: --health-cmd="mysqladmin ping -h 127.0.0.1 -pci-only-root" --health-interval=5s --health-timeout=5s --health-retries=20
     steps:
       - uses: actions/checkout@v7
+      - name: Match production database character set and legacy InnoDB limits
+        env:
+          MARIADB_CONTAINER: ${{ job.services.mariadb.id }}
+        run: |
+          docker exec "$MARIADB_CONTAINER" mysql -uroot -pci-only-root -e "ALTER DATABASE ablakin_ci CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci; SET GLOBAL innodb_file_format='Antelope'; SET GLOBAL innodb_large_prefix=OFF; SET GLOBAL sql_mode='NO_AUTO_CREATE_USER,NO_ENGINE_SUBSTITUTION';"
       - uses: shivammathur/setup-php@v2
         with:
           php-version: 8.3.36
