@@ -118,10 +118,11 @@ jobs:
         env:
           PREVIOUS_SHA: ${{ github.event.before }}
           TARGET: ${{ ((github.ref == 'refs/heads/test' && 'test') || inputs.target || 'production') }}
+          CHECKS_ONLY: ${{ inputs.checks_only }}
         shell: bash
         run: |
           if [[ "$TARGET" = test && "$GITHUB_EVENT_NAME" = workflow_dispatch ]]; then PREVIOUS_SHA=$(git rev-parse HEAD^); fi
-          if [[ "$TARGET" = test && "$PREVIOUS_SHA" =~ ^[0-9a-f]{40}$ && "$PREVIOUS_SHA" != 0000000000000000000000000000000000000000 ]]; then
+          if [[ "$TARGET" = test && "$CHECKS_ONLY" != true && "$PREVIOUS_SHA" =~ ^[0-9a-f]{40}$ && "$PREVIOUS_SHA" != 0000000000000000000000000000000000000000 ]]; then
             if git cat-file -e "$PREVIOUS_SHA^{commit}" && git diff --quiet "$PREVIOUS_SHA" HEAD -- docker/php docker/composer; then
               echo 'Runtime files unchanged; the existing verified image is reused.'
               exit 0
@@ -138,6 +139,7 @@ jobs:
           <?php
           header('Content-Type: application/json');
           if (PHP_SAPI !== 'fpm-fcgi' || PHP_VERSION !== '8.3.36' || ini_get('session.upload_progress.enabled') !== '0') { http_response_code(500); exit; }
+          if (isset($_GET['hold'])) { file_put_contents('/probe/request-started', '1'); sleep(4); }
           echo json_encode(['php' => PHP_VERSION, 'sapi' => PHP_SAPI, 'upload_progress' => false]);
           PHP
           cat > "$probe/nginx.conf" <<'NGINX'
@@ -152,6 +154,20 @@ jobs:
             docker logs php83-http
             exit 1
           fi
+          for marker in request-started cli-started cli-finished; do touch "$probe/$marker"; chmod 666 "$probe/$marker"; done
+          curl --fail --max-time 30 'http://127.0.0.1:18083/?hold=1' > "$RUNNER_TEMP/drained-response.json" &
+          request_pid=$!
+          for attempt in {1..30}; do [[ ! -s "$probe/request-started" ]] || break; sleep 0.1; done
+          test -s "$probe/request-started"
+          docker exec php83-fpm php -r 'file_put_contents("/probe/cli-started", "1"); sleep(5); file_put_contents("/probe/cli-finished", "1");' &
+          cli_pid=$!
+          for attempt in {1..30}; do [[ ! -s "$probe/cli-started" ]] || break; sleep 0.1; done
+          test -s "$probe/cli-started"
+          docker exec -i php83-fpm sh < deploy/php-drain.sh
+          test -s "$probe/cli-finished"
+          wait "$request_pid"
+          wait "$cli_pid"
+          curl --fail --max-time 5 http://127.0.0.1:18083/
           docker stop --time 10 php83-fpm
           test "$(docker inspect -f '{{.State.ExitCode}}' php83-fpm)" = 0
   deploy:
@@ -226,7 +242,7 @@ jobs:
           fi
           if [[ "$TARGET" = production ]]; then
             [[ "$GITHUB_REF_NAME" = master ]]
-            scp "${options[@]}" -P "$DEPLOY_PORT" deploy/world-production-upgrade.sh "$DEPLOY_USER@$DEPLOY_HOST:$deploy_root/world-production-upgrade.sh"
+            scp "${options[@]}" -P "$DEPLOY_PORT" deploy/world-production-upgrade.sh deploy/php-drain.sh "$DEPLOY_USER@$DEPLOY_HOST:$deploy_root/"
             ssh "${options[@]}" -p "$DEPLOY_PORT" "$DEPLOY_USER@$DEPLOY_HOST" \
               "bash '$deploy_root/world-production-upgrade.sh' '$GITHUB_SHA'"
           else

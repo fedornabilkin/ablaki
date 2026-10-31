@@ -441,7 +441,8 @@ for scenario in prep_success prep_dirty prep_runtime_changed prep_conversion_fai
   done
   echo FinancialMaintenanceBootstrap > "$TEST_REPO/yii2/common/config/main.php"
   (cd "$TEST_REPO"; sha256sum docker/php/Dockerfile docker/php/runtime.ini docker/php/security-fpm.conf docker/php/entrypoint.sh docker/composer/Dockerfile docker/composer/entrypoint.sh yii2/composer.json yii2/composer.lock | sha256sum | cut -d' ' -f1) > "$TEST_REPO/.php-runtime-upgrade/active"
-  sed "s@repo=/var/www/api.ablakin.ru@repo=$TEST_REPO@" "$source_root/deploy/world-production-upgrade.sh" > "$TEST_REPO/runner.sh"
+  printf 'drain fixture\n' > "$TEST_REPO/php-drain.sh"
+  sed -e "s@repo=/var/www/api.ablakin.ru@repo=$TEST_REPO@" -e "s@deploy_root=/opt/ablaki-backend@deploy_root=$TEST_REPO@" "$source_root/deploy/world-production-upgrade.sh" > "$TEST_REPO/runner.sh"
   status=0
   bash "$TEST_REPO/runner.sh" "$(printf '%040d' 1)" > "$TEST_REPO/output.log" 2>&1 || status=$?
   control="$TEST_REPO/yii2/common/runtime/financial-maintenance"

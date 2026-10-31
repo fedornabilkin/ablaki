@@ -46,19 +46,7 @@ sync
 docker exec "$php_id" service cron stop
 phase='draining old PHP requests and scheduled commands'
 # A graceful FPM reload keeps the listener available, and retires pre-gate workers.
-docker exec "$php_id" sh -ec '
-  workers=$(ps -eo pid,args | awk "/php-fpm: pool/ && !/awk/ {print \$1}")
-  kill -USR2 1
-  deadline=$(( $(date +%s) + 180 ))
-  while :; do
-    alive=0
-    for pid in $workers; do if kill -0 "$pid" 2>/dev/null; then alive=1; fi; done
-    if ps -eo comm= | grep -qx php; then alive=1; fi
-    [ "$alive" = 1 ] || break
-    [ "$(date +%s)" -lt "$deadline" ] || exit 1
-    sleep 1
-  done
-'
+docker exec -i "$php_id" sh < "$deploy_root/php-drain.sh"
 exec 9<"$control/writers.lock"
 flock -x -w 180 9
 curl --fail --silent --show-error --max-time 30 http://127.0.0.1:2180/v1/stat > /dev/null
