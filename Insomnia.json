@@ -3184,7 +3184,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/nodes/{{ _.world_node_id }}/economy",
       "name": "GET /world/nodes/{id}/economy",
-      "description": "",
+      "description": "2026-10-31: У структурного листа has_finances=false, treasury_enabled=false, balances=null, финансовые действия запрещены; finance_node_id указывает родителя.",
       "method": "GET",
       "body": {},
       "parameters": [
@@ -10552,7 +10552,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/nodes/{{ _.world_node_id }}/harvest-buy-preview",
       "name": "POST /world/nodes/{id}/harvest-buy-preview",
-      "description": "placement-options: GET /v1/world/nodes/{id}/placement-options.\n2026-10-28: NPC stockpiles expose npc_supply=true, sell actual extracted raw stock at profile reference prices and recycle proceeds. NPC seller does not consume the personal daily sale quota; buyer funds, per-operation quantity, capacity, quotes and replay checks remain enforced.\n2026-10-29: mini-storage capacity is 5 slots, optional nullable slot_limit is 100 (null for other stockpiles). The mini-storage selected on a parent map uses these same stock and purchase endpoints with the selected CHILD node ID, without routing away. Existing quote, rights, stock, wallet, treasury and idempotency checks remain authoritative.",
+      "description": "placement-options: GET /v1/world/nodes/{id}/placement-options.\n2026-10-28: NPC stockpiles expose npc_supply=true, sell actual extracted raw stock at profile reference prices and recycle proceeds. NPC seller does not consume the personal daily sale quota; buyer funds, per-operation quantity, capacity, quotes and replay checks remain enforced.\n2026-10-29: mini-storage capacity is 5 slots, optional nullable slot_limit is 100 (null for other stockpiles). The mini-storage selected on a parent map uses these same stock and purchase endpoints with the selected CHILD node ID, without routing away. Existing quote, rights, stock, wallet, treasury and idempotency checks remain authoritative.\n\n2026-10-31: Листовой склад: finance_node_id в условиях указывает финансового родителя. Оплата поступает родителю; changed_node_ids включает обоих. Повтор request_key не списывает деньги повторно.",
       "method": "POST",
       "body": {
         "mimeType": "application/json",
@@ -10587,7 +10587,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/nodes/{{ _.world_node_id }}/harvest-buy",
       "name": "POST /world/nodes/{id}/harvest-buy",
-      "description": "placement-options: GET /v1/world/nodes/{id}/placement-options.\n2026-10-28: NPC stockpiles expose npc_supply=true, sell actual extracted raw stock at profile reference prices and recycle proceeds. NPC seller does not consume the personal daily sale quota; buyer funds, per-operation quantity, capacity, quotes and replay checks remain enforced.\n2026-10-29: mini-storage capacity is 5 slots, optional nullable slot_limit is 100 (null for other stockpiles). The mini-storage selected on a parent map uses these same stock and purchase endpoints with the selected CHILD node ID, without routing away. Existing quote, rights, stock, wallet, treasury and idempotency checks remain authoritative.",
+      "description": "placement-options: GET /v1/world/nodes/{id}/placement-options.\n2026-10-28: NPC stockpiles expose npc_supply=true, sell actual extracted raw stock at profile reference prices and recycle proceeds. NPC seller does not consume the personal daily sale quota; buyer funds, per-operation quantity, capacity, quotes and replay checks remain enforced.\n2026-10-29: mini-storage capacity is 5 slots, optional nullable slot_limit is 100 (null for other stockpiles). The mini-storage selected on a parent map uses these same stock and purchase endpoints with the selected CHILD node ID, without routing away. Existing quote, rights, stock, wallet, treasury and idempotency checks remain authoritative.\n\n2026-10-31: Листовой склад: finance_node_id в условиях указывает финансового родителя. Оплата поступает родителю; changed_node_ids включает обоих. Повтор request_key не списывает деньги повторно.",
       "method": "POST",
       "body": {
         "mimeType": "application/json",
@@ -10874,7 +10874,7 @@
       "name": "GET · Шаблоны для родителя",
       "url": "{{ _.baseUrl }}/v1/world/templates?parent_id={{ _.simple_parent_id }}&envelope=1&per-page=100",
       "method": "GET",
-      "description": "Схема 43: только шаблоны с разрешённым родителем parent_id, корректные totalCount/pageCount после фильтрации. available отдельно отражает материалы и единственную незавершённую стройку. Контракт: docs/architecture/simple-world-api.md.",
+      "description": "Схема 43: только шаблоны с разрешённым родителем parent_id, корректные totalCount/pageCount после фильтрации. available отдельно отражает материалы и единственную незавершённую стройку. Контракт: docs/architecture/simple-world-api.md.\n\n2026-10-31: Каталог листового родителя пуст. Прямое создание дочернего объекта также запрещено; размещение предметов сохраняется.",
       "body": {},
       "parameters": [],
       "headers": [
@@ -11329,7 +11329,7 @@
       "name": "GET · Бюджет родителя",
       "url": "{{ _.baseUrl }}/v1/world/objects/{{ _.simple_node_id }}/budget",
       "method": "GET",
-      "description": "Контракт: docs/architecture/simple-world-api.md. ID в окружении — примеры: сначала получите действительные ID из GET.",
+      "description": "Контракт: docs/architecture/simple-world-api.md. ID в окружении — примеры: сначала получите действительные ID из GET.\n\n2026-10-31: Для листового объекта PARENT_BUDGET_REQUIRED (422); используйте бюджет финансового родителя.",
       "body": {},
       "parameters": [],
       "headers": [
@@ -11360,7 +11360,7 @@
       "name": "POST · Пополнить свой бюджет",
       "url": "{{ _.baseUrl }}/v1/world/objects/{{ _.simple_node_id }}/budget",
       "method": "POST",
-      "description": "Контракт: docs/architecture/simple-world-api.md. ID в окружении — примеры: сначала получите действительные ID из GET. Новый ключ для нового действия; тот же ключ и тело при повторе.\n2026-10-28: onboarding may create the participant starter site in an active public city owned by bot. It does not permit ordinary construction on foreign property or create credits; payout still requires the dedicated funded settlement reserve.",
+      "description": "Контракт: docs/architecture/simple-world-api.md. ID в окружении — примеры: сначала получите действительные ID из GET. Новый ключ для нового действия; тот же ключ и тело при повторе.\n2026-10-28: onboarding may create the participant starter site in an active public city owned by bot. It does not permit ordinary construction on foreign property or create credits; payout still requires the dedicated funded settlement reserve.\n\n2026-10-31: Для листового объекта PARENT_BUDGET_REQUIRED (422); используйте бюджет финансового родителя.",
       "body": {
         "mimeType": "application/json",
         "text": "{\"amount\":\"10.0000\"}"
@@ -11880,7 +11880,7 @@
       "name": "GET - State",
       "url": "{{ _.baseUrl }}/v1/world/economy",
       "method": "GET",
-      "description": "Contract: docs/architecture/economy-runtime-api.md. Read-only state with dish-specific backpack restore_hp (at most 8), kitchen_restore_hp, repeat_limit, repeat_remaining, repeat_seconds, restores_at, can_eat and disorder_until. Goals include completed, blocked_reason and funding_settlement_id; can_fund_goals requires world-manage. Completed goals still require an existing funded reserve. Feedback leads to /forum. world_instance is the active root id:created_at string (or null); browser acceptance-checklist results are isolated by user and world instance.\n\n2026-10-30: development is null when disabled, otherwise {version:1, completed, total, next_stage, stages:[{code,title,description,completed,steps:[{code,title,quantity,required,completed,action_href}]}]}. Authenticated read-only server progress; no reward issuance. Internal links target the player own available objects or public NPC source. See docs/architecture/economy-runtime-api.md. 2026-10-31: development has 55 objectives including lodged-house. extraction_daily.maximum is 20 or 25 while lodging on a bed in an owned active house/room; used batches are never reset by moving and remaining stays nonnegative. Published NPC wages are 3 Cr, or 6 Cr with a drill; accepted batches keep their original terms.",
+      "description": "Contract: docs/architecture/economy-runtime-api.md. Read-only state with dish-specific backpack restore_hp (at most 8), kitchen_restore_hp, repeat_limit, repeat_remaining, repeat_seconds, restores_at, can_eat and disorder_until. Goals include completed, blocked_reason and funding_settlement_id; can_fund_goals requires world-manage. Completed goals still require an existing funded reserve. Feedback leads to /forum. world_instance is the active root id:created_at string (or null); browser acceptance-checklist results are isolated by user and world instance.\n\n2026-10-30: development is null when disabled, otherwise {version:1, completed, total, next_stage, stages:[{code,title,description,completed,steps:[{code,title,quantity,required,completed,action_href}]}]}. Authenticated read-only server progress; no reward issuance. Internal links target the player own available objects or public NPC source. See docs/architecture/economy-runtime-api.md. 2026-10-31: development has 55 objectives including lodged-house. extraction_daily.maximum is 20 or 25 while lodging on a bed in an owned active house/room; used batches are never reset by moving and remaining stays nonnegative. Published NPC wages are 3 Cr, or 6 Cr with a drill; accepted batches keep their original terms.\n\n2026-10-31: У структурного листа has_finances=false, treasury_enabled=false, balances=null, финансовые действия запрещены; finance_node_id указывает родителя.",
       "body": {},
       "parameters": [],
       "headers": [
@@ -12302,6 +12302,103 @@
         "token": "{{ _.bearer }}"
       },
       "metaSortKey": 31.1,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_world_presence_read",
+      "parentId": "fld_ea15edb61c8ffcbe49e62c342cd39e5c",
+      "modified": 1793398681253,
+      "created": 1793398681253,
+      "url": "{{ _.baseUrl }}/v1/world/nodes/{{ _.world_node_id }}/presence",
+      "name": "GET /world/nodes/{id}/presence · read",
+      "description": "GET не меняет состояние. Для POST возьмите revision из current; новый ключ на новое действие, тот же ключ при повторе. Heartbeat не перемещает персонажа. Конфликт старой вкладки: PRESENCE_CHANGED (409).",
+      "method": "GET",
+      "body": {},
+      "parameters": [],
+      "headers": [],
+      "authentication": {
+        "type": "bearer",
+        "token": "{{ _.bearer }}",
+        "disabled": false
+      },
+      "metaSortKey": 215,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_world_presence_enter",
+      "parentId": "fld_ea15edb61c8ffcbe49e62c342cd39e5c",
+      "modified": 1793398681253,
+      "created": 1793398681253,
+      "url": "{{ _.baseUrl }}/v1/world/nodes/{{ _.world_node_id }}/presence",
+      "name": "POST /world/nodes/{id}/presence · enter",
+      "description": "GET не меняет состояние. Для POST возьмите revision из current; новый ключ на новое действие, тот же ключ при повторе. Heartbeat не перемещает персонажа. Конфликт старой вкладки: PRESENCE_CHANGED (409).",
+      "method": "POST",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"revision\": 0,\n  \"heartbeat\": false,\n  \"request_key\": \"presence-enter-00000001\"\n}"
+      },
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "authentication": {
+        "type": "bearer",
+        "token": "{{ _.bearer }}",
+        "disabled": false
+      },
+      "metaSortKey": 215,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_world_presence_heartbeat",
+      "parentId": "fld_ea15edb61c8ffcbe49e62c342cd39e5c",
+      "modified": 1793398681253,
+      "created": 1793398681253,
+      "url": "{{ _.baseUrl }}/v1/world/nodes/{{ _.world_node_id }}/presence",
+      "name": "POST /world/nodes/{id}/presence · heartbeat",
+      "description": "GET не меняет состояние. Для POST возьмите revision из current; новый ключ на новое действие, тот же ключ при повторе. Heartbeat не перемещает персонажа. Конфликт старой вкладки: PRESENCE_CHANGED (409).",
+      "method": "POST",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"revision\": 1,\n  \"heartbeat\": true,\n  \"request_key\": \"presence-heartbeat-00001\"\n}"
+      },
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "authentication": {
+        "type": "bearer",
+        "token": "{{ _.bearer }}",
+        "disabled": false
+      },
+      "metaSortKey": 215,
       "isPrivate": false,
       "settingStoreCookies": true,
       "settingSendCookies": true,

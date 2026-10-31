@@ -82,6 +82,11 @@ class TreasuryLedger
         $rows = $base->orderBy(['received_at' => SORT_ASC, 'id' => SORT_ASC])->limit(101)->all($this->db);
         if (!$rows) throw new GameError('TREASURY_EMPTY', 'В казне нет поступлений для сбора.');
         $more = count($rows) > 100; $rows = array_slice($rows, 0, 100);
+        return $this->collectionPlan($accounts, $rule, $rows, $more, $node);
+    }
+    private function collectionPlan(array $accounts, array $rule, array $rows, bool $more, int $node): array
+    {
+        $treasury = $accounts['treasury']; $budget = $accounts['budget'];
         $plans = []; $collected = $this->money('0');
         foreach ($rows as $row) {
             $take = $this->money($row['remaining_amount']); $collected = $collected->add($take);
@@ -212,6 +217,19 @@ class TreasuryLedger
             'original_amount' => $amount->decimal(), 'remaining_amount' => $amount->decimal(), 'received_at' => $now, 'protected_until' => $protection,
             'next_loss_at' => $protection + $policy['loss_policy']['loss_period_seconds'], 'loss_sequence' => 0, 'loss_fraction' => 0])->execute();
         $receipt = (int)$this->db->getLastInsertID();
+        $node = (int)(new Query())->select('s.node_id')->from(['s' => 'economy_subject'])
+            ->innerJoin(['a' => 'economy_account'], '[[a.subject_id]]=[[s.id]]')->where(['a.id' => $account])->scalar($this->db);
+        if (!(new TreasuryAvailability($this->db))->enabled($node)) {
+            // Settle only this new receipt. Older receipts keep their accepted loss schedule.
+            $accounts = (new EconomyHierarchy($this->db))->accounts($node);
+            $plan = $this->collectionPlan($accounts, $policy, [['id' => $receipt, 'remaining_amount' => $amount->decimal()]], false, $node);
+            $operation = bin2hex(random_bytes(16));
+            $this->db->createCommand()->insert('game_operation', ['id' => $operation, 'user_id' => null,
+                'type' => 'economy.treasury.direct', 'created_at' => $now]
+                + \common\modules\world\models\domain\EconomyRuntime::operationContext($this->db, ['node_id' => $node]))->execute();
+            $this->collect($node, $accounts, $plan, $operation);
+            return;
+        }
         if ($policy['loss_policy']['loss_rate_bps'] > 0) $this->scheduleLoss($receipt, 1, $protection + $policy['loss_policy']['loss_period_seconds']);
     }
     /** Authorised market purchase, committed with the inventory movement by CommandBus. */

@@ -40,6 +40,13 @@ final class NpcMaintenance
         $nodes = (new NpcInfrastructure($this->db))->nodes($policy);
         (new NpcStockLogistics($this->db))->consolidate($policy, $nodes, $operation);
         $this->refresh($policy, $operation);
+        // Reads remain side-effect free: reopen full sources before the next visitor arrives.
+        foreach ($nodes as $source) {
+            if (NpcInfrastructure::role($source) !== 'source' || !NodeAvailability::activePath($this->db, (int)$source['id'])) continue;
+            $place = Node::findOne((int)$source['id']);
+            if (!$place || !ExtractionStorage::local($place)) continue;
+            foreach (WorldSources::options($place) as $definition) $this->ensureOutputStorage($place, $definition, $operation);
+        }
     }
     public function refresh(array $policy, string $operation): void
     {
@@ -51,6 +58,7 @@ final class NpcMaintenance
         usort($circulation, static fn($a, $b) => [$b['hierarchy_level'], $b['id']] <=> [$a['hierarchy_level'], $a['id']]);
         foreach ($circulation as $node) {
             $this->priceStorage((int)$node['id'], $operation);
+            if (\common\modules\world\domain\NodeStructure::isLeaf($node)) continue;
             $accounts = (new EconomyHierarchy($this->db))->accounts((int)$node['id']);
             if (!isset($accounts['treasury'])) continue;
             try {
@@ -67,6 +75,7 @@ final class NpcMaintenance
         usort($nodes, static fn($a, $b) => [NpcInfrastructure::role($a) !== 'source', $a['id']] <=> [NpcInfrastructure::role($b) !== 'source', $b['id']]);
         $shortfall = Money::parse('0');
         foreach ($nodes as $node) if (in_array(NpcInfrastructure::role($node), ['camp', 'source', 'workshop', 'equipment', 'warehouse'], true)) {
+            if (\common\modules\world\domain\NodeStructure::isLeaf($node)) continue;
             $this->fund($node, $policy, $operation);
             $accounts = (new EconomyHierarchy($this->db))->accounts((int)$node['id']);
             $available = (new BudgetSpending($this->db))->available((int)$accounts['budget']['id']); $target = $this->targetBudget($node, $policy);
@@ -90,6 +99,44 @@ final class NpcMaintenance
     {
         $infrastructure = new NpcInfrastructure($this->db);
         if ($infrastructure->managed($node->getAttributes(), ['source'])) $this->fund($node->getAttributes(), $infrastructure->policy((int)$node->root_id), $operation, null, true);
+    }
+    /** A busy source must not wait for the periodic worker to receive already funded output. */
+    public function ensureOutputStorage(Node $node, array $definition, string $operation): void
+    {
+        $infrastructure = new NpcInfrastructure($this->db);
+        if (!$infrastructure->managed($node->getAttributes(), ['source']) || $this->outputFits($node, $definition)) return;
+        if (!$this->db->getTransaction()) throw new \LogicException('NPC logistics requires a locked transaction.');
+        $policy = $infrastructure->policy((int)$node->root_id); $nodes = $infrastructure->nodes($policy);
+        $logistics = new NpcStockLogistics($this->db);
+        $logistics->consolidate($policy, $nodes, $operation, (int)$node->id);
+        if (!$this->outputFits($node, $definition)) {
+            // Recycle public receipts, without touching accepted wage holds or private accounts.
+            $this->refresh($policy, $operation);
+            $warehouse = new WorldWarehouse($this->db, new WorldFlags($this->db, \Yii::$app->getModule('world')));
+            foreach ($nodes as $target) {
+                if (NpcInfrastructure::role($target) !== 'warehouse' || !NodeAvailability::activePath($this->db, (int)$target['id'])) continue;
+                // Some batches contain several resources. Each slot is bought separately,
+                // with a fresh price, until that batch fits or the policy/funds limit is hit.
+                while (!$this->outputFits($node, $definition)) {
+                    $state = $warehouse->state((int)$policy['bot_user_id'], (int)$target['id']);
+                    if ($state['next_price'] === null) break;
+                    $price = Money::parse($state['next_price']);
+                    $purchase = $this->operation((int)$policy['bot_user_id'], (int)$policy['world_id'], 'world.npc.warehouse.expand');
+                    $this->fund($target, $policy, $purchase, $price, true);
+                    $account = (new EconomyHierarchy($this->db))->accounts($state['finance_node_id'])['budget'];
+                    if ((new BudgetSpending($this->db))->available((int)$account['id'])->compare($price) < 0) break;
+                    $warehouse->expandFunded((int)$policy['bot_user_id'], (int)$target['id'], $purchase);
+                    $logistics->consolidate($policy, $nodes, $purchase, (int)$node->id);
+                }
+                if ($this->outputFits($node, $definition)) break;
+            }
+        }
+        foreach ($nodes as $target) if (NpcInfrastructure::role($target) === 'warehouse') $this->priceStorage((int)$target['id'], $operation);
+    }
+    private function outputFits(Node $node, array $definition): bool
+    {
+        try { ExtractionStorage::nearest($node, $definition, true); return true; }
+        catch (GameError $error) { if ($error->reason !== 'EMPLOYER_STORAGE_FULL') throw $error; return false; }
     }
     private function minimumWage(int $node, array $policy): Money
     {

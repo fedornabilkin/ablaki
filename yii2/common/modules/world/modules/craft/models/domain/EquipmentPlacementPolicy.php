@@ -33,7 +33,7 @@ class EquipmentPlacementPolicy
         catch (\common\modules\world\support\GameError $error) { throw new ConflictHttpException($error->getMessage()); }
         if (isset($node['hierarchy_level'])) {
             if (!\common\modules\world\models\domain\NodeAvailability::activePath($this->db, (int)$node['id'])) throw new ConflictHttpException('Объект или его родитель недоступен для размещения.');
-            if (!in_array($node['node_type'], ['PLOT', 'BUILDING', 'ROOM', 'PLACE'], true)) throw new ConflictHttpException('В этом объекте нет мест для размещения предметов.');
+            if (!in_array($node['node_type'], ['PLOT', 'BUILDING', 'ROOM', 'PLACE', 'CHEST'], true)) throw new ConflictHttpException('В этом объекте нет мест для размещения предметов.');
             if ($furniture) {
                 $exposures = json_decode($furniture['exposures_json'], true);
                 if (!is_array($exposures) || !in_array($slot['exposure_class'], $exposures, true)) throw new ConflictHttpException('Предмет не подходит к условиям этого места.');

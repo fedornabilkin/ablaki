@@ -9,6 +9,21 @@ use Yii;
 
 class NodeController extends LegacyController
 {
+    public function actionPresence($id): array
+    {
+        $this->flags()->requireFlag('world_read');
+        $node = $this->id($id); $user = (int)Yii::$app->user->id;
+        $service = new \common\modules\world\models\domain\WorldPresence(Yii::$app->db);
+        if (Yii::$app->request->isGet) return $service->state($user, $node);
+        if (!Yii::$app->request->isPost) throw new \yii\web\MethodNotAllowedHttpException('Используйте GET или POST.');
+        $input = Yii::$app->request->bodyParams;
+        if (!is_array($input) || !is_int($input['revision'] ?? null) || $input['revision'] < 0
+            || !is_bool($input['heartbeat'] ?? null) || !is_string($input['request_key'] ?? null))
+            throw new GameError('INVALID_COMMAND', 'Обновите данные местоположения.', 422);
+        $payload = ['node_id' => $node, 'revision' => $input['revision'], 'heartbeat' => $input['heartbeat']];
+        return \common\modules\world\models\Command::run($user, $input['request_key'], 'world.presence.visit', $payload,
+            fn() => $service->visit($user, $node, $input['revision'], $input['heartbeat']));
+    }
     public function actionIndex(): array
     {
         if (Yii::$app->request->get('view') === 'home') return $this->page(null);

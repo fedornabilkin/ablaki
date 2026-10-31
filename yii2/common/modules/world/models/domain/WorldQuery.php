@@ -153,6 +153,10 @@ class WorldQuery
         $liveWork = [];
         if ($builds) foreach ((new Query())->from('world_build_work')->where(['build_id' => array_map(static function ($build) { return $build->id; }, $builds), 'ended_at' => null])->all($this->db) as $work)
             $liveWork[$work['build_id']] = ($liveWork[$work['build_id']] ?? 0) + max(0, min(time(), (int)$work['last_seen_at'] + 60) - (int)$work['accounted_at']);
+        $treasuries = (new \common\modules\world\modules\economy\models\domain\TreasuryAvailability($this->db))->forNodes($ids);
+        $presence = new WorldPresence($this->db);
+        $present = $presence->counts($ids);
+        $location = $presence->current($this->policy->userId());
         $result = [];
         foreach ($rows as $row) {
             $owned = $this->policy->owns($row); $detail = $details[$row['id']] ?? [];
@@ -188,6 +192,8 @@ class WorldQuery
                 'coordinates' => ['x' => (int)$row['position_x'], 'y' => (int)$row['position_y']],
                 'footprint' => $row['footprint_json'] === null ? null : json_decode($row['footprint_json'], true, 512, JSON_THROW_ON_ERROR),
                 'child_count' => (int)($descendants[$row['id']]['children'] ?? 0),
+                'treasury_enabled' => $treasuries[$row['id']] ?? false,
+                'presence_count' => $present[$row['id']] ?? 0, 'is_here' => $location['node_id'] === (int)$row['id'],
                 'descendant_count' => (int)($descendants[$row['id']]['amount'] ?? 0),
                 'population_total' => (int)($populations[$row['id']]['amount'] ?? 0),
                 'owned_by_me' => $this->policy->ownsItems($row),

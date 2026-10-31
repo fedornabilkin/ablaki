@@ -18,10 +18,11 @@ class EconomyHierarchy
         for ($depth = 0; $depth < 33; $depth++) {
             $row = (new Query())->from('world_node')->where(['id' => $node])->one($this->db);
             if (!$row) throw new \common\modules\world\support\GameError('NODE_NOT_FOUND', 'Объект не найден.', 404);
-            if (isset($row['hierarchy_level']) || !empty($row['template_id'])) return $node;
             if ($depth === 0) $owner = $row['owner_user_id'];
-            $warehouse = $row['node_type'] === 'BUILDING' && (new Query())->from('world_building')->where(['node_id' => $node, 'building_kind' => 'warehouse'])->exists($this->db);
-            if (!in_array($row['node_type'], ['ROOM', 'BED'], true) && !$warehouse) {
+            $common = isset($row['hierarchy_level']) || !empty($row['template_id']);
+            $warehouse = !$common && $row['node_type'] === 'BUILDING' && (new Query())->from('world_building')->where(['node_id' => $node, 'building_kind' => 'warehouse'])->exists($this->db);
+            $leaf = $common ? \common\modules\world\domain\NodeStructure::isLeaf($row) : (in_array($row['node_type'], ['ROOM', 'BED'], true) || $warehouse);
+            if (!$leaf) {
                 if ($origin !== $node && $row['owner_user_id'] != $owner) throw new \common\modules\world\support\GameError('FINANCIAL_OWNER_MISMATCH', 'Владельцы объекта и его финансового родителя должны совпадать. Обратитесь к администратору.');
                 return $node;
             }

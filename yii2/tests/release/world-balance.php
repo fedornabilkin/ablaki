@@ -11,14 +11,14 @@ use yii\db\Query;
 
 $candidate = EconomyProfile::load();
 EconomyProfile::validate($candidate);
-economyCheck($candidate['objects']['drilling-rig']['price_cr'] === '650.0000' && $candidate['objects']['drilling-rig']['work_seconds'] === 3600, 'rig remains a funded premium goal with one hour of active construction');
+economyCheck($candidate['objects']['drilling-rig']['price_cr'] === '250.0000' && $candidate['objects']['drilling-rig']['work_seconds'] === 3600, 'rig remains a funded premium goal with one hour of active construction');
 economyCheck($candidate['objects']['house']['price_cr'] === '180.0000' && $candidate['objects']['house']['work_seconds'] === 600, 'house is a reachable premium upgrade above the twenty-credit shelter');
 foreach ([0, 21, 2.5, '5'] as $bonus) {
     $invalid = $candidate; $invalid['housing_benefits']['house']['extraction_daily_bonus'] = $bonus;
     try { EconomyProfile::validate($invalid); throw new RuntimeException('Invalid bonus accepted'); }
     catch (InvalidArgumentException $e) { economyCheck(true, 'house bonus rejects invalid quantities'); }
 }
-foreach ([['reward_cr', '0.0000'], ['target_budget_cr', '2.0000'], ['bot_user_id', 9001], ['settle_public_obligations', 1]] as [$field, $value]) {
+foreach ([['reward_cr', '0.0000'], ['target_budget_cr', '1.0000'], ['bot_user_id', 9001], ['settle_public_obligations', 1]] as [$field, $value]) {
     $invalid = $candidate; $invalid['npc'][$field] = $value;
     try { EconomyProfile::validate($invalid); throw new RuntimeException('Invalid NPC policy accepted'); }
     catch (InvalidArgumentException $e) { economyCheck(true, 'NPC profile rejects invalid amounts and identity overrides'); }
@@ -29,8 +29,8 @@ $quote = $publisher->preview($candidate);
 $publisher->publish($candidate, $quote['digest'], 9001, 'New balance acceptance');
 economyCheck($npcTotal() === $beforePublication, 'publishing the new prices and benefits does not create money');
 $policy = (new NpcInfrastructure($db))->policy();
-economyCheck($policy['reward_cr'] === '3.0000' && $policy['target_budget_cr'] === '90.0000' && $policy['idle_budget_cr'] === '0.0000', 'NPC wages and buffers come from the published profile');
-economyCheck(\common\modules\world\models\domain\HiredExtraction::rates(Node::requireOne(['code' => 'npc-bot-mine']))['reward_cr'] === '6.0000', 'NPC drilling work pays six existing credits per batch');
+economyCheck($policy['reward_cr'] === '2.0000' && $policy['target_budget_cr'] === '90.0000' && $policy['idle_budget_cr'] === '0.0000', 'NPC wages and buffers come from the published profile');
+economyCheck(\common\modules\world\models\domain\HiredExtraction::rates(Node::requireOne(['code' => 'npc-bot-mine']))['reward_cr'] === '4.0000', 'NPC drilling work pays four existing credits per batch');
 
 $tx = $db->beginTransaction();
 try {

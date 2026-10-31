@@ -29,7 +29,8 @@ final class WorldSnapshot
                 'extensions' => $node['extensions'] ?? [],
                 'geo' => ['coordinates' => $node['coordinates'], 'footprint' => $node['footprint']],
                 'state' => ['status' => $node['status'], 'visibility' => $node['visibility'], 'revision' => $node['revision'],
-                    'portable' => $node['portable'], 'details' => $node['details'], 'permissions' => $node['permissions'], 'actions' => $node['actions']],
+                    'presence_count' => $node['presence_count'] ?? 0, 'is_here' => $node['is_here'] ?? false,
+                    'portable' => $node['portable'], 'can_contain_nodes' => $node['can_contain_nodes'] ?? true, 'treasury_enabled' => $node['treasury_enabled'] ?? true, 'details' => $node['details'], 'permissions' => $node['permissions'], 'actions' => $node['actions']],
                 'construction' => ['condition' => $details['condition'] ?? null, 'max_condition' => $details['max_condition'] ?? null, 'repair_active' => $details['repair_active'] ?? false],
                 'owner' => $node['owner'] ?? ['id' => null, 'owned_by_me' => $node['owned_by_me'], 'has_finances' => $node['has_finances']], 'map' => $map];
         };

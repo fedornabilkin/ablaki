@@ -90,6 +90,7 @@ class NodeTemplate extends LockedRecord
                 foreach (['map_width', 'map_height'] as $field) if (isset($data[$field]) && (!is_int($data[$field]) || $data[$field] < 1 || $data[$field] > 1000)) throw new \InvalidArgumentException();
                 if (isset($data['storage_capacity']) && (!is_int($data['storage_capacity']) || $data['storage_capacity'] < 1 || $data['storage_capacity'] > 100)) throw new \InvalidArgumentException();
                 if (isset($data['allow_sales']) && !is_bool($data['allow_sales'])) throw new \InvalidArgumentException();
+                if (array_key_exists('treasury_enabled', $data) && !is_bool($data['treasury_enabled'])) throw new \InvalidArgumentException();
             }
         } catch (\Throwable $e) { $this->addError($attribute, 'Укажите корректный JSON; материалы должны существовать в каталоге.'); }
     }
@@ -120,9 +121,9 @@ class NodeTemplate extends LockedRecord
     public function permits(?Node $parent): bool
     {
         if (!$parent) return (int)$this->hierarchy_level === 1;
+        if (!(new domain\CommonNodePolicy())->permitsChild($parent->getAttributes())) return false;
         if (str_starts_with($this->code, 'mini-storage-level-') && !domain\MiniStorage::permitsParent($parent)) return false;
-        if ($this->player_buildable) return (new domain\CommonNodePolicy())->permitsChild($parent->getAttributes())
-            && $this->getAllowedParents()->andWhere(['id' => $parent->template_id])->exists();
+        if ($this->player_buildable) return $this->getAllowedParents()->andWhere(['id' => $parent->template_id])->exists();
         return $parent->status === 'active' && (int)$parent->hierarchy_level + 1 === (int)$this->hierarchy_level
             && $this->getAllowedParents()->andWhere(['id' => $parent->template_id])->exists();
     }

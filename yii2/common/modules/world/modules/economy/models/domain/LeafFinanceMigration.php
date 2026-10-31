@@ -13,16 +13,19 @@ class LeafFinanceMigration
     private $db;
     public function __construct(Connection $db) { $this->db = $db; }
 
-    public function run(): void
+    public function run(string $version = 'v1'): void
     {
-        $nodes = (new Query())->select('s.node_id')->from(['s' => 'economy_subject'])
-            ->innerJoin(['n' => 'world_node'], '[[n.id]]=[[s.node_id]]')->leftJoin(['b' => 'world_building'], '[[b.node_id]]=[[n.id]]')
-            ->where(['or', ['n.node_type' => ['ROOM', 'BED']], ['b.building_kind' => 'warehouse']])->column($this->db);
-        foreach ($nodes as $node) $this->db->transaction(function () use ($node) {
+        $common = isset($this->db->schema->getTableSchema('world_node')->columns['hierarchy_level']);
+        $query = (new Query())->select('n.*')->from(['s' => 'economy_subject'])->innerJoin(['n' => 'world_node'], '[[n.id]]=[[s.node_id]]');
+        if (!$common) $query->leftJoin(['b' => 'world_building'], '[[b.node_id]]=[[n.id]]')
+            ->where(['or', ['n.node_type' => ['ROOM', 'BED']], ['b.building_kind' => 'warehouse']]);
+        $nodes = array_column(array_filter($query->all($this->db), static fn(array $node): bool => !$common || \common\modules\world\domain\NodeStructure::isLeaf($node)), 'id');
+        foreach ($nodes as $node) $this->db->transaction(function () use ($node, $version) {
             $locks = new Locks($this->db); $locks->row('craft_meta', ['id' => 1]); $locks->row('world_registry', ['id' => 1]);
-            $operation = md5('world.leaf-finance.v1:' . $node);
+            $operation = md5('world.leaf-finance.' . $version . ':' . $node);
             if ((new Query())->from('game_operation')->where(['id' => $operation])->exists($this->db)) return;
             $hierarchy = new EconomyHierarchy($this->db); $parent = $hierarchy->financialNode((int)$node);
+            if ($parent === (int)$node) return;
             $old = (new Query())->select('a.*')->from(['a' => 'economy_account'])->innerJoin(['s' => 'economy_subject'], '[[s.id]]=[[a.subject_id]]')
                 ->where(['s.node_id' => $node, 'a.currency' => 'Cr', 'a.role' => ['budget', 'treasury']])->all($this->db);
             if (!$old) return;
@@ -30,6 +33,7 @@ class LeafFinanceMigration
             $accounts = $hierarchy->accounts($parent);
             if (!isset($accounts['budget'], $accounts['treasury'])) $accounts = $hierarchy->provision($parent, $operation);
             foreach ($old as $source) {
+                $source = $locks->row('economy_account', ['id' => $source['id']]);
                 $target = $locks->row('economy_account', ['id' => $accounts[$source['role']]['id']]);
                 $amount = Money::parse((string)$source['amount']); $reserved = Money::parse((string)$source['reserved']);
                 if ($amount->isNegative() || $reserved->isNegative() || $reserved->compare($amount) > 0) throw new \RuntimeException('Invalid legacy leaf account: ' . $source['id']);

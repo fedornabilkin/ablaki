@@ -709,6 +709,9 @@ echo 'Node-context, single-builder and one-click lodging checks passed.' . PHP_E
     $saleInput = ['inventory_id' => $shopState['items'][0]['inventory_id'], 'quantity' => 1];
     $saleQuote = $shop->preview($freshUser, (int)$waterStorage['node_id'], 'buy', $saleInput); $saleKey = bin2hex(random_bytes(16));
     $sold = $shop->execute($freshUser, (int)$waterStorage['node_id'], 'buy', $saleInput, $saleKey, $saleQuote['quote_id'], (array)$saleQuote['expected_revisions']);
+    $saleAccount = (new Query())->select('t.destination_account_id')->from(['t' => 'economy_transfer'])->where(['line_code' => 'harvest-purchase'])->orderBy(['id' => SORT_DESC])->scalar($db);
+    $parentAccounts = (new \common\modules\world\modules\economy\models\domain\EconomyHierarchy($db))->accounts((int)$waterNode->id);
+    economyCheck((int)$saleAccount === (int)$parentAccounts['treasury']['id'] && in_array((int)$waterNode->id, $sold['changed_node_ids'], true), 'mini-storage sale credits its parent and invalidates the parent view');
     economyCheck($shop->execute($freshUser, (int)$waterStorage['node_id'], 'buy', $saleInput, $saleKey, $saleQuote['quote_id'], (array)$saleQuote['expected_revisions']) === $sold && $npcTotal() === $npcMoneyBefore && $shop->state($freshUser, (int)$waterStorage['node_id'])['items'][0]['quantity'] === 1, 'NPC sale transfers real stock and buyer funds exactly once');
     // Reproduce the previously shipped 50-slot NPC layout, including the empty nested warehouse.
     $tx = $db->beginTransaction();
@@ -732,7 +735,12 @@ echo 'Node-context, single-builder and one-click lodging checks passed.' . PHP_E
         $db->createCommand()->update('craft_inventory', ['slot' => 1], ['id' => $saleInput['inventory_id']])->execute();
         $guard = $db->beginTransaction();
         try {
-            (new \common\modules\world\modules\economy\models\domain\BudgetFunding($db))->contribute($npcUser, (int)$redundant->id, \common\modules\world\modules\economy\value\Money::parse('1'), 'Fixture protected money', $layoutOperation);
+            // Recreate an account from before terminal nodes inherited their parent's finances.
+            // Current funding deliberately goes to the parent and cannot make this legacy fixture.
+            $db->createCommand()->insert('economy_subject', ['node_id' => $redundant->id, 'created_at' => time()])->execute();
+            $legacySubject = (int)$db->getLastInsertID();
+            $db->createCommand()->insert('economy_account', ['subject_id' => $legacySubject, 'role' => 'budget', 'currency' => 'Cr', 'amount' => '1.0000', 'reserved' => '0.0000'])->execute();
+            (new \common\services\user\CreditLedger($db))->changeExact($npcUser, '-1.0000', 'fixture', 'Fixture legacy account');
             economyReject(static fn() => $infrastructure->install(9001), 'NPC_STORAGE_REVIEW_REQUIRED');
             economyCheck(Node::requireOne((int)$redundant->id)->status === 'active' && $npcTotal() === $npcMoneyBefore, 'layout correction cannot archive a nested storage containing existing money');
         } finally { $guard->rollBack(); }
@@ -892,11 +900,12 @@ echo 'Node-context, single-builder and one-click lodging checks passed.' . PHP_E
     $npcRefresh();
     economyCheck($layoutAfterLogistics === (new Query())->select(['id', 'storage_id', 'slot', 'item_quantity'])->from('craft_inventory')->where(['user_id' => $npcUser])->andWhere(['>', 'item_quantity', 0])->orderBy('id')->all($db), 'repeated NPC consolidation does not duplicate or reshuffle stock');
     economyCheck($npcTotal() === $npcMoneyBefore && $npcPrivate() === $privateBefore
-        && \common\modules\world\modules\economy\value\Money::parse((string)(new Query())->select('amount')->from('economy_account')->where(['subject_id' => (new Query())->select('id')->from('economy_subject')->where(['node_id' => $waterStorage['node_id']]), 'role' => 'treasury'])->scalar($db))->isZero(), 'maintenance collects NPC sale proceeds without touching private accounts or issuing credits');
+        && \common\modules\world\modules\economy\value\Money::parse((string)(new \common\modules\world\modules\economy\models\domain\EconomyHierarchy($db))->accounts((int)$waterNode->id)['treasury']['amount'])->isZero(), 'maintenance collects NPC sale proceeds without touching private accounts or issuing credits');
+    $waterReservedBefore = \common\modules\world\modules\economy\value\Money::parse((string)(new \common\modules\world\modules\economy\models\domain\EconomyHierarchy($db))->accounts((int)$waterNode->id)['budget']['reserved']);
     economySourceCommand($freshUser, (int)$waterNode->id, 'start', ['action_code' => 'gather-water']);
     $npcRefresh();
     $waterAccounts = (new \common\modules\world\modules\economy\models\domain\EconomyHierarchy($db))->accounts((int)$waterNode->id);
-    economyCheck(\common\modules\world\modules\economy\value\Money::parse($waterAccounts['budget']['reserved'])->decimal() === '1.0000'
+    economyCheck(\common\modules\world\modules\economy\value\Money::parse($waterAccounts['budget']['reserved'])->compare($waterReservedBefore->add(\common\modules\world\modules\economy\value\Money::parse('1'))) === 0
         && (new \common\modules\world\modules\economy\models\domain\BudgetSpending($db))->available((int)$waterAccounts['budget']['id'])->decimal() === '20.0000', 'refill tops up free funds while preserving the accepted wage reserve');
     $db->createCommand()->update('world_mining_worker', ['accounted_at' => time() - 60, 'last_seen_at' => time()], ['user_id' => $freshUser])->execute();
     \common\modules\world\models\Mining::discover();

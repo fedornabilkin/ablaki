@@ -18,6 +18,7 @@ class TemplateSearch extends \yii\base\Model
         $query->andFilterWhere(['hierarchy_level' => $this->hierarchy_level, 'enabled' => $this->enabled])->andFilterWhere(['like', 'name', $this->q]);
         if ($parentId !== null) {
             $parent = Node::requireOne($parentId);
+            if (!(new domain\CommonNodePolicy())->permitsChild($parent->getAttributes())) { $query->andWhere('0=1'); return $provider; }
             $allowed = (new \yii\db\Query())->select('template_id')->from('world_template_parent')->where(['parent_template_id' => $parent->template_id]);
             $query->andWhere(['enabled' => 1, 'player_buildable' => 1])->andWhere(['id' => $allowed]);
             // Equivalent legacy recipes are represented by one canonical catalog entry.

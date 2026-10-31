@@ -57,6 +57,7 @@ class NodeFinanceReport
             $this->flags->requireFlag('world_read');
             $place = (new WorldQuery($this->db, new WorldAccessPolicy($user)))->node($node);
             if (!$place['permissions']['storage']) throw new GameError('FINANCE_OWNER_REQUIRED', 'Финансовый отчёт доступен владельцу объекта.', 403);
+            if (!$place['has_finances']) throw new GameError('PARENT_BUDGET_REQUIRED', 'Откройте финансовый отчёт родительского объекта.', 422);
             $accounts = (new EconomyHierarchy($this->db))->accounts($node);
             $budget = (int)($accounts['budget']['id'] ?? 0); $treasury = (int)($accounts['treasury']['id'] ?? 0); $ids = array_values(array_filter([$budget, $treasury]));
             $base = (new Query())->from('economy_transfer')->where(['or', ['source_account_id' => $ids], ['destination_account_id' => $ids]]);

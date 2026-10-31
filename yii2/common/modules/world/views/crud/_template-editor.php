@@ -26,6 +26,7 @@ $renderBranch = function ($parent) use (&$renderBranch, $branches, $model) {
 };
 $catalog = (new Query())->select(['code', 'name', 'kind'])->from('craft_item')->where(['active' => 1, 'kind' => ['material', 'tool', 'station']])->orderBy(['name' => SORT_ASC])->all();
 $settings = [
+    'treasury_enabled' => ['Казна (только при наличии дочерних объектов)', 'boolean'],
     'climate' => ['Климат', 'string'], 'settlement_kind' => ['Тип поселения', ['village' => 'Деревня', 'city' => 'Город']],
     'population' => ['Население', 'number'], 'plot_limit' => ['Лимит участков', 'number'],
     'building_kind' => ['Тип постройки', ['house' => 'Дом', 'forge' => 'Кузница', 'workshop' => 'Мастерская', 'workroom' => 'Рабочее помещение', 'warehouse' => 'Склад', 'canopy' => 'Навес']],

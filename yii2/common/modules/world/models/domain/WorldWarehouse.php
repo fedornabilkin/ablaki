@@ -77,14 +77,25 @@ class WorldWarehouse
         return $bus->execute($user, $key, 'world.warehouse.expand', $input, $quote, $revisions, function ($payload, $terms, $operation) use ($user, $bus) {
             $p = $this->prepare($user, $payload);
             if (CanonicalJson::encode($p['terms']) !== CanonicalJson::encode($terms)) throw new GameError('WAREHOUSE_CHANGED', 'Условия расширения изменились. Повторите расчёт.');
-            $gap = Money::parse($terms['personal_charge']); $price = Money::parse($terms['price']);
-            if (!$gap->isZero()) (new BudgetFunding($this->db))->contribute($user, $terms['finance_node_id'], $gap, 'Расширение склада', $operation);
-            $accounts = (new EconomyHierarchy($this->db))->provision($terms['finance_node_id'], $operation); $spending = new BudgetSpending($this->db);
-            $hold = $spending->reserve((int)$accounts['budget']['id'], $price, 'Расширение склада', $operation);
-            $spending->pay($hold, $terms['recipient_node_id'], $price, $operation, 'warehouse_expansion');
-            if ($this->db->createCommand()->update('craft_storage', ['capacity' => $terms['capacity_after'], 'revision' => new Expression('[[revision]]+1')], ['id' => $terms['storage_id'], 'revision' => $p['storage']['revision']])->execute() !== 1) throw new GameError('WAREHOUSE_CHANGED', 'Вместимость склада изменилась.');
-            $result = ['changed_node_ids' => array_values(array_unique([$payload['node_id'], $terms['finance_node_id'], $terms['recipient_node_id']])), 'changed_storage_ids' => [$terms['storage_id']], 'amount' => $terms['price'], 'currency' => 'Cr'];
-            $bus->emit($operation, $user, 'world.warehouse.expanded', $result); return $result;
+            return $this->applyExpansion($user, $p, $operation, $bus);
         });
+    }
+    /** Internal NPC purchase under its owner/catalog/registry locks; no personal top-up or free slots. */
+    public function expandFunded(int $user, int $node, string $operation): array
+    {
+        if (!$this->db->getTransaction()) throw new \LogicException('Warehouse purchase requires a locked transaction.');
+        return $this->applyExpansion($user, $this->prepare($user, ['node_id' => $node, 'top_up' => false]), $operation, new CommandBus($this->db, $this->flags));
+    }
+    private function applyExpansion(int $user, array $p, string $operation, CommandBus $bus): array
+    {
+        $terms = $p['terms'];
+        $gap = Money::parse($terms['personal_charge']); $price = Money::parse($terms['price']);
+        if (!$gap->isZero()) (new BudgetFunding($this->db))->contribute($user, $terms['finance_node_id'], $gap, 'Расширение склада', $operation);
+        $accounts = (new EconomyHierarchy($this->db))->provision($terms['finance_node_id'], $operation); $spending = new BudgetSpending($this->db);
+        $hold = $spending->reserve((int)$accounts['budget']['id'], $price, 'Расширение склада', $operation);
+        $spending->pay($hold, $terms['recipient_node_id'], $price, $operation, 'warehouse_expansion');
+        if ($this->db->createCommand()->update('craft_storage', ['capacity' => $terms['capacity_after'], 'revision' => new Expression('[[revision]]+1')], ['id' => $terms['storage_id'], 'revision' => $p['storage']['revision']])->execute() !== 1) throw new GameError('WAREHOUSE_CHANGED', 'Вместимость склада изменилась.');
+        $result = ['changed_node_ids' => array_values(array_unique([$terms['node_id'], $terms['finance_node_id'], $terms['recipient_node_id']])), 'changed_storage_ids' => [$terms['storage_id']], 'amount' => $terms['price'], 'currency' => 'Cr'];
+        $bus->emit($operation, $user, 'world.warehouse.expanded', $result); return $result;
     }
 }
