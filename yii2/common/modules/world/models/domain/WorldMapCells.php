@@ -13,6 +13,8 @@ use common\modules\world\modules\economy\value\Money;
 use common\modules\world\support\CanonicalJson;
 use common\modules\world\support\CommandBus;
 use common\modules\world\support\GameError;
+use common\modules\world\modules\progression\domain\WorldRatingPolicy;
+use common\modules\world\modules\progression\models\domain\WorldRatingAwards;
 use yii\db\Connection;
 use yii\db\Expression;
 use yii\db\Query;
@@ -175,6 +177,14 @@ class WorldMapCells
                     EconomyRuntime::fact($this->db, $user, 'map_cell_explored', count($payload['cells']), $operation);
                 }
                 $this->db->createCommand()->update('world_node', ['revision' => new Expression('[[revision]]+1'), 'updated_at' => time()], ['id' => $payload['node_id']])->execute();
+                $awards = new WorldRatingAwards($this->db);
+                foreach ($payload['cells'] as $i => $point) {
+                    $weight = $action === 'buy' ? WorldRatingPolicy::purchase($terms['pricing']['unit_prices'][$i]['price'])
+                        : WorldRatingPolicy::exploration($point['x'], $point['y']);
+                    $awards->award($user, $action === 'buy' ? 'purchase' : 'explore',
+                        'map:' . $action . ':' . $payload['node_id'] . ':' . $point['x'] . ':' . $point['y'], $operation, [$weight],
+                        ($action === 'buy' ? 'Покупка' : 'Исследование') . ' ячейки ' . $point['x'] . ', ' . $point['y'] . ' объекта №' . $payload['node_id']);
+                }
                 $cells = array_map(static function ($point) use ($action) { return $point + ['state' => $action === 'buy' ? 'open' : 'discovered']; }, $payload['cells']);
                 $result = ['changed_node_ids' => array_values(array_unique([$payload['node_id'], $terms['payer_node_id'] ?? $payload['node_id']])), 'cells' => $cells, 'cell' => $cells[0], 'amount' => $terms['price'], 'currency' => 'Cr'];
                 $bus->emit($operation, $user, 'world.map.' . $action, $result + ['transfer_id' => $transfer]);

@@ -273,6 +273,10 @@ class Crafting
                 (new CraftOperationJournal($this->s))->operation($user, 'craft.completed');
                 \common\modules\world\models\domain\EconomyQuota::consume($this->s->db, $user, 'crafting_hourly', $qty, $this->s->operationId);
                 \common\modules\world\models\domain\EconomyRuntime::fact($this->s->db, $user, 'crafted:' . trim($recipe['code']), $qty, $this->s->operationId);
+                (new \common\modules\world\modules\progression\models\domain\WorldRatingAwards($this->s->db))->award(
+                    $user, 'craft', 'craft:' . $this->s->operationId, $this->s->operationId,
+                    array_fill(0, $qty, \common\modules\world\modules\progression\domain\WorldRatingPolicy::craft((int)$recipe['experience'])),
+                    'Крафт: ' . trim($output['name']) . ' × ' . ((int)$recipe['output_quantity'] * $qty));
                 (new \common\modules\world\support\CommandBus($this->s->db, $flags))->emit($this->s->operationId, $user, 'craft.completed', ['node_id' => $this->s->workspaceNodeId, 'recipe_id' => $id, 'batches' => $qty, 'output' => ['item_id' => (int)$output['id'], 'quantity' => (int)$recipe['output_quantity'] * $qty]]);
             }
         }

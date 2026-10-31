@@ -149,6 +149,10 @@ class WorldConstruction
         $result = (new PremisesDelivery($this->db, $this->flags))->deliver($user, $terms, $transfer, $operation, $tree->get((int)$project['node_id']));
         $result['changed_storage_ids'] = array_values(array_unique(array_merge($changed, $result['changed_storage_ids'])));
         $this->update('world_construction', ['status' => 'completed', 'revision' => (int)$project['revision'] + 1], ['id' => $project['id'], 'revision' => $project['revision']]);
+        (new \common\modules\world\modules\progression\models\domain\WorldRatingAwards($this->db))->award(
+            $user, 'construction', 'build:' . $project['node_id'], $operation,
+            [\common\modules\world\modules\progression\domain\WorldRatingPolicy::construction((int)$terms['config']['duration_seconds'])],
+            'Завершено строительство объекта №' . $project['node_id']);
         $tree->audit($user, 'world.construction.finish', 'Завершение строительства', ['project_id' => (int)$project['id']], ['id' => $project['node_id'], 'room_id' => $result['room_id']], $operation);
         (new CommandBus($this->db, $this->flags))->emit($operation, $user, 'world.construction.finished', $result);
     }

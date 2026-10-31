@@ -54,6 +54,14 @@ checkCraft(count(array_unique(array_map(static function ($b) { return $b['positi
 $cycle = ['ready_at' => 300, 'water_due_at' => 120, 'water_missed' => 0]; $rules = ['water_window_seconds' => 60, 'harvest_window_seconds' => 600];
 $clock = '\common\modules\world\models\domain\CultivationClock';
 checkCraft(!$clock::project($cycle, $rules, 179)['water_missed'] && $clock::project($cycle, $rules, 180)['yield_factor_bps'] === 5000, 'watering exact deadline halves yield');
+checkCraft(!$clock::project($cycle, $rules, 119)['can_water'] && $clock::project($cycle, $rules, 120)['can_water'] && $clock::project($cycle, $rules, 179)['can_water']
+    && !$clock::project($cycle, $rules, 180)['can_water'], 'watering is available only inside its useful window');
+checkCraft(!$clock::project(array_replace($cycle, ['water_missed' => 1]), $rules, 121)['can_water'], 'an already reduced crop cannot charge for useless watering');
+$starterCycle = array_replace($cycle, ['water_due_at' => 150]);
+$starterRules = array_replace($rules, ['water_window_seconds' => 150]);
+checkCraft(!$clock::project($starterCycle, $starterRules, 149)['can_water'] && $clock::project($starterCycle, $starterRules, 150)['can_water']
+    && $clock::project($starterCycle, $starterRules, 299)['yield_factor_bps'] === 10000
+    && !$clock::project($starterCycle, $starterRules, 300)['can_water'], 'starter carrot leaves two and a half minutes for one mid-cycle watering');
 checkCraft($clock::project($cycle, $rules, 300)['state'] === 'ripe' && $clock::project($cycle, $rules, 300)['ready_at'] === 300, 'missed watering never pauses growth');
 checkCraft($clock::project($cycle, $rules, 899)['state'] === 'ripe' && $clock::project($cycle, $rules, 900)['state'] === 'expired', 'harvest exact expiry boundary');
 $warehouse = $db->transaction(function () use ($tree, $site) { return $tree->create(['code' => 'fixture-warehouse', 'slug' => 'fixture-warehouse', 'name' => 'Склад', 'node_type' => 'BUILDING', 'parent_id' => (int)$site['id'], 'owner_user_id' => 9001, 'visibility' => 'private'], ['building_kind' => 'warehouse', 'operational_status' => 'active']); });
@@ -75,6 +83,28 @@ $db->createCommand()->insert('world_expansion_entitlement', ['policy_id' => $pol
 $db->createCommand()->insert('craft_storage', ['identity_key' => 'backpack:user:9001', 'kind' => 'backpack', 'owner_user_id' => 9001, 'capacity' => 20])->execute(); $backpack = (int)$db->getLastInsertID();
 $db->createCommand()->update('craft_inventory', ['storage_id' => $backpack], ['user_id' => 9001])->execute();
 $draft = (new \yii\db\Query())->from('world_crop_revision')->one($db);
+$timingTest = $db->beginTransaction();
+try {
+    $starterId = (new \yii\db\Query())->select('id')->from('world_crop')->where(['code' => 'starter-carrot'])->scalar($db);
+    if (!$starterId) {
+        $db->createCommand()->insert('world_crop', ['code' => 'starter-carrot', 'name' => 'Морковь для начинающих'])->execute();
+        $starterId = (int)$db->getLastInsertID();
+    }
+    $db->createCommand()->update('world_crop_revision', ['status' => 'superseded'], ['crop_id' => $starterId])->execute();
+    $legacy = $draft; unset($legacy['id']);
+    $legacy = array_replace($legacy, ['crop_id' => $starterId, 'version' => 1 + (int)(new \yii\db\Query())->from('world_crop_revision')->where(['crop_id' => $starterId])->max('version', $db),
+        'status' => 'published', 'grow_seconds' => 300, 'water_interval_seconds' => 120, 'water_window_seconds' => 60]);
+    $db->createCommand()->insert('world_crop_revision', $legacy)->execute(); $legacyId = (int)$db->getLastInsertID();
+    $migration = new \m261031_140000_world_starter_watering(['db' => $db]);
+    $migration->up(); $migration->up();
+    $updated = (new \yii\db\Query())->from('world_crop_revision')->where(['crop_id' => $starterId, 'status' => 'published'])->one($db);
+    checkCraft((int)$updated['version'] === $legacy['version'] + 1 && (int)$updated['water_interval_seconds'] === 150 && (int)$updated['water_window_seconds'] === 150, 'starter timing migration publishes once and can be retried');
+    $old = (new \yii\db\Query())->from('world_crop_revision')->where(['id' => $legacyId])->one($db);
+    checkCraft((int)$old['water_interval_seconds'] === 120 && (int)$old['water_window_seconds'] === 60, 'accepted crops retain their original revision and timings');
+    $db->createCommand()->update('world_crop_revision', ['water_interval_seconds' => 160, 'water_window_seconds' => 140], ['id' => $updated['id']])->execute();
+    $migration->up();
+    checkCraft((int)(new \yii\db\Query())->select('water_interval_seconds')->from('world_crop_revision')->where(['id' => $updated['id']])->scalar($db) === 160, 'starter timing migration preserves custom administrator rules');
+} finally { $timingTest->rollBack(); }
 $cultivation = new \common\modules\world\models\domain\WorldCultivation($db, $flags, new \common\modules\world\models\domain\WorldAccessPolicy(9001, true));
 $publication = $cultivation->publication(['code' => 'fixture_carrot', 'name' => 'Морковь', 'reason' => 'Fixture', 'seed_item_id' => (int)$draft['seed_item_id'], 'yield_item_id' => (int)$draft['yield_item_id'], 'water_item_id' => (int)$draft['water_item_id'], 'seed_quantity' => 1, 'yield_quantity' => 4, 'water_quantity' => 1, 'grow_seconds' => 300, 'water_interval_seconds' => 120]);
 function cropCommand($service, $action, $input) {
@@ -106,6 +136,20 @@ checkCraft(!$cultivation->state(9001, $bedId)['dug'], 'sowing consumes preparati
 $db->createCommand()->update('world_crop_cycle', ['water_due_at' => time() - 5], ['id' => $sown['cycle_id']])->execute();
 cropCommand($cultivation, 'water', ['bed_id' => $bedId]);
 checkCraft(!$cultivation->state(9001, $bedId)['cycle']['water_missed'], 'timely watering retains full yield');
+$db->createCommand()->update('world_crop_cycle', ['water_due_at' => time() - 1], ['id' => $sown['cycle_id']])->execute();
+$lateQuote = $cultivation->preview(9001, 'water', ['bed_id' => $bedId]);
+$db->createCommand()->update('world_crop_cycle', ['water_due_at' => time() - 61], ['id' => $sown['cycle_id']])->execute();
+$waterBefore = (int)(new \yii\db\Query())->from('world_crop_action')->where(['cycle_id' => $sown['cycle_id'], 'kind' => 'water'])->count('*', $db);
+try { $cultivation->preview(9001, 'water', ['bed_id' => $bedId]); throw new RuntimeException('Late watering accepted'); }
+catch (\common\modules\world\support\GameError $e) { checkCraft($e->reason === 'WATER_NOT_DUE' && (int)(new \yii\db\Query())->from('world_crop_action')->where(['cycle_id' => $sown['cycle_id'], 'kind' => 'water'])->count('*', $db) === $waterBefore, 'expired watering preview rejects without another action'); }
+$waterInventory = (new \yii\db\Query())->from('craft_inventory')->where(['storage_id' => $backpack])->orderBy('id')->all($db);
+$walletBefore = (new \yii\db\Query())->from('persone')->where(['user_id' => 9001])->one($db);
+try { $cultivation->execute(9001, 'water', ['bed_id' => $bedId], bin2hex(random_bytes(16)), $lateQuote['quote_id'], (array)$lateQuote['expected_revisions']); throw new RuntimeException('Expired watering quote executed'); }
+catch (\common\modules\world\support\GameError $e) {
+    checkCraft($e->reason === 'WATER_NOT_DUE'
+        && $waterInventory === (new \yii\db\Query())->from('craft_inventory')->where(['storage_id' => $backpack])->orderBy('id')->all($db)
+        && $walletBefore === (new \yii\db\Query())->from('persone')->where(['user_id' => 9001])->one($db), 'a quote accepted before the deadline cannot consume water or money after it');
+}
 $db->createCommand()->update('world_crop_cycle', ['water_due_at' => time() - 120, 'ready_at' => time() - 1], ['id' => $sown['cycle_id']])->execute();
 $harvestQuote = $cultivation->preview(9001, 'harvest', ['bed_id' => $bedId]);
 checkCraft($harvestQuote['terms']['output']['quantity'] === 2, 'missed watering grants exactly half of four');

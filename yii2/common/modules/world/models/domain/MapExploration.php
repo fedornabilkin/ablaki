@@ -25,9 +25,9 @@ class MapExploration
     {
         $missing = [];
         foreach (self::predecessors($x, $y) as $point) {
-            if (!(new Query())->from('world_map_cell')->where(['parent_id' => $node, 'state' => ['open', 'discovered']] + $point)->exists($this->db)) $missing[] = $point;
+            if (!(new Query())->from('world_map_cell')->where(['parent_id' => $node, 'state' => 'open'] + $point)->exists($this->db)) $missing[] = $point;
         }
-        if ($missing) throw new \common\modules\world\support\GameError('MAP_PREDECESSOR_REQUIRED', 'Сначала исследуйте соседние ячейки со стороны центра; для диагонали нужны обе стороны.', 422, ['required_cells' => $missing]);
+        if ($missing) throw new \common\modules\world\support\GameError('MAP_PREDECESSOR_REQUIRED', 'Сначала купите соседние ячейки со стороны центра; для диагонали нужны обе стороны.', 422, ['required_cells' => $missing]);
     }
     public function state(array $node, int $user): array
     {
