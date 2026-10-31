@@ -4,6 +4,39 @@ set -Eeuo pipefail
 source_root=$(cd "$(dirname "$0")/../.." && pwd)
 test_root=$(mktemp -d)
 trap 'rm -rf -- "$test_root"' EXIT
+# Real Git regression: a historical CRLF blob with newer eol=lf attributes
+# remains dirty after stash. The target blob must be staged before fast-forward.
+(
+  mkdir "$test_root/compose-eol"
+  cd "$test_root/compose-eol"
+  git init -q
+  git config user.name Fixture
+  git config user.email fixture@example.invalid
+  git config core.autocrlf false
+  printf 'version: "3"\r\nservices: {}\r\n' > docker-compose.yaml
+  git add docker-compose.yaml
+  git commit -qm original
+  printf 'docker-compose.yaml text eol=lf\n' > .gitattributes
+  git add .gitattributes
+  git commit -qm attributes
+  old=$(git rev-parse HEAD)
+  printf 'version: "3"\nservices: {}\n' > docker-compose.yaml
+  git add docker-compose.yaml
+  git commit -qm normalized
+  target=$(git rev-parse HEAD)
+  git checkout -q "$old"
+  printf 'version: "3"\r\nservices: {}\r\n# operator config\r\n' > docker-compose.yaml
+  cp docker-compose.yaml ../operator-compose.yaml
+  git stash push -qm preserve -- docker-compose.yaml
+  git checkout "$target" -- docker-compose.yaml
+  git merge --ff-only "$target" >/dev/null
+  git reset HEAD -- docker-compose.yaml >/dev/null
+  cp ../operator-compose.yaml docker-compose.yaml
+  [[ "$(git rev-parse HEAD)" = "$target" ]]
+  git diff --cached --quiet
+  cmp docker-compose.yaml ../operator-compose.yaml
+)
+printf 'PASS production Compose CRLF preservation with real Git\n'
 mkdir -p "$test_root/bin"
 export TEST_LOG TEST_REPO TEST_FAIL TEST_BRANCH
 cat > "$test_root/bin/git" <<'MOCK'
@@ -397,7 +430,7 @@ case "$1" in
   merge)
     if [[ "$TEST_FAIL" = prep_local_compose ]]; then printf 'repository config\n' > docker-compose.yaml; fi
     ;;
-  stash) ;;
+  stash|checkout|reset) ;;
   diff) [[ "$TEST_FAIL" != prep_runtime_changed ]] ;;
   *) exit 1 ;;
 esac

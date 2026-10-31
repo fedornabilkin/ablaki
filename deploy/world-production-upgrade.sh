@@ -10,6 +10,8 @@ phase='checking the production checkout'
 compose_backup=''
 restore_compose() {
   if [[ -n "$compose_backup" ]]; then
+    # Before a failed fast-forward, discard only our staged target Compose file.
+    git reset HEAD -- docker-compose.yaml >/dev/null
     cp -p -- "$compose_backup" "$repo/docker-compose.yaml"
     [[ "$(sha256sum "$repo/docker-compose.yaml" | cut -d' ' -f1)" = "$compose_checksum" ]]
   fi
@@ -69,6 +71,9 @@ if [[ -n "$checkout_changes" ]]; then
   cp -p -- docker-compose.yaml "$compose_backup"
   # Retain a Git recovery point as well; never restore a guessed server config.
   git -c user.name='Ablaki deploy' -c user.email='deploy@ablaki.ru' stash push -m 'world preparation: preserve production Compose' -- docker-compose.yaml
+  # Old HEAD stores CRLF despite eol=lf attributes, so stash alone cannot make
+  # this path clean. Stage the exact target blob, which fast-forward accepts.
+  git checkout "$expected_sha" -- docker-compose.yaml
 fi
 git merge --ff-only "$expected_sha"
 restore_compose
