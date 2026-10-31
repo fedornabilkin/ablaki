@@ -412,6 +412,7 @@ case "$1" in
       cat >/dev/null
       [[ -f "$TEST_REPO/yii2/common/runtime/financial-maintenance/paused" ]]
       grep -Fxq 'flock -x -w 180 9' "$TEST_LOG"
+      [[ "$(grep -Fc 'docker exec -i abc123 sh' "$TEST_LOG")" = 2 ]]
       [[ "$TEST_FAIL" != prep_conversion_failed ]] || exit 24
       echo '{}' > "$TEST_REPO/yii2/common/runtime/financial-maintenance/verified.json"
     fi

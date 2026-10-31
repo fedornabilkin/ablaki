@@ -53,6 +53,9 @@ curl --fail --silent --show-error --max-time 30 http://127.0.0.1:2180/v1/stat > 
 phase='updating the checked application code'
 git merge --ff-only "$expected_sha"
 [[ "$(git rev-parse HEAD)" = "$expected_sha" ]]
+phase='draining pages rendered with the previous code'
+# Legacy read pages can contain paid-ad widgets. Retire old widget code before DDL.
+docker exec -i "$php_id" sh < "$deploy_root/php-drain.sh"
 phase='preparing engines, world schema and exact credits'
 docker exec -i -e WORLD_PRODUCTION_UPGRADE=confirmed-production-checkout "$php_id" \
   php -d memory_limit=768M < "$repo/deploy/world-production-prepare.php"

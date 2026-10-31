@@ -74,6 +74,15 @@ try {
     if (flock($exclusive, LOCK_EX | LOCK_NB)) throw new RuntimeException('Migration skipped an in-flight writer.');
     touch($directory . '/paused');
     if (\common\services\user\FinancialMaintenance::enterWriter()) throw new RuntimeException('New writer bypassed maintenance.');
+    require dirname(__DIR__, 2) . '/vendor/autoload.php';
+    require dirname(__DIR__, 2) . '/vendor/yiisoft/yii2/Yii.php';
+    Yii::setAlias('@common', dirname(__DIR__, 2) . '/common');
+    Yii::setAlias('@frontend', dirname(__DIR__, 2) . '/frontend');
+    $advertisement = new class extends \frontend\modules\advertising\widgets\ads\AdsWidget {
+        public function __construct() {}
+        protected function getCompany() { throw new LogicException('Paid ad reached the database during maintenance.'); }
+    };
+    if ($advertisement->run() !== '') throw new RuntimeException('Paid advertising was not suppressed on a read page.');
     fwrite($pipes[0], "NESTED\n"); fflush($pipes[0]);
     if (trim((string)fgets($pipes[1])) !== 'NESTED') throw new RuntimeException('An admitted transaction was interrupted.');
     fwrite($pipes[0], "RELEASE\n"); fclose($pipes[0]); unset($pipes[0]);
@@ -83,6 +92,7 @@ try {
     if (!flock($exclusive, LOCK_EX | LOCK_NB)) throw new RuntimeException('Completed writer retained a lease.');
     unlink($directory . '/paused');
     if (\common\services\user\FinancialMaintenance::enterWriter()) throw new RuntimeException('Writer bypassed exclusive migration lock.');
+    if ($advertisement->run() !== '') throw new RuntimeException('Paid advertising bypassed the migration lease.');
     flock($exclusive, LOCK_UN); fclose($exclusive); $exclusive=null;
     if (!\common\services\user\FinancialMaintenance::enterWriter()) throw new RuntimeException('Writer did not resume.');
     \common\services\user\FinancialMaintenance::release();
