@@ -45,7 +45,7 @@ chmod 0644 "$control/paused"
 sync
 docker exec "$php_id" service cron stop
 phase='draining old PHP requests and scheduled commands'
-# A graceful FPM reload keeps the listener available, and retires pre-gate workers.
+# Retire old FPM children without interrupting requests or restarting the master.
 docker exec -i "$php_id" sh < "$deploy_root/php-drain.sh"
 exec 9<"$control/writers.lock"
 flock -x -w 180 9
@@ -61,7 +61,7 @@ docker exec -i -e WORLD_PRODUCTION_UPGRADE=confirmed-production-checkout "$php_i
   php -d memory_limit=768M < "$repo/deploy/world-production-prepare.php"
 [[ -s "$control/verified.json" ]]
 phase='refreshing PHP and checking read access'
-docker kill --signal=USR2 "$php_id" >/dev/null
+docker exec -i "$php_id" sh < "$deploy_root/php-drain.sh"
 ready=false
 for attempt in {1..30}; do
   if curl --fail --silent --show-error --max-time 10 http://127.0.0.1:2180/v1/stat > /dev/null; then ready=true; break; fi

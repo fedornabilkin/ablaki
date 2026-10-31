@@ -139,7 +139,12 @@ jobs:
           <?php
           header('Content-Type: application/json');
           if (PHP_SAPI !== 'fpm-fcgi' || PHP_VERSION !== '8.3.36' || ini_get('session.upload_progress.enabled') !== '0') { http_response_code(500); exit; }
-          if (isset($_GET['hold'])) { file_put_contents('/probe/request-started', '1'); sleep(4); }
+          if (isset($_GET['hold'])) {
+              file_put_contents('/probe/request-started', '1');
+              $until = microtime(true) + 6;
+              while (microtime(true) < $until) { usleep(100000); }
+              file_put_contents('/probe/request-finished', '1');
+          }
           echo json_encode(['php' => PHP_VERSION, 'sapi' => PHP_SAPI, 'upload_progress' => false]);
           PHP
           cat > "$probe/nginx.conf" <<'NGINX'
@@ -154,7 +159,7 @@ jobs:
             docker logs php83-http
             exit 1
           fi
-          for marker in request-started cli-started cli-finished; do touch "$probe/$marker"; chmod 666 "$probe/$marker"; done
+          for marker in request-started request-finished cli-started cli-finished; do touch "$probe/$marker"; chmod 666 "$probe/$marker"; done
           curl --fail --max-time 30 'http://127.0.0.1:18083/?hold=1' > "$RUNNER_TEMP/drained-response.json" &
           request_pid=$!
           for attempt in {1..30}; do [[ ! -s "$probe/request-started" ]] || break; sleep 0.1; done
@@ -165,6 +170,7 @@ jobs:
           test -s "$probe/cli-started"
           docker exec -i php83-fpm sh < deploy/php-drain.sh
           test -s "$probe/cli-finished"
+          test -s "$probe/request-finished"
           wait "$request_pid"
           wait "$cli_pid"
           curl --fail --max-time 5 http://127.0.0.1:18083/
