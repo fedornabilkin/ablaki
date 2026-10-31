@@ -9,8 +9,8 @@ final class NpcStockLogistics
 {
     public function __construct(private readonly Connection $db) {}
 
-    /** Called by maintenance under catalog, NPC owner and world registry locks. */
-    public function consolidate(array $policy, array $nodes, string $operation): void
+    /** Maintenance/source commands hold catalog, NPC owner and world registry locks. */
+    public function consolidate(array $policy, array $nodes, string $operation, ?int $sourceNode = null): void
     {
         if (!$this->db->getTransaction()) throw new \LogicException('NPC logistics requires a locked transaction.');
         $owner = (int)$policy['bot_user_id'];
@@ -18,7 +18,7 @@ final class NpcStockLogistics
         foreach ($nodes as $node) {
             if ((int)$node['owner_user_id'] !== $owner || !NodeAvailability::activePath($this->db, (int)$node['id'])) continue;
             if (NpcInfrastructure::role($node) === 'warehouse') $warehouses[] = (int)$node['id'];
-            if (NpcInfrastructure::role($node) === 'source') $sources[] = (int)$node['id'];
+            if (NpcInfrastructure::role($node) === 'source' && ($sourceNode === null || (int)$node['id'] === $sourceNode)) $sources[] = (int)$node['id'];
         }
         if (!$warehouses || !$sources) return;
         $store = new CraftStorage($this->db); $store->operationId = $operation;

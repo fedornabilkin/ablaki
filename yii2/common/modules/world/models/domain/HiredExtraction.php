@@ -77,6 +77,7 @@ final class HiredExtraction
         if ((new Query())->from('world_source_work')->where(['user_id' => $user])->andWhere(['not', ['active_key' => null]])->andWhere(['like', 'definition_json', '"employment"'])->exists(Node::getDb()))
             throw new GameError('HIRED_BATCH_UNFINISHED', 'Сначала завершите принятую оплачиваемую партию в другом объекте.', 409);
         (new NpcMaintenance(Node::getDb()))->ensureBudget($node, $operation);
+        (new NpcMaintenance(Node::getDb()))->ensureOutputStorage($node, $definition, $operation);
         $p = self::context($node, $user, false, $definition);
         $hold = (new BudgetSpending(Node::getDb()))->reserve($p['budget_id'], Money::parse($p['reward_cr']), 'Оплата партии добычи #' . $node->id, $operation);
         return $definition + ['employment' => ['owner_user_id' => (int)$node->owner_user_id, 'storage_id' => (int)$p['storage']['id'], 'auto_storage' => true, 'budget_id' => $p['budget_id'], 'reward_cr' => $p['reward_cr'], 'commitment_id' => $hold]];

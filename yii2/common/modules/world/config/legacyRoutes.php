@@ -1,6 +1,8 @@
 <?php
 // Stable public addresses; each resource has its own controller.
 return [
+    'GET v1/world/nodes/<id:\d+>/presence' => 'world/api-node/presence',
+    'POST v1/world/nodes/<id:\d+>/presence' => 'world/api-node/presence',
     'GET v1/world' => 'world/api-node/index',
     'GET v1/world/nodes/<id:\d+>/construction' => 'world/api-construction/construction',
     'GET v1/world/nodes/<id:\d+>/building-operation' => 'world/api-building/building-operation',

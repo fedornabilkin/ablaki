@@ -176,11 +176,18 @@ final class WorldSources
                 // Persist earned work when delivery is temporarily blocked, without consuming quota/wear.
                 $transaction = $db->beginTransaction();
                 try {
+                    // A single checkpoint can deliver batches for several people. Journals and
+                    // quota receipts need an operation per batch, independent of its caller.
+                    $delivery = bin2hex(random_bytes(16));
+                    $db->createCommand()->insert('game_operation', [
+                        'id' => $delivery, 'user_id' => $user, 'type' => 'world.source.complete', 'created_at' => time(),
+                    ] + EconomyRuntime::operationContext($db, ['node_id' => $node]))->execute();
                     $place = self::context($node, $user); DrillingRig::requireAccepted($place, $definition); $units = self::tools($user, $definition);
                     $period = \common\modules\world\models\WorldTime::dayWindow($db, time());
                     $used = self::dailyUsed($user, $work['action_code'], $period['start']);
                     if ($used >= ($definition['daily_limit'] ?? 10000)) throw new GameError('SOURCE_DAILY_LIMIT', 'Дневной предел этого источника исчерпан.', 409);
-                    $store = new CraftStorage($db); $store->operationId = $operation; $inventory = new CanonicalInventory($store);
+                    $store = new CraftStorage($db); $store->operationId = $delivery; $inventory = new CanonicalInventory($store);
+                    if (isset($definition['employment'])) (new NpcMaintenance($db))->ensureOutputStorage($place, $definition, $delivery);
                     $target = isset($definition['employment']) ? HiredExtraction::target($place, $user, $definition)
                         : (($definition['output_destination'] ?? null) === 'mini_storage' ? ExtractionStorage::nearest($place, $definition) : (new StorageAccessPolicy($db))->storage($user, (int)$work['target_storage_id'], true));
                     foreach ($definition['output'] as $code => $quantity) {
@@ -190,12 +197,12 @@ final class WorldSources
                         if (!$plan['output_fits']) throw new GameError('SOURCE_STORAGE_FULL', 'Освободите место для добытого ресурса.', 409);
                         $inventory->applyCraft(isset($definition['employment']) ? (int)$definition['employment']['owner_user_id'] : $user, $plan, $target, [], $item, 'source:' . $work['action_code']);
                     }
-                    HiredExtraction::pay($user, (int)$work['id'], $definition, $operation);
+                    HiredExtraction::pay($user, (int)$work['id'], $definition, $delivery);
                     $npc = new NpcMaintenance($db);
-                    if ($target['node_id'] !== null) $npc->priceStorage((int)$target['node_id'], $operation);
-                    $npc->ensureBudget($place, $operation);
-                    EconomyRuntime::fact($db, $user, 'source:' . $work['action_code'], array_sum($definition['output']), $operation);
-                    EconomyQuota::consume($db, $user, 'extraction_daily', 1, $operation);
+                    if ($target['node_id'] !== null) $npc->priceStorage((int)$target['node_id'], $delivery);
+                    $npc->ensureBudget($place, $delivery);
+                    EconomyRuntime::fact($db, $user, 'source:' . $work['action_code'], array_sum($definition['output']), $delivery);
+                    EconomyQuota::consume($db, $user, 'extraction_daily', 1, $delivery);
                     foreach ($units as $unit) (new EquipmentExposure($db))->use($unit['instance_id'], 1, 1, false);
                     $xp = (int)$definition['experience'];
                     if ($xp > 0) {
@@ -205,7 +212,7 @@ final class WorldSources
                         else $db->createCommand()->insert('craft_skill', $where + ['experience' => min(9900, $xp)])->execute();
                     }
                     $db->createCommand()->insert('craft_event', ['user_id' => $user, 'action' => 'source', 'item_id' => $item['id'], 'quantity' => array_sum($definition['output']), 'credit_change' => 0, 'created_at' => time()])->execute();
-                    $db->createCommand()->update('world_source_work', ['status' => 'completed', 'target_storage_id' => (int)$target['id'], 'active_key' => null, 'blocked_code' => null, 'blocked_message' => null, 'completed_at' => time(), 'operation_id' => $operation], ['id' => $work['id']])->execute();
+                    $db->createCommand()->update('world_source_work', ['status' => 'completed', 'target_storage_id' => (int)$target['id'], 'active_key' => null, 'blocked_code' => null, 'blocked_message' => null, 'completed_at' => time(), 'operation_id' => $delivery], ['id' => $work['id']])->execute();
                     $transaction->commit();
                 } catch (GameError $error) {
                     $transaction->rollBack();
@@ -213,6 +220,9 @@ final class WorldSources
                 } catch (\yii\web\HttpException $error) {
                     $transaction->rollBack();
                     $db->createCommand()->update('world_source_work', ['blocked_code' => 'SOURCE_DELIVERY_BLOCKED', 'blocked_message' => 'Проверьте место, ресурсы и доступ к хранилищу.'], ['id' => $work['id']])->execute();
+                } catch (\Throwable $error) {
+                    $transaction->rollBack();
+                    throw $error;
                 }
             }
             if ($status !== 'working') $db->createCommand()->delete('world_mining_worker', ['source_work_id' => $work['id']])->execute();

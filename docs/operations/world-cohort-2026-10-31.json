@@ -1,0 +1,492 @@
+{
+    "profile_version": 4,
+    "simultaneous_players": 5,
+    "common_clock": true,
+    "players": [
+        {
+            "user": 51,
+            "elapsed_days": 19.9,
+            "steps": 55,
+            "total": 55,
+            "missing": [],
+            "built_types": 29,
+            "constructed_objects": 30,
+            "active_objects": 30,
+            "admin": false,
+            "wallet": {
+                "credit": "3.0000",
+                "balance": "0"
+            },
+            "health": 96,
+            "house_daily_limit": 25,
+            "balance_history": [
+                {
+                    "type": "everyday                                          ",
+                    "count": 21,
+                    "change": "21.0000"
+                },
+                {
+                    "type": "resource_wage                                     ",
+                    "count": 407,
+                    "change": "1226.0000"
+                },
+                {
+                    "type": "world_invest                                      ",
+                    "count": 32,
+                    "change": "-1244.0000"
+                }
+            ],
+            "salaries": [
+                {
+                    "kind": "resource_wage",
+                    "quantity": 407,
+                    "amount": "1226.0000"
+                }
+            ],
+            "milestones_days": {
+                "sand-plot": 6.904,
+                "warehouse": 15.16,
+                "water-source": 4.921,
+                "drilling-rig": 18.954,
+                "garden": 0.005,
+                "cookfire": 0.034,
+                "mini-storage-level-6": 7.904,
+                "bedroom": 4.914,
+                "campfire-place": 0.033,
+                "mini-storage-level-5": 7.903,
+                "storage-building": 0.032,
+                "workroom": 6.915,
+                "place": 6.916,
+                "starter-shelter": 0.001,
+                "forge": 1.904,
+                "forest-plot": 0.004,
+                "mini-storage-level-7": 7.906,
+                "workshop-building": 0.907,
+                "starter-site": 0,
+                "clay-plot": 6.162,
+                "house": 4.913,
+                "shelf": 7.9,
+                "mine": 0.003,
+                "small-greenhouse": 10.91,
+                "field-kitchen": 0.037,
+                "trap": 6.914,
+                "garden-bed": 10.912,
+                "stone-plot": 6.155,
+                "meadow-plot": 0.005
+            },
+            "construction_seconds": 7370,
+            "source_work_seconds": 22395,
+            "outcome": {
+                "complete": true,
+                "clock": 1795122063
+            }
+        },
+        {
+            "user": 52,
+            "elapsed_days": 19.9,
+            "steps": 55,
+            "total": 55,
+            "missing": [],
+            "built_types": 29,
+            "constructed_objects": 30,
+            "active_objects": 30,
+            "admin": false,
+            "wallet": {
+                "credit": "3.0000",
+                "balance": "0"
+            },
+            "health": 96,
+            "house_daily_limit": 25,
+            "balance_history": [
+                {
+                    "type": "everyday                                          ",
+                    "count": 21,
+                    "change": "21.0000"
+                },
+                {
+                    "type": "resource_wage                                     ",
+                    "count": 407,
+                    "change": "1226.0000"
+                },
+                {
+                    "type": "world_invest                                      ",
+                    "count": 32,
+                    "change": "-1244.0000"
+                }
+            ],
+            "salaries": [
+                {
+                    "kind": "resource_wage",
+                    "quantity": 407,
+                    "amount": "1226.0000"
+                }
+            ],
+            "milestones_days": {
+                "sand-plot": 6.904,
+                "warehouse": 15.16,
+                "water-source": 4.921,
+                "drilling-rig": 18.954,
+                "garden": 0.005,
+                "cookfire": 0.034,
+                "mini-storage-level-6": 7.904,
+                "bedroom": 4.914,
+                "campfire-place": 0.033,
+                "mini-storage-level-5": 7.903,
+                "storage-building": 0.032,
+                "workroom": 6.915,
+                "place": 6.916,
+                "starter-shelter": 0.001,
+                "forge": 1.904,
+                "forest-plot": 0.004,
+                "mini-storage-level-7": 7.906,
+                "starter-site": 0,
+                "workshop-building": 0.907,
+                "clay-plot": 6.162,
+                "house": 4.913,
+                "shelf": 7.9,
+                "mine": 0.003,
+                "small-greenhouse": 10.91,
+                "field-kitchen": 0.037,
+                "trap": 6.914,
+                "garden-bed": 10.912,
+                "stone-plot": 6.155,
+                "meadow-plot": 0.005
+            },
+            "construction_seconds": 7370,
+            "source_work_seconds": 22395,
+            "outcome": {
+                "complete": true,
+                "clock": 1795122063
+            }
+        },
+        {
+            "user": 53,
+            "elapsed_days": 19.9,
+            "steps": 55,
+            "total": 55,
+            "missing": [],
+            "built_types": 29,
+            "constructed_objects": 30,
+            "active_objects": 30,
+            "admin": false,
+            "wallet": {
+                "credit": "3.0000",
+                "balance": "0"
+            },
+            "health": 96,
+            "house_daily_limit": 25,
+            "balance_history": [
+                {
+                    "type": "everyday                                          ",
+                    "count": 21,
+                    "change": "21.0000"
+                },
+                {
+                    "type": "resource_wage                                     ",
+                    "count": 407,
+                    "change": "1226.0000"
+                },
+                {
+                    "type": "world_invest                                      ",
+                    "count": 32,
+                    "change": "-1244.0000"
+                }
+            ],
+            "salaries": [
+                {
+                    "kind": "resource_wage",
+                    "quantity": 407,
+                    "amount": "1226.0000"
+                }
+            ],
+            "milestones_days": {
+                "sand-plot": 6.904,
+                "warehouse": 15.16,
+                "water-source": 4.921,
+                "drilling-rig": 18.954,
+                "garden": 0.005,
+                "cookfire": 0.034,
+                "mini-storage-level-6": 7.904,
+                "bedroom": 4.914,
+                "campfire-place": 0.033,
+                "mini-storage-level-5": 7.903,
+                "storage-building": 0.032,
+                "workroom": 6.915,
+                "place": 6.916,
+                "starter-shelter": 0.001,
+                "forge": 1.904,
+                "forest-plot": 0.004,
+                "mini-storage-level-7": 7.906,
+                "workshop-building": 0.907,
+                "starter-site": 0,
+                "clay-plot": 6.162,
+                "house": 4.913,
+                "shelf": 7.9,
+                "mine": 0.003,
+                "small-greenhouse": 10.91,
+                "field-kitchen": 0.037,
+                "trap": 6.914,
+                "garden-bed": 10.912,
+                "stone-plot": 6.155,
+                "meadow-plot": 0.005
+            },
+            "construction_seconds": 7370,
+            "source_work_seconds": 22395,
+            "outcome": {
+                "complete": true,
+                "clock": 1795122063
+            }
+        },
+        {
+            "user": 54,
+            "elapsed_days": 19.9,
+            "steps": 55,
+            "total": 55,
+            "missing": [],
+            "built_types": 29,
+            "constructed_objects": 30,
+            "active_objects": 30,
+            "admin": false,
+            "wallet": {
+                "credit": "3.0000",
+                "balance": "0"
+            },
+            "health": 96,
+            "house_daily_limit": 25,
+            "balance_history": [
+                {
+                    "type": "everyday                                          ",
+                    "count": 21,
+                    "change": "21.0000"
+                },
+                {
+                    "type": "resource_wage                                     ",
+                    "count": 407,
+                    "change": "1226.0000"
+                },
+                {
+                    "type": "world_invest                                      ",
+                    "count": 32,
+                    "change": "-1244.0000"
+                }
+            ],
+            "salaries": [
+                {
+                    "kind": "resource_wage",
+                    "quantity": 407,
+                    "amount": "1226.0000"
+                }
+            ],
+            "milestones_days": {
+                "sand-plot": 6.904,
+                "warehouse": 15.16,
+                "water-source": 4.921,
+                "drilling-rig": 18.954,
+                "garden": 0.005,
+                "cookfire": 0.034,
+                "mini-storage-level-6": 7.904,
+                "bedroom": 4.914,
+                "campfire-place": 0.033,
+                "mini-storage-level-5": 7.903,
+                "storage-building": 0.032,
+                "workroom": 6.915,
+                "place": 6.916,
+                "starter-shelter": 0.001,
+                "forge": 1.904,
+                "forest-plot": 0.004,
+                "mini-storage-level-7": 7.906,
+                "workshop-building": 0.907,
+                "starter-site": 0,
+                "clay-plot": 6.162,
+                "house": 4.913,
+                "shelf": 7.9,
+                "mine": 0.003,
+                "small-greenhouse": 10.91,
+                "field-kitchen": 0.037,
+                "trap": 6.914,
+                "garden-bed": 10.912,
+                "stone-plot": 6.155,
+                "meadow-plot": 0.005
+            },
+            "construction_seconds": 7370,
+            "source_work_seconds": 22395,
+            "outcome": {
+                "complete": true,
+                "clock": 1795122063
+            }
+        },
+        {
+            "user": 55,
+            "elapsed_days": 19.9,
+            "steps": 55,
+            "total": 55,
+            "missing": [],
+            "built_types": 29,
+            "constructed_objects": 30,
+            "active_objects": 30,
+            "admin": false,
+            "wallet": {
+                "credit": "3.0000",
+                "balance": "0"
+            },
+            "health": 96,
+            "house_daily_limit": 25,
+            "balance_history": [
+                {
+                    "type": "everyday                                          ",
+                    "count": 21,
+                    "change": "21.0000"
+                },
+                {
+                    "type": "resource_wage                                     ",
+                    "count": 407,
+                    "change": "1226.0000"
+                },
+                {
+                    "type": "world_invest                                      ",
+                    "count": 32,
+                    "change": "-1244.0000"
+                }
+            ],
+            "salaries": [
+                {
+                    "kind": "resource_wage",
+                    "quantity": 407,
+                    "amount": "1226.0000"
+                }
+            ],
+            "milestones_days": {
+                "sand-plot": 6.904,
+                "warehouse": 15.16,
+                "water-source": 4.921,
+                "drilling-rig": 18.954,
+                "garden": 0.005,
+                "cookfire": 0.034,
+                "mini-storage-level-6": 7.904,
+                "bedroom": 4.914,
+                "campfire-place": 0.033,
+                "mini-storage-level-5": 7.903,
+                "storage-building": 0.032,
+                "workroom": 6.915,
+                "place": 6.916,
+                "starter-shelter": 0.001,
+                "forge": 1.904,
+                "forest-plot": 0.004,
+                "mini-storage-level-7": 7.906,
+                "workshop-building": 0.907,
+                "starter-site": 0,
+                "clay-plot": 6.162,
+                "house": 4.913,
+                "shelf": 7.9,
+                "mine": 0.003,
+                "small-greenhouse": 10.91,
+                "field-kitchen": 0.037,
+                "trap": 6.914,
+                "garden-bed": 10.912,
+                "stone-plot": 6.155,
+                "meadow-plot": 0.005
+            },
+            "construction_seconds": 7370,
+            "source_work_seconds": 22395,
+            "outcome": {
+                "complete": true,
+                "clock": 1795122063
+            }
+        }
+    ],
+    "global_money_before": "124138.1753",
+    "global_money_after": "124243.1753",
+    "normal_daily_credit_issuance": "105.0000",
+    "npc_free_budget_at_end": "2090.8981",
+    "fund_stall_count": 0,
+    "checks": {
+        "five_new_players": true,
+        "all_complete": true,
+        "all_within_21_days": true,
+        "no_external_topups": true,
+        "only_daily_credit_issuance": true,
+        "no_negative_wallets_or_accounts": true,
+        "no_npc_fund_stalls": true,
+        "house_benefit_for_everyone": true
+    },
+    "npc_warehouses": [
+        {
+            "id": 60,
+            "capacity": 5,
+            "initial_capacity": 5,
+            "max_capacity": 5
+        },
+        {
+            "id": 62,
+            "capacity": 5,
+            "initial_capacity": 5,
+            "max_capacity": 5
+        },
+        {
+            "id": 64,
+            "capacity": 5,
+            "initial_capacity": 5,
+            "max_capacity": 5
+        },
+        {
+            "id": 66,
+            "capacity": 5,
+            "initial_capacity": 5,
+            "max_capacity": 5
+        },
+        {
+            "id": 68,
+            "capacity": 5,
+            "initial_capacity": 5,
+            "max_capacity": 5
+        },
+        {
+            "id": 70,
+            "capacity": 5,
+            "initial_capacity": 5,
+            "max_capacity": 5
+        },
+        {
+            "id": 72,
+            "capacity": 5,
+            "initial_capacity": 5,
+            "max_capacity": 5
+        },
+        {
+            "id": 74,
+            "capacity": 5,
+            "initial_capacity": 5,
+            "max_capacity": 5
+        },
+        {
+            "id": 76,
+            "capacity": 5,
+            "initial_capacity": 5,
+            "max_capacity": 5
+        },
+        {
+            "id": 78,
+            "capacity": 5,
+            "initial_capacity": 5,
+            "max_capacity": 5
+        },
+        {
+            "id": 80,
+            "capacity": 5,
+            "initial_capacity": 5,
+            "max_capacity": 5
+        },
+        {
+            "id": 81,
+            "capacity": 128,
+            "initial_capacity": 100,
+            "max_capacity": 200
+        }
+    ],
+    "npc_warehouse_purchases": {
+        "count": 28,
+        "amount": "2030.0000"
+    },
+    "observed_minimum_free_npc_budget": 126.975,
+    "observed_peak_player_wallet_total": 1251.5
+}

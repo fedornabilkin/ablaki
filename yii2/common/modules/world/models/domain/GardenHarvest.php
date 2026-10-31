@@ -158,6 +158,8 @@ class GardenHarvest
             $wallet = $this->one('persone', ['user_id' => $user]);
             if (!$wallet || Money::parse((string)$wallet['credit'])->compare($total) < 0) throw new GameError('INSUFFICIENT_CREDIT', 'Не хватает кредитов.');
             (new TreasuryLedger($this->db))->published($garden);
+            $finance = (new \common\modules\world\modules\economy\models\domain\EconomyHierarchy($this->db))->financialNode($garden);
+            $p['terms']['finance_node_id'] = $finance;
             $p['terms']['total'] = $total->decimal();
         }
         return $p + compact('store', 'target', 'item', 'plan');
@@ -197,7 +199,7 @@ class GardenHarvest
                 $changed[] = (int)$p['target']['id'];
             }
             if ($this->db->createCommand()->update('world_node', ['revision' => new Expression('[[revision]]+1')], ['id' => $garden])->execute() !== 1) throw new \RuntimeException('Garden revision failed.');
-            $result = ['changed_node_ids' => [$garden], 'changed_storage_ids' => $changed];
+            $result = ['changed_node_ids' => array_values(array_unique([$garden, $terms['finance_node_id'] ?? $garden])), 'changed_storage_ids' => $changed];
             $bus->emit($operation, $user, 'world.harvest.' . $action, $result); return $result;
         });
     }

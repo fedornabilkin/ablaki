@@ -16,7 +16,8 @@ final class NodePresentationVisitor implements WorldVisitor
             'repair_active' => (bool)($details['repair_active'] ?? false)];
         if ($dto['permissions']['manage']) $common += ['area' => (int)($row['area'] ?? 0), 'exposure_class' => $row['exposure_class'] ?? 'outdoor'];
         $dto['details'] = (object)($common + $details);
-        $dto['has_finances'] = true;
+        $dto['can_contain_nodes'] = !\common\modules\world\domain\NodeStructure::isLeaf($row);
+        $dto['has_finances'] = $dto['can_contain_nodes'];
         $effective = array_merge($row, $details, $common);
         $dto['actions'] = $this->policy->actions($effective + ['depth' => 0], $this->user);
         $dto['extensions'] = $this->policy->extensions($effective);

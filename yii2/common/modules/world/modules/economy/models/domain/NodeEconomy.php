@@ -49,7 +49,7 @@ class NodeEconomy
         $writable = $place['has_finances'] && $place['status'] === 'active' && ($common || !(new \common\modules\world\models\domain\WorldTree($this->db))->isShelter($node)) && WalletSchema::ready($this->db) && $this->flags->capabilities()['world_write'];
         $catchingUp = $owner && isset($accounts['treasury']) && (new TreasuryLedger($this->db))->catchingUp((int)$accounts['treasury']['id'], time());
         return ['node_id' => $node, 'finance_node_id' => (new EconomyHierarchy($this->db))->financialNode($node), 'has_finances' => $place['has_finances'], 'currency' => 'Cr', 'balances' => $balances, 'can_view_finances' => $owner, 'collection_rule' => $rule,
-            'can_invest' => $writable,
+            'treasury_enabled' => $place['treasury_enabled'], 'can_invest' => $writable,
             'can_grant' => $writable && $owner && $balances !== null && !Money::parse($balances['available'])->isZero(),
             'grant_preview' => '/v1/world/nodes/' . $node . '/budget-grant-preview', 'grant_execute' => '/v1/world/nodes/' . $node . '/budget-grant',
             'wallet_ready' => WalletSchema::ready($this->db), 'treasury_catching_up' => $catchingUp, 'collect_available' => $writable && !$catchingUp && $owner && $rule && $rule['status'] === 'published' && $rule['loss_policy'] !== null && $balances['treasury'] !== '0.0000',
@@ -59,6 +59,7 @@ class NodeEconomy
     {
         $place = $this->node($user, $node);
         if (!$place['permissions']['storage']) throw new GameError('FINANCE_OWNER_REQUIRED', 'Обязательства доступны владельцу объекта.', 403);
+        if (!$place['has_finances']) throw new GameError('PARENT_BUDGET_REQUIRED', 'Откройте обязательства родительского объекта.', 422);
         if ($page < 1 || $page > 1000000) throw new GameError('INVALID_PAGINATION', 'Некорректная страница.', 422);
         $accounts = $this->accounts($node); $items = []; $total = 0;
         if (isset($accounts['budget'])) {
