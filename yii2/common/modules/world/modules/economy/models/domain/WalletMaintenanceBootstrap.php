@@ -13,6 +13,8 @@ class WalletMaintenanceBootstrap implements BootstrapInterface
         $app->on(Module::EVENT_BEFORE_ACTION, static function (ActionEvent $event) use ($app) {
             if (!WalletMaintenance::frozen($app->db)) return;
             $route = $event->action->getUniqueId();
+            if ($app instanceof \yii\web\Application && \common\services\user\FinancialMaintenance::readAllowed($route, $app->request->method)) return;
+            if ($app instanceof \yii\console\Application && getenv('WORLD_PRODUCTION_UPGRADE') === 'confirmed-production-checkout') return;
             if ($app instanceof \yii\console\Application && in_array($route, [
                 'world-setup/wallet-status', 'world-setup/wallet-freeze', 'world-setup/wallet-snapshot',
                 'world-setup/wallet-convert', 'world-setup/wallet-verify', 'world-setup/wallet-cancel', 'world-audit/credits',

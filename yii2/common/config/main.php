@@ -6,7 +6,7 @@ use common\modules\forum\Module;
 use yii\redis\Cache;
 
 $config = [
-    'bootstrap' => [\common\modules\world\modules\economy\models\domain\WalletMaintenanceBootstrap::class],
+    'bootstrap' => [\common\services\user\FinancialMaintenanceBootstrap::class, \common\modules\world\modules\economy\models\domain\WalletMaintenanceBootstrap::class],
     'language' => 'ru-RU',
     'charset' => 'UTF-8',
     'aliases' => [
