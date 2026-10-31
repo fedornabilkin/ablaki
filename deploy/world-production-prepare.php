@@ -30,6 +30,14 @@ $db = $app->db;
 if ($db->driverName !== 'mysql' || $db->createCommand('SELECT DATABASE()')->queryScalar() !== 'ablaki'
     || strpos($db->createCommand('SELECT VERSION()')->queryScalar(), '10.1.48-MariaDB') !== 0) throw new RuntimeException('Unexpected target database.');
 if ((int)$db->createCommand('SELECT COUNT(*) FROM information_schema.TRIGGERS WHERE TRIGGER_SCHEMA=DATABASE()')->queryScalar() !== 0) throw new RuntimeException('Review database triggers before preparation.');
+$db->createCommand('SET SESSION lock_wait_timeout=60')->execute();
+$db->createCommand('SET SESSION innodb_lock_wait_timeout=60')->execute();
+// A lost SSH connection may outlive its host flock while docker's PHP keeps running.
+// This connection-scoped lock prevents a second operator from replaying the DDL then.
+if ((int)$db->createCommand("SELECT GET_LOCK('ablaki.world.production-preparation', 0)")->queryScalar() !== 1) throw new RuntimeException('Another production preparation is still running.');
+register_shutdown_function(static function () use ($db): void {
+    try { $db->createCommand("SELECT RELEASE_LOCK('ablaki.world.production-preparation')")->queryScalar(); } catch (Throwable $ignored) {}
+});
 foreach (['WORLD_INSTALL' => 'confirmed-world-install', 'WORLD_WALLET_MAINTENANCE' => '1'] as $key => $value) putenv($key . '=' . $value);
 $progress = static function (string $phase, array $details): void {
     echo json_encode(['phase' => $phase] + $details, JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR), "\n";
