@@ -3,7 +3,7 @@
   "code": "economy-closed-test-v1",
   "status": "candidate",
   "created_on": "2026-10-16",
-  "updated_on": "2026-10-30",
+  "updated_on": "2026-10-31",
   "effective_from": null,
   "activation": "explicit_versioned_publication",
   "currency": "Cr",
@@ -100,11 +100,11 @@
     "max_cells": 25,
     "other_nodes_initial_open": 1,
     "curve": "rings",
-    "base_price_cr": "0.5000",
+    "base_price_cr": "2.0000",
     "bulk_minimum": 3,
     "discount_bps": 500,
     "fee_receiver": "existing_settlement_budget",
-    "outer_ring_multiplier": 10
+    "outer_ring_multiplier": 3
   },
   "construction": {
     "minimum_budgets": true,

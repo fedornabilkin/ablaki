@@ -62,7 +62,8 @@ if (!$db->schema->getTableSchema('craft_command',true)) {
 // Legacy schema shape, including unique output index and pre-existing inventory.
 $tables=[
     'user'=>['id'=>'pk','username'=>'string'],
-    'persone'=>['id'=>'pk','user_id'=>'integer','credit'=>'decimal(18,5)','balance'=>'decimal(18,5)'],
+    'persone'=>['id'=>'pk','user_id'=>'integer','credit'=>'decimal(18,5)','balance'=>'decimal(18,5)','rating'=>'decimal(20,5) NOT NULL DEFAULT 0'],
+    'history_rating'=>['id'=>'pk','user_id'=>'integer','rating'=>'decimal(20,5)','rating_up'=>'decimal(20,5)','type'=>'string','comment'=>'string','created_at'=>'integer'],
     'history_balance'=>['id'=>'pk','user_id'=>'integer','credit'=>'decimal(18,5)','balance'=>'decimal(18,5)','credit_up'=>'decimal(18,5)','balance_up'=>'decimal(18,5)','type'=>'string','comment'=>'string','created_at'=>'integer'],
     'craft_category'=>['id'=>'pk','name'=>'string NOT NULL','description'=>'text'],
     'craft_item'=>['id'=>'pk','name'=>'string NOT NULL UNIQUE','description'=>'text','category_id'=>'integer NOT NULL','active'=>'integer DEFAULT 0'],

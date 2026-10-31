@@ -593,6 +593,8 @@ try {
         economyReject(static function () use ($map, $siteId, $x, $y) { $map->requirePredecessors($siteId, $x, $y); }, 'MAP_PREDECESSOR_REQUIRED');
         foreach ($needed as $index => $point) {
             $db->createCommand()->insert('world_map_cell', ['parent_id' => $siteId] + $point + ['state' => 'discovered', 'price' => '0', 'created_at' => time(), 'updated_at' => time()])->execute();
+            economyReject(static function () use ($map, $siteId, $x, $y) { $map->requirePredecessors($siteId, $x, $y); }, 'MAP_PREDECESSOR_REQUIRED');
+            $db->createCommand()->update('world_map_cell', ['state' => 'open'], ['parent_id' => $siteId] + $point)->execute();
             if (count($needed) === 2 && $index === 0) economyReject(static function () use ($map, $siteId, $x, $y) { $map->requirePredecessors($siteId, $x, $y); }, 'MAP_PREDECESSOR_REQUIRED');
         }
         $map->requirePredecessors($siteId, $x, $y);

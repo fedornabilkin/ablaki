@@ -183,6 +183,12 @@ class Build extends Record
         if (!$cancel && !$this->isRepair()) {
             BuildFacilities::provision($node, $operation);
             domain\EconomyRuntime::fact(self::getDb(), (int)$this->owner_user_id, 'built:' . $node->template->code, 1, $operation);
+            if ($node->template->code !== 'starter-site') {
+                (new \common\modules\world\modules\progression\models\domain\WorldRatingAwards(self::getDb()))->award(
+                    (int)$this->owner_user_id, 'construction', 'build:' . $node->id, $operation,
+                    [\common\modules\world\modules\progression\domain\WorldRatingPolicy::construction((int)$this->required_seconds)],
+                    'Завершено строительство объекта №' . $node->id);
+            }
         }
     }
     public static function listing(int $user, array $filter): \yii\data\ActiveDataProvider

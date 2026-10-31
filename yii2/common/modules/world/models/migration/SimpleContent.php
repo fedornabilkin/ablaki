@@ -17,7 +17,7 @@ final class SimpleContent
             $db->createCommand()->insert('world_crop_revision', ['crop_id' => $id, 'version' => 1, 'status' => 'published',
                 'seed_item_id' => $seed['id'], 'yield_item_id' => $carrot['id'], 'water_item_id' => $water['id'],
                 'seed_quantity' => 1, 'yield_quantity' => 4, 'water_quantity' => 1, 'grow_seconds' => 300,
-                'water_interval_seconds' => 120, 'water_window_seconds' => 60, 'harvest_window_seconds' => 86400,
+                'water_interval_seconds' => 150, 'water_window_seconds' => 150, 'harvest_window_seconds' => 86400,
                 'config_json' => '{}', 'published_at' => time()])->execute();
         }
         if (!(new Query())->from('craft_recipe')->where(['code' => 'starter-carrot-seeds'])->exists($db)) {
