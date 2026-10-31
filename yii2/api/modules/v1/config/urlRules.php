@@ -36,7 +36,7 @@ return [
     [
         'class' => UrlRule::class,
         'controller' => ['v1/history'],
-        'only' => ['index', 'create', 'balance', 'balance-type', 'rating', 'rating-type'],
+        'only' => ['index', 'balance', 'balance-type', 'rating', 'rating-type'],
         'pluralize' => false,
         'extraPatterns' => [
             'GET balance' => 'balance',
@@ -51,7 +51,8 @@ return [
         'pluralize' => false,
         'only' => ['everyday'],
         'extraPatterns' => [
-            'GET everyday' => 'everyday',
+            'POST everyday' => 'everyday',
+            'GET everyday' => 'everyday', // Deprecated compatibility; SPA uses POST.
         ],
     ],
     [
@@ -71,7 +72,8 @@ return [
         'pluralize' => false,
         'only' => ['everyday', 'recipients', 'fund', 'my-fund', 'available'],
         'extraPatterns' => [
-            'GET everyday' => 'everyday',
+            'POST everyday' => 'everyday',
+            'GET everyday' => 'everyday', // Deprecated compatibility; SPA uses POST.
             'GET recipients' => 'recipients',
             'GET fund' => 'fund',
             'GET my-fund' => 'my-fund',

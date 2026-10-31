@@ -10,9 +10,7 @@ class BuildApiController extends CoreController
 {
     public function actionActive(): array
     {
-        $work = BuildWork::find()->alias('w')->innerJoin(['a' => 'world_builder'], 'a.work_id=w.id')
-            ->where(['a.user_id' => (int)Yii::$app->user->id, 'w.ended_at' => null])->one();
-        return ['build' => $work ? $work->build->toArray() : null];
+        return ['build' => (new \common\modules\world\models\domain\WorldPlayerRead(Yii::$app->db))->activeConstruction((int)Yii::$app->user->id)];
     }
     public function actionIndex(): array { return $this->listing(Build::listing((int)Yii::$app->user->id, Yii::$app->request->queryParams)); }
     public function actionView($id): array

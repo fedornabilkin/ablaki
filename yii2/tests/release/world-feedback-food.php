@@ -86,6 +86,15 @@ try {
 $economyController = new \common\modules\world\apiControllers\EconomyApiController('economy', $app->getModule('world'));
 $rootIdentity = (new Query())->from('world_node')->where(['id' => EconomyRuntime::world($db)])->one($db);
 $economyState = $economyController->actionIndex();
+$app->request->setQueryParams(['include' => 'character']);
+$characterScreen = $economyController->actionIndex();
+$playerRead = new \common\modules\world\models\domain\WorldPlayerRead($db);
+economyCheck($characterScreen['contract_version'] === 1 && $characterScreen['economy']['world_instance'] === $economyState['world_instance']
+    && $characterScreen['character'] === $playerRead->overview((int)$app->user->id), 'character overview combines the existing private projections');
+$app->request->setQueryParams(['include' => ['character']]);
+economyReject(static function () use ($economyController) { $economyController->actionIndex(); }, 'INVALID_INCLUDE');
+$app->request->setQueryParams([]);
+
 economyCheck($economyState['world_instance'] === $rootIdentity['id'] . ':' . $rootIdentity['created_at'], 'economy state identifies the active world instance independently of the current page');
 $identityTx = $db->beginTransaction();
 try {

@@ -30,7 +30,6 @@ return array_merge([
     'POST v1/world/builds/<id:\d+>/<action:start|heartbeat|stop|cancel>' => 'world/build-api/<action>',
     'GET v1/world/start' => 'world/start-api/index',
     'POST v1/world/start' => 'world/start-api/create',
-    'OPTIONS v1/world/<path:.*>' => 'world/object-api/options',
     'craft/<controller:[\w-]+>/<action:[\w-]+>' => 'world/craft/<controller>/<action>',
     'craft/<controller:[\w-]+>' => 'world/craft/<controller>/index',
 ], require __DIR__ . '/legacyRoutes.php');

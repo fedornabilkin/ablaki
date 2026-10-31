@@ -13,6 +13,8 @@
 
 ## Маршруты
 
+С 2026-10-31 история поддерживает `include=types`: `{contract_version:1, history:{items,_meta,_links}, filters:{types:[{type,count}]}}`. Страница истории получает записи и собственные типы одним запросом. Без `include` формат не меняется; отдельные `*-type` сохранены. Подробности — [общие чтения API](api-consolidation.md).
+
 | Маршрут | Доступ и поиск |
 | --- | --- |
 | `GET v1/users`, `GET v1/users/last` | Публично. `q` по логину; сортировка `id`, `created_at`, `username`. |

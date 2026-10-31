@@ -23,7 +23,8 @@ return [
             'GET recent' => 'recent',
             'GET summary' => 'summary',
             'GET remove' => 'remove',
-            'GET start/{id}' => 'start',
+            'POST start/{id}' => 'start',
+            'GET start/{id}' => 'start', // Deprecated compatibility; SPA uses POST.
             'POST play/{id}' => 'play',
             'POST double/{id}' => 'double',
         ],

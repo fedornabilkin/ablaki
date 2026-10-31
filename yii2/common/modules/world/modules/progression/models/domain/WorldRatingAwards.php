@@ -22,11 +22,13 @@ final class WorldRatingAwards
         $locks = new Locks($this->db);
         $person = $locks->row('persone', ['user_id' => $user]);
         if (!$person) throw new \RuntimeException('Rating account missing.');
+        // Legacy profiles may have no rating yet; calculation and receipt share the same zero baseline.
+        $ratingBefore = $person['rating'] ?? 0;
         // Current reads also work after an earlier snapshot under MySQL REPEATABLE READ.
         if ($locks->row('world_rating_award', ['user_id' => $user, 'source_key' => $source])) return;
         $where = ['user_id' => $user, 'action' => $action];
         $track = $locks->row('world_rating_progress', $where);
-        $next = WorldRatingPolicy::award((float)$person['rating'], (float)($track['peak_rating'] ?? 0), (int)($track['completed_units'] ?? 0), $weights);
+        $next = WorldRatingPolicy::award((float)$ratingBefore, (float)($track['peak_rating'] ?? 0), (int)($track['completed_units'] ?? 0), $weights);
         $values = ['completed_units' => $next['completed'], 'peak_rating' => $next['peak']];
         $write = $track ? $this->db->createCommand()->update('world_rating_progress', $values, $where)
             : $this->db->createCommand()->insert('world_rating_progress', $where + $values);
@@ -44,7 +46,7 @@ final class WorldRatingAwards
             'user_id' => $user, 'action' => $action, 'source_key' => $source, 'operation_id' => $operation,
             'policy_version' => WorldRatingPolicy::VERSION, 'units' => count($weights),
             'weights_json' => json_encode($weights, JSON_THROW_ON_ERROR),
-            'rating_before' => $person['rating'], 'rating_after' => $next['rating'], 'rating_delta' => $next['delta'],
+            'rating_before' => $ratingBefore, 'rating_after' => $next['rating'], 'rating_delta' => $next['delta'],
             'created_at' => time(),
         ])->execute() !== 1) throw new \RuntimeException('Rating receipt write failed.');
     }

@@ -23,6 +23,36 @@ economyCheck(WorldRatingPolicy::award(0, 10, 100, [1])['delta'] < WorldRatingPol
 economyCheck(WorldRatingPolicy::award(1000000, 1000000, 1000000, [0.1])['delta'] === 0.0, 'rounding does not mint a minimum reward forever');
 economyCheck(WorldRatingPolicy::award(2.1234567, 0, 0, [0])['rating'] === 2.1234567, 'zero weight cannot change an existing game rating through rounding');
 
+foreach ([[0.1, 0.05], [0.0, 0.0]] as [$weight, $expectedRating]) {
+    $tx = $db->beginTransaction();
+    try {
+        $user = $freshUser;
+        $db->createCommand()->update('persone', ['rating' => null], ['user_id' => $user])->execute();
+        $db->createCommand()->delete('world_rating_progress', ['user_id' => $user, 'action' => 'craft'])->execute();
+        $wallet = (new Query())->from('persone')->where(['user_id' => $user])->one($db);
+        $historyCount = (int)(new Query())->from('history_rating')->where(['user_id' => $user])->count('*', $db);
+        $source = 'test:null-rating:' . ($weight > 0 ? 'gain' : 'zero');
+        $awards = new WorldRatingAwards($db);
+        $awards->award($user, 'craft', $source, bin2hex(random_bytes(16)), [$weight], 'First rating');
+        $receipt = (new Query())->from('world_rating_award')->where(['user_id' => $user, 'source_key' => $source])->one($db);
+        $after = (new Query())->from('persone')->where(['user_id' => $user])->one($db);
+        $progress = (new Query())->from('world_rating_progress')->where(['user_id' => $user, 'action' => 'craft'])->one($db);
+        economyCheck($receipt['rating_before'] !== null && (float)$receipt['rating_before'] === 0.0
+            && (float)$receipt['rating_after'] === $expectedRating && (float)$receipt['rating_delta'] === $expectedRating
+            && (float)$after['rating'] === $expectedRating && (int)$progress['completed_units'] === 1,
+            'NULL legacy rating is recorded as zero for a ' . ($weight > 0 ? 'positive' : 'zero') . ' reward');
+        economyCheck($after['credit'] === $wallet['credit'] && $after['balance'] === $wallet['balance']
+            && (int)(new Query())->from('history_rating')->where(['user_id' => $user])->count('*', $db) === $historyCount + ($weight > 0 ? 1 : 0),
+            'first rating preserves currency and records only an actual gain in history');
+        $awards->award($user, 'craft', $source, bin2hex(random_bytes(16)), [$weight], 'Replay');
+        economyCheck((new Query())->from('persone')->where(['user_id' => $user])->one($db) === $after
+            && (new Query())->from('world_rating_progress')->where(['user_id' => $user, 'action' => 'craft'])->one($db) === $progress
+            && (int)(new Query())->from('world_rating_award')->where(['user_id' => $user, 'source_key' => $source])->count('*', $db) === 1
+            && (int)(new Query())->from('history_rating')->where(['user_id' => $user])->count('*', $db) === $historyCount + ($weight > 0 ? 1 : 0),
+            'replaying the first rating source cannot duplicate its reward, progress or history');
+    } finally { $tx->rollBack(); }
+}
+
 $pricing = ['base_price' => '2.0000', 'outer_ring_multiplier' => 3, 'bulk_minimum' => 3, 'discount_bps' => 500];
 $price = WorldMapCells::purchasePricing($pricing, [['x' => 1, 'y' => 0], ['x' => 2, 'y' => 0], ['x' => -2, 'y' => -2]]);
 economyCheck($price['gross_total'] === '26.0000' && $price['total'] === '24.7000', 'ring prices and package discount agree for positive and negative coordinates');

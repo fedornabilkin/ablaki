@@ -77,7 +77,7 @@ jobs:
           # PHP 8.3 supports the MySQL 8 default authentication plugin.
           check_isolated() {
             unset ABL_TEST_DSN
-            suites="auth-response frontend-lists frontend-api-routing game-overview five-game forum-gift forum-install daily-reward exchange-refund topic68-economy worker-barrier-test world-economy-gameplay world-feedback-food classic-craft-install world-economy-profile user-activity user-cleanup"
+            suites="api-route-catalog world-player-read auth-response frontend-lists frontend-api-routing game-overview five-game forum-gift forum-install daily-reward exchange-refund topic68-economy worker-barrier-test world-economy-gameplay world-feedback-food classic-craft-install world-economy-profile user-activity user-cleanup"
             if [[ ! -f tests/release/world-economy-gameplay.php ]]; then
               suites=${suites//world-economy-gameplay/}
               suites=${suites//world-feedback-food/}
