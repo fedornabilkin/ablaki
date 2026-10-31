@@ -1,5 +1,6 @@
 <?php
 require dirname(__DIR__, 2) . '/common/modules/world/modules/economy/value/Money.php';
+require dirname(__DIR__, 2) . '/common/modules/world/modules/economy/value/LegacyCreditConversion.php';
 require dirname(__DIR__, 2) . '/common/modules/world/modules/economy/value/TestCreditConversion.php';
 
 use common\modules\world\modules\economy\value\Money;

@@ -6,7 +6,7 @@ use Yii;
 /** Read-only, explicitly invoked reports. No credentials, auth rows or player messages are emitted. */
 class WorldAuditController extends \yii\console\Controller
 {
-    private const TABLES = ['user', 'persone', 'history_balance', 'craft_item', 'craft_recipe', 'craft_inventory', 'craft_container', 'craft_capacity', 'craft_slot_lease', 'craft_tool_wear', 'craft_skill', 'craft_known', 'craft_command'];
+    private const TABLES = ['user', 'persone', 'history_balance', 'history_rating', 'craft_item', 'craft_recipe', 'craft_inventory', 'craft_container', 'craft_capacity', 'craft_slot_lease', 'craft_tool_wear', 'craft_skill', 'craft_known', 'craft_command'];
     private function output(array $data): int
     {
         $this->stdout(json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT | JSON_THROW_ON_ERROR) . "\n");

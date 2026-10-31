@@ -9,6 +9,10 @@ name: Backend CI and deployment
       - master
   workflow_dispatch:
     inputs:
+      production_audit:
+        description: Read-only production schema/runtime preflight (no deployment)
+        type: boolean
+        default: false
       target:
         description: Deployment environment (production requires master)
         type: choice
@@ -36,6 +40,7 @@ permissions:
 jobs:
   minimum:
     name: Minimum release checks
+    if: ${{ !inputs.production_audit }}
     runs-on: ubuntu-22.04
     timeout-minutes: 6
     steps:
@@ -92,12 +97,13 @@ jobs:
           if [[ -f tests/release/world-economy-profile.php ]]; then php tests/release/world-economy-profile.php; fi
   full_before:
     name: Full checks before production
-    if: ${{ !(github.ref == 'refs/heads/test' || inputs.target == 'test') }}
+    if: ${{ !inputs.production_audit && !(github.ref == 'refs/heads/test' || inputs.target == 'test') }}
     uses: ./.github/workflows/backend-full.yml
     with:
       target: production
   runtime-image:
     name: PHP 8.3.36 FPM and Composer images
+    if: ${{ !inputs.production_audit }}
     runs-on: ubuntu-22.04
     timeout-minutes: 15
     steps:
@@ -275,3 +281,47 @@ jobs:
     uses: ./.github/workflows/backend-full.yml
     with:
       target: test
+  production_audit:
+    name: Read-only production preflight
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.production_audit }}
+    runs-on: ubuntu-22.04
+    timeout-minutes: 5
+    environment: production-backend
+    concurrency:
+      group: production-backend
+      cancel-in-progress: false
+    env:
+      DEPLOY_HOST: ${{ secrets.BACKEND_DEPLOY_HOST }}
+      DEPLOY_PORT: ${{ secrets.BACKEND_DEPLOY_PORT }}
+      DEPLOY_USER: ${{ secrets.BACKEND_DEPLOY_USER }}
+      DEPLOY_SSH_KEY: ${{ secrets.BACKEND_DEPLOY_SSH_KEY }}
+      DEPLOY_KNOWN_HOSTS: ${{ secrets.BACKEND_DEPLOY_KNOWN_HOSTS }}
+    steps:
+      - uses: actions/checkout@v7
+      - name: Inspect the existing checkout and database without deploying
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          [[ "$DEPLOY_HOST" =~ ^[A-Za-z0-9][A-Za-z0-9._-]*$ ]]
+          [[ "$DEPLOY_USER" =~ ^[a-z_][a-z0-9_-]*$ ]]
+          [[ "$DEPLOY_PORT" =~ ^[0-9]{1,5}$ ]]
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$DEPLOY_SSH_KEY" | tr -d '\r' > "$HOME/.ssh/deploy_key"
+          printf '%s\n' "$DEPLOY_KNOWN_HOSTS" | tr -d '\r' > "$HOME/.ssh/known_hosts"
+          chmod 600 "$HOME/.ssh/deploy_key" "$HOME/.ssh/known_hosts"
+          options=(-i "$HOME/.ssh/deploy_key" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=yes -o UserKnownHostsFile="$HOME/.ssh/known_hosts")
+          mkdir -p "$RUNNER_TEMP/production-audit"
+          ssh "${options[@]}" -p "$DEPLOY_PORT" "$DEPLOY_USER@$DEPLOY_HOST" 'cd /var/www/api.ablakin.ru && test "$(pwd -P)" = /var/www/api.ablakin.ru && git -c safe.directory=/var/www/api.ablakin.ru rev-parse HEAD && docker-compose ps && docker-compose exec -T php php -v' > "$RUNNER_TEMP/production-audit/runtime.txt"
+          ssh "${options[@]}" -p "$DEPLOY_PORT" "$DEPLOY_USER@$DEPLOY_HOST" 'cd /var/www/api.ablakin.ru && test "$(pwd -P)" = /var/www/api.ablakin.ru && docker-compose exec -T php php' < deploy/world-production-inspect.php > "$RUNNER_TEMP/production-audit/database.json"
+          python3 - "$RUNNER_TEMP/production-audit/database.json" <<'PY'
+          import json,sys
+          report=json.load(open(sys.argv[1]))
+          assert report['read_only'] is True
+          print(json.dumps({k: report[k] for k in ['read_only','php','server','row_counts','wallet_guard_available']}))
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: production-read-only-preflight
+          path: ${{ runner.temp }}/production-audit
+          retention-days: 7

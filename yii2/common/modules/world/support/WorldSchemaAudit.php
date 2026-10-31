@@ -8,8 +8,25 @@ use yii\db\Query;
 /** Metadata only: neither credentials nor application row contents belong in this report. */
 class WorldSchemaAudit
 {
+    private const INSTALL_TABLES = ['user', 'persone', 'history_balance', 'history_rating', 'craft_meta', 'craft_category', 'craft_item', 'craft_recipe', 'craft_inventory', 'craft_command'];
     private $db;
     public function __construct(Connection $db) { $this->db = $db; }
+    /** Check legacy prerequisites before even creating the migration journal. */
+    public function installationIssues(): array
+    {
+        $issues = [];
+        foreach (self::INSTALL_TABLES as $table) {
+            $schema = $this->db->schema->getTableSchema($table, true);
+            if (!$schema || !$schema->getColumn('id')) {
+                $issues[] = 'Missing legacy prerequisite: ' . $table . '.id';
+                continue;
+            }
+            if ($this->db->driverName !== 'mysql') continue;
+            $engine = $this->db->createCommand('SELECT ENGINE FROM information_schema.TABLES WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME=:table', [':table' => $table])->queryScalar();
+            if (strtolower((string)$engine) !== 'innodb') $issues[] = 'InnoDB required: ' . $table;
+        }
+        return $issues;
+    }
     private function comparable(string $type): string
     {
         $type = strtolower(trim($type));
@@ -32,8 +49,11 @@ class WorldSchemaAudit
             foreach ($db->schema->getTableIndexes($table, true) as $index) $indexes[] = ['name' => $index->name, 'columns' => $index->columnNames, 'unique' => $index->isUnique];
             $entry = ['columns' => $columns, 'indexes' => $indexes, 'foreign_keys' => $schema->foreignKeys];
             if ($db->driverName === 'mysql') {
-                $entry['engine'] = $db->createCommand('SELECT ENGINE FROM information_schema.TABLES WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME=:table', [':table' => $table])->queryScalar();
-                if (strtolower((string)$entry['engine']) !== 'innodb') $result['issues'][] = ['code' => 'NON_TRANSACTIONAL_ENGINE', 'table' => $table, 'engine' => $entry['engine']];
+                $metadata = $db->createCommand('SELECT TABLE_TYPE, ENGINE FROM information_schema.TABLES WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME=:table', [':table' => $table])->queryOne();
+                $entry['table_type'] = $metadata['TABLE_TYPE'] ?? null;
+                $entry['engine'] = $metadata['ENGINE'] ?? null;
+                // Compatibility views have no engine; their underlying world tables are audited separately.
+                if ($entry['table_type'] !== 'VIEW' && strtolower((string)$entry['engine']) !== 'innodb') $result['issues'][] = ['code' => 'NON_TRANSACTIONAL_ENGINE', 'table' => $table, 'engine' => $entry['engine']];
             }
             foreach ($schema->foreignKeys as $name => $definition) {
                 $parentName = $definition[0]; $parent = $db->schema->getTableSchema($parentName);
@@ -55,6 +75,7 @@ class WorldSchemaAudit
         $result['installed_schema_version'] = $registry ? (int)$registry['schema_version'] : null;
         $result['registry_flags'] = $registry ? array_intersect_key($registry, array_flip(['world_read', 'world_write', 'storage_v2', 'economy_tick'])) : [];
         $result['installation_record_complete'] = !$missing && $registry && (int)$registry['schema_version'] === WorldFlags::SCHEMA_VERSION;
+        $result['installation_prerequisites'] = $this->installationIssues();
         $result['note'] = 'Observed metadata and migration history, not a gameplay activation certificate. No DDL lock: do not run concurrently with installation. FK_TYPE_REVIEW requires review, not automatic type conversion. Missing expected constraints require migration acceptance; existing FK metadata alone cannot prove their completeness.';
         return $result;
     }
