@@ -6,6 +6,8 @@ if (!is_string($dsn) || !preg_match('/^(mysql:host=127\.0\.0\.1;port=3306|pgsql:
 }
 $pdo = new PDO($dsn, 'ablakin_ci', 'ci-only-password', [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]);
 if (str_starts_with($dsn, 'mysql:')) {
+    $views = $pdo->query('SHOW FULL TABLES WHERE Table_type = \'VIEW\'')->fetchAll(PDO::FETCH_COLUMN);
+    foreach ($views as $view) $pdo->exec('DROP VIEW `' . str_replace('`', '``', $view) . '`');
     $tables = $pdo->query('SHOW FULL TABLES WHERE Table_type = \'BASE TABLE\'')->fetchAll(PDO::FETCH_COLUMN);
     $pdo->exec('SET FOREIGN_KEY_CHECKS = 0');
     try {
