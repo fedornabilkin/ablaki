@@ -86,7 +86,8 @@ try {
     economyCheck($quota['remaining'] === 0 && Command::run($freshUser, $consumeKey, 'fixture.balance.quota', [], $consume) === $quota, 'premium batches are consumed once and obey the shared daily limit');
     $quota = EconomyQuota::state($db, $freshUser, 'extraction_daily');
     $lodge('house-b');
-    economyCheck(EconomyQuota::state($db, $freshUser, 'extraction_daily') === $quota, 'a second house cannot stack bonuses or reset used batches');
+    // Compare both snapshots at the same time; server_time itself is not a bonus.
+    economyCheck(EconomyQuota::state($db, $freshUser, 'extraction_daily', $quota['server_time']) === $quota, 'a second house cannot stack bonuses or reset used batches');
     $lodge('shelter');
     $withoutBonus = EconomyQuota::state($db, $freshUser, 'extraction_daily');
     economyCheck($withoutBonus['maximum'] === 20 && $withoutBonus['used'] === 25 && $withoutBonus['remaining'] === 0, 'leaving the house cannot refund already-used premium batches');

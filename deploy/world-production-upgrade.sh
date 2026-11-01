@@ -45,7 +45,7 @@ if [[ -f "$control/completed" && ! -e "$control/paused" ]]; then
   changed_paths=$(git diff --name-only HEAD "$expected_sha")
   while IFS= read -r path; do
     case "$path" in
-      ''|docker/nginx/*|docs/*|.github/workflows/*|deploy/tests/*|deploy/world-production-upgrade.sh|deploy/world-production-inspect.php) ;;
+      ''|docker/nginx/*|docs/*|.github/workflows/*|deploy/tests/*|yii2/tests/*|deploy/world-production-upgrade.sh|deploy/world-production-inspect.php) ;;
       *) config_only=false ;;
     esac
   done <<< "$changed_paths"

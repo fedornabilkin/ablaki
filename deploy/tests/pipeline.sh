@@ -436,6 +436,7 @@ case "$1" in
   diff)
     if [[ "$2" = --name-only ]]; then
       echo docker/nginx/add/php.conf
+      echo yii2/tests/release/world-economy-runtime.php
       [[ "$TEST_FAIL" != nginx_application ]] || echo yii2/api/controllers/WorldController.php
     fi
     [[ "$TEST_FAIL" != prep_runtime_changed ]]
