@@ -380,6 +380,7 @@ jobs:
               sys.exit(0)
           print(json.dumps({k: report[k] for k in ['read_only','php','server','row_counts','wallet_guard_available']}))
           PY
+          ssh "${options[@]}" -p "$DEPLOY_PORT" "$DEPLOY_USER@$DEPLOY_HOST" 'if docker container inspect ablaki-world-worker-production >/dev/null 2>&1; then docker inspect -f "running={{.State.Running}} restart={{.HostConfig.RestartPolicy.Name}}" ablaki-world-worker-production; docker logs --tail 12 ablaki-world-worker-production 2>&1; fi' > "$RUNNER_TEMP/production-audit/worker.txt"
       - uses: actions/upload-artifact@v4
         if: always()
         with:

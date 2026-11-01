@@ -77,4 +77,17 @@ $module = new common\modules\world\Module('world', null, $moduleConfig);
 $report['world_activation']['capabilities'] = (new common\modules\world\models\domain\WorldFlags($db, $module))->capabilities();
 $profile = (new yii\db\Query())->select('p.config_json')->from(['p' => 'world_economy_profile'])->innerJoin(['c' => 'world_economy_current'], 'c.profile_id=p.id')->where(['c.id' => 1])->scalar($db);
 $report['world_activation']['public_access'] = $profile && (json_decode($profile, true, 64, JSON_THROW_ON_ERROR)['closed_test']['restricted'] ?? true) === false;
+if ($report['world_activation']['public_access'] && $report['world_activation']['capabilities']['world_write']) {
+    // Exercise the production read model without credentials, HTTP login, presence writes or gameplay commands.
+    $config['components']['db'] = $db;
+    $app = new yii\console\Application($config);
+    $world = (int)$report['world_activation']['registry']['active_world_id'];
+    $reader = new common\modules\world\models\domain\WorldQuery($db, new common\modules\world\models\domain\WorldAccessPolicy(0));
+    $rootNode = $reader->node($world);
+    $report['world_activation']['public_root'] = ['id' => $rootNode['id'], 'name' => $rootNode['name'], 'type' => $rootNode['type']];
+    $report['world_activation']['npc_ready'] = (new common\modules\world\models\domain\NpcInfrastructure($db))->ready();
+    foreach ($report['world_activation']['starter_reserves'] as $reserve) {
+        $report['world_activation']['starter_availability'][] = (new common\modules\world\models\domain\StarterReserve($db))->state((int)$reserve['node_id']);
+    }
+}
 echo json_encode($report, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR), "\n";
