@@ -49,6 +49,7 @@ jobs:
           php tests/release/world-test-credits.php
           php tests/release/target-database.php
           php tests/release/world-economy-race.php
+          php tests/release/world-rating.php
   checks:
     name: Extended backend checks (SQLite, MySQL, PostgreSQL)
     runs-on: ubuntu-22.04
@@ -166,6 +167,7 @@ jobs:
             export ABL_TEST_DSN="$1"
             php tests/release/target-database.php || return
             if [[ -f tests/release/world-economy-race.php ]]; then php tests/release/world-economy-race.php || return; else php tests/release/classic-craft.php || return; fi
+            php tests/release/world-rating.php || return
             php tests/release/user-activity.php
           }
           # SQLite fixtures and the two target databases are independent.

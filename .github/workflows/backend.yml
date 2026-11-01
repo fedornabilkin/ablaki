@@ -287,7 +287,10 @@ jobs:
             ssh "${options[@]}" -p "$DEPLOY_PORT" "$DEPLOY_USER@$DEPLOY_HOST" \
               "bash '$deploy_root/world-production-upgrade.sh' '$GITHUB_SHA'" | tee "$RUNNER_TEMP/backend-production-release.log"
             if grep -Fxq '[world-production] Nginx-only release applied; application and database unchanged.' "$RUNNER_TEMP/backend-production-release.log"; then
-              echo 'nginx_only=true' >> "$GITHUB_OUTPUT"
+              echo 'skip_additive_migrations=true' >> "$GITHUB_OUTPUT"
+            fi
+            if grep -Fxq '[world-production] Rating precision release applied; stored values verified.' "$RUNNER_TEMP/backend-production-release.log"; then
+              echo 'skip_additive_migrations=true' >> "$GITHUB_OUTPUT"
             fi
           else
             ssh "${options[@]}" -p "$DEPLOY_PORT" "$DEPLOY_USER@$DEPLOY_HOST" \
@@ -317,7 +320,7 @@ jobs:
             "cd '$repo_root' && test \"\$(pwd -P)\" = '$repo_root' && docker-compose exec -T -e '$install_context' php php /web/yii2/yii craft-setup/$install_action"
           ssh "${options[@]}" -p "$DEPLOY_PORT" "$DEPLOY_USER@$DEPLOY_HOST" \
             "cd '$repo_root' && test \"\$(pwd -P)\" = '$repo_root' && docker-compose exec -T -e 'FORUM_INSTALL=confirmed-$TARGET-checkout' php php /web/yii2/yii forum-setup/install"
-        if: env.TARGET == 'production' && !inputs.activate_world && steps.release.outputs.nginx_only != 'true'
+        if: env.TARGET == 'production' && !inputs.activate_world && steps.release.outputs.skip_additive_migrations != 'true'
       - name: Prepare the explicitly requested funded economy test
         if: env.TARGET == 'test' && inputs.economy_test != '' && inputs.economy_test != 'skip'
         shell: bash

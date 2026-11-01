@@ -7,6 +7,44 @@ use common\modules\world\modules\progression\models\domain\WorldRatingAwards;
 use common\modules\world\models\domain\WorldMapCells;
 use yii\db\Query;
 
+if (in_array($db->driverName, ['mysql', 'pgsql'], true)) {
+    // Production predates migrations and still has binary32 rating columns.
+    $legacyFloat = $db->driverName === 'mysql' ? 'FLOAT' : 'REAL';
+    $db->createCommand()->alterColumn('persone', 'rating', $legacyFloat . ' NULL DEFAULT 0')->execute();
+    $db->createCommand()->alterColumn('history_rating', 'rating_up', $legacyFloat . ' NOT NULL')->execute();
+    $precision = new \common\services\user\LegacyRatingPrecision($db);
+    $beforePrecision = $precision->snapshot();
+    require_once $yiiRoot . '/console/world-migrations/m261101_130000_world_rating_precision.php';
+    $migration = new \m261101_130000_world_rating_precision(['db' => $db]);
+    $migration->up();
+    economyCheck($precision->snapshot() === $beforePrecision, 'widening legacy rating precision preserves all profile and history values');
+    $migration->up();
+    economyCheck($precision->snapshot() === $beforePrecision, 'rating precision migration is repeatable without changing data');
+}
+
+foreach (WorldRatingPolicy::ACTIONS as $action) {
+    $tx = $db->beginTransaction();
+    try {
+        $db->createCommand()->update('persone', ['rating' => 4000], ['user_id' => $freshUser])->execute();
+        $db->createCommand()->delete('world_rating_progress', ['user_id' => $freshUser, 'action' => $action])->execute();
+        $wallet = (new Query())->select(['credit', 'balance'])->from('persone')->where(['user_id' => $freshUser])->one($db);
+        $historyBefore = (int)(new Query())->from('history_rating')->where(['user_id' => $freshUser])->count('*', $db);
+        $awards = new WorldRatingAwards($db);
+        for ($i = 0; $i < 6; $i++) {
+            $source = 'precision-' . $action . '-' . $i;
+            $awards->award($freshUser, $action, $source, bin2hex(random_bytes(16)), [0.2], 'Precision fixture');
+            $receipt = (new Query())->from('world_rating_award')->where(['user_id' => $freshUser, 'source_key' => $source])->one($db);
+            $rating = (float)(new Query())->select('rating')->from('persone')->where(['user_id' => $freshUser])->scalar($db);
+            economyCheck($rating === (float)$receipt['rating_after'] && (float)$receipt['rating_delta'] > 0, $action . ' retains a reward smaller than legacy FLOAT precision');
+            $awards->award($freshUser, $action, $source, bin2hex(random_bytes(16)), [0.2], 'Replay');
+            economyCheck((float)(new Query())->select('rating')->from('persone')->where(['user_id' => $freshUser])->scalar($db) === $rating, $action . ' replay cannot duplicate the small reward');
+        }
+        economyCheck((new Query())->select(['credit', 'balance'])->from('persone')->where(['user_id' => $freshUser])->one($db) === $wallet
+            && (int)(new Query())->from('history_rating')->where(['user_id' => $freshUser])->count('*', $db) === $historyBefore + 6,
+            $action . ' precision preserves currency and records six gains exactly once');
+    } finally { $tx->rollBack(); }
+}
+
 $first = WorldRatingPolicy::award(0, 0, 0, [1]);
 economyCheck($first['delta'] === 0.5, 'zero-rating account has a finite positive first reward');
 foreach ([0.98, 0.99, 1, 10, 100] as $rating) {

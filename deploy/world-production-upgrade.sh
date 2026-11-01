@@ -28,6 +28,10 @@ checkout_changes=$(git status --porcelain --untracked-files=no)
 git diff --cached --quiet
 control="$repo/yii2/common/runtime/financial-maintenance"
 [[ ! -L "$control" ]]
+if [[ -f "$control/completed" && -f "$control/rating-precision.pending" ]]; then
+  [[ "$(cat "$control/rating-precision.pending")" = "$expected_sha" && "$(git rev-parse HEAD)" = "$expected_sha" ]]
+  exec bash "$repo/deploy/world-rating-precision.sh" "$expected_sha"
+fi
 if [[ -f "$control/completed" && -f "$control/world-activation.pending" ]]; then
   # A retried launch must resume its own checked code without invoking old migration paths.
   [[ "$(git rev-parse HEAD)" = "$expected_sha" ]]
@@ -39,6 +43,20 @@ if [[ -f "$control/completed" && ! -e "$control/paused" ]]; then
   git fetch origin master
   [[ "$(git rev-parse FETCH_HEAD)" = "$expected_sha" ]]
   git merge-base --is-ancestor HEAD "$expected_sha"
+  if git cat-file -e "$expected_sha:yii2/console/world-migrations/m261101_130000_world_rating_precision.php" 2>/dev/null && [[ ! -f "$control/rating-precision-verified.json" ]]; then
+    # This repair must not invoke the legacy entrypoint or the full migration chain.
+    changed_paths=$(git diff --name-only HEAD "$expected_sha")
+    while IFS= read -r path; do
+      case "$path" in
+        ''|docs/*|.github/workflows/*|deploy/tests/*|yii2/tests/*|deploy/world-production-upgrade.sh|deploy/world-production-inspect.php|deploy/world-rating-precision.sh|deploy/world-rating-precision.php|yii2/common/services/user/LegacyRatingPrecision.php|yii2/console/world-migrations/m261101_130000_world_rating_precision.php) ;;
+        *) printf '::error::Unrelated changes in the targeted rating release: %s\n' "$path" >&2; exit 1 ;;
+      esac
+    done <<< "$changed_paths"
+    compose_checksum=$(sha256sum docker-compose.yaml | cut -d' ' -f1)
+    git merge --ff-only "$expected_sha"
+    [[ "$(git rev-parse HEAD)" = "$expected_sha" && "$(sha256sum docker-compose.yaml | cut -d' ' -f1)" = "$compose_checksum" ]]
+    exec bash "$repo/deploy/world-rating-precision.sh" "$expected_sha"
+  fi
   # A proxy-only fix must not restart PHP, rerun migrations or stash the
   # operator's Compose override. Application/runtime changes use the usual path.
   config_only=true

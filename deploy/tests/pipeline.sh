@@ -448,7 +448,10 @@ cat > "$test_root/production-bin/docker-compose" <<'MOCK'
 #!/usr/bin/env bash
 printf 'compose %s\n' "$*" >> "$TEST_LOG"
 case "$*" in
-  'ps -q php') printf 'abc123\n' ;;
+  'ps -q php')
+    printf 'abc123\n'
+    [[ "$TEST_FAIL" != rating_success ]] || printf 'def456\n'
+    ;;
   'exec -T nginx nginx -t') [[ "$TEST_FAIL" != nginx_invalid ]] ;;
   'exec -T nginx nginx -s reload') [[ "$TEST_FAIL" != nginx_reload_failed ]] ;;
   *) exit 1 ;;
@@ -459,10 +462,24 @@ cat > "$test_root/production-bin/docker" <<'MOCK'
 set -eu
 printf 'docker %s\n' "$*" >> "$TEST_LOG"
 case "$1" in
-  inspect) echo true ;;
+  inspect)
+    case "$3" in
+      '{{index .Config.Labels "com.docker.compose.oneoff"}}') if [[ "$4" = def456 ]]; then echo True; else echo False; fi ;;
+      '{{index .Config.Labels "ablaki.world.worker"}}') echo production ;;
+      *) echo true ;;
+    esac
+    ;;
+  container) exit 0 ;;
+  stop|start) ;;
   kill) [[ "$*" = 'kill --signal=USR2 abc123' ]] ;;
   exec)
-    if [[ "$*" = *memory_limit* ]]; then
+    if [[ "$*" = *WORLD_RATING_PRECISION* ]]; then
+      cat >/dev/null
+      [[ -f "$TEST_REPO/yii2/common/runtime/financial-maintenance/paused" ]]
+      grep -Fxq 'flock -x -w 180 9' "$TEST_LOG"
+      [[ "$TEST_FAIL" != rating_failed ]] || exit 24
+      echo '{}' > "$TEST_REPO/yii2/common/runtime/financial-maintenance/rating-precision-verified.json"
+    elif [[ "$*" = *memory_limit* ]]; then
       cat >/dev/null
       [[ -f "$TEST_REPO/yii2/common/runtime/financial-maintenance/paused" ]]
       grep -Fxq 'flock -x -w 180 9' "$TEST_LOG"
@@ -548,4 +565,47 @@ for scenario in prep_success prep_local_compose prep_dirty prep_runtime_changed 
   fi
   ! grep -Eq '^docker (stop|restart|rm|run)|^make |reset|mysqldump|pg_restore' "$TEST_LOG"
   printf 'PASS production preparation: %s\n' "$scenario"
+done
+
+# The targeted rating repair pauses writers, retains the serving containers,
+# and leaves a resumable pause on any failed migration.
+for scenario in rating_success rating_failed rating_resume rating_finished rating_wrong_release; do
+  TEST_FAIL=$scenario
+  TEST_REPO="$test_root/$scenario"
+  mkdir -p "$TEST_REPO/deploy" "$TEST_REPO/yii2/common/runtime/financial-maintenance"
+  TEST_REPO=$(cd "$TEST_REPO" && pwd -P)
+  TEST_LOG="$TEST_REPO/commands.log"
+  : > "$TEST_LOG"
+  control="$TEST_REPO/yii2/common/runtime/financial-maintenance"
+  touch "$control/completed" "$control/writers.lock"
+  echo 'operator config' > "$TEST_REPO/docker-compose.yaml"
+  echo 'fixture' > "$TEST_REPO/deploy/php-drain.sh"
+  echo 'fixture' > "$TEST_REPO/deploy/world-rating-precision.php"
+  if [[ "$scenario" = rating_resume || "$scenario" = rating_finished || "$scenario" = rating_wrong_release ]]; then
+    printf '%040d\n' 1 > "$control/rating-precision.pending"
+    if [[ "$scenario" = rating_finished ]]; then echo '{}' > "$control/rating-precision-verified.json"; else touch "$control/paused"; fi
+    [[ "$scenario" != rating_wrong_release ]] || printf '%040d\n' 2 > "$control/rating-precision.pending"
+  fi
+  sed "s@repo=/var/www/api.ablakin.ru@repo=$TEST_REPO@" "$source_root/deploy/world-rating-precision.sh" > "$TEST_REPO/runner.sh"
+  status=0
+  bash "$TEST_REPO/runner.sh" "$(printf '%040d' 1)" > "$TEST_REPO/output.log" 2>&1 || status=$?
+  case "$scenario" in
+    rating_success|rating_resume)
+      [[ "$status" = 0 && ! -e "$control/paused" && ! -e "$control/rating-precision.pending" ]] || { cat "$TEST_REPO/output.log"; exit 1; }
+      grep -Fxq 'docker stop --time 180 ablaki-world-worker-production' "$TEST_LOG"
+      grep -Fxq 'docker start ablaki-world-worker-production' "$TEST_LOG"
+      grep -Fxq 'flock -u 9' "$TEST_LOG"
+      ;;
+    rating_failed|rating_wrong_release)
+      [[ "$status" != 0 && -f "$control/paused" && -f "$control/rating-precision.pending" ]]
+      ! grep -q 'cron start\|flock -u 9\|docker start ' "$TEST_LOG"
+      ;;
+    rating_finished)
+      [[ "$status" = 0 && ! -e "$control/paused" && ! -e "$control/rating-precision.pending" ]]
+      ! grep -q '^docker ' "$TEST_LOG"
+      ;;
+  esac
+  [[ "$(cat "$TEST_REPO/docker-compose.yaml")" = 'operator config' ]]
+  ! grep -Eq '^make |^compose up|^docker (restart|rm)|migrate/up' "$TEST_LOG"
+  printf 'PASS targeted rating release: %s\n' "$scenario"
 done
