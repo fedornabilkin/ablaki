@@ -34,7 +34,13 @@ register_shutdown_function(static function () use ($db): void {
     try { $db->createCommand("SELECT RELEASE_LOCK('ablaki.world.production-activation')")->queryScalar(); } catch (Throwable $ignored) {}
 });
 $db->createCommand('SET SESSION innodb_lock_wait_timeout=60')->execute();
-$author = (int)(new yii\db\Query())->select('id')->from('user')->where(['username' => 'fedornabilkin'])->scalar($db);
+$administrators = [];
+foreach ((new yii\db\Query())->select('user_id')->distinct()->from('auth_assignment')->column($db) as $candidate) {
+    if ($app->authManager->checkAccess((int)$candidate, 'p-admin')) $administrators[] = (int)$candidate;
+}
+// Installation content is attributed to the sole existing site administrator; no roles are granted.
+if (count($administrators) !== 1) throw new RuntimeException('Select and review the publication administrator explicitly.');
+$author = $administrators[0];
 $progress = static function (string $step, array $details): void {
     echo json_encode(['step' => $step] + $details, JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR), "\n";
 };
