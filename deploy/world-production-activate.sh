@@ -17,13 +17,19 @@ trap 'code=$?; printf "::error::World activation stopped at %s (exit %s). Keep t
 exec 8>"$control/operator.lock"
 flock -n 8
 touch "$control/world-activation.pending"
-php_id=$(docker-compose ps -q php)
-[[ "$php_id" =~ ^[a-f0-9]+$ && "$(docker inspect -f '{{.State.Running}}' "$php_id")" = true ]]
 if docker container inspect "$worker" >/dev/null 2>&1; then
   [[ "$(docker inspect -f '{{index .Config.Labels "ablaki.world.worker"}}' "$worker")" = production ]]
   docker stop --time 180 "$worker"
   docker rm "$worker"
 fi
+php_id=''
+for candidate in $(docker-compose ps -q php); do
+  oneoff=$(docker inspect -f '{{index .Config.Labels "com.docker.compose.oneoff"}}' "$candidate")
+  [[ "$oneoff" != True && "$oneoff" != true ]] || continue
+  [[ -z "$php_id" ]]
+  php_id=$candidate
+done
+[[ "$php_id" =~ ^[a-f0-9]+$ && "$(docker inspect -f '{{.State.Running}}' "$php_id")" = true ]]
 phase='pausing new financial operations and draining existing writers'
 touch "$control/paused"
 chmod 0644 "$control/paused"

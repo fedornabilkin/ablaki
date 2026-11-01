@@ -30,6 +30,11 @@ if (getenv('WORLD_INSPECT_PROGRESS') === 'true') {
         $report['wallet'] = (new yii\db\Query())->select(['phase', 'updated_at'])->from('economy_wallet_rollout')->where(['id' => 1])->one($db);
         $report['columns'] = (new yii\db\Query())->select(['column_key', 'phase', 'row_count', 'last_source_id'])->from('economy_wallet_column')->all($db);
     }
+    if ($db->schema->getTableSchema('world_storage_rollout')) {
+        $report['storage'] = (new yii\db\Query())->select(['phase','activated_at'])->from('world_storage_rollout')->where(['id' => 1])->one($db);
+        $report['storage']['migrated_users'] = (int)(new yii\db\Query())->from('world_storage_baseline')->count('*', $db);
+        $report['storage']['verified_users'] = (int)(new yii\db\Query())->from('world_storage_baseline')->where(['not', ['verified_at' => null]])->count('*', $db);
+    }
     echo json_encode($report, JSON_PRETTY_PRINT | JSON_THROW_ON_ERROR), "\n";
     exit(0);
 }
@@ -64,6 +69,7 @@ $report['world_activation'] = [
     'npc' => (new yii\db\Query())->from('world_npc_policy')->all($db),
     'bot' => (new yii\db\Query())->select(['u.id','u.username','p.credit'])->from(['u'=>'user'])->leftJoin(['p'=>'persone'], 'p.user_id=u.id')->where(['u.username'=>'bot'])->one($db),
     'account_total' => (new yii\db\Query())->from('economy_account')->count('*', $db),
+    'starter_reserves' => (new yii\db\Query())->from('world_starter_reserve')->all($db),
 ];
 $moduleConfig = $config['modules']['world'];
 unset($moduleConfig['class']);
