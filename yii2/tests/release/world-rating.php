@@ -1,6 +1,6 @@
 <?php
 /** Full operation fixtures plus rating invariants. Dedicated CI databases only. */
-require __DIR__ . '/world-terminal-nodes.php';
+require __DIR__ . '/world-warehouse-storage.php';
 
 use common\modules\world\modules\progression\domain\WorldRatingPolicy;
 use common\modules\world\modules\progression\models\domain\WorldRatingAwards;
