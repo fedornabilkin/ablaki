@@ -17,6 +17,14 @@ name: Backend CI and deployment
         description: Read-only production schema/runtime preflight (no deployment)
         type: boolean
         default: false
+      activate_world:
+        description: Explicit public world activation on production after checked deployment
+        type: boolean
+        default: false
+      starter_reserve:
+        description: Approved initial transfer from bot to the North City starter reserve (Cr)
+        type: string
+        default: '0'
       progress_only:
         description: Read saved migration progress only, without waiting for deployment
         type: boolean
@@ -283,7 +291,7 @@ jobs:
             "cd '$repo_root' && test \"\$(pwd -P)\" = '$repo_root' && docker-compose exec -T -e '$install_context' php php /web/yii2/yii craft-setup/$install_action"
           ssh "${options[@]}" -p "$DEPLOY_PORT" "$DEPLOY_USER@$DEPLOY_HOST" \
             "cd '$repo_root' && test \"\$(pwd -P)\" = '$repo_root' && docker-compose exec -T -e 'FORUM_INSTALL=confirmed-$TARGET-checkout' php php /web/yii2/yii forum-setup/install"
-        if: env.TARGET == 'production'
+        if: env.TARGET == 'production' && !inputs.activate_world
       - name: Prepare the explicitly requested funded economy test
         if: env.TARGET == 'test' && inputs.economy_test != '' && inputs.economy_test != 'skip'
         shell: bash
@@ -297,6 +305,17 @@ jobs:
           options=(-i "$HOME/.ssh/deploy_key" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=yes -o UserKnownHostsFile="$HOME/.ssh/known_hosts")
           ssh "${options[@]}" -p "$DEPLOY_PORT" "$DEPLOY_USER@$DEPLOY_HOST" \
             "cd /var/code/ablaki && test \"\$(pwd -P)\" = /var/code/ablaki && docker-compose exec -T -e WORLD_INSTALL=confirmed-world-install -e WORLD_TEST_SETUP=confirmed-test-checkout -e WORLD_TEST_MODE=1 php php /web/yii2/yii world-setup/economy-test-prepare '$apply' '$ECONOMY_DONOR'"
+      - name: Activate the explicitly requested production world
+        if: env.TARGET == 'production' && inputs.activate_world
+        shell: bash
+        env:
+          STARTER_RESERVE: ${{ inputs.starter_reserve }}
+        run: |
+          set -Eeuo pipefail
+          [[ "$GITHUB_REF_NAME" = master && "$STARTER_RESERVE" =~ ^[0-9]{1,6}(\.[0-9]{1,4})?$ ]]
+          options=(-i "$HOME/.ssh/deploy_key" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=yes -o UserKnownHostsFile="$HOME/.ssh/known_hosts" -o ServerAliveInterval=30 -o ServerAliveCountMax=6)
+          ssh "${options[@]}" -p "$DEPLOY_PORT" "$DEPLOY_USER@$DEPLOY_HOST" \
+            "bash /var/www/api.ablakin.ru/deploy/world-production-activate.sh '$GITHUB_SHA' '$STARTER_RESERVE'"
       - name: Verify deployed PHP, dependencies and background scheduler
         shell: bash
         run: |

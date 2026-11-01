@@ -28,6 +28,12 @@ checkout_changes=$(git status --porcelain --untracked-files=no)
 git diff --cached --quiet
 control="$repo/yii2/common/runtime/financial-maintenance"
 [[ ! -L "$control" ]]
+if [[ -f "$control/completed" && -f "$control/world-activation.pending" ]]; then
+  # A retried launch must resume its own checked code without invoking old migration paths.
+  [[ "$(git rev-parse HEAD)" = "$expected_sha" ]]
+  printf '[world-production] Activation pending; keep the existing checkout and writer pause.\n'
+  exit 0
+fi
 if [[ -f "$control/completed" && ! -e "$control/paused" ]]; then
   exec bash "$deploy_root/backend-deploy.sh" "$repo" master production "$expected_sha"
 fi

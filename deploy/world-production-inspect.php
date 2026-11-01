@@ -65,4 +65,10 @@ $report['world_activation'] = [
     'bot' => (new yii\db\Query())->select(['u.id','u.username','p.credit'])->from(['u'=>'user'])->leftJoin(['p'=>'persone'], 'p.user_id=u.id')->where(['u.username'=>'bot'])->one($db),
     'account_total' => (new yii\db\Query())->from('economy_account')->count('*', $db),
 ];
+$moduleConfig = $config['modules']['world'];
+unset($moduleConfig['class']);
+$module = new common\modules\world\Module('world', null, $moduleConfig);
+$report['world_activation']['capabilities'] = (new common\modules\world\models\domain\WorldFlags($db, $module))->capabilities();
+$profile = (new yii\db\Query())->select('p.config_json')->from(['p' => 'world_economy_profile'])->innerJoin(['c' => 'world_economy_current'], 'c.profile_id=p.id')->where(['c.id' => 1])->scalar($db);
+$report['world_activation']['public_access'] = $profile && (json_decode($profile, true, 64, JSON_THROW_ON_ERROR)['closed_test']['restricted'] ?? true) === false;
 echo json_encode($report, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR), "\n";
