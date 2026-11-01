@@ -54,4 +54,15 @@ foreach (['economy_wallet_rollout','world_registry','economy_registry'] as $tabl
     $columns = $table === 'economy_wallet_rollout' ? ['phase'] : ($table === 'world_registry' ? ['schema_version','world_read','world_write','storage_v2','economy_tick'] : ['wallet_ready']);
     $report[$table] = (new yii\db\Query())->select($columns)->from($table)->where(['id'=>1])->one($db);
 }
+$report['world_activation'] = [
+    'environment_flags' => array_combine(['WORLD_READ','WORLD_WRITE','STORAGE_V2','ECONOMY_TICK','WORLD_TEST_MODE'], array_map(static fn($key) => getenv($key) === '1', ['WORLD_READ','WORLD_WRITE','STORAGE_V2','ECONOMY_TICK','WORLD_TEST_MODE'])),
+    'configured_flags' => $config['modules']['world']['flags'] ?? [],
+    'registry' => (new yii\db\Query())->from('world_registry')->where(['id' => 1])->one($db),
+    'storage' => (new yii\db\Query())->from('world_storage_rollout')->where(['id' => 1])->one($db),
+    'nodes' => (new yii\db\Query())->select(['id','parent_id','node_type','name','owner_user_id','status'])->from('world_node')->orderBy('id')->limit(100)->all($db),
+    'economy_profile' => (new yii\db\Query())->select(['id','version','digest'])->from('world_economy_profile')->orderBy(['id' => SORT_DESC])->limit(1)->one($db),
+    'npc' => (new yii\db\Query())->from('world_npc_policy')->all($db),
+    'bot' => (new yii\db\Query())->select(['u.id','u.username','p.credit'])->from(['u'=>'user'])->leftJoin(['p'=>'persone'], 'p.user_id=u.id')->where(['u.username'=>'bot'])->one($db),
+    'account_total' => (new yii\db\Query())->from('economy_account')->count('*', $db),
+];
 echo json_encode($report, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR), "\n";
