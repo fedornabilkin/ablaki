@@ -423,22 +423,35 @@ case "$1" in
   symbolic-ref) echo master ;;
   status)
     [[ "$TEST_FAIL" != prep_dirty ]] || echo ' M file.php'
-    [[ "$TEST_FAIL" != prep_local_compose ]] || echo ' M docker-compose.yaml'
+    [[ "$TEST_FAIL" != prep_local_compose && "$TEST_FAIL" != nginx_success ]] || echo ' M docker-compose.yaml'
     ;;
-  rev-parse) printf '%040d\n' 1 ;;
+  rev-parse)
+    if [[ "$TEST_FAIL" = nginx_unchecked ]]; then printf '%040d\n' 2; else printf '%040d\n' 1; fi
+    ;;
   fetch|merge-base) ;;
   merge)
     if [[ "$TEST_FAIL" = prep_local_compose ]]; then printf 'repository config\n' > docker-compose.yaml; fi
     ;;
   stash|checkout|reset) ;;
-  diff) [[ "$TEST_FAIL" != prep_runtime_changed ]] ;;
+  diff)
+    if [[ "$2" = --name-only ]]; then
+      echo docker/nginx/add/php.conf
+      [[ "$TEST_FAIL" != nginx_application ]] || echo yii2/api/controllers/WorldController.php
+    fi
+    [[ "$TEST_FAIL" != prep_runtime_changed ]]
+    ;;
   *) exit 1 ;;
 esac
 MOCK
 cat > "$test_root/production-bin/docker-compose" <<'MOCK'
 #!/usr/bin/env bash
-[[ "$*" = 'ps -q php' ]] || exit 1
-printf 'abc123\n'
+printf 'compose %s\n' "$*" >> "$TEST_LOG"
+case "$*" in
+  'ps -q php') printf 'abc123\n' ;;
+  'exec -T nginx nginx -t') [[ "$TEST_FAIL" != nginx_invalid ]] ;;
+  'exec -T nginx nginx -s reload') [[ "$TEST_FAIL" != nginx_reload_failed ]] ;;
+  *) exit 1 ;;
+esac
 MOCK
 cat > "$test_root/production-bin/docker" <<'MOCK'
 #!/usr/bin/env bash
@@ -471,12 +484,13 @@ printf 'read smoke\n' >> "$TEST_LOG"
 MOCK
 chmod +x "$test_root/production-bin/"*
 export PATH="$test_root/production-bin:$PATH"
-for scenario in prep_success prep_local_compose prep_dirty prep_runtime_changed prep_conversion_failed prep_drain_failed; do
+for scenario in prep_success prep_local_compose prep_dirty prep_runtime_changed prep_conversion_failed prep_drain_failed nginx_success nginx_invalid nginx_reload_failed nginx_unchecked nginx_application; do
   TEST_FAIL=$scenario
   TEST_REPO="$test_root/$scenario"
   TEST_LOG="$test_root/$scenario.log"
   : > "$TEST_LOG"
   mkdir -p "$TEST_REPO/.php-runtime-upgrade" "$TEST_REPO/docker/php" "$TEST_REPO/docker/composer" "$TEST_REPO/yii2/common/services/user" "$TEST_REPO/yii2/common/config" "$TEST_REPO/deploy"
+  TEST_REPO=$(cd "$TEST_REPO" && pwd -P)
   for file in docker/php/Dockerfile docker/php/runtime.ini docker/php/security-fpm.conf docker/php/entrypoint.sh docker/composer/Dockerfile docker/composer/entrypoint.sh yii2/composer.json yii2/composer.lock yii2/common/services/user/FinancialMaintenanceBootstrap.php deploy/world-production-prepare.php; do
     printf 'fixture\n' > "$TEST_REPO/$file"
   done
@@ -484,11 +498,35 @@ for scenario in prep_success prep_local_compose prep_dirty prep_runtime_changed 
   printf 'operator production config\n' > "$TEST_REPO/docker-compose.yaml"
   (cd "$TEST_REPO"; sha256sum docker/php/Dockerfile docker/php/runtime.ini docker/php/security-fpm.conf docker/php/entrypoint.sh docker/composer/Dockerfile docker/composer/entrypoint.sh yii2/composer.json yii2/composer.lock | sha256sum | cut -d' ' -f1) > "$TEST_REPO/.php-runtime-upgrade/active"
   printf 'drain fixture\n' > "$TEST_REPO/php-drain.sh"
+  control="$TEST_REPO/yii2/common/runtime/financial-maintenance"
+  if [[ "$scenario" = nginx_* ]]; then
+    mkdir -p "$control"
+    echo previously-activated > "$control/completed"
+    printf 'printf "normal deploy\\n" >> "$TEST_LOG"\n' > "$TEST_REPO/backend-deploy.sh"
+  fi
   sed -e "s@repo=/var/www/api.ablakin.ru@repo=$TEST_REPO@" -e "s@deploy_root=/opt/ablaki-backend@deploy_root=$TEST_REPO@" "$source_root/deploy/world-production-upgrade.sh" > "$TEST_REPO/runner.sh"
   status=0
   bash "$TEST_REPO/runner.sh" "$(printf '%040d' 1)" > "$TEST_REPO/output.log" 2>&1 || status=$?
   control="$TEST_REPO/yii2/common/runtime/financial-maintenance"
   case "$scenario" in
+    nginx_success)
+      [[ "$status" = 0 ]] || { cat "$TEST_REPO/output.log"; exit 1; }
+      grep -Fxq 'compose exec -T nginx nginx -t' "$TEST_LOG"
+      grep -Fxq 'compose exec -T nginx nginx -s reload' "$TEST_LOG"
+      ! grep -q 'normal deploy\|^docker \|^flock \|git stash' "$TEST_LOG"
+      [[ "$(cat "$TEST_REPO/docker-compose.yaml")" = 'operator production config' ]]
+      ;;
+    nginx_invalid|nginx_reload_failed|nginx_unchecked)
+      [[ "$status" != 0 ]]
+      ! grep -q 'normal deploy\|^docker \|^flock ' "$TEST_LOG"
+      [[ "$scenario" = nginx_reload_failed ]] || ! grep -q 'nginx -s reload' "$TEST_LOG"
+      [[ "$scenario" != nginx_unchecked ]] || ! grep -q '^git merge\|^compose ' "$TEST_LOG"
+      ;;
+    nginx_application)
+      [[ "$status" = 0 ]]
+      grep -Fxq 'normal deploy' "$TEST_LOG"
+      ! grep -q '^compose ' "$TEST_LOG"
+      ;;
     prep_success|prep_local_compose)
       [[ "$status" = 0 && -f "$control/completed" && ! -f "$control/paused" ]] || { cat "$TEST_REPO/output.log"; exit 1; }
       grep -Fxq 'flock -u 9' "$TEST_LOG"
@@ -504,6 +542,9 @@ for scenario in prep_success prep_local_compose prep_dirty prep_runtime_changed 
       ! grep -q 'cron start\|flock -u 9' "$TEST_LOG"
       ;;
   esac
+  if [[ "$scenario" = nginx_* ]]; then
+    [[ ! -e "$control/paused" && "$(cat "$control/completed")" = previously-activated ]]
+  fi
   ! grep -Eq '^docker (stop|restart|rm|run)|^make |reset|mysqldump|pg_restore' "$TEST_LOG"
   printf 'PASS production preparation: %s\n' "$scenario"
 done
