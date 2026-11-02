@@ -1,6 +1,6 @@
 <?php
 // Disposable allowlisted fixture only. Never loads the application's database configuration.
-require __DIR__ . '/world-economy-runtime.php';
+require_once __DIR__ . '/world-economy-runtime.php';
 
 use common\modules\world\domain\events\EventRules;
 use common\modules\world\models\WorldEvent;

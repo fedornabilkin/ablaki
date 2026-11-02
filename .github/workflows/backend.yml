@@ -7,10 +7,16 @@ name: Backend CI and deployment
   pull_request:
     branches:
       - master
+  schedule:
+    - cron: '17 2 * * *'
   workflow_dispatch:
     inputs:
       checks_only:
         description: Run all isolated checks without deploying
+        type: boolean
+        default: false
+      legacy_maintenance:
+        description: Explicit first-install or recovery procedure (not a normal release)
         type: boolean
         default: false
       production_audit:
@@ -53,16 +59,46 @@ name: Backend CI and deployment
         required: true
 permissions:
   contents: read
+  actions: read
 jobs:
+  plan:
+    name: Select checks from the last published release
+    if: ${{ !inputs.production_audit }}
+    runs-on: ubuntu-22.04
+    timeout-minutes: 5
+    outputs:
+      checks: ${{ steps.plan.outputs.checks }}
+      publish: ${{ steps.plan.outputs.publish }}
+      runtime: ${{ steps.plan.outputs.runtime }}
+      database: ${{ steps.plan.outputs.database }}
+      portable: ${{ steps.plan.outputs.portable }}
+      additive: ${{ steps.plan.outputs.additive }}
+      base: ${{ steps.plan.outputs.base }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - name: Check release selection
+        run: python3 deploy/tests/release-plan.py
+      - name: Select changed areas
+        id: plan
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TARGET: ${{ (github.ref == 'refs/heads/test' && 'test') || inputs.target || 'production' }}
+          FORCE_FULL: ${{ inputs.checks_only || inputs.legacy_maintenance || inputs.activate_world }}
+          CHECKS_ONLY: ${{ inputs.checks_only }}
+          MAINTENANCE: ${{ inputs.legacy_maintenance || inputs.activate_world || (inputs.economy_test && inputs.economy_test != 'skip') }}
+        run: python3 deploy/release-plan.py
   minimum:
     name: Minimum release checks
-    if: ${{ !inputs.production_audit }}
+    needs: plan
+    if: needs.plan.outputs.checks == 'true'
     runs-on: ubuntu-22.04
     timeout-minutes: 6
     steps:
       - uses: actions/checkout@v7
         with:
-          fetch-depth: 2
+          fetch-depth: 0
       - name: Validate requested target
         env:
           TARGET: ${{ ((github.ref == 'refs/heads/test' && 'test') || inputs.target || 'production') }}
@@ -92,13 +128,13 @@ jobs:
           composer check-platform-reqs --no-dev
       - name: Check changed PHP and deployment guards
         env:
-          PREVIOUS_SHA: ${{ github.event.before }}
+          PREVIOUS_SHA: ${{ needs.plan.outputs.base }}
         shell: bash
         run: |
           for script in deploy/*.sh deploy/tests/*.sh docker/php/entrypoint.sh docker/composer/entrypoint.sh; do bash -n "$script"; done
-          base=HEAD^
+          base=
           if [[ "$PREVIOUS_SHA" =~ ^[0-9a-f]{40}$ ]] && git cat-file -e "$PREVIOUS_SHA^{commit}" 2>/dev/null; then base=$PREVIOUS_SHA; fi
-          if git rev-parse --verify "$base" >/dev/null 2>&1; then
+          if [[ -n "$base" ]] && git rev-parse --verify "$base" >/dev/null 2>&1; then
             git diff --name-only --diff-filter=ACMR -z "$base" HEAD -- '*.php' > "$RUNNER_TEMP/php-files"
           else
             git ls-files -z -- '*.php' > "$RUNNER_TEMP/php-files"
@@ -106,20 +142,25 @@ jobs:
           while IFS= read -r -d '' file; do php -l "$file" >/dev/null; done < "$RUNNER_TEMP/php-files"
           php -l yii2/yii
           bash deploy/tests/pipeline.sh
+          bash deploy/tests/production-release.sh
       - name: Check authentication, rewards, refunds and API routes
         working-directory: yii2
         run: |
           for suite in api-route-catalog world-player-read auth-response daily-reward exchange-refund frontend-api-routing classic-craft-install; do php "tests/release/$suite.php"; done
           if [[ -f tests/release/world-economy-profile.php ]]; then php tests/release/world-economy-profile.php; fi
   full_before:
-    name: Full checks before production
-    if: ${{ !inputs.production_audit && (inputs.checks_only || !(github.ref == 'refs/heads/test' || inputs.target == 'test')) }}
+    name: Required application checks before production
+    needs: plan
+    if: ${{ needs.plan.outputs.database == 'true' && (inputs.checks_only || !(github.ref == 'refs/heads/test' || inputs.target == 'test')) }}
     uses: ./.github/workflows/backend-full.yml
     with:
       target: ${{ inputs.checks_only && 'test' || 'production' }}
+      portable: ${{ needs.plan.outputs.portable == 'true' }}
+      core_checked: true
   runtime-image:
     name: PHP 8.3.36 FPM and Composer images
-    if: ${{ !inputs.production_audit }}
+    needs: plan
+    if: needs.plan.outputs.runtime == 'true'
     runs-on: ubuntu-22.04
     timeout-minutes: 15
     steps:
@@ -133,13 +174,6 @@ jobs:
           CHECKS_ONLY: ${{ inputs.checks_only }}
         shell: bash
         run: |
-          if [[ "$TARGET" = test && "$GITHUB_EVENT_NAME" = workflow_dispatch ]]; then PREVIOUS_SHA=$(git rev-parse HEAD^); fi
-          if [[ "$TARGET" = test && "$CHECKS_ONLY" != true && "$PREVIOUS_SHA" =~ ^[0-9a-f]{40}$ && "$PREVIOUS_SHA" != 0000000000000000000000000000000000000000 ]]; then
-            if git cat-file -e "$PREVIOUS_SHA^{commit}" && git diff --quiet "$PREVIOUS_SHA" HEAD -- docker/php docker/composer; then
-              echo 'Runtime files unchanged; the existing verified image is reused.'
-              exit 0
-            fi
-          fi
           docker build --pull -t ablaki-php83-ci docker/php
           docker build --pull -t ablaki-composer83-ci docker/composer
           docker run --rm --entrypoint php ablaki-php83-ci -r 'if (PHP_VERSION !== "8.3.36" || ini_get("session.upload_progress.enabled") !== "0") exit(1); foreach (["pdo_mysql","pdo_pgsql","pdo_sqlite","intl","gd","mbstring","zip","curl"] as $extension) if (!extension_loaded($extension)) throw new RuntimeException($extension);'
@@ -212,12 +246,16 @@ jobs:
   deploy:
     name: Deploy backend to ${{ (github.ref == 'refs/heads/test' && 'test') || inputs.target || 'production' }}
     needs:
+      - plan
       - minimum
       - full_before
       - runtime-image
-    if: always() && !inputs.checks_only && !inputs.production_audit && needs.minimum.result == 'success' && needs.runtime-image.result == 'success' && (needs.full_before.result == 'success' || ((github.ref == 'refs/heads/test' || inputs.target
-      == 'test') && needs.full_before.result == 'skipped')) && github.event_name != 'pull_request' && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/test' || (github.event_name
-      == 'workflow_dispatch' && inputs.target == 'test' && github.ref_type == 'branch'))
+    if: >-
+      always() && needs.plan.outputs.publish == 'true' && needs.minimum.result == 'success'
+      && (needs.runtime-image.result == 'success' || (needs.plan.outputs.runtime == 'false' && needs.runtime-image.result == 'skipped'))
+      && (needs.full_before.result == 'success' || (needs.full_before.result == 'skipped' && (needs.plan.outputs.database == 'false' || github.ref == 'refs/heads/test' || inputs.target == 'test')))
+      && github.event_name != 'pull_request' && github.event_name != 'schedule'
+      && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/test' || (github.event_name == 'workflow_dispatch' && inputs.target == 'test' && github.ref_type == 'branch'))
     runs-on: ubuntu-22.04
     timeout-minutes: 60
     environment: ${{ (inputs.target == 'test' || github.ref == 'refs/heads/test') && 'test-backend' || 'production-backend' }}
@@ -258,8 +296,11 @@ jobs:
           printf 'Host %s\n  ControlMaster auto\n  ControlPersist 60\n  ControlPath %s/backend-ssh-%%C\n' \
             "$DEPLOY_HOST" "$RUNNER_TEMP" > "$HOME/.ssh/config"
           chmod 600 "$HOME/.ssh/config"
-      - name: Deploy the checked release and prepare production credits
+      - name: Deploy the checked release
         id: release
+        env:
+          RELEASE_BASE: ${{ needs.plan.outputs.base }}
+          LEGACY_MAINTENANCE: ${{ inputs.legacy_maintenance || inputs.activate_world }}
         shell: bash
         run: |
           set -Eeuo pipefail
@@ -283,9 +324,14 @@ jobs:
           fi
           if [[ "$TARGET" = production ]]; then
             [[ "$GITHUB_REF_NAME" = master ]]
-            scp "${options[@]}" -P "$DEPLOY_PORT" deploy/world-production-upgrade.sh deploy/php-drain.sh "$DEPLOY_USER@$DEPLOY_HOST:$deploy_root/"
-            ssh "${options[@]}" -p "$DEPLOY_PORT" "$DEPLOY_USER@$DEPLOY_HOST" \
-              "bash '$deploy_root/world-production-upgrade.sh' '$GITHUB_SHA'" | tee "$RUNNER_TEMP/backend-production-release.log"
+            [[ -z "$RELEASE_BASE" || "$RELEASE_BASE" =~ ^[a-f0-9]{40}$ ]]
+            if [[ "$LEGACY_MAINTENANCE" = true ]]; then
+              scp "${options[@]}" -P "$DEPLOY_PORT" deploy/world-production-upgrade.sh deploy/php-drain.sh "$DEPLOY_USER@$DEPLOY_HOST:$deploy_root/"
+              ssh "${options[@]}" -p "$DEPLOY_PORT" "$DEPLOY_USER@$DEPLOY_HOST" "bash '$deploy_root/world-production-upgrade.sh' '$GITHUB_SHA'" | tee "$RUNNER_TEMP/backend-production-release.log"
+            else
+              scp "${options[@]}" -P "$DEPLOY_PORT" deploy/production-release.sh "$DEPLOY_USER@$DEPLOY_HOST:$deploy_root/"
+              ssh "${options[@]}" -p "$DEPLOY_PORT" "$DEPLOY_USER@$DEPLOY_HOST" "bash '$deploy_root/production-release.sh' '$GITHUB_SHA' '$RELEASE_BASE'" | tee "$RUNNER_TEMP/backend-production-release.log"
+            fi
             if grep -Fxq '[world-production] Nginx-only release applied; application and database unchanged.' "$RUNNER_TEMP/backend-production-release.log"; then
               echo 'skip_additive_migrations=true' >> "$GITHUB_OUTPUT"
             fi
@@ -320,7 +366,7 @@ jobs:
             "cd '$repo_root' && test \"\$(pwd -P)\" = '$repo_root' && docker-compose exec -T -e '$install_context' php php /web/yii2/yii craft-setup/$install_action"
           ssh "${options[@]}" -p "$DEPLOY_PORT" "$DEPLOY_USER@$DEPLOY_HOST" \
             "cd '$repo_root' && test \"\$(pwd -P)\" = '$repo_root' && docker-compose exec -T -e 'FORUM_INSTALL=confirmed-$TARGET-checkout' php php /web/yii2/yii forum-setup/install"
-        if: env.TARGET == 'production' && !inputs.activate_world && steps.release.outputs.skip_additive_migrations != 'true'
+        if: env.TARGET == 'production' && needs.plan.outputs.additive == 'true' && !inputs.activate_world && steps.release.outputs.skip_additive_migrations != 'true'
       - name: Prepare the explicitly requested funded economy test
         if: env.TARGET == 'test' && inputs.economy_test != '' && inputs.economy_test != 'skip'
         shell: bash
@@ -357,15 +403,21 @@ jobs:
           docker-compose exec -T php php -r 'require "/web/yii2/vendor/autoload.php"; require "/web/yii2/vendor/yiisoft/yii2/Yii.php"; if (PHP_VERSION !== "8.3.36" || ini_get("session.upload_progress.enabled") !== "0") exit(1); $socket = @fsockopen("127.0.0.1", 9000); if (!$socket) exit(1); fclose($socket); echo json_encode(["php" => PHP_VERSION, "yii" => Yii::getVersion(), "upload_progress" => false, "fpm_ready" => true]), PHP_EOL;' </dev/null
           docker-compose exec -T php service cron status </dev/null
           docker-compose exec -T php composer check-platform-reqs </dev/null
+          if [[ "$1" = /var/www/api.ablakin.ru ]]; then
+            [[ "$(docker inspect -f '{{.State.Running}}' ablaki-world-worker-production)" = true ]]
+            curl --fail --silent --show-error --max-time 30 http://127.0.0.1:2180/v1/stat > /dev/null
+          fi
           VERIFY
-          printf '### Backend ready: `%s`\n\nMandatory checks, server readiness and HTTP smoke passed. Extended tests continue separately.\n' "$GITHUB_SHA" >> "$GITHUB_STEP_SUMMARY"
+          printf '### Backend ready: `%s`\n\nRequired checks and server readiness passed.\n' "$GITHUB_SHA" >> "$GITHUB_STEP_SUMMARY"
   full_after:
     name: Extended checks after test deployment
-    needs: deploy
-    if: ${{ always() && needs.deploy.result == 'success' && (github.ref == 'refs/heads/test' || inputs.target == 'test') }}
+    needs: [deploy, plan]
+    if: ${{ always() && needs.deploy.result == 'success' && needs.plan.outputs.database == 'true' && (github.ref == 'refs/heads/test' || inputs.target == 'test') }}
     uses: ./.github/workflows/backend-full.yml
     with:
       target: test
+      portable: ${{ needs.plan.outputs.portable == 'true' }}
+      core_checked: true
   production_audit:
     name: Read-only production preflight
     if: ${{ github.event_name == 'workflow_dispatch' && inputs.production_audit }}
