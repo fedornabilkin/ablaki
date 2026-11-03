@@ -37,6 +37,57 @@ trap 'rm -rf -- "$test_root"' EXIT
   cmp docker-compose.yaml ../operator-compose.yaml
 )
 printf 'PASS production Compose CRLF preservation with real Git\n'
+# Exercise the real deploy wrapper with a stale CRLF index, operator edits and
+# a branch switch. Only make is stubbed; Git must preserve the edits in stash.
+(
+  mkdir -p "$test_root/branch-eol" "$test_root/eol-bin"
+  cd "$test_root/branch-eol"
+  git init -q
+  git config user.name Fixture
+  git config user.email fixture@example.invalid
+  git config core.autocrlf false
+  printf 'original\r\n' > file.php
+  git add file.php
+  git commit -qm original
+  printf '*.php text eol=lf\n' > .gitattributes
+  git add .gitattributes
+  git commit -qm attributes
+  git branch feature
+  git checkout -qb test
+  printf 'original\n' > file.php
+  git add file.php
+  git commit -qm normalized
+  target=$(git rev-parse HEAD)
+  git clone -q --bare . ../eol-origin
+  git remote add origin ../eol-origin
+  git checkout -q feature
+  printf 'original\noperator edit\n' > file.php
+  printf 'LOCAL=preserved\n' > .env
+  printf '#!/usr/bin/env bash\n[[ "$*" = up ]]\n' > "$test_root/eol-bin/make"
+  chmod +x "$test_root/eol-bin/make"
+  # Git for Windows prints C:/ paths while Bash pwd uses /c/. Keep the fixture
+  # comparable to the Linux server without changing any Git operations.
+  if command -v cygpath >/dev/null; then
+    export REAL_EOL_GIT
+    REAL_EOL_GIT=$(command -v git)
+    cat > "$test_root/eol-bin/git" <<'GIT_PATH'
+#!/usr/bin/env bash
+if [[ "${*: -2}" = 'rev-parse --show-toplevel' ]]; then
+  cygpath -u "$("$REAL_EOL_GIT" "$@")"
+else
+  exec "$REAL_EOL_GIT" "$@"
+fi
+GIT_PATH
+    chmod +x "$test_root/eol-bin/git"
+  fi
+  PATH="$test_root/eol-bin:$PATH" bash "$source_root/deploy/backend-deploy.sh" "$PWD" test test "$target" > ../eol-deploy.log 2>&1 || { cat ../eol-deploy.log; exit 1; }
+  [[ "$(git symbolic-ref --short HEAD)" = test && "$(git rev-parse HEAD)" = "$target" ]]
+  git diff --quiet
+  git diff --cached --quiet
+  git stash show -p | grep -q 'operator edit'
+  [[ "$(cat .env)" = LOCAL=preserved ]]
+)
+printf 'PASS branch switch with CRLF normalization and preserved edits\n'
 mkdir -p "$test_root/bin"
 export TEST_LOG TEST_REPO TEST_FAIL TEST_BRANCH
 cat > "$test_root/bin/git" <<'MOCK'
@@ -55,6 +106,7 @@ case "$1 $2" in
     [[ "$TEST_FAIL" != dirty ]] || printf ' M local.php\n'
     ;;
   'stash push') ;;
+  'diff --quiet') ;;
   'fetch --prune') ;;
   'show-ref --verify') exit 1 ;;
   'checkout -b') printf '%s\n' "$3" > "$TEST_REPO/current-branch" ;;
