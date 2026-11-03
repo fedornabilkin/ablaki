@@ -17,4 +17,6 @@
 
 ## Группа D: Публикация
 - [x] D0. Устранить блокировку смены тестовой ветки историческими CRLF-файлами: сохранить изменения в stash, разрешить только остаточное различие CRLF/LF и проверить реальным Git без принудительного checkout.
-- [ ] D1. Проверить итоговую ревизию в CI и выпустить совместимые backend/frontend; подтвердить результат.
+- [x] D1. Проверить итоговую ревизию в CI и выпустить совместимые backend/frontend; подтвердить результат.
+
+Backend `d6d6f96`: [test](https://github.com/fedornabilkin/ablaki/actions/runs/41681169254), [production](https://github.com/fedornabilkin/ablaki/actions/runs/41682623715). Frontend `af177ee`: [production](https://github.com/fedornabilkin/ablaki-front/actions/runs/41683486342). Обязательные проверки успешны. Версия frontend подтверждена через deploy-version.txt, публичные API и /world отвечают HTTP 200. Игровые проверки выполнены на изолированных данных; production-операции не использовались для тестов.
