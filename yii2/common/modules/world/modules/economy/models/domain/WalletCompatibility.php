@@ -19,8 +19,11 @@ class WalletCompatibility
         foreach ($tables as $table) {
             if (!in_array($table, array_merge($required, ['advertising']), true) && !preg_match('/^(craft_|world_|game_|economy_)/D', $table)) continue;
             if ($this->db->driverName === 'mysql') {
-                $engine = $this->db->createCommand('SELECT ENGINE FROM information_schema.TABLES WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME=:table', [':table' => $table])->queryScalar();
-                if (strtolower((string)$engine) !== 'innodb') $result['table_issues'][] = ['table' => $table, 'reason' => 'requires-innodb'];
+                $metadata = $this->db->createCommand('SELECT TABLE_TYPE, ENGINE FROM information_schema.TABLES WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME=:table', [':table' => $table])->queryOne();
+                // Object compatibility views share world_node's engine, checked as a physical table.
+                // Required legacy financial tables must still be physical InnoDB tables.
+                if (($metadata['TABLE_TYPE'] ?? null) === 'VIEW' && !in_array($table, $required, true) && $table !== 'advertising') continue;
+                if (strtolower((string)($metadata['ENGINE'] ?? null)) !== 'innodb') $result['table_issues'][] = ['table' => $table, 'reason' => 'requires-innodb'];
             }
         }
         foreach (['game_orel', 'game_duel', 'game_five', 'credit_exchange', 'credit_transfer', 'advertising'] as $table) {
@@ -31,9 +34,15 @@ class WalletCompatibility
             elseif (strpos($table, 'game_') === 0) $query->where(['or', ['user_gamer' => null], ['user_gamer' => 0]]);
             elseif ($table !== 'advertising') $query->where(['or', ['user_buyer' => null], ['user_buyer' => 0]]);
             else $query->where(['!=', 'credit', 0]);
-            $count = 0; $invalid = 0; $samples = [];
+            $count = 0; $invalid = 0; $samples = []; $historicalNegative = 0;
             foreach ($query->each(500, $this->db) as $row) {
                 $count++;
+                // Owner confirmed that negative advertising remainders are obsolete records.
+                // Keep the values and report them, without treating them as an open liability.
+                if ($table === 'advertising' && is_numeric($row[$field]) && $row[$field] < 0) {
+                    $historicalNegative++;
+                    continue;
+                }
                 try {
                     if (strpos($table, 'game_') === 0) LegacyCreditPolicy::game($row[$field]);
                     elseif ($table === 'credit_exchange') LegacyCreditPolicy::exchange($row[$field]);
@@ -44,6 +53,7 @@ class WalletCompatibility
                 }
             }
             $result['sources'][$table] = ['rows' => $count, 'requires_decision' => $invalid, 'samples' => $samples];
+            if ($table === 'advertising') $result['sources'][$table]['historical_negative_ignored'] = $historicalNegative;
             $result['requires_decision'] += $invalid;
         }
         if (in_array('persone', $tables, true)) {

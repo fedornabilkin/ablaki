@@ -4,6 +4,39 @@ set -Eeuo pipefail
 source_root=$(cd "$(dirname "$0")/../.." && pwd)
 test_root=$(mktemp -d)
 trap 'rm -rf -- "$test_root"' EXIT
+# Real Git regression: a historical CRLF blob with newer eol=lf attributes
+# remains dirty after stash. The target blob must be staged before fast-forward.
+(
+  mkdir "$test_root/compose-eol"
+  cd "$test_root/compose-eol"
+  git init -q
+  git config user.name Fixture
+  git config user.email fixture@example.invalid
+  git config core.autocrlf false
+  printf 'version: "3"\r\nservices: {}\r\n' > docker-compose.yaml
+  git add docker-compose.yaml
+  git commit -qm original
+  printf 'docker-compose.yaml text eol=lf\n' > .gitattributes
+  git add .gitattributes
+  git commit -qm attributes
+  old=$(git rev-parse HEAD)
+  printf 'version: "3"\nservices: {}\n' > docker-compose.yaml
+  git add docker-compose.yaml
+  git commit -qm normalized
+  target=$(git rev-parse HEAD)
+  git checkout -q "$old"
+  printf 'version: "3"\r\nservices: {}\r\n# operator config\r\n' > docker-compose.yaml
+  cp docker-compose.yaml ../operator-compose.yaml
+  git stash push -qm preserve -- docker-compose.yaml
+  git checkout "$target" -- docker-compose.yaml
+  git merge --ff-only "$target" >/dev/null
+  git reset HEAD -- docker-compose.yaml >/dev/null
+  cp ../operator-compose.yaml docker-compose.yaml
+  [[ "$(git rev-parse HEAD)" = "$target" ]]
+  git diff --cached --quiet
+  cmp docker-compose.yaml ../operator-compose.yaml
+)
+printf 'PASS production Compose CRLF preservation with real Git\n'
 mkdir -p "$test_root/bin"
 export TEST_LOG TEST_REPO TEST_FAIL TEST_BRANCH
 cat > "$test_root/bin/git" <<'MOCK'
@@ -378,4 +411,201 @@ for scenario in runtime_warm runtime_build runtime_install runtime_start runtime
   [[ "$(cat "$TEST_REPO/.env")" = 'local environment' ]]
   ! grep -Eq 'pg_dump|mysqldump|pg_restore|down |reset|stop.*postgres|stop.*mysql' "$TEST_LOG"
   printf 'PASS deployment scenario: %s\n' "$scenario"
+done
+# Preparation fixtures exercise shell sequencing without contacting a server.
+mkdir -p "$test_root/production-bin"
+cat > "$test_root/production-bin/git" <<'MOCK'
+#!/usr/bin/env bash
+set -eu
+while [[ "$1" = -c ]]; do shift 2; done
+printf 'git %s\n' "$*" >> "$TEST_LOG"
+case "$1" in
+  symbolic-ref) echo master ;;
+  status)
+    [[ "$TEST_FAIL" != prep_dirty ]] || echo ' M file.php'
+    [[ "$TEST_FAIL" != prep_local_compose && "$TEST_FAIL" != nginx_success ]] || echo ' M docker-compose.yaml'
+    ;;
+  rev-parse)
+    if [[ "$TEST_FAIL" = nginx_unchecked ]]; then printf '%040d\n' 2; else printf '%040d\n' 1; fi
+    ;;
+  fetch|merge-base) ;;
+  merge)
+    if [[ "$TEST_FAIL" = prep_local_compose ]]; then printf 'repository config\n' > docker-compose.yaml; fi
+    ;;
+  stash|checkout|reset) ;;
+  diff)
+    if [[ "$2" = --name-only ]]; then
+      echo docker/nginx/add/php.conf
+      echo yii2/tests/release/world-economy-runtime.php
+      [[ "$TEST_FAIL" != nginx_application ]] || echo yii2/api/controllers/WorldController.php
+    fi
+    [[ "$TEST_FAIL" != prep_runtime_changed ]]
+    ;;
+  *) exit 1 ;;
+esac
+MOCK
+cat > "$test_root/production-bin/docker-compose" <<'MOCK'
+#!/usr/bin/env bash
+printf 'compose %s\n' "$*" >> "$TEST_LOG"
+case "$*" in
+  'ps -q php')
+    printf 'abc123\n'
+    [[ "$TEST_FAIL" != rating_success ]] || printf 'def456\n'
+    ;;
+  'exec -T nginx nginx -t') [[ "$TEST_FAIL" != nginx_invalid ]] ;;
+  'exec -T nginx nginx -s reload') [[ "$TEST_FAIL" != nginx_reload_failed ]] ;;
+  *) exit 1 ;;
+esac
+MOCK
+cat > "$test_root/production-bin/docker" <<'MOCK'
+#!/usr/bin/env bash
+set -eu
+printf 'docker %s\n' "$*" >> "$TEST_LOG"
+case "$1" in
+  inspect)
+    case "$3" in
+      '{{index .Config.Labels "com.docker.compose.oneoff"}}') if [[ "$4" = def456 ]]; then echo True; else echo False; fi ;;
+      '{{index .Config.Labels "ablaki.world.worker"}}') echo production ;;
+      *) echo true ;;
+    esac
+    ;;
+  container) exit 0 ;;
+  stop|start) ;;
+  kill) [[ "$*" = 'kill --signal=USR2 abc123' ]] ;;
+  exec)
+    if [[ "$*" = *WORLD_RATING_PRECISION* ]]; then
+      cat >/dev/null
+      [[ -f "$TEST_REPO/yii2/common/runtime/financial-maintenance/paused" ]]
+      grep -Fxq 'flock -x -w 180 9' "$TEST_LOG"
+      [[ "$TEST_FAIL" != rating_failed ]] || exit 24
+      echo '{}' > "$TEST_REPO/yii2/common/runtime/financial-maintenance/rating-precision-verified.json"
+    elif [[ "$*" = *memory_limit* ]]; then
+      cat >/dev/null
+      [[ -f "$TEST_REPO/yii2/common/runtime/financial-maintenance/paused" ]]
+      grep -Fxq 'flock -x -w 180 9' "$TEST_LOG"
+      [[ "$(grep -Fc 'docker exec -i abc123 sh' "$TEST_LOG")" = 2 ]]
+      [[ "$TEST_FAIL" != prep_conversion_failed ]] || exit 24
+      echo '{}' > "$TEST_REPO/yii2/common/runtime/financial-maintenance/verified.json"
+    fi
+    ;;
+  *) exit 1 ;;
+esac
+MOCK
+cat > "$test_root/production-bin/flock" <<'MOCK'
+#!/usr/bin/env bash
+printf 'flock %s\n' "$*" >> "$TEST_LOG"
+[[ "$*" != '-x -w 180 9' || "$TEST_FAIL" != prep_drain_failed ]]
+MOCK
+cat > "$test_root/production-bin/curl" <<'MOCK'
+#!/usr/bin/env bash
+printf 'read smoke\n' >> "$TEST_LOG"
+MOCK
+chmod +x "$test_root/production-bin/"*
+export PATH="$test_root/production-bin:$PATH"
+for scenario in prep_success prep_local_compose prep_dirty prep_runtime_changed prep_conversion_failed prep_drain_failed nginx_success nginx_invalid nginx_reload_failed nginx_unchecked nginx_application; do
+  TEST_FAIL=$scenario
+  TEST_REPO="$test_root/$scenario"
+  TEST_LOG="$test_root/$scenario.log"
+  : > "$TEST_LOG"
+  mkdir -p "$TEST_REPO/.php-runtime-upgrade" "$TEST_REPO/docker/php" "$TEST_REPO/docker/composer" "$TEST_REPO/yii2/common/services/user" "$TEST_REPO/yii2/common/config" "$TEST_REPO/deploy"
+  TEST_REPO=$(cd "$TEST_REPO" && pwd -P)
+  for file in docker/php/Dockerfile docker/php/runtime.ini docker/php/security-fpm.conf docker/php/entrypoint.sh docker/composer/Dockerfile docker/composer/entrypoint.sh yii2/composer.json yii2/composer.lock yii2/common/services/user/FinancialMaintenanceBootstrap.php deploy/world-production-prepare.php; do
+    printf 'fixture\n' > "$TEST_REPO/$file"
+  done
+  echo FinancialMaintenanceBootstrap > "$TEST_REPO/yii2/common/config/main.php"
+  printf 'operator production config\n' > "$TEST_REPO/docker-compose.yaml"
+  (cd "$TEST_REPO"; sha256sum docker/php/Dockerfile docker/php/runtime.ini docker/php/security-fpm.conf docker/php/entrypoint.sh docker/composer/Dockerfile docker/composer/entrypoint.sh yii2/composer.json yii2/composer.lock | sha256sum | cut -d' ' -f1) > "$TEST_REPO/.php-runtime-upgrade/active"
+  printf 'drain fixture\n' > "$TEST_REPO/php-drain.sh"
+  control="$TEST_REPO/yii2/common/runtime/financial-maintenance"
+  if [[ "$scenario" = nginx_* ]]; then
+    mkdir -p "$control"
+    echo previously-activated > "$control/completed"
+    printf 'printf "normal deploy\\n" >> "$TEST_LOG"\n' > "$TEST_REPO/backend-deploy.sh"
+  fi
+  sed -e "s@repo=/var/www/api.ablakin.ru@repo=$TEST_REPO@" -e "s@deploy_root=/opt/ablaki-backend@deploy_root=$TEST_REPO@" "$source_root/deploy/world-production-upgrade.sh" > "$TEST_REPO/runner.sh"
+  status=0
+  bash "$TEST_REPO/runner.sh" "$(printf '%040d' 1)" > "$TEST_REPO/output.log" 2>&1 || status=$?
+  control="$TEST_REPO/yii2/common/runtime/financial-maintenance"
+  case "$scenario" in
+    nginx_success)
+      [[ "$status" = 0 ]] || { cat "$TEST_REPO/output.log"; exit 1; }
+      grep -Fxq 'compose exec -T nginx nginx -t' "$TEST_LOG"
+      grep -Fxq 'compose exec -T nginx nginx -s reload' "$TEST_LOG"
+      ! grep -q 'normal deploy\|^docker \|^flock \|git stash' "$TEST_LOG"
+      [[ "$(cat "$TEST_REPO/docker-compose.yaml")" = 'operator production config' ]]
+      ;;
+    nginx_invalid|nginx_reload_failed|nginx_unchecked)
+      [[ "$status" != 0 ]]
+      ! grep -q 'normal deploy\|^docker \|^flock ' "$TEST_LOG"
+      [[ "$scenario" = nginx_reload_failed ]] || ! grep -q 'nginx -s reload' "$TEST_LOG"
+      [[ "$scenario" != nginx_unchecked ]] || ! grep -q '^git merge\|^compose ' "$TEST_LOG"
+      ;;
+    nginx_application)
+      [[ "$status" = 0 ]]
+      grep -Fxq 'normal deploy' "$TEST_LOG"
+      ! grep -q '^compose ' "$TEST_LOG"
+      ;;
+    prep_success|prep_local_compose)
+      [[ "$status" = 0 && -f "$control/completed" && ! -f "$control/paused" ]] || { cat "$TEST_REPO/output.log"; exit 1; }
+      grep -Fxq 'flock -u 9' "$TEST_LOG"
+      grep -Fxq 'read smoke' "$TEST_LOG"
+      [[ "$(cat "$TEST_REPO/docker-compose.yaml")" = 'operator production config' ]]
+      ;;
+    prep_dirty|prep_runtime_changed)
+      [[ "$status" != 0 && ! -e "$control/paused" ]]
+      ! grep -q '^docker ' "$TEST_LOG"
+      ;;
+    prep_conversion_failed|prep_drain_failed)
+      [[ "$status" != 0 && -f "$control/paused" && ! -f "$control/completed" ]]
+      ! grep -q 'cron start\|flock -u 9' "$TEST_LOG"
+      ;;
+  esac
+  if [[ "$scenario" = nginx_* ]]; then
+    [[ ! -e "$control/paused" && "$(cat "$control/completed")" = previously-activated ]]
+  fi
+  ! grep -Eq '^docker (stop|restart|rm|run)|^make |reset|mysqldump|pg_restore' "$TEST_LOG"
+  printf 'PASS production preparation: %s\n' "$scenario"
+done
+
+# The targeted rating repair pauses writers, retains the serving containers,
+# and leaves a resumable pause on any failed migration.
+for scenario in rating_success rating_failed rating_resume rating_finished rating_wrong_release; do
+  TEST_FAIL=$scenario
+  TEST_REPO="$test_root/$scenario"
+  mkdir -p "$TEST_REPO/deploy" "$TEST_REPO/yii2/common/runtime/financial-maintenance"
+  TEST_REPO=$(cd "$TEST_REPO" && pwd -P)
+  TEST_LOG="$TEST_REPO/commands.log"
+  : > "$TEST_LOG"
+  control="$TEST_REPO/yii2/common/runtime/financial-maintenance"
+  touch "$control/completed" "$control/writers.lock"
+  echo 'operator config' > "$TEST_REPO/docker-compose.yaml"
+  echo 'fixture' > "$TEST_REPO/deploy/php-drain.sh"
+  echo 'fixture' > "$TEST_REPO/deploy/world-rating-precision.php"
+  if [[ "$scenario" = rating_resume || "$scenario" = rating_finished || "$scenario" = rating_wrong_release ]]; then
+    printf '%040d\n' 1 > "$control/rating-precision.pending"
+    if [[ "$scenario" = rating_finished ]]; then echo '{}' > "$control/rating-precision-verified.json"; else touch "$control/paused"; fi
+    [[ "$scenario" != rating_wrong_release ]] || printf '%040d\n' 2 > "$control/rating-precision.pending"
+  fi
+  sed "s@repo=/var/www/api.ablakin.ru@repo=$TEST_REPO@" "$source_root/deploy/world-rating-precision.sh" > "$TEST_REPO/runner.sh"
+  status=0
+  bash "$TEST_REPO/runner.sh" "$(printf '%040d' 1)" > "$TEST_REPO/output.log" 2>&1 || status=$?
+  case "$scenario" in
+    rating_success|rating_resume)
+      [[ "$status" = 0 && ! -e "$control/paused" && ! -e "$control/rating-precision.pending" ]] || { cat "$TEST_REPO/output.log"; exit 1; }
+      grep -Fxq 'docker stop --time 180 ablaki-world-worker-production' "$TEST_LOG"
+      grep -Fxq 'docker start ablaki-world-worker-production' "$TEST_LOG"
+      grep -Fxq 'flock -u 9' "$TEST_LOG"
+      ;;
+    rating_failed|rating_wrong_release)
+      [[ "$status" != 0 && -f "$control/paused" && -f "$control/rating-precision.pending" ]]
+      ! grep -q 'cron start\|flock -u 9\|docker start ' "$TEST_LOG"
+      ;;
+    rating_finished)
+      [[ "$status" = 0 && ! -e "$control/paused" && ! -e "$control/rating-precision.pending" ]]
+      ! grep -q '^docker ' "$TEST_LOG"
+      ;;
+  esac
+  [[ "$(cat "$TEST_REPO/docker-compose.yaml")" = 'operator config' ]]
+  ! grep -Eq '^make |^compose up|^docker (restart|rm)|migrate/up' "$TEST_LOG"
+  printf 'PASS targeted rating release: %s\n' "$scenario"
 done

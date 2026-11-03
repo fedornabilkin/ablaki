@@ -42,7 +42,12 @@ class TestWorldSetup
         $this->progress('storage-active');
         $wallet = new WalletRollout($this->db); $state = $wallet->status();
         if (!$state['wallet_ready']) {
-            $state = $wallet->begin();
+            $existing = $state['rollout'];
+            $hasPolicy = $this->db->schema->getTableSchema('economy_wallet_rollout', true)->getColumn('precision_policy');
+            $policy = $existing && $existing['phase'] !== 'cancelled'
+                ? ($existing['precision_policy'] ?? 'strict')
+                : ($hasPolicy ? \common\modules\world\modules\economy\value\LegacyCreditConversion::HALF_UP : 'strict');
+            $state = $wallet->begin($policy);
             while (in_array($state['rollout']['phase'], ['frozen', 'snapshotted'], true)) {
                 if ($state['rollout']['phase'] === 'snapshotted') break;
                 $state = $wallet->snapshot(2000);

@@ -65,6 +65,8 @@ class WorldSetupController extends \yii\console\Controller
     public function actionInstall(): int
     {
         $this->requireInstall();
+        $issues = (new \common\modules\world\support\WorldSchemaAudit(Yii::$app->db))->installationIssues();
+        if ($issues) throw new \RuntimeException("World installation prerequisites failed; no migration was started:\n" . implode("\n", $issues));
         $migrate = new \yii\console\controllers\MigrateController('world-migration', Yii::$app, ['migrationPath' => '@console/world-migrations', 'migrationNamespaces' => [], 'interactive' => false]);
         $exit = $migrate->runAction('up');
         if ($exit !== 0) return $exit;
@@ -133,7 +135,7 @@ class WorldSetupController extends \yii\console\Controller
     public function actionStorageActivate(): int { return $this->rolloutOutput((new \common\modules\world\modules\craft\models\domain\StorageRollout(Yii::$app->db))->activate()); }
     public function actionStorageStatus(): int { return $this->rolloutOutput((new \common\modules\world\modules\craft\models\domain\StorageRollout(Yii::$app->db))->status()); }
     public function actionWalletStatus(): int { return $this->rolloutOutput((new \common\modules\world\modules\economy\models\domain\WalletRollout(Yii::$app->db))->status()); }
-    public function actionWalletFreeze(): int { return $this->rolloutOutput((new \common\modules\world\modules\economy\models\domain\WalletRollout(Yii::$app->db))->begin()); }
+    public function actionWalletFreeze(string $precisionPolicy = 'strict'): int { return $this->rolloutOutput((new \common\modules\world\modules\economy\models\domain\WalletRollout(Yii::$app->db))->begin($precisionPolicy)); }
     public function actionWalletSnapshot(int $limit = 500): int { return $this->rolloutOutput((new \common\modules\world\modules\economy\models\domain\WalletRollout(Yii::$app->db))->snapshot($limit)); }
     public function actionWalletConvert(): int { return $this->rolloutOutput((new \common\modules\world\modules\economy\models\domain\WalletRollout(Yii::$app->db))->convert()); }
     public function actionWalletVerify(): int { return $this->rolloutOutput((new \common\modules\world\modules\economy\models\domain\WalletRollout(Yii::$app->db))->verify()); }

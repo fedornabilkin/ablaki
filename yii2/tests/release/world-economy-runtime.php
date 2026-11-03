@@ -168,19 +168,25 @@ function economySourceCommand(int $user, int $node, string $action, array $extra
 function economySourceTick(int $user, int $node, int $seconds = 60, bool $stop = false): array
 {
     $db = Yii::$app->db;
-    $db->createCommand()->update('world_mining_worker', ['accounted_at' => time() - $seconds, 'last_seen_at' => time()], ['user_id' => $user])->execute();
+    $now = time();
+    $db->createCommand()->update('world_mining_worker', ['accounted_at' => $now - $seconds, 'last_seen_at' => $now], ['user_id' => $user])->execute();
     return economySourceCommand($user, $node, $stop ? 'stop' : 'heartbeat');
 }
 $sourceBefore = $freshStock->quantities($freshUser)[$logItem];
 economySourceCommand($freshUser, $forestId, 'start');
+$pauseStartedAt = time();
 $paused = economySourceTick($freshUser, $forestId, 30, true);
-economyCheck(!$paused['working'] && $paused['worked_seconds'] === 30 && $paused['quota']['remaining'] === 19, 'pausing source work preserves seconds without consuming quota');
+// A real DB round trip can cross a second boundary. Preserve elapsed work,
+// including that round trip, rather than requiring the wall clock to stand still.
+$pauseFinishedAt = time();
+economyCheck(!$paused['working'] && $paused['worked_seconds'] >= 30 && $paused['worked_seconds'] <= 30 + $pauseFinishedAt - $pauseStartedAt && $paused['quota']['remaining'] === 19, 'pausing source work preserves seconds without consuming quota');
 economySourceCommand($freshUser, $forestId, 'start');
-$db->createCommand()->update('world_mining_worker', ['accounted_at' => time() - 3600, 'last_seen_at' => time() - 3600], ['user_id' => $freshUser])->execute();
+$offlineAt = time() - 3600;
+$db->createCommand()->update('world_mining_worker', ['accounted_at' => $offlineAt, 'last_seen_at' => $offlineAt], ['user_id' => $freshUser])->execute();
 $offline = economySourceCommand($freshUser, $forestId, 'heartbeat');
-economyCheck(!$offline['working'] && $offline['worked_seconds'] === 90 && $freshStock->quantities($freshUser)[$logItem] === $sourceBefore, 'one offline hour adds at most sixty accepted seconds and does not deliver a batch');
+economyCheck(!$offline['working'] && $offline['worked_seconds'] === $paused['worked_seconds'] + 60 && $freshStock->quantities($freshUser)[$logItem] === $sourceBefore, 'one offline hour adds at most sixty accepted seconds and does not deliver a batch');
 economySourceCommand($freshUser, $forestId, 'start');
-$resumed = economySourceTick($freshUser, $forestId, 30);
+$resumed = economySourceTick($freshUser, $forestId, 120 - $offline['worked_seconds']);
 economyCheck($resumed['quota']['remaining'] === 18 && $freshStock->quantities($freshUser)[$logItem] === $sourceBefore + 1, 'resuming finishes only the remaining work');
 economySourceCommand($freshUser, $forestId, 'start');
 economySourceTick($freshUser, $forestId);

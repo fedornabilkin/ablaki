@@ -1,6 +1,6 @@
 <?php
 // Reuses only the disposable, allowlisted fixture; never application database settings.
-require __DIR__ . '/world-economy-runtime.php';
+require_once __DIR__ . '/world-economy-runtime.php';
 
 use common\modules\world\models\Command;
 use common\modules\world\modules\economy\models\domain\BudgetDisbursement;

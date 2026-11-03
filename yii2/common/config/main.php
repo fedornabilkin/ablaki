@@ -6,7 +6,7 @@ use common\modules\forum\Module;
 use yii\redis\Cache;
 
 $config = [
-    'bootstrap' => [\common\modules\world\modules\economy\models\domain\WalletMaintenanceBootstrap::class],
+    'bootstrap' => [\common\services\user\FinancialMaintenanceBootstrap::class, \common\modules\world\modules\economy\models\domain\WalletMaintenanceBootstrap::class],
     'language' => 'ru-RU',
     'charset' => 'UTF-8',
     'aliases' => [
@@ -55,7 +55,11 @@ $config = [
     ],
 
     'modules' => [
-        'world' => ['class' => \common\modules\world\Module::class],
+        'world' => [
+            'class' => \common\modules\world\Module::class,
+            // Per-installation switches can be changed without restarting FPM or running entrypoint migrations.
+            'flags' => is_file(__DIR__ . '/world-local.php') ? require __DIR__ . '/world-local.php' : [],
+        ],
         'user' => [
             'class' => 'dektrium\user\Module',
             'enableFlashMessages' => false,

@@ -10,11 +10,15 @@ class CultivationClock
         $due = $cycle['water_due_at'] === null ? null : (int)$cycle['water_due_at'];
         if ($due !== null && $due >= $ready) $due = null;
         $deadline = $due === null || $due >= $ready ? null : min($ready, $due + (int)$rules['water_window_seconds']);
+        $schedule = CultivationSchedule::accepted($cycle);
+        $step = CultivationSchedule::step($cycle);
+        if ($step === 1 && $deadline !== null) $deadline = min($deadline, (int)$cycle['planted_at'] + $schedule['interval_seconds']);
         $missed = !empty($cycle['water_missed']) || ($deadline !== null && $now >= $deadline);
         $expires = $ready + (int)$rules['harvest_window_seconds'];
         $canWater = !$missed && $deadline !== null && $now >= $due && $now < $deadline;
         return ['state' => $now >= $expires ? 'expired' : ($now >= $ready ? 'ripe' : ($canWater ? 'needs_water' : 'growing')),
             'ready_at' => $ready, 'water_due_at' => $due, 'water_deadline_at' => $deadline, 'expires_at' => $expires,
+            'watering_step' => $step, 'watering_total' => $schedule ? (int)$schedule['waterings'] : null,
             'water_missed' => $missed, 'event_loss_bps' => (int)($cycle['event_loss_bps'] ?? 0),
             'yield_factor_bps' => intdiv(($missed ? 5000 : 10000) * (10000 - (int)($cycle['event_loss_bps'] ?? 0)), 10000), 'can_water' => $canWater];
     }

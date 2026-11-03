@@ -299,10 +299,11 @@ final class EconomyScenario
             self::need(isset($this->state['objects']['garden-bed']) && $this->state['crop'] === null, 'BED_UNAVAILABLE');
             $crop = $this->profile['crop']; $this->tool('world-shovel', $this->profile['operating_costs']['crop_dig_tool_wear_per_cycle']);
             $this->spend('garden', self::money($crop['dig_fee_cr'])->add(self::money($crop['sow_fee_cr'])));
-            $this->stock([$crop['seed'] => $crop['seed_quantity'], $crop['water'] => $crop['water_quantity_per_action']], -1);
+            $this->stock([$crop['seed'] => $crop['seed_quantity']], -1);
             // Conservative labour allowance within the 180-second aggregate, not a live craft timer.
             $this->state['now'] += 120;
-            $this->state['crop'] = ['ready_at' => $this->state['now'] + $crop['grow_seconds'], 'water_due_at' => $this->state['now'] + $crop['water_interval_seconds'], 'water_missed' => 0];
+            $this->state['crop'] = ['planted_at' => $this->state['now'], 'ready_at' => $this->state['now'] + $crop['grow_seconds'], 'water_due_at' => $this->state['now'], 'water_missed' => 0,
+                'terms_json' => json_encode(['watering_schedule' => CultivationSchedule::forSowing($crop + ['water_item_id' => 1])])];
             $this->state['facts']['bed_dug'] = true; $this->state['facts']['carrot_sown'] = true;
         } elseif ($action === 'cancel_crop') {
             self::need($this->state['crop'] !== null, 'CROP_REQUIRED');
@@ -314,8 +315,10 @@ final class EconomyScenario
             $clock = CultivationClock::project($this->state['crop'], $crop, $this->state['now']);
             if ($action === 'water') {
                 self::need($clock['can_water'], 'WATER_NOT_DUE');
-                $this->spend('garden', self::money($crop['water_fee_cr'])); $this->stock([$crop['water'] => 1], -1);
-                $this->state['now'] += 60; $this->state['crop']['water_due_at'] = null;
+                $first = CultivationSchedule::step($this->state['crop']) === 1;
+                $this->spend('garden', self::money($first ? '0.0000' : $crop['water_fee_cr'])); $this->stock([$crop['water'] => $crop['water_quantity_per_action']], -1);
+                $this->state['now'] += $first ? 0 : 60;
+                $this->state['crop']['water_due_at'] = CultivationSchedule::nextWatering($this->state['crop'], $crop);
             } else {
                 self::need($clock['state'] === 'ripe', 'CROP_NOT_READY_OR_EXPIRED');
                 $quantity = max(1, intdiv($crop['yield_quantity'] * $this->efficiency() * $clock['yield_factor_bps'], 100000000));

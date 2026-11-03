@@ -20,6 +20,9 @@ class AdsWidget extends AbstractWidget
 
     public function run()
     {
+        // A page view is a monetary writer when it displays a paid advertisement.
+        // Keep the rest of the page readable while financial operations are paused.
+        if (!\common\services\user\FinancialMaintenance::enterWriter()) return '';
         $this->getCompany();
         $item = array_shift(self::$company);
         if(!$item){

@@ -2,15 +2,17 @@
 namespace common\modules\world\modules\economy\models\domain;
 
 use common\modules\world\modules\economy\value\Money;
+use common\modules\world\modules\economy\value\LegacyCreditConversion;
 use yii\db\Connection;
 use yii\db\Expression;
 use yii\db\Query;
 
-/** Offline, resumable preparation and explicit activation. No automatic rounding or reverse DDL. */
+/** Offline, resumable preparation. Rounding requires an explicit, persisted decision. */
 class WalletRollout
 {
     private const COLUMNS = ['persone.credit', 'history_balance.credit', 'history_balance.credit_up'];
     private $db;
+    private $precisionPolicy = LegacyCreditConversion::STRICT;
     public function __construct(Connection $db) { $this->db = $db; }
 
     public function status(): array
@@ -23,15 +25,22 @@ class WalletRollout
             'wallet_ready' => WalletSchema::ready($this->db), 'activation_available' => $run && $run['phase'] === 'verified'];
     }
 
-    public function begin(): array
+    public function begin(string $precisionPolicy = LegacyCreditConversion::STRICT): array
     {
-        return $this->exclusive(function () {
+        if (!in_array($precisionPolicy, [LegacyCreditConversion::STRICT, LegacyCreditConversion::HALF_UP], true)) throw new \InvalidArgumentException('Unknown wallet precision policy.');
+        return $this->exclusive(function () use ($precisionPolicy) {
             if (WalletSchema::ready($this->db)) throw new \RuntimeException('The exact wallet is already active.');
             if (\common\modules\world\modules\craft\models\domain\StorageMaintenance::frozen($this->db)) throw new \RuntimeException('Finish the storage rollout before freezing the wallet.');
             $run = $this->run();
-            if ($run && $run['phase'] !== 'cancelled') return $this->status();
+            if ($run && $run['phase'] !== 'cancelled') {
+                if ($precisionPolicy !== ($run['precision_policy'] ?? LegacyCreditConversion::STRICT)) throw new \RuntimeException('Cannot change the precision policy of an existing rollout.');
+                return $this->status();
+            }
             $this->requireEngines();
             $values = ['run_id' => bin2hex(random_bytes(16)), 'phase' => 'frozen', 'started_at' => time(), 'updated_at' => time()];
+            $schema = $this->db->schema->getTableSchema('economy_wallet_rollout', true);
+            if ($schema->getColumn('precision_policy')) $values['precision_policy'] = $precisionPolicy;
+            elseif ($precisionPolicy !== LegacyCreditConversion::STRICT) throw new \RuntimeException('Install the wallet precision policy migration first.');
             if ($run) $this->db->createCommand()->update('economy_wallet_rollout', $values, ['id' => 1])->execute();
             else $this->db->createCommand()->insert('economy_wallet_rollout', ['id' => 1] + $values)->execute();
             return $this->status();
@@ -59,16 +68,15 @@ class WalletRollout
                 if ($state['phase'] !== 'copying' || $this->type($key) !== $state['original_type']) throw new \RuntimeException('Snapshot source schema changed: ' . $key);
                 // Originals and cursor commit together, at most $limit rows per invocation.
                 $this->db->transaction(function () use ($run, $key, $state, $limit) {
-                    $count = 0; $cursor = $state['last_source_id'];
+                    $count = 0; $cursor = $state['last_source_id']; $batch = [];
                     foreach ($this->rows($key, null, $cursor) as $row) {
                         $exact = $this->amount($key, $row);
-                        $this->db->createCommand()->insert('economy_wallet_snapshot', [
-                            'run_id' => $run['run_id'], 'column_key' => $key, 'source_id' => $row['id'],
-                            'raw_amount' => $row['raw_amount'], 'exact_amount' => $exact,
-                        ])->execute();
+                        $batch[] = [$run['run_id'], $key, $row['id'], $row['raw_amount'], $exact];
                         $cursor = $row['id']; $count++;
                         if ($count === $limit) break;
                     }
+                    if ($batch) $this->db->createCommand()->batchInsert('economy_wallet_snapshot',
+                        ['run_id', 'column_key', 'source_id', 'raw_amount', 'exact_amount'], $batch)->execute();
                     $this->db->createCommand()->update('economy_wallet_column', [
                         'last_source_id' => $cursor, 'row_count' => (int)$state['row_count'] + $count, 'updated_at' => time(),
                     ], ['run_id' => $run['run_id'], 'column_key' => $key])->execute();
@@ -105,11 +113,15 @@ class WalletRollout
                 if (!$state || !in_array($state['phase'], ['prepared', 'converting', 'converted'], true)) throw new \RuntimeException('Complete all credit snapshots first.');
                 $exact = $this->isExact($key);
                 if (!$exact && $this->type($key) !== $state['original_type']) throw new \RuntimeException('Unexpected column type: ' . $key);
-                $this->compare($run, $key, $state['phase'] === 'prepared' || !$exact);
+                if ($exact && $state['phase'] === 'converting' && $this->precisionPolicy === LegacyCreditConversion::HALF_UP) {
+                    // A crash after MySQL's implicit DDL commit may precede normalization.
+                    $this->checkSnapshot($run, $key);
+                } else $this->compare($run, $key, $state['phase'] === 'prepared' || !$exact);
             }
             $this->phase('converting');
             foreach (self::COLUMNS as $key) {
                 $state = $this->column($run, $key);
+                if ($state['phase'] === 'converted') continue;
                 $this->columnPhase($run, $key, 'converting'); // Durable before MySQL implicit commit.
                 if (!$this->isExact($key)) {
                     list($table, $field) = explode('.', $key);
@@ -124,6 +136,7 @@ class WalletRollout
                     $this->db->schema->refreshTableSchema($table);
                 }
                 if (!$this->isExact($key)) throw new \RuntimeException('Decimal conversion failed: ' . $key);
+                if ($this->precisionPolicy === LegacyCreditConversion::HALF_UP) $this->applySnapshot($run, $key);
                 $this->compare($run, $key, false);
                 $this->columnPhase($run, $key, 'converted');
             }
@@ -226,15 +239,52 @@ class WalletRollout
     {
         try {
             if ($row['raw_amount'] === null) throw new \InvalidArgumentException('Null amount.');
-            // Test deployment adopts the wallet quantum for legacy fractional values.
-            // The immutable snapshot retains raw_amount; production stays strict.
+            // Test setup already opts in. Production uses the decision saved by begin().
             $test = getenv('WORLD_TEST_SETUP') === 'confirmed-test-checkout' && getenv('WORLD_TEST_MODE') === '1';
-            $amount = $test ? \common\modules\world\modules\economy\value\TestCreditConversion::amount((string)$row['raw_amount'], $key === 'persone.credit') : Money::parse((string)$row['raw_amount']);
+            $amount = $test || $this->precisionPolicy === LegacyCreditConversion::HALF_UP
+                ? LegacyCreditConversion::amount((string)$row['raw_amount'], $key === 'persone.credit')
+                : Money::parse((string)$row['raw_amount']);
             if ($key === 'persone.credit' && $amount->isNegative()) throw new \InvalidArgumentException('Negative personal credit.');
             return $amount->decimal();
         } catch (\InvalidArgumentException | \OverflowException $e) {
             throw new \RuntimeException('Explicit amount decision required at ' . $key . '#' . $row['id'] . ' (' . $e->getMessage() . ')');
         }
+    }
+    /** Native FLOAT -> DECIMAL can use binary noise instead of the reviewed decimal text. */
+    private function applySnapshot(array $run, string $key): void
+    {
+        $this->checkSnapshot($run, $key);
+        list($table, $field) = explode('.', $key);
+        $source = $this->db->quoteTableName($table); $column = $this->db->quoteColumnName($field);
+        $join = 'b.source_id=s.id AND b.run_id=:run AND b.column_key=:key';
+        $params = [':run' => $run['run_id'], ':key' => $key];
+        $this->db->transaction(function () use ($run, $key, $source, $column, $join, $params) {
+            $count = $this->db->createCommand('SELECT COUNT(*) FROM ' . $source)->queryScalar();
+            $missing = $this->db->createCommand('SELECT COUNT(*) FROM ' . $source . ' s LEFT JOIN economy_wallet_snapshot b ON ' . $join . ' WHERE b.source_id IS NULL', $params)->queryScalar();
+            if ((string)$count !== (string)$this->column($run, $key)['row_count'] || (int)$missing !== 0) throw new \RuntimeException('Wallet source rows changed after the snapshot.');
+            $sql = $this->db->driverName === 'mysql'
+                ? 'UPDATE ' . $source . ' s JOIN economy_wallet_snapshot b ON ' . $join . ' SET s.' . $column . '=b.exact_amount WHERE s.' . $column . '<>b.exact_amount'
+                : 'UPDATE ' . $source . ' s SET ' . $column . '=b.exact_amount FROM economy_wallet_snapshot b WHERE ' . $join . ' AND s.' . $column . '<>b.exact_amount';
+            $this->db->createCommand($sql, $params)->execute();
+        });
+    }
+    private function checkSnapshot(array $run, string $key): void
+    {
+        $state = $this->column($run, $key);
+        $rawHash = hash_init('sha256'); $exactHash = hash_init('sha256'); $count = 0;
+        $cursor = null;
+        do {
+            $query = (new Query())->from('economy_wallet_snapshot')->where(['run_id' => $run['run_id'], 'column_key' => $key])->orderBy('source_id')->limit(500);
+            if ($cursor !== null) $query->andWhere(['>', 'source_id', $cursor]);
+            $rows = $query->all($this->db);
+            foreach ($rows as $row) {
+                if ($this->amount($key, ['id' => $row['source_id'], 'raw_amount' => $row['raw_amount']]) !== $row['exact_amount']) throw new \RuntimeException('Snapshot precision decision changed.');
+                $this->digest($rawHash, $row['source_id'], $row['raw_amount']);
+                $this->digest($exactHash, $row['source_id'], $row['exact_amount']); $count++;
+                $cursor = $row['source_id'];
+            }
+        } while (count($rows) === 500);
+        if ((string)$count !== (string)$state['row_count'] || hash_final($rawHash) !== $state['raw_hash'] || hash_final($exactHash) !== $state['exact_hash']) throw new \RuntimeException('Wallet snapshot integrity check failed.');
     }
     private function definition(\yii\db\ColumnSchema $column): string
     {
@@ -260,6 +310,8 @@ class WalletRollout
     {
         $run = $this->run();
         if (!$run || !in_array($run['phase'], $phases, true) || WalletSchema::ready($this->db)) throw new \RuntimeException('Wallet rollout is not in the required phase.');
+        $this->precisionPolicy = $run['precision_policy'] ?? LegacyCreditConversion::STRICT;
+        if (!in_array($this->precisionPolicy, [LegacyCreditConversion::STRICT, LegacyCreditConversion::HALF_UP], true)) throw new \RuntimeException('Unknown stored wallet precision policy.');
         return $run;
     }
     private function requireSchema(): void
