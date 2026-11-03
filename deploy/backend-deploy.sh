@@ -30,6 +30,16 @@ if [[ -n "$expected_sha" ]]; then
   [[ "$expected_sha" =~ ^[0-9a-f]{40}$ && "$(git rev-parse FETCH_HEAD)" = "$expected_sha" ]] || die 'The branch advanced beyond this checked release; use the newer run'
 fi
 if [[ "$(git symbolic-ref --quiet --short HEAD || true)" != "$branch" ]]; then
+  checkout_ref="origin/$branch"
+  if git show-ref --verify --quiet "refs/heads/$branch"; then checkout_ref=$branch; fi
+  # Historical CRLF blobs can stay dirty after stash when newer attributes
+  # normalize them to LF. Stage only those target blobs; never force checkout.
+  if ! git diff --quiet; then
+    git diff --cached --quiet || die 'Staged changes remain after preserving the checkout'
+    git diff --ignore-cr-at-eol --quiet || die 'Local content changes remain after preserving the checkout'
+    mapfile -d '' -t eol_paths < <(git diff --name-only -z)
+    git checkout "$checkout_ref" -- "${eol_paths[@]}"
+  fi
   if git show-ref --verify --quiet "refs/heads/$branch"; then
     git checkout "$branch"
   else
