@@ -30,6 +30,7 @@ class WorldCultivation
         } else {
             $rate = (int)(\common\modules\world\models\WorldTime::settings($this->db)['world_time_rate'] ?? 1);
             foreach ($keys as $key) if (isset($rules[$key]) && (int)$rules[$key] > 0) $rules[$key] = \common\modules\world\models\WorldTime::realSeconds((int)$rules[$key], $rate);
+            if ($rules['water_item_id'] !== null) $rules['grow_seconds'] = max(2, (int)$rules['grow_seconds']);
         }
         return $rules;
     }
@@ -154,8 +155,11 @@ class WorldCultivation
         $weather = $cycle ? CultivationEnvironment::damage($this->db, $cycle, $environment, time()) : ['loss_bps' => 0, 'effects' => []];
         if ($cycle) $cycle['event_loss_bps'] = $weather['loss_bps'];
         $terms = ['bed_id' => $input['bed_id'], 'cycle_id' => $cycle ? (int)$cycle['id'] : null, 'cycle_revision' => $cycle ? (int)$cycle['revision'] : null, 'crop_revision_id' => (int)$rules['id'], 'grow_seconds' => (int)$rules['grow_seconds'], 'water_interval_seconds' => (int)$rules['water_interval_seconds'], 'water_window_seconds' => (int)$rules['water_window_seconds'], 'harvest_window_seconds' => (int)$rules['harvest_window_seconds'], 'cancel_refund' => false];
+        if ($action === 'sow') $terms['watering_schedule'] = CultivationSchedule::forSowing($rules);
         $accepted = json_decode($rules['config_json'], true) ?: [];
         $terms += ['price_cr' => $action === 'cancel' ? '0.0000' : ($accepted['fees'][$action] ?? '0.0000'), 'payer_node_id' => (int)$c['bed']['garden_node_id']];
+        // The first watering used to be included in sowing. Splitting the UI must not add a fee.
+        if ($action === 'water' && CultivationSchedule::step($cycle) === 1) $terms['price_cr'] = '0.0000';
         $terms['environment'] = $environment; $terms['event_loss_bps'] = $cycle['event_loss_bps'] ?? 0;
         $terms['weather_effects'] = $weather['effects'];
         if ($action === 'cancel') return $c + compact('rules', 'terms', 'revisions');
@@ -166,7 +170,7 @@ class WorldCultivation
         if ($action === 'harvest' && $clock['state'] !== 'ripe') throw new GameError('CROP_NOT_RIPE', 'Урожай ещё не созрел.');
         $required = [];
         if ($action === 'sow') $required[(int)$rules['seed_item_id']] = (int)$rules['seed_quantity'];
-        if (in_array($action, ['sow', 'water'], true) && $rules['water_item_id'] !== null) $required[(int)$rules['water_item_id']] = ($required[(int)$rules['water_item_id']] ?? 0) + (int)$rules['water_quantity'];
+        if ($action === 'water' && $rules['water_item_id'] !== null) $required[(int)$rules['water_item_id']] = (int)$rules['water_quantity'];
         $items = []; foreach ($required as $id => $quantity) $items[$id] = $this->resource($id);
         $output = $this->resource((int)$rules['yield_item_id']);
         $efficiency = $action === 'harvest' ? (new NightWorkEfficiency($this->db))->basisPoints($user) : 10000;
@@ -229,15 +233,14 @@ class WorldCultivation
                 if ($action === 'harvest') (new GardenHarvest($this->db, $this->flags))->recordHarvest($p['target'], $p['plan'], $operation);
                 if ($action === 'sow' || $action === 'harvest') EconomyRuntime::fact($this->db, $user, $action === 'sow' ? 'carrot_sown' : 'carrot_harvested', 1, $operation);
                 if ($action === 'sow') {
-                    $this->db->createCommand()->insert('world_crop_cycle', ['bed_id' => $payload['bed_id'], 'owner_user_id' => $user, 'crop_revision_id' => $p['rules']['id'], 'operation_id' => $operation, 'status' => 'growing', 'planted_at' => $now, 'ready_at' => $now + (int)$p['rules']['grow_seconds'], 'water_due_at' => $p['rules']['water_item_id'] === null ? null : $now + (int)$p['rules']['water_interval_seconds'], 'terms_json' => CanonicalJson::encode($terms)])->execute();
+                    $this->db->createCommand()->insert('world_crop_cycle', ['bed_id' => $payload['bed_id'], 'owner_user_id' => $user, 'crop_revision_id' => $p['rules']['id'], 'operation_id' => $operation, 'status' => 'growing', 'planted_at' => $now, 'ready_at' => $now + (int)$p['rules']['grow_seconds'], 'water_due_at' => $p['rules']['water_item_id'] === null ? null : $now, 'terms_json' => CanonicalJson::encode($terms)])->execute();
                     $cycleId = (int)$this->db->getLastInsertID();
                     $this->db->createCommand()->update('world_bed', ['dug_at' => null], ['node_id' => $payload['bed_id']])->execute();
                     $this->db->createCommand()->insert('world_bed_active_cycle', ['bed_id' => $payload['bed_id'], 'cycle_id' => $cycleId])->execute();
                 } else {
                     $cycleId = (int)$p['cycle']['id'];
                     if ($action === 'water') {
-                        $nextDue = (int)$p['cycle']['water_due_at'] + (int)$p['rules']['water_interval_seconds'];
-                        $values = ['water_missed' => (int)$terms['water_missed'], 'water_due_at' => $nextDue < (int)$p['cycle']['ready_at'] ? $nextDue : null];
+                        $values = ['water_missed' => (int)$terms['water_missed'], 'water_due_at' => CultivationSchedule::nextWatering($p['cycle'], $p['rules'])];
                     }
                     else {
                         $values = ['status' => $action === 'harvest' ? 'harvested' : 'cancelled', 'closed_at' => $now];

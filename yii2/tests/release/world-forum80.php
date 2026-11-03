@@ -133,9 +133,25 @@ checkCraft((int)(new \yii\db\Query())->select('durability')->from('craft_equipme
 foreach ([(int)$draft['seed_item_id'], (int)$draft['water_item_id']] as $i => $itemId) $db->createCommand()->insert('craft_inventory', ['user_id' => 9001, 'item_id' => $itemId, 'item_quantity' => 10, 'slot' => $i + 1, 'storage_id' => $backpack])->execute();
 $sown = cropCommand($cultivation, 'sow', ['bed_id' => $bedId, 'crop_revision_id' => $published['crop_revision_id']]);
 checkCraft(!$cultivation->state(9001, $bedId)['dug'], 'sowing consumes preparation');
+checkCraft($cultivation->state(9001, $bedId)['cycle']['watering_step'] === 1 && $cultivation->state(9001, $bedId)['cycle']['can_water'], 'new sowing explicitly requests the first watering');
+checkCraft((int)(new \yii\db\Query())->from('craft_inventory')->where(['storage_id' => $backpack, 'item_id' => $draft['water_item_id']])->sum('item_quantity', $db) === 10, 'sowing no longer silently consumes watering resources');
 $db->createCommand()->update('world_crop_cycle', ['water_due_at' => time() - 5], ['id' => $sown['cycle_id']])->execute();
 cropCommand($cultivation, 'water', ['bed_id' => $bedId]);
 checkCraft(!$cultivation->state(9001, $bedId)['cycle']['water_missed'], 'timely watering retains full yield');
+$afterFirst = $cultivation->state(9001, $bedId)['cycle'];
+checkCraft($afterFirst['watering_step'] === 2 && !$afterFirst['can_water'] && $afterFirst['state'] === 'growing', 'first watering leads to a visible wait for the second');
+$db->createCommand()->update('world_crop_cycle', ['planted_at' => time() - 121, 'water_due_at' => time() - 1], ['id' => $sown['cycle_id']])->execute();
+cropCommand($cultivation, 'water', ['bed_id' => $bedId]);
+$afterSecond = $cultivation->state(9001, $bedId)['cycle'];
+checkCraft($afterSecond['watering_step'] === null && $afterSecond['water_due_at'] === null && $afterSecond['state'] === 'growing', 'second watering leads to growth with no third watering');
+checkCraft((int)(new \yii\db\Query())->from('craft_inventory')->where(['storage_id' => $backpack, 'item_id' => $draft['water_item_id']])->sum('item_quantity', $db) === 8, 'two explicit waterings including retries consume exactly two waters');
+$db->createCommand()->update('world_crop_cycle', ['ready_at' => time() - 1], ['id' => $sown['cycle_id']])->execute();
+checkCraft($cultivation->preview(9001, 'harvest', ['bed_id' => $bedId])['terms']['output']['quantity'] === 4, 'two timely waterings preserve the full harvest');
+cropCommand($cultivation, 'harvest', ['bed_id' => $bedId]);
+checkCraft($cultivation->state(9001, $bedId)['cycle'] === null && !$cultivation->state(9001, $bedId)['dug'], 'harvest returns the bed to digging');
+cropCommand($cultivation, 'dig', ['bed_id' => $bedId]);
+$sown = cropCommand($cultivation, 'sow', ['bed_id' => $bedId, 'crop_revision_id' => $published['crop_revision_id']]);
+cropCommand($cultivation, 'water', ['bed_id' => $bedId]);
 $db->createCommand()->update('world_crop_cycle', ['water_due_at' => time() - 1], ['id' => $sown['cycle_id']])->execute();
 $lateQuote = $cultivation->preview(9001, 'water', ['bed_id' => $bedId]);
 $db->createCommand()->update('world_crop_cycle', ['water_due_at' => time() - 61], ['id' => $sown['cycle_id']])->execute();
@@ -187,9 +203,11 @@ $market = new \common\modules\world\models\domain\GardenHarvest($db, $flags);
 $gardenId = (int)$garden['id'];
 $db->createCommand()->update('world_node', ['visibility' => 'public'], ['id' => $gardenId])->execute();
 $marketState = $market->state(9001, $gardenId);
-checkCraft($marketState['capacity'] === 5 && count($marketState['items']) === 1 && $marketState['items'][0]['quantity'] === 2, 'harvest goes to five-slot garden warehouse');
-checkCraft($reader->node($bedId)['details']->harvested_quantity === 2 && $reader->node($gardenId)['details']->harvested_quantity === 2, 'harvest statistics aggregate bed and garden');
-$lotId = $marketState['items'][0]['inventory_id'];
+checkCraft($marketState['capacity'] === 5 && count($marketState['items']) === 2 && array_sum(array_column($marketState['items'], 'quantity')) === 6, 'both full and reduced harvests go to separate batches in five-slot garden warehouse');
+checkCraft($reader->node($bedId)['details']->harvested_quantity === 6 && $reader->node($gardenId)['details']->harvested_quantity === 6, 'harvest statistics aggregate bed and garden');
+$reducedLot = array_values(array_filter($marketState['items'], static fn($item) => $item['quantity'] === 2))[0];
+$fullLot = array_values(array_filter($marketState['items'], static fn($item) => $item['quantity'] === 4))[0];
+$lotId = $reducedLot['inventory_id'];
 function marketCommand($service, $user, $garden, $action, $input) {
     $q = $service->preview($user, $garden, $action, $input); $key = bin2hex(random_bytes(16));
     $result = $service->execute($user, $garden, $action, $input, $key, $q['quote_id'], (array)$q['expected_revisions']);
@@ -197,6 +215,7 @@ function marketCommand($service, $user, $garden, $action, $input) {
     return $result;
 }
 function rejectsMarket(callable $fn, $message) { try { $fn(); } catch (\common\modules\world\support\GameError $e) { checkCraft(true, $message); return; } throw new RuntimeException('Expected rejection: ' . $message); }
+marketCommand($market, 9001, $gardenId, 'withdraw', ['inventory_id' => $fullLot['inventory_id'], 'quantity' => 4]);
 rejectsMarket(function () use ($market, $gardenId, $lotId) { $market->preview(9002, $gardenId, 'price', ['inventory_id' => $lotId, 'price' => '1']); }, 'foreign player cannot set price');
 rejectsMarket(function () use ($market, $gardenId, $lotId) { $market->preview(9001, $gardenId, 'buy', ['inventory_id' => $lotId, 'quantity' => 1]); }, 'owner cannot buy own harvest');
 $db->createCommand()->insert('craft_storage', ['identity_key' => 'backpack:user:9002', 'kind' => 'backpack', 'owner_user_id' => 9002, 'capacity' => 20])->execute(); $buyerPack = (int)$db->getLastInsertID();
