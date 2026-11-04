@@ -6354,7 +6354,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/workspace",
       "name": "GET /world/workspace",
-      "description": "Изготовление временно доступно только в собственной действующей стоянке PLOT/campsite. node_id — ID стоянки. Инструменты, станции и склады дочерних помещений входят в её область. Для других объектов WORKSPACE_UNAVAILABLE. recipes[].icon содержит иконку выходного предмета для плиток мастерской.\n\n2026-10-30: Each recipe additionally returns category, a group name. Client filters the loaded catalogue by category, text and availability without extra requests. Contract: docs/architecture/simple-world-api.md.",
+      "description": "Мастерская своей действующей ноды или открытая мастерская NPC. node_id определяет область материалов, инструментов и станций; recipe_id — выбранный рецепт. category и icon предназначены для каталога.\n\n2026-11-04: recipes[].materials: item_id, name, quantity (на одну партию), have, available, recipe_id (nullable, рецепт компонента). locked_reasons включает опыт, контекст, оборудование и лимит; available учитывает также материалы и кредиты. Заблокированные рецепты можно просматривать; команды сохраняют все проверки.",
       "method": "GET",
       "body": {},
       "parameters": [
@@ -10692,7 +10692,7 @@
       "created": 1791009594237,
       "url": "{{ _.baseUrl }}/v1/world/nodes/{{ _.world_node_id }}/placement-options",
       "name": "GET /world/nodes/{id}/placement-options",
-      "description": "Схема 43: только совместимые с нодой/условиями предметы; до изготовления requires_crafting=true. Открытая пустая ячейка проверяется при переносе той же серверной политикой.",
+      "description": "Схема 43: только совместимые с нодой/условиями предметы; до изготовления requires_crafting=true. Открытая пустая ячейка проверяется при переносе той же серверной политикой.\n\n2026-11-04: В общей модели нод полный каталог всех активных предметов, включая отсутствующие и несовместимые. unavailable_reason объясняет отказ; available=false всегда означает input=null. Один элемент на тип предмета; количество суммируется по доступным собственным хранилищам, input выбирает одну подходящую стопку. Просмотр чужой ноды не раскрывает чужой инвентарь.",
       "method": "GET",
       "body": {},
       "parameters": [
@@ -10874,9 +10874,15 @@
       "name": "GET · Шаблоны для родителя",
       "url": "{{ _.baseUrl }}/v1/world/templates?parent_id={{ _.simple_parent_id }}&envelope=1&per-page=100",
       "method": "GET",
-      "description": "Схема 43: только шаблоны с разрешённым родителем parent_id, корректные totalCount/pageCount после фильтрации. available отдельно отражает материалы и единственную незавершённую стройку. Контракт: docs/architecture/simple-world-api.md.\n\n2026-10-31: Каталог листового родителя пуст. Прямое создание дочернего объекта также запрещено; размещение предметов сохраняется.",
+      "description": "Схема 43: только шаблоны с разрешённым родителем parent_id, корректные totalCount/pageCount после фильтрации. available отдельно отражает материалы и единственную незавершённую стройку. Контракт: docs/architecture/simple-world-api.md.\n\n2026-10-31: Каталог листового родителя пуст. Прямое создание дочернего объекта также запрещено; размещение предметов сохраняется.\n\n2026-11-04: catalog=1 возвращает все включённые player_buildable-шаблоны, включая запрещённые для этого родителя. compatible показывает допустимость ноды; available дополнительно учитывает ресурсы и права. unavailable_reason объясняет отказ. Без catalog=1 прежняя фильтрация сохраняется.",
       "body": {},
-      "parameters": [],
+      "parameters": [
+        {
+          "name": "catalog",
+          "value": "1",
+          "disabled": true
+        }
+      ],
       "headers": [
         {
           "name": "Accept",
@@ -11880,7 +11886,7 @@
       "name": "GET - State",
       "url": "{{ _.baseUrl }}/v1/world/economy",
       "method": "GET",
-      "description": "Contract: docs/architecture/economy-runtime-api.md. Read-only state with dish-specific backpack restore_hp (at most 8), kitchen_restore_hp, repeat_limit, repeat_remaining, repeat_seconds, restores_at, can_eat and disorder_until. Goals include completed, blocked_reason and funding_settlement_id; can_fund_goals requires world-manage. Completed goals still require an existing funded reserve. Feedback leads to /forum. world_instance is the active root id:created_at string (or null); browser acceptance-checklist results are isolated by user and world instance.\n\n2026-10-30: development is null when disabled, otherwise {version:1, completed, total, next_stage, stages:[{code,title,description,completed,steps:[{code,title,quantity,required,completed,action_href}]}]}. Authenticated read-only server progress; no reward issuance. Internal links target the player own available objects or public NPC source. See docs/architecture/economy-runtime-api.md. 2026-10-31: development has 55 objectives including lodged-house. extraction_daily.maximum is 20 or 25 while lodging on a bed in an owned active house/room; used batches are never reset by moving and remaining stays nonnegative. Published NPC wages are 3 Cr, or 6 Cr with a drill; accepted batches keep their original terms.\n\n2026-10-31: У структурного листа has_finances=false, treasury_enabled=false, balances=null, финансовые действия запрещены; finance_node_id указывает родителя.",
+      "description": "Contract: docs/architecture/economy-runtime-api.md. Read-only state with dish-specific backpack restore_hp (at most 8), kitchen_restore_hp, repeat_limit, repeat_remaining, repeat_seconds, restores_at, can_eat and disorder_until. Goals include completed, blocked_reason and funding_settlement_id; can_fund_goals requires world-manage. Completed goals still require an existing funded reserve. Feedback leads to /forum. world_instance is the active root id:created_at string (or null); browser acceptance-checklist results are isolated by user and world instance.\n\n2026-10-30: development is null when disabled, otherwise {version:1, completed, total, next_stage, stages:[{code,title,description,completed,steps:[{code,title,quantity,required,completed,action_href}]}]}. Authenticated read-only server progress; no reward issuance. Internal links target the player own available objects or public NPC source. See docs/architecture/economy-runtime-api.md. 2026-10-31: development has 55 objectives including lodged-house. extraction_daily.maximum is 20 or 25 while lodging on a bed in an owned active house/room; used batches are never reset by moving and remaining stays nonnegative. Published NPC wages are 3 Cr, or 6 Cr with a drill; accepted batches keep their original terms.\n\n2026-10-31: У структурного листа has_finances=false, treasury_enabled=false, balances=null, финансовые действия запрещены; finance_node_id указывает родителя.\n\n2026-11-04: checklist_steps: полный набор {code, completed, quantity, required, action_href}, независимо от состава и финансирования наград. mine_resources_mined подтверждает завершённую добычу в своей шахте, включая исторические партии. Чтение не выдаёт наград.",
       "body": {},
       "parameters": [],
       "headers": [
@@ -12636,7 +12642,7 @@
       "name": "GET - Character overview (nested)",
       "url": "{{ _.baseUrl }}/v1/world/economy",
       "method": "GET",
-      "description": "Current-player screen: {contract_version:1,economy:{...existing state...},character:{progression:{craft,professions,extraction_work,server_time},construction:{active:Build|null}}}. Replaces three requests on the character page; standalone state, progression and active-build reads remain compatible. See docs/architecture/api-consolidation.md.",
+      "description": "Current-player screen: {contract_version:1,economy:{...existing state...},character:{progression:{craft,professions,extraction_work,server_time},construction:{active:Build|null}}}. Replaces three requests on the character page; standalone state, progression and active-build reads remain compatible. See docs/architecture/api-consolidation.md.\n\n2026-11-04: checklist_steps: полный набор {code, completed, quantity, required, action_href}, независимо от состава и финансирования наград. mine_resources_mined подтверждает завершённую добычу в своей шахте, включая исторические партии. Чтение не выдаёт наград.",
       "body": {},
       "parameters": [
         {

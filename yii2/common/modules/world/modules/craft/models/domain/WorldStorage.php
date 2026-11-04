@@ -118,7 +118,8 @@ class WorldStorage
         $node = (int)$location['id']; $owned = (int)$location['owner_user_id'] === $user;
         $stationIds = (new Query())->select('item_id')->from('craft_station')->where(['active' => 1])->andWhere(['not', ['item_id' => null]]);
         $furnitureIds = (new Query())->select('item_id')->from('world_furnishing_rule');
-        $catalog = (new Query())->from('craft_item')->where(['active' => 1])->andWhere(['or', ['id' => $stationIds], ['id' => $furnitureIds], ['storage_kind' => 'chest']])->orderBy(['id' => SORT_ASC])->all($this->db);
+        $placeable = array_fill_keys((new Query())->select('id')->from('craft_item')->where(['active' => 1])->andWhere(['or', ['id' => $stationIds], ['id' => $furnitureIds], ['storage_kind' => 'chest']])->column($this->db), true);
+        $catalog = (new Query())->from('craft_item')->where(['active' => 1])->orderBy(['id' => SORT_ASC])->all($this->db);
         $headers = $owned ? $this->list($user, $node)['items'] : [];
         $sourceIds = array_column(array_filter($headers, static function ($h) { return in_array($h['kind'], ['backpack', 'chest', 'stockpile'], true); }), 'id');
         $rows = $sourceIds ? (new Query())->from('craft_inventory')->where(['storage_id' => $sourceIds])->andWhere(['>', 'item_quantity', 0])->orderBy(['id' => SORT_ASC])->all($this->db) : [];
@@ -145,19 +146,20 @@ class WorldStorage
         $items = [];
         foreach ($catalog as $definition) {
             $compatible = false;
-            foreach ($compatibleSlots as $slot) {
+            foreach (isset($placeable[$definition['id']]) ? $compatibleSlots : [] as $slot) {
                 try { (new EquipmentPlacementPolicy($this->db))->assertAllowed($definition, $target, $slot, false); $compatible = true; break; }
                 catch (\yii\web\ConflictHttpException $error) { continue; }
             }
-            if (!$compatible) continue;
+            $reason = !$owned ? 'Требуются права владельца.' : (!$compatible ? 'Предмет нельзя разместить в этой ноде.' : '');
             $inventory = array_filter($rows, static function ($row) use ($definition) { return (int)$row['item_id'] === (int)$definition['id']; });
             if (!$inventory) {
-                $items[] = ['id' => (int)$definition['id'], 'name' => trim($definition['name']), 'description' => trim($definition['description'] ?? ''), 'icon' => trim($definition['icon']), 'quantity' => 0, 'available' => false, 'input' => null, 'requires_crafting' => true];
+                $items[] = ['id' => (int)$definition['id'], 'name' => trim($definition['name']), 'description' => trim($definition['description'] ?? ''), 'icon' => trim($definition['icon']), 'quantity' => 0, 'available' => false, 'input' => null, 'requires_crafting' => true, 'unavailable_reason' => $reason ?: 'Сначала получите или изготовьте предмет.'];
                 continue;
             }
+            $candidate = null;
             foreach ($inventory as $row) {
                 $destination = null;
-                if ($location['status'] === 'active') foreach ($slots as $slot) {
+                if ($compatible && $location['status'] === 'active') foreach ($slots as $slot) {
                     try {
                         (new EquipmentPlacementPolicy($this->db))->assertAllowed($definition, $target, $slot);
                         (new CanonicalInventory(new CraftStorage($this->db)))->inspectTransfer($user, (int)$row['id'], (int)$target['id'], (int)$slot['position'], 1);
@@ -166,8 +168,10 @@ class WorldStorage
                     } catch (\yii\web\HttpException $error) { continue; }
                     catch (GameError $error) { continue; }
                 }
-                $items[] = ['id' => (int)$row['id'], 'name' => trim($definition['name']), 'description' => trim($definition['description'] ?? ''), 'icon' => trim($definition['icon']), 'quantity' => (int)$row['item_quantity'], 'available' => $destination !== null, 'input' => $destination];
+                $candidate = ['id' => (int)$row['id'], 'name' => trim($definition['name']), 'description' => trim($definition['description'] ?? ''), 'icon' => trim($definition['icon']), 'quantity' => array_sum(array_column($inventory, 'item_quantity')), 'available' => $destination !== null, 'input' => $destination, 'unavailable_reason' => $destination ? '' : ($reason ?: 'Нет свободного подходящего места или предмет занят.')];
+                if ($destination) break;
             }
+            $items[] = $candidate;
         }
         return ['node_id' => $node, 'items' => $items];
     }
