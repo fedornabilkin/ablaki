@@ -494,7 +494,11 @@ try {
     $contains = static function (array $rows, string $name) { return (bool)array_filter($rows, static function ($row) use ($name) { return $row['name'] === $name; }); };
     $bedName = trim((string)(new Query())->select('name')->from('craft_item')->where(['id' => $bedId])->scalar($db));
     $benchName = trim((string)(new Query())->select('name')->from('craft_item')->where(['id' => $benchId])->scalar($db));
-    economyCheck(!$contains($outdoor, $bedName) && !$contains($outdoor, $benchName) && $contains($interior, $bedName) && $contains($working, $benchName), 'placement catalog filters exposure and workstation context even before crafting');
+    economyCheck($contains($outdoor, $bedName) && $contains($outdoor, $benchName) && $contains($interior, $bedName) && $contains($working, $benchName), 'full placement catalog preserves items across outdoor, interior and workstation contexts');
+    foreach ([$bedName, $benchName] as $name) {
+        $unavailable = array_values(array_filter($outdoor, static function ($row) use ($name) { return $row['name'] === $name; }));
+        economyCheck(count($unavailable) === 1 && !$unavailable[0]['available'] && $unavailable[0]['input'] === null && $unavailable[0]['unavailable_reason'] !== '', 'incompatible outdoor item remains explained and cannot execute a placement: ' . $name);
+    }
     $walletBefore = (string)(new Query())->select('credit')->from('persone')->where(['user_id' => $freshUser])->scalar($db);
     // Earlier fixture commands represent past play, outside this UI operation's rate window.
     $db->createCommand()->update('game_command', ['created_at' => time() - 120], ['user_id' => $freshUser])->execute();
