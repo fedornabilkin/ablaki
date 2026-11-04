@@ -35,13 +35,19 @@ final class WorldProgress
         $existing['source:gather-log'] = $existing['crafted:classic-log'] ?? 0;
         $existing['source:gather-stone'] = $existing['crafted:classic-stone'] ?? 0;
         $historicalSources = [];
-        foreach ((new Query())->select(['w.action_code', 'w.definition_json'])->from(['w' => 'world_source_work'])->innerJoin(['n' => 'world_node'], 'n.id=w.node_id')
+        foreach ((new Query())->select(['w.action_code', 'w.definition_json', 'n.owner_user_id', 'template_code' => 't.code'])->from(['w' => 'world_source_work'])->innerJoin(['n' => 'world_node'], 'n.id=w.node_id')->leftJoin(['t' => 'world_template'], 't.id=n.template_id')
             ->where(['w.user_id' => $user, 'w.status' => 'completed', 'n.root_id' => $world])->all($this->db) as $work) {
             $definition = json_decode($work['definition_json'], true);
             $key = 'source:' . $work['action_code'];
             $historicalSources[$key] = ($historicalSources[$key] ?? 0) + array_sum($definition['output'] ?? []);
+            if ($work['template_code'] === 'mine' && (int)$work['owner_user_id'] === $user)
+                $existing['own-source:mining'] = ($existing['own-source:mining'] ?? 0) + array_sum($definition['output'] ?? []);
         }
         foreach ($historicalSources as $key => $quantity) $existing[$key] = max($existing[$key] ?? 0, $quantity);
+        // Older mines delivered directly to their owner's storage before per-batch work existed.
+        $legacyMined = (int)(new Query())->select(new Expression('SUM(m.produced_quantity)'))->from(['m' => 'world_mining_state'])
+            ->innerJoin(['n' => 'world_node'], 'n.id=m.node_id')->where(['n.owner_user_id' => $user, 'n.root_id' => $world])->scalar($this->db);
+        $existing['own-source:mining'] = max($existing['own-source:mining'] ?? 0, $legacyMined);
         $existing['daily_supply_claimed'] = $member ? (int)(new Query())->from('craft_event')->where(['user_id' => $user, 'action' => 'gather'])
             ->andWhere(['>=', 'created_at', $member['joined_at']])->count('*', $this->db) : 0;
         foreach (['classic-campfire', 'classic-bench', 'classic-furnace'] as $code) {

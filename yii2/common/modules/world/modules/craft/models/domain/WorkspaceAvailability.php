@@ -43,6 +43,8 @@ class WorkspaceAvailability
         foreach ((new Query())->from('craft_recipe_item')->where(['recipe_id' => array_column($catalog, 'id')])->all($this->db) as $r) $ingredients[$r['recipe_id']][$r['item_id']] = (int)$r['item_quantity'];
         foreach ($tools as $r) $roles[$r['recipe_id']][$r['item_id']] = false;
         $candidates = []; $resolver = new StationResolver($store); $byId = array_column($catalog, null, 'id');
+        $recipeByItem = [];
+        foreach ($catalog as $entry) if (!empty($definitions[$entry['item_id']]['active']) && !isset($recipeByItem[$entry['item_id']])) $recipeByItem[$entry['item_id']] = (int)$entry['id'];
         $credit = (new Query())->select('credit')->from('persone')->where(['user_id' => $user])->scalar($this->db);
         $charged = (new CraftSettings($store))->chargeCredits();
         $profile = \common\modules\world\models\domain\EconomyRuntime::current($this->db);
@@ -68,7 +70,17 @@ class WorkspaceAvailability
                 elseif (isset($freeByItem[$item][$unit['instance_id']])) $retained[$item] = 1;
             }
             if (!$required) $missing[] = 'Не настроены ингредиенты.';
-            foreach ($required as $item => $quantity) if (empty($definitions[$item]['active']) || ($stock[$item] ?? 0) - ($retained[$item] ?? 0) < $quantity) $missing[] = 'Не хватает: ' . ($definitions[$item]['name'] ?? $item);
+            // Structural requirements are distinct from consumable shortages. The UI can
+            // explain locked recipes even when no command preview is possible yet.
+            $recipe['locked_reasons'] = array_values(array_unique($missing));
+            $recipe['materials'] = [];
+            foreach ($required as $item => $quantity) {
+                $have = max(0, ($stock[$item] ?? 0) - ($retained[$item] ?? 0));
+                $available = !empty($definitions[$item]['active']) && $have >= $quantity;
+                $recipe['materials'][] = ['item_id' => (int)$item, 'name' => trim($definitions[$item]['name'] ?? (string)$item),
+                    'quantity' => $quantity, 'have' => $have, 'available' => $available, 'recipe_id' => $recipeByItem[$item] ?? null];
+                if (!$available) $missing[] = 'Не хватает: ' . ($definitions[$item]['name'] ?? $item) . ' — ' . $have . ' / ' . $quantity;
+            }
             if ($charged && \common\modules\world\modules\economy\value\Money::parse((string)$credit)->compare(\common\modules\world\modules\economy\value\Money::parse((string)$source['cost_credits'])) < 0) $missing[] = 'Не хватает кредитов.';
             $recipe['available'] = !$missing; $recipe['availability_reasons'] = array_values(array_unique($missing));
         }

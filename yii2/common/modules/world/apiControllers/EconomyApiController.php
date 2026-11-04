@@ -42,6 +42,7 @@ class EconomyApiController extends CoreController
         if ($include !== null && $include !== 'character') throw new GameError('INVALID_INCLUDE', 'Недопустимый раздел ответа.', 422);
         $user = (int)Yii::$app->user->id; $db = Yii::$app->db;
         $revision = EconomyRuntime::current($db);
+        $goals = (new WorldGoals($db))->state($user);
         $world = (new \yii\db\Query())->select(['n.id', 'n.created_at'])->from(['r' => 'world_registry'])
             ->innerJoin(['n' => 'world_node'], 'n.id=r.active_world_id')->where(['r.id' => 1])->one($db);
         $state = ['enabled' => $revision !== null, 'profile_version' => $revision ? $revision['version'] : null,
@@ -53,7 +54,7 @@ class EconomyApiController extends CoreController
             'starter_funding_mode' => $revision['profile']['starter']['funding'] ?? 'personal_transfer',
             'second_milestone_day' => $revision['profile']['closed_test']['verified_second_milestone_day'] ?? null,
             'admission' => EconomyRuntime::admission($db, $user, Yii::$app->user->can('world-manage')),
-            'health' => WorldFood::state($db, $user), 'goals' => (new WorldGoals($db))->state($user)['goals'],
+            'health' => WorldFood::state($db, $user), 'goals' => $goals['goals'], 'checklist_steps' => $goals['checklist_steps'],
             'development' => $revision ? (new \common\modules\world\models\domain\WorldDevelopment($db))->state($user) : null,
             'quotas' => array_map(static function ($kind) use ($db, $user) { return EconomyQuota::state($db, $user, $kind); }, ['crafting_hourly', 'extraction_daily', 'sales_daily']),
             'feedback_path' => '/forum', 'server_time' => time()];

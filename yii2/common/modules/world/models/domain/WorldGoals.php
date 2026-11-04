@@ -30,6 +30,7 @@ final class WorldGoals
             'bed_dug' => ['bed_dug', 1], 'carrot_sown' => ['carrot_sown', 1], 'daily_supply_claimed' => ['daily_supply_claimed', 1],
             'carrot_harvested' => ['carrot_harvested', 1], 'mine_built' => ['built:mine', 1], 'stone_pickaxe_crafted' => ['crafted:world-stone-pickaxe', 1],
             'stone_mined' => ['source:mine-stone', 1], 'coal_mined' => ['source:gather-coal', 1], 'ore_mined' => ['source:gather-ore', 1],
+            'mine_resources_mined' => ['own-source:mining', 1],
             'forge_built' => ['built:forge', 1], 'bench_crafted' => ['crafted:classic-bench', 1], 'furnace_crafted' => ['crafted:classic-furnace', 1], 'ingot_crafted' => ['crafted:classic-ingot', 1]];
         $facts = []; foreach ($mapping as $fact => $source) $facts[$fact] = ['completed' => (int)($raw[$source[0]] ?? 0) >= $source[1],
             'quantity' => (int)($raw[$source[0]] ?? 0), 'required' => $source[1]];
@@ -51,7 +52,7 @@ final class WorldGoals
             'shelter_built' => $map, 'hammer_crafted' => $craft, 'gather_5_logs' => $at('forest-plot'), 'gather_5_stones' => $at('stone-plot'),
             'campfire_placed' => $at('campfire-place'), 'garden_built' => $map, 'shovel_crafted' => $craft, 'bed_dug' => $at('garden-bed'), 'carrot_sown' => $at('garden-bed'),
             'daily_supply_claimed' => $map, 'carrot_harvested' => $at('garden-bed'), 'mine_built' => $map, 'stone_pickaxe_crafted' => $craft,
-            'stone_mined' => $at('mine'), 'coal_mined' => $at('mine'), 'ore_mined' => $at('mine'), 'forge_built' => $map,
+            'mine_resources_mined' => $at('mine'), 'stone_mined' => $at('mine'), 'coal_mined' => $at('mine'), 'ore_mined' => $at('mine'), 'forge_built' => $map,
             'bench_crafted' => $craft, 'furnace_crafted' => $craft, 'ingot_crafted' => $craft];
     }
     public function state(int $user): array
@@ -77,7 +78,9 @@ final class WorldGoals
                 'can_claim' => (bool)$ready && $pool !== null && !isset($claims[$code]), 'credits_cr' => $accepted['credits_cr'],
                 'experience' => $accepted['experience'], 'items' => $accepted['items'], 'destination_node_id' => $member ? (int)$member['starter_site_id'] : null];
         }
-        return ['goals' => $goals, 'profile_version' => $revision ? $revision['version'] : null, 'server_time' => time()];
+        $checklist = [];
+        foreach ($facts as $code => $fact) $checklist[] = ['code' => $code, 'action_href' => $links[$code] ?? ($links['mine_built'] ?? '/world')] + $fact;
+        return ['goals' => $goals, 'checklist_steps' => $checklist, 'profile_version' => $revision ? $revision['version'] : null, 'server_time' => time()];
     }
     public function fund(int $settlement, string $code, int $count, int $author, string $operation): array
     {

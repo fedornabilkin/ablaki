@@ -11,7 +11,9 @@ class TemplateApiController extends CoreController
     {
         $parent = $this->id(Yii::$app->request->get('parent_id'));
         $node = Node::readable($parent, (int)Yii::$app->user->id);
-        $provider = (new TemplateSearch())->search(Yii::$app->request->queryParams, $parent);
+        $provider = (new TemplateSearch())->search(Yii::$app->request->queryParams, $parent, Yii::$app->request->get('catalog') === '1');
+        $allowed = (new \common\modules\world\models\domain\CommonNodePolicy())->permitsChild($node->getAttributes())
+            ? array_map('intval', (new \yii\db\Query())->select('template_id')->from('world_template_parent')->where(['parent_template_id' => $node->template_id])->column()) : [];
         $templates = $provider->getModels(); $codes = [];
         foreach ($templates as $template) {
             $defaults = $template->defaults();
@@ -32,6 +34,8 @@ class TemplateApiController extends CoreController
             $item['minimum_labor_budget'] = $template->minimumLaborBudget((int)$node->hierarchy_level + 1);
             $item += $owned ? $availability[(int)$template->id]
                 : ['available' => false, 'unavailable_reason' => $node->status !== 'active' ? 'Сначала завершите строительство.' : 'Требуются права владельца.'];
+            $item['compatible'] = in_array((int)$template->id, $allowed, true);
+            if (!$item['compatible']) { $item['available'] = false; $item['unavailable_reason'] = 'Этот объект нельзя построить в выбранной ноде.'; }
             $items[] = $item;
         }
         return ['items' => $items, '_meta' => ['totalCount' => $provider->getTotalCount(), 'pageCount' => $provider->pagination->pageCount,
