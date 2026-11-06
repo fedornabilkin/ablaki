@@ -19,14 +19,16 @@ printf 'make %s\n' "$*" >> "$FIXTURE_LOG"
 MOCK
 chmod +x "$fixture/bin/"*
 export PATH="$fixture/bin:$PATH"
-for scenario in tooling proxy app paused missing changed_base changed_compose unchecked; do
+for scenario in tooling proxy app runtime_mode runtime_content paused missing changed_base changed_compose unchecked; do
   repo="$fixture/$scenario"
   git init -q --bare "$repo-origin"
   git init -q -b master "$repo"
   cd "$repo"
   git config user.name Fixture; git config user.email fixture@example.invalid
   git config core.autocrlf false
-  mkdir -p deploy docker/nginx yii2/common/runtime/financial-maintenance
+  mkdir -p deploy docker/nginx yii2/common/runtime/financial-maintenance yii2/api/runtime
+  printf '*\n!.gitignore\n' > yii2/api/runtime/.gitignore
+  chmod 755 yii2/api/runtime/.gitignore
   printf 'services: {}\n' > docker-compose.yaml
   printf 'echo runtime >> "$FIXTURE_LOG"\n' > deploy/php-runtime-upgrade.sh
   git add .; git commit -qm published
@@ -36,11 +38,14 @@ for scenario in tooling proxy app paused missing changed_base changed_compose un
     proxy) echo proxy > docker/nginx/test.conf ;;
     app) echo application > yii2/code.php ;;
     changed_compose) echo changed >> docker-compose.yaml ;;
+    runtime_mode) chmod 644 yii2/api/runtime/.gitignore ;;
     *) echo tooling > deploy/tooling.txt ;;
   esac
   git add .; git commit -qm release
   target=$(git rev-parse HEAD); git push -q origin master
   git reset --hard -q "$base"
+  if [[ "$scenario" = runtime_mode || "$scenario" = runtime_content ]]; then chmod 666 yii2/api/runtime/.gitignore; fi
+  if [[ "$scenario" = runtime_content ]]; then echo 'operator content' >> yii2/api/runtime/.gitignore; fi
   echo operator >> docker-compose.yaml
   control="$repo/yii2/common/runtime/financial-maintenance"; mkdir -p "$control"
   for file in completed world-activation-verified.json rating-precision-verified.json; do echo done > "$control/$file"; done
@@ -53,17 +58,19 @@ for scenario in tooling proxy app paused missing changed_base changed_compose un
   status=0
   bash "$fixture/runner.sh" "$target" "$base" > "$fixture/$scenario.log" 2>&1 || status=$?
   case "$scenario" in
-    tooling|proxy|app)
+    tooling|proxy|app|runtime_mode)
       [[ "$status" = 0 ]] || { cat "$fixture/$scenario.log"; exit 1; }
       [[ "$(git rev-parse HEAD)" = "$target" ]]
       case "$scenario" in
         tooling) [[ ! -f "$FIXTURE_LOG" ]] ;;
         proxy) grep -Fxq 'compose exec -T nginx nginx -s reload' "$FIXTURE_LOG"; ! grep -q runtime "$FIXTURE_LOG" ;;
         app) grep -Fxq runtime "$FIXTURE_LOG"; grep -Fxq 'make up' "$FIXTURE_LOG" ;;
+        runtime_mode) git diff --quiet -- yii2/api/runtime/.gitignore; grep -q 'Restored unchanged runtime sentinel mode' "$fixture/$scenario.log" ;;
       esac
       ;;
     *) [[ "$status" != 0 && ! -f "$FIXTURE_LOG" ]] ;;
   esac
   [[ "$(cat docker-compose.yaml)" = $'services: {}\noperator' ]]
+  if [[ "$scenario" = runtime_content ]]; then grep -Fxq 'operator content' yii2/api/runtime/.gitignore; fi
   printf 'PASS ordinary production release: %s\n' "$scenario"
 done
