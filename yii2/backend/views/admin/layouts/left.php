@@ -102,12 +102,16 @@ use mdm\admin\components\Helper;
             ],
 
 
-            ['label' => 'Мир', 'icon' => 'globe', 'url' => '#', 'items' => [
+            ['label' => 'Мир', 'icon' => 'globe', 'url' => '#', 'items' => array_merge(array_map(static function ($id, $group) {
+                return ['label'=>$group[0], 'icon'=>$group[1], 'url'=>['/world/control/index','group'=>$id]];
+            }, array_keys(\common\modules\world\admin\ControlCatalog::groups()), array_values(\common\modules\world\admin\ControlCatalog::groups())), [
+                ['label'=>'Редакторы', 'url'=>'#', 'items'=>[
                 ['label' => 'Объекты', 'url' => ['/world/node/index']],
                 ['label' => 'Шаблоны объектов', 'url' => ['/world/template/index']],
                 ['label' => 'События', 'url' => ['/world/event/index']],
                 ['label' => 'Расширенные разделы', 'url' => '#', 'items' => \common\modules\world\admin\WorldEntityCatalog::menu()],
-            ]],
+                ]],
+            ])],
             ['label' => 'Other', 'options' => ['class' => 'header']],
 
             ['label' => 'Login', 'url' => ['site/login'], 'visible' => Yii::$app->user->isGuest],

@@ -49,6 +49,24 @@ class CanonicalInventory
     {
         return (new Query())->from('craft_inventory')->where(['storage_id' => $storage])->andWhere(['>', 'item_quantity', 0])->orderBy(['slot' => SORT_ASC, 'id' => SORT_ASC])->all($this->db);
     }
+    /** Used only by the audited administrator correction service, under the normal world locks. */
+    public function correctionPlan(array $row, int $quantity): array
+    {
+        $item = (new Query())->from('craft_item')->where(['id'=>$row['item_id']])->one($this->db);
+        $storage = (new Query())->from('craft_storage')->where(['id'=>$row['storage_id']])->one($this->db);
+        if (!$item || !$storage || !in_array($item['kind'], ['material','product'], true) || $this->equipment->units((int)$row['id'])) throw new ConflictHttpException('Исправление стопки возможно только для материалов и продукции.');
+        if ($quantity < 0 || $quantity > $this->stackSize($storage,$item)) throw new ConflictHttpException('Количество выходит за пределы стопки.');
+        $values=['item_quantity'=>$quantity,'item_id'=>$quantity?$row['item_id']:null,'slot'=>$quantity?$row['slot']:null];
+        (new ProductionReservations($this->db))->assertWrite((int)$row['id'],$values);
+        return $values;
+    }
+    public function correctQuantity(array $row, int $quantity): void
+    {
+        $this->transaction(); $values=$this->correctionPlan($row,$quantity); $delta=$quantity-(int)$row['item_quantity'];
+        $this->write((int)$row['id'],$values);
+        $this->record((int)$row['user_id'],$row,abs($delta),$delta<0?(int)$row['storage_id']:null,$delta>0?(int)$row['storage_id']:null,'admin.correction');
+        $this->touch([(int)$row['storage_id']]);
+    }
     public function initialize(int $user): void
     {
         $this->transaction();

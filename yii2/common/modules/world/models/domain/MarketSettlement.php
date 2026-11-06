@@ -11,16 +11,16 @@ final class MarketSettlement
 {
     public function __construct(private readonly Connection $db) {}
 
-    public function pay(int $payer, ?int $recipient, Money $amount, string $operation, string $line): void
+    public function pay(int $payer, ?int $recipient, Money $amount, string $operation, string $line, string $label = 'Рынок', string $type = 'market_trade'): void
     {
         if ($amount->isZero()) return;
         if (!$this->db->getTransaction() || $amount->isNegative()) throw new \LogicException('Market payment needs a transaction and a positive amount.');
-        $ledger = new CreditLedger($this->db); $kind = $recipient === null ? 'market_burn' : 'market_trade';
-        $after = $ledger->changeExact($payer, Money::parse('0')->subtract($amount)->decimal(), $kind, 'Рынок: ' . $line);
-        $destination = $recipient === null ? '0.0000' : $ledger->changeExact($recipient, $amount->decimal(), $kind, 'Рынок: ' . $line);
+        $ledger = new CreditLedger($this->db); $kind = $recipient === null ? 'market_burn' : $type;
+        $after = $ledger->changeExact($payer, Money::parse('0')->subtract($amount)->decimal(), $kind, $label . ': ' . $line);
+        $destination = $recipient === null ? '0.0000' : $ledger->changeExact($recipient, $amount->decimal(), $kind, $label . ': ' . $line);
         $this->db->createCommand()->insert('economy_transfer', ['operation_id' => $operation, 'line_code' => 'market-' . $line,
             'kind' => $kind, 'source_user_id' => $payer, 'destination_user_id' => $recipient, 'amount' => $amount->decimal(),
-            'source_after' => $after, 'destination_after' => $destination, 'purpose' => 'Рынок: ' . $line, 'created_at' => time()])->execute();
+            'source_after' => $after, 'destination_after' => $destination, 'purpose' => $label . ': ' . $line, 'created_at' => time()])->execute();
     }
 
     public function settle(array $market, int $user, string $direction, array $prices, int $quantity, string $operation): Money
@@ -35,6 +35,13 @@ final class MarketSettlement
             $this->pay($user, (int)$market['owner_user_id'], $amount('owner_cr'), $operation, 'owner');
             (new TreasuryLedger($this->db))->receivePersonalPayment($user, (int)$market['city_id'], $amount('city_cr'), $operation, 'Комиссия городского рынка', 'market_trade');
             $burn = $amount('delivery_cr'); $this->pay($user, null, $burn, $operation, 'delivery');
+            $world = (int)(new \yii\db\Query())->select('root_id')->from('world_node')->where(['id'=>$market['city_id']])->scalar($this->db);
+            $policy = (new NpcInfrastructure($this->db))->policy($world);
+            if ($policy && (int)$policy['bot_user_id'] === $bot && (int)$policy['city_node_id'] === (int)$market['city_id']) {
+                $received = $amount('base_cr');
+                if ((int)$market['owner_user_id'] === $bot) $received = $received->add($amount('owner_cr'));
+                (new NpcFunding($this->db))->record($policy,$user,(int)$market['city_id'],$received,$operation,'market');
+            }
         }
         return $burn;
     }

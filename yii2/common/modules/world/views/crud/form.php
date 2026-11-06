@@ -38,6 +38,7 @@ if ($model->worldTimeRate === null) $model->worldTimeRate = \common\modules\worl
 <?php endif; ?>
 <?php endif; ?>
 <?= $this->render('_record-fields', ['model' => $model, 'form' => $form]) ?>
+<div class="form-group"><label for="world-form-comment">Причина изменения</label><?= Html::textarea('comment',Yii::$app->request->post('comment',''),['id'=>'world-form-comment','class'=>'form-control','required'=>true,'minlength'=>5,'maxlength'=>2000,'rows'=>2]) ?></div>
 <?= Html::submitButton('Сохранить', ['class' => 'btn btn-primary']) ?>
 <?= Html::a('Отмена', ['index'], ['class' => 'btn btn-default']) ?>
 <?php ActiveForm::end(); ?>

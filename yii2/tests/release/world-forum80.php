@@ -19,6 +19,9 @@ $db->schema->refresh();
 $app->setModule('world', ['class' => \common\modules\world\Module::class, 'flags' => ['world_read' => true, 'world_write' => true, 'storage_v2' => true, 'economy_tick' => true]]);
 foreach (glob($yiiRoot . '/console/world-migrations/*.php') as $file) {
     require_once $file; $class = basename($file, '.php');
+    // Keep legacy NPC funding assertions as an upgrade fixture. world-npc-funding.php
+    // installs this additive migration on its populated state and checks the new authority.
+    if ($class === 'm261106_210000_world_npc_funding') continue;
     // Exercise the legacy rules on their schema first; world-admin-entities applies
     // the new migration afterwards and checks conversion of these populated rows.
     if (in_array($class, ['m261005_100000_simple_world', 'm261006_190000_world_interior_placement', 'm261008_120000_world_mvp_facilities', 'm261008_160000_world_construction_mining', 'm261008_210000_world_object_repair', 'm261009_170000_world_common_foundation', 'm261009_180000_world_chest_item_only'], true)) continue;

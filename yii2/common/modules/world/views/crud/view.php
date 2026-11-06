@@ -6,7 +6,10 @@ $this->title = $model->name;
 <h1><?= Html::encode($this->title) ?></h1>
 <p><?= Html::a('Список', ['index'], ['class' => 'btn btn-default']) ?>
 <?= Html::a('Редактировать', ['update', 'id' => $model->id], ['class' => 'btn btn-primary']) ?>
-<?= Html::a('В архив / отключить', ['delete', 'id' => $model->id], ['class' => 'btn btn-warning', 'data' => ['method' => 'post', 'confirm' => 'Подтвердить изменение?']]) ?></p>
+</p><details><summary>В архив / отключить</summary>
+<?= Html::beginForm(['delete','id'=>$model->id],'post',['style'=>'max-width:480px;margin:12px 0']) ?>
+<label for="world-archive-comment">Причина</label><?= Html::textarea('comment','',['id'=>'world-archive-comment','class'=>'form-control','required'=>true,'minlength'=>5,'maxlength'=>2000,'rows'=>2]) ?>
+<?= Html::submitButton('В архив / отключить',['class'=>'btn btn-warning','style'=>'margin-top:8px']) ?><?= Html::endForm() ?></details>
 <?php
 $attributes = array_values(array_filter(array_unique(array_merge($this->context->columns, $this->context->fields, $model->attributes(),
     $model instanceof \common\modules\world\models\Node ? ['position_x', 'position_y'] : [])), static function ($attribute) use ($model) { return $model->hasAttribute($attribute); }));

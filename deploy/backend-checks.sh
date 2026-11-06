@@ -5,7 +5,7 @@ cd "$(dirname "$0")/../yii2"
 case "${1:?Choose isolated, database or mariadb}" in
   isolated)
     unset ABL_TEST_DSN
-    suites=(frontend-lists game-overview five-game forum-gift forum-install topic68-economy worker-barrier-test world-economy-gameplay user-activity user-cleanup craft-domain world-event-domain world-domain-regression world-build-input world-development-route world-rating world-telegram-reward world-market)
+    suites=(frontend-lists game-overview five-game forum-gift forum-install topic68-economy worker-barrier-test world-economy-gameplay user-activity user-cleanup craft-domain world-event-domain world-domain-regression world-build-input world-development-route world-rating world-telegram-reward world-npc-funding)
     if [[ "${CORE_CHECKED:-false}" != true ]]; then
       suites+=(api-route-catalog world-player-read auth-response telegram-auth daily-reward exchange-refund frontend-api-routing classic-craft-install world-economy-profile)
     fi
@@ -19,7 +19,7 @@ case "${1:?Choose isolated, database or mariadb}" in
     php tests/release/reset-ci-database.php
     php tests/release/world-telegram-reward.php
     php tests/release/reset-ci-database.php
-    php tests/release/world-market.php
+    php tests/release/world-npc-funding.php
     php tests/release/reset-ci-database.php
     php tests/release/world-rating.php
     php tests/release/user-activity.php

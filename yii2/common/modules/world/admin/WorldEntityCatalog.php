@@ -106,6 +106,10 @@ class WorldEntityCatalog
     public static function label(string $field): string
     {
         return [
+            'enabled'=>'Включено', 'share_bps'=>'Доля выручки (8000 = 80%)', 'interval_seconds'=>'Интервал, секунд', 'daily_limit_cr'=>'Дневной лимит, Cr', 'target_cr'=>'Целевой свободный бюджет источника, Cr',
+            'sales_cr'=>'Полученная выручка, Cr', 'eligible_cr'=>'Доступно для пополнения, Cr', 'funded_cr'=>'Всего пополнено, Cr', 'day_spent_cr'=>'Пополнено за день, Cr',
+            'day_key'=>'День по Москве', 'carry'=>'Остаток округления', 'last_refill_at'=>'Последнее пополнение', 'site_id'=>'Стоянка', 'channel'=>'Канал продажи',
+            'amount_cr'=>'Сумма, Cr', 'remaining_cr'=>'Остаток на будущие дни, Cr', 'allocations_json'=>'Распределение по источникам', 'author_id'=>'Администратор', 'comment'=>'Комментарий', 'entity'=>'Сущность', 'key_json'=>'Ключ записи',
             'id' => 'ID', 'name' => 'Название', 'code' => 'Код', 'kind' => 'Вид', 'status' => 'Состояние', 'state' => 'Состояние',
             'node_id' => 'Объект', 'world_id' => 'Мир', 'parent_id' => 'Родитель', 'root_id' => 'Мир', 'settlement_id' => 'Поселение',
             'plot_id' => 'Участок', 'building_id' => 'Постройка', 'room_id' => 'Комната', 'bed_id' => 'Грядка', 'garden_node_id' => 'Огород',
