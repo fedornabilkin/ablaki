@@ -148,6 +148,8 @@ jobs:
         run: |
           for suite in api-route-catalog world-player-read auth-response telegram-auth daily-reward exchange-refund frontend-api-routing classic-craft-install; do php "tests/release/$suite.php"; done
           if [[ -f tests/release/world-economy-profile.php ]]; then php tests/release/world-economy-profile.php; fi
+          php tests/release/world-construction-pacing.php
+          php tests/release/world-development-route.php
   full_before:
     name: Required application checks before production
     needs: plan

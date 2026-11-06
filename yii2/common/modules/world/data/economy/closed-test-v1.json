@@ -733,11 +733,12 @@
     },
     "estate": {
       "name": "Усадьба",
-      "price_cr": "220.0000",
-      "work_seconds": 1800,
+      "price_cr": "1000.0000",
+      "work_seconds": 32400,
       "materials": {
-        "classic-plank": 20,
-        "classic-stone": 12
+        "classic-plank": 80,
+        "classic-stone": 50,
+        "classic-rope": 16
       },
       "description": "Усадьба расширяет возможности личного хозяйства. Размещайте постройки внутри её карты.",
       "max_condition": 30000
@@ -745,7 +746,7 @@
     "starter-shelter": {
       "name": "Шалаш",
       "price_cr": "20.0000",
-      "work_seconds": 120,
+      "work_seconds": 600,
       "materials": {
         "classic-plank": 4,
         "classic-rope": 2
@@ -756,8 +757,8 @@
     },
     "garden": {
       "name": "Огород",
-      "price_cr": "30.0000",
-      "work_seconds": 180,
+      "price_cr": "40.0000",
+      "work_seconds": 1800,
       "materials": {},
       "description": "Огород для выращивания культур. Постройте грядки, подготовьте землю, затем посейте семена и следите за поливом.",
       "max_condition": 1200
@@ -765,7 +766,7 @@
     "garden-bed": {
       "name": "Грядка",
       "price_cr": "10.0000",
-      "work_seconds": 90,
+      "work_seconds": 600,
       "materials": {},
       "capability_requirements": [
         "garden"
@@ -775,8 +776,8 @@
     },
     "mine": {
       "name": "Шахта",
-      "price_cr": "70.0000",
-      "work_seconds": 480,
+      "price_cr": "90.0000",
+      "work_seconds": 5400,
       "materials": {
         "classic-plank": 6,
         "classic-stone": 6
@@ -786,8 +787,8 @@
     },
     "forge": {
       "name": "Кузница",
-      "price_cr": "40.0000",
-      "work_seconds": 1200,
+      "price_cr": "60.0000",
+      "work_seconds": 3600,
       "materials": {
         "classic-plank": 6,
         "classic-stone": 8
@@ -797,8 +798,8 @@
     },
     "house": {
       "name": "Дом",
-      "price_cr": "450.0000",
-      "work_seconds": 2400,
+      "price_cr": "550.0000",
+      "work_seconds": 5400,
       "materials": {
         "classic-plank": 50,
         "classic-stone": 30,
@@ -809,8 +810,8 @@
     },
     "warehouse": {
       "name": "Склад",
-      "price_cr": "400.0000",
-      "work_seconds": 3600,
+      "price_cr": "500.0000",
+      "work_seconds": 7200,
       "materials": {
         "classic-plank": 60,
         "classic-stone": 40,
@@ -822,8 +823,8 @@
     },
     "drilling-rig": {
       "name": "Буровая установка",
-      "price_cr": "1200.0000",
-      "work_seconds": 10800,
+      "price_cr": "1500.0000",
+      "work_seconds": 21600,
       "materials": {
         "classic-plank": 120,
         "classic-stone": 120,
@@ -833,13 +834,13 @@
       "capability_requirements": [
         "mine"
       ],
-      "description": "Крупная совместная стройка: 1200 кредитов и 3 часа суммарной работы. Четыре одновременно работающих строителя завершают её примерно за 45 минут. Утраивает добычу, заменяет кирку и удваивает оплату наёмного работника из бюджета владельца.",
+      "description": "Крупная совместная стройка. Приглашайте помощников и выделяйте бюджет их оплаты; цена, материалы и полный объём труда показаны в карточке. Утраивает добычу, заменяет кирку и удваивает оплату наёмного работника из бюджета владельца.",
       "max_condition": 16000
     },
     "forest-plot": {
       "name": "Лесной участок",
-      "price_cr": "35.0000",
-      "work_seconds": 240,
+      "price_cr": "40.0000",
+      "work_seconds": 900,
       "materials": {
         "classic-plank": 2
       },
@@ -848,8 +849,8 @@
     },
     "stone-plot": {
       "name": "Каменистый участок",
-      "price_cr": "35.0000",
-      "work_seconds": 240,
+      "price_cr": "45.0000",
+      "work_seconds": 900,
       "materials": {
         "classic-plank": 2
       },
@@ -858,8 +859,8 @@
     },
     "clay-plot": {
       "name": "Глиняный участок",
-      "price_cr": "40.0000",
-      "work_seconds": 240,
+      "price_cr": "45.0000",
+      "work_seconds": 900,
       "materials": {
         "classic-plank": 2
       },
@@ -868,8 +869,8 @@
     },
     "sand-plot": {
       "name": "Песчаный участок",
-      "price_cr": "35.0000",
-      "work_seconds": 240,
+      "price_cr": "40.0000",
+      "work_seconds": 600,
       "materials": {
         "classic-plank": 2
       },
@@ -878,8 +879,8 @@
     },
     "meadow-plot": {
       "name": "Луговой участок",
-      "price_cr": "25.0000",
-      "work_seconds": 180,
+      "price_cr": "30.0000",
+      "work_seconds": 600,
       "materials": {
         "classic-plank": 1
       },
@@ -888,8 +889,8 @@
     },
     "water-source": {
       "name": "Источник воды",
-      "price_cr": "40.0000",
-      "work_seconds": 300,
+      "price_cr": "50.0000",
+      "work_seconds": 1200,
       "materials": {
         "classic-stone": 3
       },
@@ -899,7 +900,7 @@
     "campfire-place": {
       "name": "Место костра",
       "price_cr": "0.0000",
-      "work_seconds": 30,
+      "work_seconds": 120,
       "materials": {},
       "description": "Площадка для костра и приготовления еды. Изготовьте и разместите необходимый предмет на её карте.",
       "exposure_class": "outdoor",
@@ -907,8 +908,8 @@
     },
     "cookfire": {
       "name": "Очаг",
-      "price_cr": "25.0000",
-      "work_seconds": 240,
+      "price_cr": "30.0000",
+      "work_seconds": 1800,
       "materials": {
         "classic-stone": 4,
         "classic-log": 2
@@ -919,8 +920,8 @@
     },
     "trap": {
       "name": "Ловушка",
-      "price_cr": "50.0000",
-      "work_seconds": 300,
+      "price_cr": "60.0000",
+      "work_seconds": 900,
       "materials": {
         "classic-plank": 3,
         "classic-rope": 2
@@ -930,8 +931,8 @@
     },
     "workshop-building": {
       "name": "Ремесленная мастерская",
-      "price_cr": "100.0000",
-      "work_seconds": 1200,
+      "price_cr": "150.0000",
+      "work_seconds": 5400,
       "materials": {
         "classic-plank": 8,
         "classic-stone": 4
@@ -941,8 +942,8 @@
     },
     "storage-building": {
       "name": "Хозсклад",
-      "price_cr": "30.0000",
-      "work_seconds": 300,
+      "price_cr": "40.0000",
+      "work_seconds": 1800,
       "materials": {
         "classic-plank": 4,
         "classic-stone": 2,
@@ -954,8 +955,8 @@
     },
     "small-greenhouse": {
       "name": "Малая теплица",
-      "price_cr": "350.0000",
-      "work_seconds": 2400,
+      "price_cr": "400.0000",
+      "work_seconds": 5400,
       "materials": {
         "classic-plank": 30,
         "classic-glass": 12,
@@ -975,8 +976,8 @@
     },
     "field-kitchen": {
       "name": "Полевая кухня",
-      "price_cr": "45.0000",
-      "work_seconds": 600,
+      "price_cr": "60.0000",
+      "work_seconds": 2700,
       "materials": {
         "classic-plank": 6,
         "classic-stone": 4,
@@ -987,8 +988,8 @@
     },
     "bedroom": {
       "name": "Комната",
-      "price_cr": "60.0000",
-      "work_seconds": 600,
+      "price_cr": "80.0000",
+      "work_seconds": 1800,
       "max_condition": 2000,
       "materials": {
         "classic-plank": 8
@@ -996,8 +997,8 @@
     },
     "workroom": {
       "name": "Мастерская",
-      "price_cr": "80.0000",
-      "work_seconds": 900,
+      "price_cr": "100.0000",
+      "work_seconds": 2700,
       "max_condition": 2500,
       "materials": {
         "classic-plank": 12,
@@ -1007,14 +1008,14 @@
     "place": {
       "name": "Место",
       "price_cr": "0.0000",
-      "work_seconds": 30,
+      "work_seconds": 120,
       "max_condition": 200,
       "materials": {}
     },
     "shelf": {
       "name": "Полка",
       "price_cr": "5.0000",
-      "work_seconds": 90,
+      "work_seconds": 300,
       "max_condition": 300,
       "materials": {
         "classic-plank": 2
@@ -1023,7 +1024,7 @@
     "mini-storage-level-2": {
       "name": "Мини-склад",
       "price_cr": "5.0000",
-      "work_seconds": 180,
+      "work_seconds": 600,
       "max_condition": 800,
       "materials": {
         "classic-plank": 4,
@@ -1033,7 +1034,7 @@
     "mini-storage-level-3": {
       "name": "Мини-склад",
       "price_cr": "5.0000",
-      "work_seconds": 180,
+      "work_seconds": 600,
       "max_condition": 800,
       "materials": {
         "classic-plank": 4,
@@ -1043,7 +1044,7 @@
     "mini-storage-level-4": {
       "name": "Мини-склад",
       "price_cr": "5.0000",
-      "work_seconds": 180,
+      "work_seconds": 600,
       "max_condition": 800,
       "materials": {
         "classic-plank": 4,
@@ -1053,7 +1054,7 @@
     "mini-storage-level-5": {
       "name": "Мини-склад",
       "price_cr": "5.0000",
-      "work_seconds": 180,
+      "work_seconds": 600,
       "max_condition": 800,
       "materials": {
         "classic-plank": 4,
@@ -1063,7 +1064,7 @@
     "mini-storage-level-6": {
       "name": "Мини-склад",
       "price_cr": "5.0000",
-      "work_seconds": 180,
+      "work_seconds": 600,
       "max_condition": 800,
       "materials": {
         "classic-plank": 4,
@@ -1073,7 +1074,7 @@
     "mini-storage-level-7": {
       "name": "Мини-склад",
       "price_cr": "5.0000",
-      "work_seconds": 180,
+      "work_seconds": 600,
       "max_condition": 800,
       "materials": {
         "classic-plank": 4,

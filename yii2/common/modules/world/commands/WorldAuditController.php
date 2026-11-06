@@ -22,6 +22,12 @@ class WorldAuditController extends \yii\console\Controller
     {
         return $this->output((new \common\modules\world\models\domain\EconomyReport(Yii::$app->db))->report($cohort, $afterUser, $limit));
     }
+    public function actionConstructionPacing(): int
+    {
+        $profile = \common\modules\world\models\domain\EconomyProfile::load();
+        \common\modules\world\models\domain\EconomyProfile::validate($profile);
+        return $this->output(\common\modules\world\domain\ConstructionPacing::report($profile));
+    }
     public function actionEconomyScenario(string $scenario = 'first-four-days'): int
     {
         $data = \common\modules\world\models\domain\EconomyScenario::report(

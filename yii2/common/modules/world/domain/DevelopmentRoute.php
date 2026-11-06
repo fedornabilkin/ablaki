@@ -82,8 +82,11 @@ final class DevelopmentRoute
             $price = (string)$object['price_cr'];
             if (str_contains($price, '.')) $price = rtrim(rtrim($price, '0'), '.');
             $seconds = (int)$object['work_seconds'];
-            $duration = $seconds >= 60 ? intdiv($seconds, 60) . ' мин' : '';
-            if ($seconds % 60) $duration .= ($duration ? ' ' : '') . ($seconds % 60) . ' с';
+            $parts = [];
+            if ($seconds >= 3600) $parts[] = intdiv($seconds, 3600) . ' ч';
+            if (intdiv($seconds % 3600, 60)) $parts[] = intdiv($seconds % 3600, 60) . ' мин';
+            if ($seconds % 60 || !$parts) $parts[] = ($seconds % 60) . ' с';
+            $duration = implode(' ', $parts);
             $terms[] = $object['name'] . ': ' . $price . ' Cr и ' . $duration . ' самостоятельной работы.';
         }
         return $terms ? implode(' ', $terms) . ' ' : '';

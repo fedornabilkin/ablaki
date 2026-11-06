@@ -35,4 +35,7 @@ $revised['objects']['house']['price_cr'] = '987.1234';
 $revised['objects']['house']['work_seconds'] = 90;
 $stage = array_column(DevelopmentRoute::stages($revised), null, 'code')['rooms'];
 checkRoute(str_contains($stage['description'], '987.1234 Cr') && str_contains($stage['description'], '1 мин 30 с'), 'Guide uses exact published prices and runtime work durations instead of stale literals.');
+$revised['objects']['house']['work_seconds'] = 5431;
+$stage = array_column(DevelopmentRoute::stages($revised), null, 'code')['rooms'];
+checkRoute(str_contains($stage['description'], '1 ч 30 мин 31 с'), 'Long construction hints retain hours, minutes and seconds without rounding away work.');
 checkRoute(DevelopmentRoute::progress($facts, [], $revised)['total'] === $complete['total'], 'Changing balance does not rewrite completed objectives.');
