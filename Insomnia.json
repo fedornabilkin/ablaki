@@ -12670,6 +12670,422 @@
       "settingRebuildPath": true,
       "settingFollowRedirects": "global",
       "_type": "request"
+    },
+    {
+      "_id": "fld_telegram_auth_20261104",
+      "parentId": "wrk_26ad32cf982e470088560000269f804b",
+      "name": "Telegram authentication",
+      "description": "Browser proof never goes to the bot. See docs/architecture/telegram-auth.md.",
+      "environment": {
+        "telegram_request_id": "",
+        "telegram_browser_secret": "",
+        "telegram_user_id": "1234567890123",
+        "telegram_bot_api_key": ""
+      },
+      "environmentPropertyOrder": null,
+      "metaSortKey": -1,
+      "_type": "request_group"
+    },
+    {
+      "_id": "req_telegram_availability",
+      "parentId": "fld_telegram_auth_20261104",
+      "name": "Availability",
+      "url": "{{ baseUrl }}/auth/telegram/config",
+      "method": "GET",
+      "description": "For anonymous requests disable Bearer authentication. For binding use the original site session. Secrets belong in a private environment.",
+      "body": {},
+      "headers": [],
+      "parameters": [],
+      "authentication": {},
+      "metaSortKey": -609,
+      "isPrivate": false,
+      "settingStoreCookies": false,
+      "settingSendCookies": false,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_telegram_my_connected_telegram",
+      "parentId": "fld_telegram_auth_20261104",
+      "name": "My connected Telegram",
+      "url": "{{ baseUrl }}/auth/telegram/identity",
+      "method": "GET",
+      "description": "For anonymous requests disable Bearer authentication. For binding use the original site session. Secrets belong in a private environment.",
+      "body": {},
+      "headers": [],
+      "parameters": [],
+      "authentication": {
+        "type": "bearer",
+        "token": "{{ _.bearer }}",
+        "disabled": false
+      },
+      "metaSortKey": -608,
+      "isPrivate": false,
+      "settingStoreCookies": false,
+      "settingSendCookies": false,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_telegram_start_login",
+      "parentId": "fld_telegram_auth_20261104",
+      "name": "Start login",
+      "url": "{{ baseUrl }}/auth/telegram/start",
+      "method": "POST",
+      "description": "For anonymous requests disable Bearer authentication. For binding use the original site session. Secrets belong in a private environment.",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"purpose\": \"login\",\n  \"allow_signup\": false\n}"
+      },
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "parameters": [],
+      "authentication": {},
+      "metaSortKey": -607,
+      "isPrivate": false,
+      "settingStoreCookies": false,
+      "settingSendCookies": false,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_telegram_start_new_account",
+      "parentId": "fld_telegram_auth_20261104",
+      "name": "Start new account",
+      "url": "{{ baseUrl }}/auth/telegram/start",
+      "method": "POST",
+      "description": "For anonymous requests disable Bearer authentication. For binding use the original site session. Secrets belong in a private environment.",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"purpose\": \"login\",\n  \"allow_signup\": true\n}"
+      },
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "parameters": [],
+      "authentication": {},
+      "metaSortKey": -606,
+      "isPrivate": false,
+      "settingStoreCookies": false,
+      "settingSendCookies": false,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_telegram_start_binding",
+      "parentId": "fld_telegram_auth_20261104",
+      "name": "Start binding",
+      "url": "{{ baseUrl }}/auth/telegram/start",
+      "method": "POST",
+      "description": "For anonymous requests disable Bearer authentication. For binding use the original site session. Secrets belong in a private environment.",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"purpose\": \"link\",\n  \"allow_signup\": false\n}"
+      },
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "parameters": [],
+      "authentication": {
+        "type": "bearer",
+        "token": "{{ _.bearer }}",
+        "disabled": false
+      },
+      "metaSortKey": -605,
+      "isPrivate": false,
+      "settingStoreCookies": false,
+      "settingSendCookies": false,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_telegram_poll_approval",
+      "parentId": "fld_telegram_auth_20261104",
+      "name": "Poll approval",
+      "url": "{{ baseUrl }}/auth/telegram/status",
+      "method": "POST",
+      "description": "For anonymous requests disable Bearer authentication. For binding use the original site session. Secrets belong in a private environment.",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"request_id\": \"{{ _.telegram_request_id }}\",\n  \"browser_secret\": \"{{ _.telegram_browser_secret }}\"\n}"
+      },
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "parameters": [],
+      "authentication": {
+        "type": "bearer",
+        "token": "{{ _.bearer }}",
+        "disabled": false
+      },
+      "metaSortKey": -604,
+      "isPrivate": false,
+      "settingStoreCookies": false,
+      "settingSendCookies": false,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_telegram_complete_in_browser",
+      "parentId": "fld_telegram_auth_20261104",
+      "name": "Complete in browser",
+      "url": "{{ baseUrl }}/auth/telegram/complete",
+      "method": "POST",
+      "description": "For anonymous requests disable Bearer authentication. For binding use the original site session. Secrets belong in a private environment.",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"request_id\": \"{{ _.telegram_request_id }}\",\n  \"browser_secret\": \"{{ _.telegram_browser_secret }}\"\n}"
+      },
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "parameters": [],
+      "authentication": {
+        "type": "bearer",
+        "token": "{{ _.bearer }}",
+        "disabled": false
+      },
+      "metaSortKey": -603,
+      "isPrivate": false,
+      "settingStoreCookies": false,
+      "settingSendCookies": false,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_telegram_cancel_approval",
+      "parentId": "fld_telegram_auth_20261104",
+      "name": "Cancel approval",
+      "url": "{{ baseUrl }}/auth/telegram/cancel",
+      "method": "POST",
+      "description": "For anonymous requests disable Bearer authentication. For binding use the original site session. Secrets belong in a private environment.",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"request_id\": \"{{ _.telegram_request_id }}\",\n  \"browser_secret\": \"{{ _.telegram_browser_secret }}\"\n}"
+      },
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "parameters": [],
+      "authentication": {
+        "type": "bearer",
+        "token": "{{ _.bearer }}",
+        "disabled": false
+      },
+      "metaSortKey": -602,
+      "isPrivate": false,
+      "settingStoreCookies": false,
+      "settingSendCookies": false,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_telegram_bot_prepare",
+      "parentId": "fld_telegram_auth_20261104",
+      "name": "Bot prepare",
+      "url": "{{ baseUrl }}/auth/telegram/bot/prepare",
+      "method": "POST",
+      "description": "For anonymous requests disable Bearer authentication. For binding use the original site session. Secrets belong in a private environment.",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"request_id\": \"{{ _.telegram_request_id }}\",\n  \"telegram_user_id\": \"{{ _.telegram_user_id }}\",\n  \"telegram_username\": \"test_person\"\n}"
+      },
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "parameters": [],
+      "authentication": {
+        "type": "bearer",
+        "token": "{{ _.telegram_bot_api_key }}",
+        "disabled": false
+      },
+      "metaSortKey": -601,
+      "isPrivate": false,
+      "settingStoreCookies": false,
+      "settingSendCookies": false,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_telegram_bot_confirm",
+      "parentId": "fld_telegram_auth_20261104",
+      "name": "Bot confirm",
+      "url": "{{ baseUrl }}/auth/telegram/bot/confirm",
+      "method": "POST",
+      "description": "For anonymous requests disable Bearer authentication. For binding use the original site session. Secrets belong in a private environment.",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"request_id\": \"{{ _.telegram_request_id }}\",\n  \"telegram_user_id\": \"{{ _.telegram_user_id }}\",\n  \"approve\": true\n}"
+      },
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "parameters": [],
+      "authentication": {
+        "type": "bearer",
+        "token": "{{ _.telegram_bot_api_key }}",
+        "disabled": false
+      },
+      "metaSortKey": -600,
+      "isPrivate": false,
+      "settingStoreCookies": false,
+      "settingSendCookies": false,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_telegram_bot_deny",
+      "parentId": "fld_telegram_auth_20261104",
+      "name": "Bot deny",
+      "url": "{{ baseUrl }}/auth/telegram/bot/confirm",
+      "method": "POST",
+      "description": "For anonymous requests disable Bearer authentication. For binding use the original site session. Secrets belong in a private environment.",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"request_id\": \"{{ _.telegram_request_id }}\",\n  \"telegram_user_id\": \"{{ _.telegram_user_id }}\",\n  \"approve\": false\n}"
+      },
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "parameters": [],
+      "authentication": {
+        "type": "bearer",
+        "token": "{{ _.telegram_bot_api_key }}",
+        "disabled": false
+      },
+      "metaSortKey": -599,
+      "isPrivate": false,
+      "settingStoreCookies": false,
+      "settingSendCookies": false,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_telegram_bot_register",
+      "parentId": "fld_telegram_auth_20261104",
+      "name": "Bot register",
+      "url": "{{ baseUrl }}/auth/telegram/bot/register",
+      "method": "POST",
+      "description": "Bot startup: authenticated registration of getMe identity; preserves admin enabled setting.",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"bot_id\": \"12345\",\n  \"bot_username\": \"ExampleBot\"\n}"
+      },
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "parameters": [],
+      "authentication": {
+        "type": "bearer",
+        "token": "{{ _.telegram_bot_api_key }}",
+        "disabled": false
+      },
+      "metaSortKey": -601,
+      "isPrivate": false,
+      "settingStoreCookies": false,
+      "settingSendCookies": false,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_telegram_unlink",
+      "parentId": "fld_telegram_auth_20261104",
+      "name": "Unlink Telegram",
+      "url": "{{ baseUrl }}/auth/telegram/unlink",
+      "method": "POST",
+      "description": "Current site Bearer session and current account password. Revokes earlier approvals; preserves account and progress. Password belongs in a private environment.",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"password\": \"{{ _.account_password }}\"\n}"
+      },
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "parameters": [],
+      "authentication": {
+        "type": "bearer",
+        "token": "{{ _.bearer }}",
+        "disabled": false
+      },
+      "metaSortKey": -605,
+      "isPrivate": false,
+      "settingStoreCookies": false,
+      "settingSendCookies": false,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
     }
   ]
 }

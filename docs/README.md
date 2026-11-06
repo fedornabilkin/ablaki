@@ -13,6 +13,10 @@
 
 ## Текущий MVP
 
+- [Вход через Telegram](architecture/telegram-auth.md): сайт/API и env подготовлены; отдельный бот и включение — [следующий этап](plan/2026-11-04-telegram-auth.md).
+
+- [Приёмка 4 ноября](plan/done/2026-11-04-world-acceptance-catalogs.md): полный каталог, состав рецептов и исторические факты добычи; backend `325afe7` / frontend `ce831cc` опубликованы, полный CI прошёл.
+
 - [Активация production 1 ноября](operations/world-production-activation.md): InnoDB, точные деньги, сверка 24 849 владельцев, открытый мир и постоянный worker. При активации из bot выделены 25 000 Cr на 100 стартов и 810 Cr NPC. [Первичный аудит схемы](operations/production-schema-review-2026-10-31.md) — исторический срез; [оставшийся пункт C3](plan/2026-10-31-production-schema-compatibility.md) — аварийное восстановление, а не повторная установка.
 - [Этапы выращивания, 3 ноября](architecture/world-cultivation-states.md): два явных полива, один текущий таймер, сохранение старых посевов. [Выпуск](plan/done/2026-11-03-cultivation-stages.md): backend d6d6f96 / frontend af177ee, полный CI и production подтверждены.
 - [Оптимизация обычной выкладки](plan/done/2026-11-02-release-optimization.md): выбор проверок по изменениям и пропуск документационных публикаций; [полный хронометраж](plan/2026-10-19-test-deployment-optimization.md) ещё в работе.

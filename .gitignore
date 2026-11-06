@@ -1,6 +1,7 @@
 .idea
 
 .env
+.env.telegram-bot
 .php-runtime-upgrade/
 *.lock
 postgresdata

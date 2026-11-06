@@ -18,4 +18,6 @@
 
 PHP lint изменённых файлов; world-economy-sources.php на SQLite и отдельной MariaDB 10.11 (ablakin_ci); полный world-economy-gameplay.php на SQLite. Проверены точное количество слитков, разделение блокировок и нехватки, полный каталог без разрешения несовместимых переносов, первая и историческая добыча, изоляция пользователей. Миграции и денежные команды не изменялись.
 
-Реализация и локальная проверка завершены. Публикация фиксируется отдельно после завершения workflow.
+## Публикация — 2026-11-04
+
+[Test deploy](https://github.com/fedornabilkin/ablaki/actions/runs/41820164643): публикация успешна; старое ожидание скрытого каталога исправлено в регрессии. [Полный повтор](https://github.com/fedornabilkin/ablaki/actions/runs/41821458262) прошёл API/игровые сценарии, MariaDB 10.1, MySQL 8 и PostgreSQL 16. [Production](https://github.com/fedornabilkin/ablaki/actions/runs/41822332936) успешен: применён 325afe7f29f927181943b4b1185daa6ab2868836, HTTP и worker проверены, повторной инициализации мира нет. Локально также пройден world-rating.php.

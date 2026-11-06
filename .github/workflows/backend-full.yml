@@ -56,7 +56,7 @@ jobs:
           MYSQL_USER: ablakin_ci
           MYSQL_PASSWORD: ci-only-password
           MYSQL_ROOT_PASSWORD: ci-only-root
-        ports: ['3306:3306']
+        ports: ['3306:3306', '33316:3306']
         options: --health-cmd="mysqladmin ping -h 127.0.0.1 -pci-only-root" --health-interval=5s --health-timeout=5s --health-retries=20
     steps:
       - uses: actions/checkout@v7
@@ -85,6 +85,14 @@ jobs:
         env:
           ABL_TEST_DSN: mysql:host=127.0.0.1;port=3306;dbname=ablakin_ci
         run: bash deploy/backend-checks.sh mariadb
+      - name: Verify Telegram migrations, login and concurrent unlink on production MariaDB
+        env:
+          MARIADB_CONTAINER: ${{ job.services.mariadb.id }}
+          TELEGRAM_TEST_DSN: mysql:host=127.0.0.1;port=33316;dbname=ablakin_telegram_ci
+          TELEGRAM_TEST_PASSWORD: ci-only-root
+        run: |
+          docker exec "$MARIADB_CONTAINER" mysql -uroot -pci-only-root -e "CREATE DATABASE ablakin_telegram_ci CHARACTER SET utf8 COLLATE utf8_general_ci;"
+          php yii2/tests/release/telegram-auth.php
   portability:
     name: MySQL 8 and PostgreSQL 16 compatibility
     if: inputs.portable

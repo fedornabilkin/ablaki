@@ -146,7 +146,7 @@ jobs:
       - name: Check authentication, rewards, refunds and API routes
         working-directory: yii2
         run: |
-          for suite in api-route-catalog world-player-read auth-response daily-reward exchange-refund frontend-api-routing classic-craft-install; do php "tests/release/$suite.php"; done
+          for suite in api-route-catalog world-player-read auth-response telegram-auth daily-reward exchange-refund frontend-api-routing classic-craft-install; do php "tests/release/$suite.php"; done
           if [[ -f tests/release/world-economy-profile.php ]]; then php tests/release/world-economy-profile.php; fi
   full_before:
     name: Required application checks before production
@@ -367,6 +367,15 @@ jobs:
           ssh "${options[@]}" -p "$DEPLOY_PORT" "$DEPLOY_USER@$DEPLOY_HOST" \
             "cd '$repo_root' && test \"\$(pwd -P)\" = '$repo_root' && docker-compose exec -T -e 'FORUM_INSTALL=confirmed-$TARGET-checkout' php php /web/yii2/yii forum-setup/install"
         if: env.TARGET == 'production' && needs.plan.outputs.additive == 'true' && !inputs.activate_world && steps.release.outputs.skip_additive_migrations != 'true'
+      - name: Apply and verify Telegram authentication migrations
+        shell: bash
+        run: |
+          if [[ "$TARGET" = test ]]; then repo_root='/var/code/ablaki'; else repo_root='/var/www/api.ablakin.ru'; fi
+          options=(-i "$HOME/.ssh/deploy_key" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=yes -o UserKnownHostsFile="$HOME/.ssh/known_hosts")
+          ssh "${options[@]}" -p "$DEPLOY_PORT" "$DEPLOY_USER@$DEPLOY_HOST" \
+            "cd '$repo_root' && test \"\$(pwd -P)\" = '$repo_root' && docker-compose exec -T -e 'TELEGRAM_AUTH_INSTALL=confirmed-$TARGET-checkout' php php /web/yii2/yii telegram-auth/install"
+          ssh "${options[@]}" -p "$DEPLOY_PORT" "$DEPLOY_USER@$DEPLOY_HOST" \
+            "cd '$repo_root' && test \"\$(pwd -P)\" = '$repo_root' && docker-compose exec -T php crontab /etc/ablaki-cron"
       - name: Prepare the explicitly requested funded economy test
         if: env.TARGET == 'test' && inputs.economy_test != '' && inputs.economy_test != 'skip'
         shell: bash
