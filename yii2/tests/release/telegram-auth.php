@@ -6,6 +6,7 @@ require dirname(__DIR__, 2) . '/vendor/autoload.php';
 require dirname(__DIR__, 2) . '/vendor/yiisoft/yii2/Yii.php';
 Yii::setAlias('@common', dirname(__DIR__, 2) . '/common');
 Yii::setAlias('@api', dirname(__DIR__, 2) . '/api');
+Yii::setAlias('@console', dirname(__DIR__, 2) . '/console');
 error_reporting(E_ALL & ~E_DEPRECATED);
 
 use api\modules\v1\models\User;
@@ -37,7 +38,7 @@ $app = new \yii\web\Application([
         'modelMap' => ['User' => User::class], 'enableConfirmation' => false, 'enableGeneratingPassword' => false,
         'mailer' => ['class' => \api\components\SilentMailer::class]]],
     'components' => [
-        'db' => ['class' => \yii\db\Connection::class, 'dsn' => $dsn, 'username' => 'root', 'password' => 'telegram-fixture-only', 'charset' => 'utf8mb4'],
+        'db' => ['class' => \yii\db\Connection::class, 'dsn' => $dsn, 'username' => 'root', 'password' => getenv('TELEGRAM_TEST_PASSWORD') ?: 'telegram-fixture-only', 'charset' => 'utf8mb4'],
         'request' => ['cookieValidationKey' => 'fixture', 'scriptFile' => __FILE__, 'scriptUrl' => '/index.php', 'hostInfo' => 'https://test.invalid'],
         'user' => ['identityClass' => User::class, 'enableSession' => false, 'enableAutoLogin' => false],
         'response' => ['format' => \yii\web\Response::FORMAT_JSON],
@@ -73,10 +74,12 @@ $db->createCommand()->createTable('user', ['id' => 'pk', 'username' => 'varchar(
 $db->createCommand()->createTable('profile', ['user_id' => 'integer PRIMARY KEY', 'gravatar_email' => 'varchar(255)'])->execute();
 $db->createCommand()->createTable('persone', ['id' => 'pk', 'user_id' => 'integer UNIQUE', 'bonus_count' => 'integer DEFAULT 0',
     'refovod' => 'integer DEFAULT 0', 'rating' => 'decimal DEFAULT 0', 'balance' => 'decimal DEFAULT 0', 'credit' => 'decimal DEFAULT 0'])->execute();
-require dirname(__DIR__, 2) . '/console/migrations/m261104_120000_telegram_auth.php';
+$installer = new \console\controllers\TelegramAuthController('telegram-install-test', $app);
+putenv('TELEGRAM_AUTH_INSTALL=confirmed-test-checkout');
+try { tgCheck($installer->actionInstall() === 0, 'deployment installs Telegram into a legacy database'); }
+finally { putenv('TELEGRAM_AUTH_INSTALL'); }
 $migration = new \m261104_120000_telegram_auth(['db' => $db]);
 $migration->up(); $migration->up();
-require dirname(__DIR__, 2) . '/console/migrations/m261106_140000_telegram_unlink.php';
 $unlinkMigration = new \m261106_140000_telegram_unlink(['db' => $db]);
 $unlinkMigration->up(); $unlinkMigration->up();
 tgCheck(true, 'migration is repeatable');
@@ -161,7 +164,6 @@ $limiter = new \common\services\auth\AuthRateLimit($db);
 $limiter->hit('fixture', 'ip', 2); $limiter->hit('fixture', 'ip', 2);
 tgReject(fn() => $limiter->hit('fixture', 'ip', 2), 429, 'shared rate limit rejects excess attempts');
 
-require dirname(__DIR__, 2) . '/console/migrations/m261106_120000_telegram_settings.php';
 $settingsMigration = new \m261106_120000_telegram_settings(['db' => $db]);
 $settingsMigration->up(); $settingsMigration->up();
 $settings = new \common\services\auth\TelegramSettings($db);
@@ -246,4 +248,17 @@ if ($db->driverName === 'mysql') {
             $sameRequest ? 'parallel replay creates one account' : 'two browser requests for same Telegram create one account');
     }
 }
+putenv('TELEGRAM_AUTH_INSTALL');
+$blocked = false;
+try { $installer->actionInstall(); } catch (RuntimeException $error) { $blocked = true; }
+tgCheck($blocked, 'migration installer requires explicit deployment context');
+putenv('TELEGRAM_AUTH_INSTALL=confirmed-test-checkout');
+$accountsBeforeInstall = (new Query())->from('user')->count();
+try {
+    tgCheck($installer->actionInstall() === 0 && $installer->actionInstall() === 0, 'deployment migrations are repeatable');
+    $versions = (new Query())->select('version')->from('migration')->where(['<>', 'version', 'm000000_000000_base'])->column();
+    sort($versions);
+    tgCheck($versions === ['m261104_120000_telegram_auth', 'm261106_120000_telegram_settings', 'm261106_140000_telegram_unlink'], 'only the three Telegram migrations enter deployment history');
+    tgCheck((new Query())->from('user')->count() === $accountsBeforeInstall && !$settings->read()['enabled'], 'deployment preserves accounts and the disabled provider');
+} finally { putenv('TELEGRAM_AUTH_INSTALL'); }
 echo "Telegram authentication lifecycle passed.\n";
