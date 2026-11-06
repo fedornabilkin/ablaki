@@ -9,5 +9,6 @@
 @media(prefers-reduced-motion:no-preference){.wc-nav a,.wc-catalog a,.wc-stat{transition:background-color .16s ease,border-color .16s ease}}
 .wc-nav{flex-wrap:wrap;overflow:visible}.wc-stats{grid-template-columns:repeat(3,minmax(0,1fr))}.wc-technical{margin-top:18px;color:var(--wc-muted)}.wc-technical .wc-catalog{margin-top:12px;max-height:520px;overflow:auto}.wc-table th{white-space:normal;min-width:90px}
 .wc-grid>div{min-width:0}
+.world-control .wc-table td{white-space:normal;min-width:95px}.world-control .wc-table td a{overflow-wrap:anywhere}.wc-filter-fields>label{flex:1 1 170px}
 @media(min-width:1500px){.wc-stats{grid-template-columns:repeat(6,minmax(0,1fr))}}
 @media(max-width:600px){.wc-stats{grid-template-columns:repeat(2,minmax(0,1fr))}.wc-nav{flex-wrap:nowrap;overflow:auto;scrollbar-width:thin}.wc-heading{gap:8px}.wc-heading p{flex-basis:100%}.wc-number{white-space:normal}.wc-panel .table td,.wc-panel .table th{padding:8px 5px}.wc-table pre{min-width:140px}}

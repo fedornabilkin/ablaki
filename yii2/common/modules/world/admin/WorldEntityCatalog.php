@@ -123,7 +123,7 @@ class WorldEntityCatalog
             'water_quantity' => 'Воды на полив', 'water_interval_seconds' => 'Интервал полива, секунд', 'water_window_seconds' => 'Время на полив, секунд',
             'harvest_window_seconds' => 'Срок сбора, секунд', 'water_missed' => 'Пропущен полив',
             'slot_type' => 'Назначение места', 'size' => 'Занимаемая площадь', 'exposure_class' => 'Защита', 'compatibility_json' => 'Совместимые предметы',
-            'item_id' => 'Предмет, ID', 'item_quantity' => 'Количество', 'quantity' => 'Количество', 'slot' => 'Ячейка', 'position' => 'Номер места',
+            'item_id' => 'Предмет', 'container_id' => 'Контейнер', 'recipe_id' => 'Рецепт', 'item_quantity' => 'Количество', 'quantity' => 'Количество', 'slot' => 'Ячейка', 'position' => 'Номер места',
             'capacity' => 'Вместимость', 'initial_capacity' => 'Начальная вместимость', 'max_capacity' => 'Предельная вместимость',
             'price' => 'Цена, Cr', 'base_price' => 'Базовая цена, Cr', 'area' => 'Площадь', 'ordinal' => 'Порядковый номер',
             'revision' => 'Редакция', 'version' => 'Версия', 'template_id' => 'Шаблон', 'template_revision_id' => 'Версия шаблона',

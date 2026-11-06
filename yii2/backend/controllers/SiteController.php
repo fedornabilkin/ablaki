@@ -108,6 +108,8 @@ class SiteController extends Controller
             ->all();
 
         return $this->render('index', [
+            'worldReport' => Yii::$app->user->can('p-admin') && Yii::$app->db->schema->getTableSchema('world_membership')
+                ? (new \common\modules\world\models\admin\WorldControlReport(Yii::$app->db))->report() : null,
             'todoProvider' => $todoProvider,
             'personProvider' => $personProvider,
             'commission' => $commission,

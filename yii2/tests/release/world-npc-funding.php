@@ -175,3 +175,4 @@ economyCheck(str_contains(adminPage('world/control/edit',['entity'=>'world_npc_f
 adminReject(405,static fn()=>adminPage('world/control/apply'),'GET cannot apply a correction');
 $app->id='app-api'; adminReject(403,static fn()=>adminPage('world/control/index'),'control center unavailable through public API'); $app->id='app-backend';
 echo "NPC funding and world control center checks passed.\n";
+require __DIR__ . '/admin-presentation-cases.php';

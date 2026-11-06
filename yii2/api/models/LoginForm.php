@@ -10,23 +10,9 @@ use yii\web\IdentityInterface;
 /**
  * Login form
  */
-class LoginForm extends \dektrium\user\models\LoginForm
+class LoginForm extends \common\models\user\PasswordLoginForm
 {
     public $token;
-
-    public function rules()
-    {
-        $rules = parent::rules();
-        if (isset($rules['passwordValidate'])) {
-            $rules['passwordValidate'] = ['password', function ($attribute) {
-                if ($this->user && is_string($this->password)) {
-                    if ((new \common\services\user\PasswordVerifier())->verify($this->user, $this->password)) return;
-                }
-                $this->addError($attribute, Yii::t('user', 'Invalid login or password'));
-            }];
-        }
-        return $rules;
-    }
 
     public function getUser()
     {

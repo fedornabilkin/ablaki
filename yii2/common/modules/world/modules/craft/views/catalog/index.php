@@ -1,5 +1,4 @@
-<?php use yii\helpers\Html; $this->title='Каталог крафта'; ?>
-<h1><?= Html::encode($this->title) ?></h1>
+<?php use yii\helpers\Html; $this->title='Каталог мастерской мира'; ?>
 <p><?= Html::a('Профиль экономики, квоты и история версий', ['economy'], ['class' => 'btn btn-primary']) ?></p>
 <section class="well">
 <h2>Оплата крафта</h2>

@@ -14,7 +14,7 @@
   }
   $(function () {
     enhance(document);
-    try { if (window.innerWidth >= 768 && localStorage.getItem('ablaki.admin.sidebarCollapsed') === '1') $('body').addClass('sidebar-collapse'); } catch (_) {}
+    try { if (window.innerWidth >= 768 && !$('.sidebar-menu .treeview.active').length && localStorage.getItem('ablaki.admin.sidebarCollapsed') === '1') $('body').addClass('sidebar-collapse'); } catch (_) {}
     $(document).on('collapsed.pushMenu expanded.pushMenu', function (event) {
       if (window.innerWidth < 768) return;
       try { localStorage.setItem('ablaki.admin.sidebarCollapsed', event.type === 'collapsed' ? '1' : '0'); } catch (_) {}

@@ -1,17 +1,16 @@
 <?php
 use common\modules\world\admin\{ControlCatalog,WorldEntityCatalog};
 use yii\helpers\Html;
+use backend\support\EntityDisplay;
+use backend\widgets\{EntityDataColumn,EntityReferenceInput,WorldSummary};
 $label=static fn($name)=>WorldEntityCatalog::label($name);
 $selected=$entity!=='' ? $entries[$entity] : null;
 $title=$selected['label'] ?? 'Управление миром';
-$stats=['objects'=>['Объекты','globe','world_node'],'members'=>['Игроки','users','world_membership'],'items'=>['Стопки предметов','cubes','craft_inventory'],'recipes'=>['Рецепты','gavel','craft_recipe'],'builds'=>['Стройки','building','world_build'],'trades'=>['Сделки за 24 ч','exchange','world_market_trade']];
 ?>
 <div class="world-control">
 <?= $this->render('_header',compact('group','title')) ?>
 <?php if($report): ?>
-<div class="wc-stats"><?php foreach($stats as $id=>[$name,$icon,$table]): ?>
-<?= Html::a('<span><i class="fa fa-'.$icon.'" aria-hidden="true"></i>'.$name.'</span><strong>'.number_format($report['counts'][$id],0,',',' ').'</strong>',['index','entity'=>$table],['class'=>'wc-stat']) ?>
-<?php endforeach ?></div>
+<?= WorldSummary::widget(['counts'=>$report['counts']]) ?>
 <?php if(in_array($group,['overview','economy','npc'],true)): ?>
 <div class="wc-grid"><div>
 <section class="wc-panel"><h2><i class="fa fa-refresh" aria-hidden="true"></i>Пополнение источников NPC</h2>
@@ -40,7 +39,7 @@ $stats=['objects'=>['Объекты','globe','world_node'],'members'=>['Игро
 <?php foreach($report['corrections'] as $correction): ?><p><?= Html::a(Html::encode($entries[$correction['entity']]['label'] ?? $correction['entity']),['view','entity'=>'world_admin_correction','key'=>['id'=>$correction['id']]]) ?><br><small class="wc-muted"><?= Html::encode($correction['username'].' · '.Yii::$app->formatter->asDatetime($correction['created_at'])) ?></small><br><?= Html::encode($correction['comment']) ?></p><?php endforeach ?>
 <?php if(!$report['corrections']): ?><p class="wc-muted">Ручных исправлений пока нет.</p><?php endif ?></section></div></div>
 <?php endif ?>
-<?php if(in_array($group,['overview','people'],true)): ?><section class="wc-panel"><h2><i class="fa fa-users"></i>Новые участники</h2><div class="wc-actions"><?php foreach($report['players'] as $player): ?><?= Html::a(Html::encode($player['username']),['index','entity'=>'world_membership','filter'=>['user_id'=>$player['user_id']]],['class'=>'btn btn-default']) ?><?php endforeach ?></div></section><?php endif ?>
+<?php if(in_array($group,['overview','people'],true)): ?><section class="wc-panel"><h2><i class="fa fa-users"></i>Новые участники</h2><div class="wc-actions"><?php foreach($report['players'] as $player): ?><?= Html::a(Html::encode($player['username']),['/user/admin/info','id'=>$player['user_id']],['class'=>'btn btn-default']) ?><?php endforeach ?></div></section><?php endif ?>
 <?= $this->render('_slices',compact('group','report')) ?>
 <section class="wc-panel"><h2><i class="fa fa-th-large"></i><?= $group==='overview'?'Быстрый доступ':Html::encode(ControlCatalog::groups()[$group][0]) ?></h2><div class="wc-catalog">
 <?php $primary=$group==='overview'?['world_node','craft_item','craft_recipe','craft_inventory','world_membership','world_admin_correction']:ControlCatalog::primary(); foreach($entries as $table=>$entry): if(!in_array($table,$primary,true) || ($group!=='overview' && $entry['group']!==$group)) continue; ?>
@@ -54,10 +53,10 @@ $stats=['objects'=>['Объекты','globe','world_node'],'members'=>['Игро
 <?= Html::beginForm(['index'],'get',['class'=>'wc-search']) ?><?= Html::hiddenInput('entity',$entity) ?>
 <label>Название, код или номер<?= Html::textInput('q',$q,['class'=>'form-control','maxlength'=>120]) ?></label>
 <?= Html::submitButton('<i class="fa fa-search"></i> Найти',['class'=>'btn btn-primary']) ?><?= Html::a('Сбросить',['index','entity'=>$entity],['class'=>'btn btn-default']) ?>
-<details<?= array_filter($filter,static fn($value)=>$value!=='')?' open':'' ?>><summary>Точные фильтры</summary><div class="wc-filter-fields"><?php foreach($fields as $field): ?><label><?= Html::encode($label($field)) ?><?= Html::textInput('filter['.$field.']',$filter[$field] ?? '',['class'=>'form-control','maxlength'=>120]) ?></label><?php endforeach ?></div></details>
+<details<?= array_filter($filter,static fn($value)=>$value!=='')?' open':'' ?>><summary>Точные фильтры</summary><div class="wc-filter-fields"><?php foreach($fields as $field): ?><label><?= Html::encode($label($field)) ?><?= ($target=EntityDisplay::target($entity,$field)) ? EntityReferenceInput::widget(['table'=>$target,'name'=>'filter['.$field.']','value'=>$filter[$field]??'','options'=>['aria-label'=>$label($field)]]) : Html::textInput('filter['.$field.']',$filter[$field]??'', ['class'=>'form-control','maxlength'=>120]) ?></label><?php endforeach ?></div></details>
 <?= Html::endForm() ?>
 <p class="wc-muted">Найдено: <?= $provider->totalCount ?> · <?= Html::encode($entity) ?></p>
 <div class="wc-table"><?= \yii\grid\GridView::widget(['dataProvider'=>$provider,'layout'=>'{items}{pager}','tableOptions'=>['class'=>'table table-hover'],
- 'columns'=>array_merge([['label'=>'Запись','format'=>'raw','value'=>static function($row) use($entity,$schema){ $key=array_intersect_key($row,array_flip($schema->primaryKey)); return $key ? Html::a('Открыть',['view','entity'=>$entity,'key'=>$key],['class'=>'btn btn-default btn-sm']) : '—'; }]],array_map(static fn($name)=>['attribute'=>$name,'label'=>$label($name),'format'=>'text'],array_slice($columns,0,11)))]) ?></div>
+ 'columns'=>array_merge([['label'=>'Запись','format'=>'raw','value'=>static function($row) use($entity,$schema){ $key=array_intersect_key($row,array_flip($schema->primaryKey)); return $key ? Html::a(Html::encode(EntityDisplay::label($entity,$row)),['view','entity'=>$entity,'key'=>$key]) : '—'; }]],array_map(static fn($name)=>['class'=>EntityDataColumn::class,'entityTable'=>$entity,'attribute'=>$name,'label'=>$label($name),'format'=>'text'],array_slice(array_values(array_diff($columns,$schema->primaryKey)),0,11)))]) ?></div>
 </section><?php endif ?>
 </div>
