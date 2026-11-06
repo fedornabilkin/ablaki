@@ -66,7 +66,7 @@ if (($argv[1] ?? '') === 'worker') {
     } catch (Throwable $error) { fwrite(STDERR, get_class($error) . ': ' . $error->getMessage()); exit(1); }
     exit(0);
 }
-$db->createCommand()->createTable('user', ['id' => 'pk', 'username' => 'varchar(255) UNIQUE',
+$db->createCommand()->createTable('user', ['id' => $db->driverName === 'mysql' ? 'int unsigned NOT NULL AUTO_INCREMENT PRIMARY KEY' : 'pk', 'username' => 'varchar(255) UNIQUE',
     'email' => $db->driverName === 'mysql' ? 'varchar(255) NOT NULL UNIQUE' : 'varchar(255) UNIQUE',
     'password_hash' => 'varchar(255)', 'auth_key' => 'varchar(255)', 'registration_ip' => 'varchar(255)',
     'created_at' => 'int', 'updated_at' => 'int', 'last_login_at' => 'int', 'latest_activity' => 'datetime',
@@ -74,10 +74,19 @@ $db->createCommand()->createTable('user', ['id' => 'pk', 'username' => 'varchar(
 $db->createCommand()->createTable('profile', ['user_id' => 'integer PRIMARY KEY', 'gravatar_email' => 'varchar(255)'])->execute();
 $db->createCommand()->createTable('persone', ['id' => 'pk', 'user_id' => 'integer UNIQUE', 'bonus_count' => 'integer DEFAULT 0',
     'refovod' => 'integer DEFAULT 0', 'rating' => 'decimal DEFAULT 0', 'balance' => 'decimal DEFAULT 0', 'credit' => 'decimal DEFAULT 0'])->execute();
+if ($db->driverName === 'mysql') {
+    // The original installer could commit this signed table, then fail at the legacy unsigned FK.
+    $db->createCommand()->createTable('auth_identity', ['id' => 'pk', 'provider' => 'varchar(20) NOT NULL',
+        'subject' => 'varchar(32) NOT NULL', 'user_id' => 'int NULL', 'username' => 'varchar(64)', 'created_at' => 'int NOT NULL'])->execute();
+}
 $installer = new \console\controllers\TelegramAuthController('telegram-install-test', $app);
 putenv('TELEGRAM_AUTH_INSTALL=confirmed-test-checkout');
 try { tgCheck($installer->actionInstall() === 0, 'deployment installs Telegram into a legacy database'); }
 finally { putenv('TELEGRAM_AUTH_INSTALL'); }
+if ($db->driverName === 'mysql') {
+    tgCheck($db->schema->getTableSchema('auth_identity', true)->columns['user_id']->unsigned, 'partial migration resumes with the legacy unsigned user id');
+    tgCheck(count($db->schema->getTableForeignKeys('auth_identity', true)) === 1, 'legacy owner foreign key is installed');
+}
 $migration = new \m261104_120000_telegram_auth(['db' => $db]);
 $migration->up(); $migration->up();
 $unlinkMigration = new \m261106_140000_telegram_unlink(['db' => $db]);
