@@ -15,9 +15,10 @@ final class AuthRateLimit
     {
         $now = time();
         $id = hash('sha256', $scope . ':' . $key . ':' . intdiv($now, $window));
+        // PostgreSQL exposes both the stored row and EXCLUDED in ON CONFLICT.
         $this->db->createCommand()->upsert('{{%auth_rate_limit}}', [
             'id' => $id, 'hits' => 1, 'expires_at' => $now + $window * 2,
-        ], ['hits' => new Expression('[[hits]] + 1')])->execute();
+        ], ['hits' => new Expression('{{%auth_rate_limit}}.[[hits]] + 1')])->execute();
         $hits = (new Query())->select('hits')->from('{{%auth_rate_limit}}')->where(['id' => $id])->scalar($this->db);
         if ((int)$hits > $limit) throw new TooManyRequestsHttpException('Слишком много попыток. Подождите минуту.');
     }
