@@ -1641,7 +1641,9 @@
         "user": {
           "login": "admin",
           "password": "123456"
-        }
+        },
+        "world_city_id": 4,
+        "world_request_key": "0123456789abcdef0123456789abcdef"
       },
       "dataPropertyOrder": {
         "&": [
@@ -13119,6 +13121,72 @@
       "isPrivate": false,
       "settingStoreCookies": false,
       "settingSendCookies": false,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_world_npc_market_listing",
+      "parentId": "fld_d5d30075b45a3e7c360b131d63adcfba",
+      "modified": 1791009594237,
+      "created": 1791009594237,
+      "url": "{{ _.baseUrl }}/v1/world/markets/{{ _.world_city_id }}",
+      "name": "GET /world/markets/{cityId}",
+      "description": "NPC-only city market; see docs/operations/world-pacing-market-2026-11-06.md. GET returns market/buy/sell with exact four-decimal prices, stock and quotas. POST atomically exchanges real stock and credits; copy inventory_id, profile_version and unit_price_cr from GET. One Idempotency-Key per intended trade, reused on retries. Changed price or insufficient funds returns an error without partial debit.",
+      "method": "GET",
+      "body": {},
+      "parameters": [],
+      "headers": [],
+      "authentication": {
+        "type": "bearer",
+        "token": "{{ _.bearer }}",
+        "disabled": false
+      },
+      "metaSortKey": 83,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_world_npc_market_trade",
+      "parentId": "fld_d5d30075b45a3e7c360b131d63adcfba",
+      "modified": 1791009594237,
+      "created": 1791009594237,
+      "url": "{{ _.baseUrl }}/v1/world/markets/{{ _.world_city_id }}/trade",
+      "name": "POST /world/markets/{cityId}/trade",
+      "description": "NPC-only city market; see docs/operations/world-pacing-market-2026-11-06.md. GET returns market/buy/sell with exact four-decimal prices, stock and quotas. POST atomically exchanges real stock and credits; copy inventory_id, profile_version and unit_price_cr from GET. One Idempotency-Key per intended trade, reused on retries. Changed price or insufficient funds returns an error without partial debit. Set world_request_key to a fresh 32-hex key for each new intended trade; keep it unchanged for retries.",
+      "method": "POST",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"direction\": \"buy\",\n  \"inventory_id\": 1,\n  \"quantity\": 1,\n  \"profile_version\": 1,\n  \"unit_price_cr\": \"3.7500\"\n}"
+      },
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "name": "Idempotency-Key",
+          "value": "{{ _.world_request_key }}"
+        }
+      ],
+      "authentication": {
+        "type": "bearer",
+        "token": "{{ _.bearer }}",
+        "disabled": false
+      },
+      "metaSortKey": 83,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
       "settingDisableRenderRequestBody": false,
       "settingEncodeUrl": true,
       "settingRebuildPath": true,

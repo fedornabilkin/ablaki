@@ -11,8 +11,8 @@ use yii\db\Query;
 
 $candidate = EconomyProfile::load();
 EconomyProfile::validate($candidate);
-economyCheck($candidate['objects']['drilling-rig']['price_cr'] === '250.0000' && $candidate['objects']['drilling-rig']['work_seconds'] === 3600, 'rig remains a funded premium goal with one hour of active construction');
-economyCheck($candidate['objects']['house']['price_cr'] === '180.0000' && $candidate['objects']['house']['work_seconds'] === 600, 'house is a reachable premium upgrade above the twenty-credit shelter');
+economyCheck($candidate['objects']['drilling-rig']['price_cr'] === '1200.0000' && $candidate['objects']['drilling-rig']['work_seconds'] === 10800, 'rig remains a funded premium goal with three hours of active construction');
+economyCheck($candidate['objects']['house']['price_cr'] === '450.0000' && $candidate['objects']['house']['work_seconds'] === 2400, 'house is a reachable premium upgrade above the twenty-credit shelter');
 foreach ([0, 21, 2.5, '5'] as $bonus) {
     $invalid = $candidate; $invalid['housing_benefits']['house']['extraction_daily_bonus'] = $bonus;
     try { EconomyProfile::validate($invalid); throw new RuntimeException('Invalid bonus accepted'); }
@@ -101,5 +101,24 @@ try {
     $storage = (new Query())->select('id')->from('craft_storage')->where(['node_id' => $fixtures['house-b'], 'kind' => 'placement'])->scalar($db);
     $db->createCommand()->delete('craft_inventory', ['storage_id' => $storage])->execute();
     economyCheck(HousingBenefits::extractionBonus($db, $freshUser, $candidate) === 0, 'an empty house cannot retain the bed benefit');
+} finally { $tx->rollBack(); }
+$tx = $db->beginTransaction();
+try {
+    $intro = (new Query())->select('r.*')->from(['r' => 'world_crop_revision'])->innerJoin(['c' => 'world_crop'], 'c.id=r.crop_id')
+        ->where(['c.code' => 'starter-carrot', 'r.status' => 'published'])->one($db);
+    \common\modules\world\models\domain\IntroCropPolicy::requireAvailable($db, $freshUser, $intro);
+    $bed = (int)(new Query())->select('node_id')->from('world_bed')->orderBy('node_id')->scalar($db);
+    foreach (['harvested', 'cleared', 'withered'] as $status) {
+        \common\modules\world\models\Command::run($freshUser, bin2hex(random_bytes(16)), 'fixture.intro-crop', [], static function ($op) use ($db, $bed, $freshUser, $intro, $status) {
+            $db->createCommand()->insert('world_crop_cycle', ['bed_id' => $bed, 'owner_user_id' => $freshUser,
+                'crop_revision_id' => $intro['id'], 'operation_id' => $op, 'status' => $status, 'planted_at' => time() - 1200,
+                'ready_at' => time(), 'terms_json' => '{}'])->execute();
+            return [];
+        }, true);
+    }
+    economyReject(static fn() => \common\modules\world\models\domain\IntroCropPolicy::requireAvailable($db, $freshUser, $intro), 'INTRO_CROP_COMPLETED');
+    \common\modules\world\models\domain\IntroCropPolicy::requireAvailable($db, $npcUser, $intro);
+    \common\modules\world\models\domain\IntroCropPolicy::requireAvailable($db, $freshUser, ['config_json' => '{}']);
+    economyCheck(true, 'intro crop limit counts completed and abandoned sowings per user, preserving uncapped legacy revisions');
 } finally { $tx->rollBack(); }
 echo "World balance checks passed.\n";

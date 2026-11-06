@@ -40,6 +40,7 @@ final class NpcMaintenance
         $nodes = (new NpcInfrastructure($this->db))->nodes($policy);
         (new NpcStockLogistics($this->db))->consolidate($policy, $nodes, $operation);
         $this->refresh($policy, $operation);
+        (new MarketRestocking($this->db))->replenish($policy, $nodes, $operation);
         // Reads remain side-effect free: reopen full sources before the next visitor arrives.
         foreach ($nodes as $source) {
             if (NpcInfrastructure::role($source) !== 'source' || !NodeAvailability::activePath($this->db, (int)$source['id'])) continue;

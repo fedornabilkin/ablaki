@@ -10,7 +10,7 @@ $empty = DevelopmentRoute::progress([], []);
 checkRoute($empty['completed'] === 0 && $empty['next_stage'] === 'home', 'New residents start with settlement, without fabricated progress.');
 $profile = json_decode(file_get_contents(dirname(__DIR__, 2) . '/common/modules/world/data/economy/closed-test-v1.json'), true, 512, JSON_THROW_ON_ERROR);
 $facts = []; $codes = [];
-foreach (DevelopmentRoute::stages() as $stage) {
+foreach (DevelopmentRoute::stages($profile) as $stage) {
     checkRoute(mb_strlen($stage['description'], 'UTF-8') <= 500, 'Stage description fits the API contract: ' . $stage['code']);
     foreach ($stage['steps'] as $step) {
         checkRoute(!isset($codes[$step['code']]), 'Unique objective: ' . $step['code']);
@@ -30,3 +30,9 @@ checkRoute($missingChild['completed'] === $complete['total'] - 1 && $missingChil
 unset($facts['own-source:mine-stone']); $facts['source:mine-stone'] = 100;
 checkRoute(DevelopmentRoute::progress($facts, [])['next_stage'] === 'mining', 'Paid extraction is not proof of mining at home.');
 checkRoute(!isset($codes['built:estate']) && !isset($codes['built:mini-storage-level-2']), 'No objectives require ownership of the public city or world.');
+$revised = $profile;
+$revised['objects']['house']['price_cr'] = '987.1234';
+$revised['objects']['house']['work_seconds'] = 90;
+$stage = array_column(DevelopmentRoute::stages($revised), null, 'code')['rooms'];
+checkRoute(str_contains($stage['description'], '987.1234 Cr') && str_contains($stage['description'], '1 мин 30 с'), 'Guide uses exact published prices and runtime work durations instead of stale literals.');
+checkRoute(DevelopmentRoute::progress($facts, [], $revised)['total'] === $complete['total'], 'Changing balance does not rewrite completed objectives.');

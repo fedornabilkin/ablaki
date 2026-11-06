@@ -10,7 +10,7 @@ class CultivationController extends LegacyController
     public function actionCrops(): array
     {
         if (!Yii::$app->request->isGet) throw new \yii\web\MethodNotAllowedHttpException('Используйте GET.');
-        return $this->cultivationService()->crops($this->id(Yii::$app->request->get('page', 1)), $this->orderSearch());
+        return $this->cultivationService()->crops($this->id(Yii::$app->request->get('page', 1)), $this->orderSearch(), (int)Yii::$app->user->id);
     }
     public function actionCultivation($id): array
     {

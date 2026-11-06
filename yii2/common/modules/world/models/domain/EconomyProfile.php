@@ -100,6 +100,12 @@ final class EconomyProfile
             throw new \InvalidArgumentException('Operating costs must match the candidate and existing wear rules.');
         }
         EconomyOperatingCosts::treasury($costs['treasury_example'], 0);
+        if (isset($data['market'])) MarketPricing::validate($data['market']);
+        if (isset($data['intro_crop'])) {
+            foreach (['grow_seconds', 'water_interval_seconds', 'water_window_seconds', 'harvest_window_seconds', 'yield_quantity', 'sow_limit'] as $field) {
+                if (!is_int($data['intro_crop'][$field] ?? null) || $data['intro_crop'][$field] < 1 || $data['intro_crop'][$field] > 31536000) throw new \InvalidArgumentException('Invalid introductory crop: ' . $field);
+            }
+        }
         $items = $data['items'];
         if (isset($data['source_equipment'])) {
             if (!is_array($data['source_equipment'])) throw new \InvalidArgumentException('Expected source equipment rules.');
@@ -143,6 +149,7 @@ final class EconomyProfile
         foreach ($data['objects'] as $code => $row) {
             if (isset($row['description']) && (!is_string($row['description']) || mb_strlen($row['description']) > 5000)) throw new \InvalidArgumentException('Invalid object description: ' . $code);
             if (!isset($row['price_cr']) || !is_int($row['work_seconds']) || $row['work_seconds'] < 1) throw new \InvalidArgumentException('Object needs a price and work duration: ' . $code);
+            if (isset($row['max_condition']) && (!is_int($row['max_condition']) || $row['max_condition'] < 1 || $row['max_condition'] > 1000000)) throw new \InvalidArgumentException('Invalid building durability.');
             self::quantities($row['materials'], $items, $code);
             self::references($row['capability_requirements'] ?? [], $data['objects'], $code);
             if (isset($row['grow_duration_bps']) && (!is_int($row['grow_duration_bps']) || $row['grow_duration_bps'] < 1000 || $row['grow_duration_bps'] > 10000)) throw new \InvalidArgumentException('Invalid growth duration modifier: ' . $code);

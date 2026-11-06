@@ -83,6 +83,7 @@ final class EconomyProfilePublisher
             foreach ($profile['objects'] as $code => $object) {
                 $old = (new Query())->from('world_template')->where(['code' => $code])->one($this->db);
                 $defaults = $old ? (json_decode($old['defaults_json'], true) ?: []) : [];
+                if (isset($object['max_condition'])) $defaults['max_condition'] = $object['max_condition'];
                 $defaults['economy_profile_id'] = $id; $defaults['mandatory_price_cr'] = $object['price_cr'];
                 if (isset($object['description'])) $defaults['description'] = $object['description'];
                 $defaults['build_tools'] = []; $defaults['build_stations'] = [];
@@ -99,24 +100,18 @@ final class EconomyProfilePublisher
                 if ($old) $this->db->createCommand()->update('world_template', $values, ['id' => $old['id']])->execute();
                 else {
                     $kind = $code === 'garden-bed' ? 'BED' : (in_array($code, ['forest-plot', 'stone-plot', 'clay-plot', 'sand-plot', 'meadow-plot', 'water-source'], true) ? 'PLOT' : 'BUILDING');
+                    $templates = require dirname(__DIR__, 2) . '/data/simple-templates.php';
+                    $template = $templates[$code] ?? null;
+                    if ($template) { $kind = $template[1]; $defaults = array_replace($template[6], $defaults); $values['defaults_json'] = CanonicalJson::encode($defaults); }
+                    if (str_starts_with($code, 'mini-storage-level-')) $kind = 'CHEST';
+                    $level = str_starts_with($code, 'mini-storage-level-') ? (int)substr($code, -1) : ($template[2] ?? ($kind === 'BED' ? 6 : 5));
                     $this->db->createCommand()->insert('world_template', $values + ['code' => $code, 'kind' => $kind, 'name' => $object['name'],
-                        'hierarchy_level' => $kind === 'BED' ? 6 : 5, 'enabled' => 1, 'player_buildable' => 1])->execute();
+                        'hierarchy_level' => $level, 'enabled' => 1, 'player_buildable' => 1])->execute();
                 }
             }
             TemplateParents::seed($this->db);
-            $crop = $profile['crop'];
-            $definition = (new Query())->from('world_crop')->where(['code' => 'carrot'])->one($this->db);
-            if (!$definition) throw new GameError('CROP_NOT_READY', 'Сначала установите культуру моркови.', 503);
-            $itemIds = (new Query())->select(['id', 'code'])->from('craft_item')->where(['code' => [$crop['seed'], $crop['yield'], $crop['water']]])->indexBy('code')->all($this->db);
-            $cropVersion = 1 + (int)(new Query())->from('world_crop_revision')->where(['crop_id' => $definition['id']])->max('version', $this->db);
-            $this->db->createCommand()->update('world_crop_revision', ['status' => 'superseded'], ['crop_id' => $definition['id'], 'status' => 'published'])->execute();
-            $this->db->createCommand()->insert('world_crop_revision', ['crop_id' => $definition['id'], 'version' => $cropVersion, 'status' => 'published',
-                'seed_item_id' => $itemIds[$crop['seed']]['id'], 'yield_item_id' => $itemIds[$crop['yield']]['id'], 'water_item_id' => $itemIds[$crop['water']]['id'],
-                'seed_quantity' => $crop['seed_quantity'], 'yield_quantity' => $crop['yield_quantity'], 'water_quantity' => $crop['water_quantity_per_action'],
-                'grow_seconds' => $crop['grow_seconds'], 'water_interval_seconds' => $crop['water_interval_seconds'],
-                'water_window_seconds' => $crop['water_window_seconds'], 'harvest_window_seconds' => $crop['harvest_window_seconds'],
-                'author_user_id' => $author, 'published_at' => time(), 'config_json' => CanonicalJson::encode(['profile_id' => $id,
-                    'fees' => ['dig' => $crop['dig_fee_cr'], 'sow' => $crop['sow_fee_cr'], 'water' => $crop['water_fee_cr'], 'harvest' => $crop['harvest_fee_cr']]])])->execute();
+            $this->publishCrop('carrot', $profile['crop'], $id, $author);
+            if (isset($profile['intro_crop'])) $this->publishCrop('starter-carrot', array_replace($profile['crop'], $profile['intro_crop']), $id, $author);
             if ((new Query())->from('world_economy_current')->where(['id' => 1])->exists($this->db))
                 $this->db->createCommand()->update('world_economy_current', ['profile_id' => $id, 'revision' => new Expression('revision+1')], ['id' => 1])->execute();
             else $this->db->createCommand()->insert('world_economy_current', ['id' => 1, 'profile_id' => $id, 'revision' => 1])->execute();
@@ -124,4 +119,20 @@ final class EconomyProfilePublisher
             return ['version' => $version, 'profile_id' => $id, 'changed' => true, 'money_created_cr' => '0.0000'];
         });
     }
+    private function publishCrop(string $code, array $crop, int $id, int $author): void
+    {
+        $definition = (new Query())->from('world_crop')->where(['code' => $code])->one($this->db);
+        if (!$definition) throw new GameError('CROP_NOT_READY', 'Сначала установите культуру моркови.', 503);
+        $itemIds = (new Query())->select(['id', 'code'])->from('craft_item')->where(['code' => [$crop['seed'], $crop['yield'], $crop['water']]])->indexBy('code')->all($this->db);
+        $cropVersion = 1 + (int)(new Query())->from('world_crop_revision')->where(['crop_id' => $definition['id']])->max('version', $this->db);
+        $this->db->createCommand()->update('world_crop_revision', ['status' => 'superseded'], ['crop_id' => $definition['id'], 'status' => 'published'])->execute();
+        $this->db->createCommand()->insert('world_crop_revision', ['crop_id' => $definition['id'], 'version' => $cropVersion, 'status' => 'published',
+            'seed_item_id' => $itemIds[$crop['seed']]['id'], 'yield_item_id' => $itemIds[$crop['yield']]['id'], 'water_item_id' => $itemIds[$crop['water']]['id'],
+            'seed_quantity' => $crop['seed_quantity'], 'yield_quantity' => $crop['yield_quantity'], 'water_quantity' => $crop['water_quantity_per_action'],
+            'grow_seconds' => $crop['grow_seconds'], 'water_interval_seconds' => $crop['water_interval_seconds'],
+            'water_window_seconds' => $crop['water_window_seconds'], 'harvest_window_seconds' => $crop['harvest_window_seconds'],
+            'author_user_id' => $author, 'published_at' => time(), 'config_json' => CanonicalJson::encode(['profile_id' => $id, 'intro_sow_limit' => $crop['sow_limit'] ?? null,
+                'fees' => ['dig' => $crop['dig_fee_cr'], 'sow' => $crop['sow_fee_cr'], 'water' => $crop['water_fee_cr'], 'harvest' => $crop['harvest_fee_cr']]])])->execute();
+    }
+
 }

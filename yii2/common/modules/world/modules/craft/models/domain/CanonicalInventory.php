@@ -255,6 +255,10 @@ class CanonicalInventory
     {
         return $this->consumeRawMaterial($user, $inventory, $item, $quantity, 'order.consumed');
     }
+    public function consumeMarket(int $user, int $inventory, int $item, int $quantity): int
+    {
+        return $this->consumeRawMaterial($user, $inventory, $item, $quantity, 'market.sold');
+    }
     public function consumeBuildingRepair(int $user, int $inventory, int $item, int $quantity): int
     {
         return $this->consumeRawMaterial($user, $inventory, $item, $quantity, 'building.repair');
