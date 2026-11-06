@@ -54,7 +54,8 @@ final class TelegramAuthController extends Controller
     public function actionIdentity(): array
     {
         $user = $this->actor(true);
-        return ['telegram' => $this->service()->identity((int)$user->id)];
+        return ['telegram' => $this->service()->identity((int)$user->id),
+            'world_reward' => (new \common\modules\world\models\domain\TelegramReward(Yii::$app->db))->state((int)$user->id)];
     }
 
     public function actionStart(): array

@@ -121,6 +121,9 @@ final class EconomyProfile
             }
         }
         foreach (['starter', 'daily'] as $section) self::quantities($data[$section]['items'], $items, $section);
+        self::quantities($data['daily']['fixed_items'] ?? [], $items, 'fixed daily supply');
+        if (array_intersect_key($data['daily']['fixed_items'] ?? [], $data['daily']['items']))
+            throw new \InvalidArgumentException('Fixed and decreasing daily supplies must not overlap.');
         if (isset($data['daily']['claim_limit']) && (!is_int($data['daily']['claim_limit']) || $data['daily']['claim_limit'] < 1 || $data['daily']['claim_limit'] > 30))
             throw new \InvalidArgumentException('Daily allowance must contain 1–30 decreasing claims per item.');
         if (isset($data['daily']['minimum_quantity']) && $data['daily']['minimum_quantity'] !== 1)
@@ -132,7 +135,7 @@ final class EconomyProfile
             self::references($objects, $data['objects'], 'daily production');
         }
         if ($data['starter']['credit_source'] !== 'existing_transfer' || !Money::parse($data['daily']['credits_cr'])->isZero()) throw new \InvalidArgumentException('Starter uses existing transfers; daily supplies contain items only.');
-        foreach ($data['daily']['items'] as $code => $quantity) {
+        foreach (($data['daily']['fixed_items'] ?? []) + $data['daily']['items'] as $code => $quantity) {
             if ($items[$code]['reference_price_cr'] === null || $items[$code]['sale_price_cr'] === null) throw new \InvalidArgumentException('Daily valuation is incomplete.');
         }
         self::references($data['bootstrap_targets'], $items, 'bootstrap_targets');
@@ -219,7 +222,7 @@ final class EconomyProfile
     /** Physical dependency closure only: no free quantities, coins, slots, skill levels or time are inferred. */
     private static function reachability(array $data): array
     {
-        $items = array_fill_keys(array_keys($data['starter']['items'] + $data['daily']['items']), true);
+        $items = array_fill_keys(array_keys($data['starter']['items'] + $data['daily']['items'] + ($data['daily']['fixed_items'] ?? [])), true);
         $objects = ['starter-site' => true]; $recipes = []; $steps = [];
         $has = static function (array $codes, array $available): bool { return !array_diff($codes, array_keys($available)); };
         do {
@@ -267,8 +270,8 @@ final class EconomyProfile
             'counts' => ['items' => count($data['items']), 'objects' => count($data['objects']), 'recipes' => count($data['recipes']), 'actions' => count($data['actions'])],
             'starter_credits_cr' => $data['starter']['credits_cr'],
             'daily_grant' => ['actual_credits_cr' => $data['daily']['credits_cr'],
-                'reference_value_cr' => self::valuation($data['daily']['items'], $data['items'], 'reference_price_cr')->decimal(),
-                'sale_value_before_limits_cr' => self::valuation($data['daily']['items'], $data['items'], 'sale_price_cr')->decimal()],
+                'reference_value_cr' => self::valuation(($data['daily']['fixed_items'] ?? []) + $data['daily']['items'], $data['items'], 'reference_price_cr')->decimal(),
+                'sale_value_before_limits_cr' => self::valuation(($data['daily']['fixed_items'] ?? []) + $data['daily']['items'], $data['items'], 'sale_price_cr')->decimal()],
             'first_day_objects_only_cr' => $objects->decimal(), 'recipe_margins' => $margins,
             'operating_costs' => EconomyOperatingCosts::report($data),
             'reachability' => self::reachability($data),

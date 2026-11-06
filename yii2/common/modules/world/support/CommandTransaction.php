@@ -22,6 +22,10 @@ final class CommandTransaction implements CommandMiddleware
                 throw new GameError('SCHEMA_NOT_READY', 'Каталог ещё не подготовлен.', 503);
             }
 
+            if ($command->type === 'world.goal.claim' && ($command->payload['code'] ?? null) === 'telegram-link') {
+                (new \common\modules\world\models\domain\TelegramReward($this->db))->lockIdentity($command->userId);
+            }
+
             if ($command->version === CommandRequest::DIRECT) {
                 $locks->owners($this->participants($command), false);
             }

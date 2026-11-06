@@ -47,6 +47,7 @@
     "funding": "parent_budget"
   },
   "daily": {
+    "fixed_items": { "world-carrot": 1 },
     "claim_limit": 5,
     "initial_multiplier": 7,
     "suppressed_by": {

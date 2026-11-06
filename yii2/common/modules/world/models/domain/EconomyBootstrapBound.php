@@ -60,7 +60,7 @@ final class EconomyBootstrapBound
         $weights[$crop['yield']] = $profile['items'][$crop['yield']]['sale_price_cr'];
         if (!is_string($weights[$crop['yield']])) throw new \InvalidArgumentException('Crop output needs a priced reference order.');
         $weights[$crop['seed']] = Money::parse($weights[$crop['yield']])->divideExact(2)->decimal();
-        foreach ([$profile['starter']['items'], $profile['daily']['items'], $profile['goals']['day-1']['items']] as $grant) {
+        foreach ([$profile['starter']['items'], $profile['daily']['items'] + ($profile['daily']['fixed_items'] ?? []), $profile['goals']['day-1']['items']] as $grant) {
             foreach ($grant as $item => $quantity) {
                 if (!isset($weights[$item]) && !in_array($item, ['classic-hammer', 'world-explorer-elixir'], true)) throw new \InvalidArgumentException('Non-raw initial capital requires revisiting the bound: ' . $item);
             }
@@ -93,7 +93,7 @@ final class EconomyBootstrapBound
         ksort($raw);
         $initial = [];
         foreach ($profile['starter']['items'] as $code => $quantity) if (isset($weights[$code])) $initial[$code] = $quantity;
-        foreach ($profile['daily']['items'] as $code => $quantity) if (isset($weights[$code])) $initial[$code] = ($initial[$code] ?? 0) + $quantity * $days;
+        foreach ($profile['daily']['items'] + ($profile['daily']['fixed_items'] ?? []) as $code => $quantity) if (isset($weights[$code])) $initial[$code] = ($initial[$code] ?? 0) + $quantity * $days;
         $batches = $profile['limits']['extraction_daily']['maximum'] * $days;
         $water = ($initial[$crop['water']] ?? 0) + $batches * $maxWater;
         $cycles = intdiv($water, 2);
