@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Ordinary releases never initialize the world or replay financial conversions.
 set -Eeuo pipefail
+trap 'printf "::error::Production release stopped at line %s (exit %s).\n" "$LINENO" "$?" >&2' ERR
 expected_sha=${1:?Checked SHA required}
 base=${2:-}
 [[ "$expected_sha" =~ ^[a-f0-9]{40}$ && ( -z "$base" || "$base" =~ ^[a-f0-9]{40}$ ) ]]
@@ -14,9 +15,20 @@ control="$repo/yii2/common/runtime/financial-maintenance"
 [[ ! -L "$control" && ! -e "$control/paused" && ! -e "$control/rating-precision.pending" && ! -e "$control/world-activation.pending" ]]
 exec 8>"$control/operator.lock"
 flock -n 8
+git diff --cached --quiet
+# The PHP entrypoint normalizes runtime permissions. Restore only Git's mode
+# for these tracked sentinels, and only when their canonical content is unchanged.
+for sentinel in yii2/api/runtime/.gitignore yii2/backend/runtime/.gitignore yii2/frontend/runtime/.gitignore; do
+  [[ -f "$sentinel" && ! -L "$sentinel" ]] || continue
+  if ! git diff --quiet -- "$sentinel"; then
+    [[ "$(git hash-object --path="$sentinel" "$sentinel")" = "$(git rev-parse "HEAD:$sentinel")" ]]
+    mode=$(git ls-files -s -- "$sentinel" | cut -d' ' -f1)
+    case "$mode" in 100644) chmod 644 "$sentinel" ;; 100755) chmod 755 "$sentinel" ;; *) exit 1 ;; esac
+    printf '[production-release] Restored unchanged runtime sentinel mode: %s\n' "$sentinel"
+  fi
+done
 changes=$(git status --porcelain --untracked-files=no)
 [[ -z "$changes" || "$changes" = ' M docker-compose.yaml' ]]
-git diff --cached --quiet
 git fetch origin master
 [[ "$(git rev-parse FETCH_HEAD)" = "$expected_sha" ]]
 actual=$(git rev-parse HEAD)
