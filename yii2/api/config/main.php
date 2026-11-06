@@ -34,6 +34,11 @@ $cfg = [
 //            ],
         ],
         'request' => [
+            // TLS terminates at the host nginx before the published Docker API port.
+            // Trust only its observed peer and protocol/client-IP headers, never forwarded hosts.
+            'trustedHosts' => [
+                '94.250.251.94' => ['X-Forwarded-Proto', 'X-Forwarded-For'],
+            ],
 //            'enableCsrfValidation' => false,
             'cookieValidationKey' => 'JDaZ5GOpnlg94q38dzWDLKjPR5rQXXlF',
             'parsers' => [
