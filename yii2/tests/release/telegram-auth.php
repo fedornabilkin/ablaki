@@ -48,6 +48,15 @@ $app = new \yii\web\Application([
 $db = $app->db;
 $config = new TelegramConfig(true, 'AblakinTestBot', str_repeat('fixture-', 8));
 $service = new TelegramAuthService($db, $config, new TelegramAccounts());
+if (in_array($argv[1] ?? '', ['unlink-worker', 'revoked-login-worker'], true)) {
+    $db->open(); workerReady();
+    try {
+        if ($argv[1] === 'unlink-worker') $service->unlink((int)$argv[2], $argv[3], 'local-fixture-password');
+        else $service->complete($argv[2], $argv[3], null, null);
+        echo json_encode(['status' => 200]);
+    } catch (\yii\web\HttpException $error) { echo json_encode(['status' => $error->statusCode]); }
+    exit(0);
+}
 if (($argv[1] ?? '') === 'worker') {
     $db->open(); workerReady();
     try {
@@ -67,6 +76,9 @@ $db->createCommand()->createTable('persone', ['id' => 'pk', 'user_id' => 'intege
 require dirname(__DIR__, 2) . '/console/migrations/m261104_120000_telegram_auth.php';
 $migration = new \m261104_120000_telegram_auth(['db' => $db]);
 $migration->up(); $migration->up();
+require dirname(__DIR__, 2) . '/console/migrations/m261106_140000_telegram_unlink.php';
+$unlinkMigration = new \m261106_140000_telegram_unlink(['db' => $db]);
+$unlinkMigration->up(); $unlinkMigration->up();
 tgCheck(true, 'migration is repeatable');
 $start = fn(bool $signup = true) => $service->start('login', $signup, null, null)['request'];
 $approve = function (array $request, string $id = '1234567890123') use ($service): void {
@@ -116,6 +128,30 @@ tgCheck($service->complete($link['id'], $link['browser_secret'], $thirdId, $thir
 tgCheck($service->identity($thirdId)['connected'], 'profile exposes binding without secret or Telegram ID');
 $boundLogin = $start(false); $approve($boundLogin, '555');
 tgCheck((int)$complete($boundLogin)['user']->id === $thirdId, 'linked Telegram preserves existing account');
+// A password is required so Telegram-only users cannot lose their sole login method.
+tgReject(fn() => $service->unlink($thirdId, $third->auth_key, 'unknown-password'), 403, 'cannot remove sole login with an unknown password');
+$password = 'local-fixture-password';
+$db->createCommand()->update('user', ['password_hash' => \dektrium\user\helpers\Password::hash($password)], ['id' => $thirdId])->execute();
+$pendingLogin = $start(false); $approve($pendingLogin, '555');
+$pendingLink = $service->start('link', false, $thirdId, $third->auth_key)['request']; $approve($pendingLink, '555');
+$userBefore = (new Query())->from('user')->where(['id' => $thirdId])->one();
+$personBefore = (new Query())->from('persone')->where(['user_id' => $thirdId])->one();
+tgReject(fn() => $service->unlink($thirdId, 'stale-key', $password), 403, 'unlink requires current account session');
+tgReject(fn() => $service->unlink($thirdId, $third->auth_key, 'wrong-password'), 403, 'unlink rejects wrong password');
+tgCheck($service->identity($thirdId) !== null, 'failed unlink preserves binding');
+tgCheck($service->unlink($thirdId, $third->auth_key, $password)['telegram'] === null, 'unlink removes Telegram from profile');
+$service->unlink($thirdId, $third->auth_key, $password);
+tgCheck((new Query())->from('auth_audit')->where(['event' => 'telegram.unlink', 'user_id' => $thirdId])->count() == 1, 'repeated unlink records one audit');
+tgCheck((new Query())->from('user')->where(['id' => $thirdId])->one() === $userBefore
+    && (new Query())->from('persone')->where(['user_id' => $thirdId])->one() === $personBefore, 'unlink preserves password, session, progress and money');
+tgReject(fn() => $complete($pendingLogin), 409, 'old approved login cannot restore removed identity');
+tgReject(fn() => $complete($boundLogin), 409, 'old completed login cannot replay after unlink');
+tgReject(fn() => $service->complete($link['id'], $link['browser_secret'], $thirdId, $third->auth_key), 409, 'old completed link cannot replay after unlink');
+$approve($pendingLink, '555');
+tgReject(fn() => $service->complete($pendingLink['id'], $pendingLink['browser_secret'], $thirdId, $third->auth_key), 409, 'reopening old chat does not refresh revoked approval');
+$freshLink = $service->start('link', false, $thirdId, $third->auth_key)['request']; $approve($freshLink, '555');
+tgCheck($service->complete($freshLink['id'], $freshLink['browser_secret'], $thirdId, $third->auth_key)['linked'], 'new explicit binding works after unlink');
+$boundLogin = $start(false); $approve($boundLogin, '555'); $complete($boundLogin);
 $db->createCommand()->update('user', ['auth_key' => 'rotated-on-logout'], ['id' => $thirdId])->execute();
 tgReject(fn() => $complete($boundLogin), 409, 'logout invalidates completed-request recovery');
 $db->createCommand()->update('user', ['blocked_at' => time()], ['id' => $thirdId])->execute();
@@ -154,7 +190,38 @@ $_SERVER['REQUEST_METHOD'] = 'GET';
 tgCheck($app->runAction('telegram-auth/config')['telegram']['enabled'] === false, 'kill switch hides availability');
 $_SERVER['REQUEST_METHOD'] = 'POST';
 tgReject(fn() => $app->runAction('telegram-auth/start'), 503, 'kill switch rejects new login');
+$app->request->setBodyParams(['password' => $password]);
+$app->request->headers->remove('Authorization');
+tgReject(fn() => $app->runAction('telegram-auth/unlink'), 401, 'unlink requires bearer authentication');
+$apiUser = User::findOne($second['user']->id);
+$db->createCommand()->update('user', ['password_hash' => \dektrium\user\helpers\Password::hash($password)], ['id' => $apiUser->id])->execute();
+$app->request->headers->set('Authorization', 'Bearer ' . $second['token']);
+$app->request->setBodyParams(['password' => ['invalid']]);
+tgReject(fn() => $app->runAction('telegram-auth/unlink'), 400, 'unlink validates password type');
+$app->request->setBodyParams(['password' => $password]);
+tgCheck($app->runAction('telegram-auth/unlink')['telegram'] === null, 'disabled provider still allows unlink');
+$_SERVER['REQUEST_METHOD'] = 'GET';
+tgCheck($app->runAction('telegram-auth/identity')['telegram'] === null, 'disabled provider still exposes current binding');
 if ($db->driverName === 'mysql') {
+    $raceId = (int)$first['user']->id;
+    $db->createCommand()->update('user', ['password_hash' => \dektrium\user\helpers\Password::hash($password)], ['id' => $raceId])->execute();
+    $raceLogin = $start(false); $approve($raceLogin);
+    $children = [];
+    foreach ([['unlink-worker', (string)$raceId, $first['token']], ['revoked-login-worker', $raceLogin['id'], $raceLogin['browser_secret']]] as $args) {
+        $process = proc_open([PHP_BINARY, '-c', php_ini_loaded_file(), __FILE__, ...$args],
+            [0 => ['pipe', 'r'], 1 => ['pipe', 'w'], 2 => ['pipe', 'w']], $pipes);
+        $children[] = [$process, $pipes];
+    }
+    releaseWorkers($children);
+    foreach ($children as $index => [$process, $pipes]) {
+        $out = stream_get_contents($pipes[1]); $err = stream_get_contents($pipes[2]);
+        fclose($pipes[1]); fclose($pipes[2]);
+        tgCheck(proc_close($process) === 0, 'unlink race finishes without deadlock: ' . $err);
+        $status = json_decode($out, true, 512, JSON_THROW_ON_ERROR)['status'];
+        tgCheck($index === 0 ? $status === 200 : in_array($status, [200, 409], true), 'concurrent login is completed before unlink or rejected');
+    }
+    tgCheck($service->identity($raceId) === null, 'concurrent completion cannot restore unlinked identity');
+    tgReject(fn() => $complete($raceLogin), 409, 'concurrent completed login cannot replay after unlink');
     foreach ([true, false] as $sameRequest) {
         $before = (int)(new Query())->from('user')->count();
         $requests = [$start(), $start()];

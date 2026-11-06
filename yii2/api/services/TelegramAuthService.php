@@ -1,7 +1,9 @@
 <?php
 namespace api\services;
 
+use api\modules\v1\models\User;
 use common\services\auth\TelegramConfig;
+use common\services\user\PasswordVerifier;
 use yii\db\Connection;
 use yii\db\Query;
 use yii\web\ConflictHttpException;
@@ -65,7 +67,9 @@ final class TelegramAuthService
                 throw new ConflictHttpException('Эта заявка уже открыта другим пользователем Telegram.');
             }
             if ($row['subject'] === null) {
-                $this->update($id, ['subject' => $subject, 'username' => $username]);
+                $identity = $this->lockedIdentity($subject);
+                $this->update($id, ['subject' => $subject, 'username' => $username,
+                    'identity_revision' => (int)$identity['revision']]);
             }
             return ['request' => [
                 'id' => $id, 'purpose' => $row['purpose'], 'display_code' => $row['display_code'],
@@ -98,6 +102,11 @@ final class TelegramAuthService
             if ($row['status'] === 'completed') {
                 // A lost HTTP response can be retried briefly, but a logout/key rotation revokes it.
                 if (time() > (int)$row['completed_at'] + 60) throw new GoneHttpException('Вход уже завершён. Начните заново.');
+                $identity = $this->lockedIdentity($row['subject']);
+                $this->validateIdentityRevision($row, $identity);
+                if ((int)$identity['user_id'] !== (int)$row['result_user_id']) {
+                    throw new ConflictHttpException('Привязка Telegram изменилась. Начните заново.');
+                }
                 if ($row['purpose'] === 'link') { $this->validateOwner($row); return ['linked' => true]; }
                 $this->lock('{{%user}}', ['id' => $row['result_user_id']]);
                 return $this->accounts->session((int)$row['result_user_id'], $row['result_key_hash']);
@@ -106,10 +115,8 @@ final class TelegramAuthService
             if ($row['status'] !== 'approved') throw new ConflictHttpException('Дождитесь подтверждения в Telegram.');
 
             // One lock per external identity serializes parallel approvals for the same Telegram account.
-            $this->db->createCommand()->upsert(self::IDENTITIES, [
-                'provider' => 'telegram', 'subject' => $row['subject'], 'created_at' => time(),
-            ], false)->execute();
-            $identity = $this->lock(self::IDENTITIES, ['provider' => 'telegram', 'subject' => $row['subject']]);
+            $identity = $this->lockedIdentity($row['subject']);
+            $this->validateIdentityRevision($row, $identity);
             if ($row['purpose'] === 'link') {
                 $this->validateOwner($row);
                 if ($identity['user_id'] !== null && (int)$identity['user_id'] !== $userId) {
@@ -149,6 +156,43 @@ final class TelegramAuthService
     {
         $row = (new Query())->from(self::IDENTITIES)->where(['provider' => 'telegram', 'user_id' => $userId])->one($this->db);
         return $row ? ['provider' => 'telegram', 'username' => $row['username'], 'connected' => true] : null;
+    }
+
+    public function unlink(int $userId, string $authKey, string $password): array
+    {
+        return $this->db->transaction(function () use ($userId, $authKey, $password) {
+            // Same lock order as complete: identity, then user. Do not lock old requests here.
+            $identity = $this->lock(self::IDENTITIES, ['provider' => 'telegram', 'user_id' => $userId]);
+            $this->validateOwner(['target_user_id' => $userId, 'target_key_hash' => hash('sha256', $authKey)]);
+            $user = User::findOne($userId);
+            if (!$user || !(new PasswordVerifier())->verify($user, $password)) {
+                throw new ForbiddenHttpException('Неверный пароль аккаунта. Для отвязки нужен действующий вход по паролю.');
+            }
+            if ($identity) {
+                $this->db->createCommand()->update(self::IDENTITIES, [
+                    'user_id' => null, 'username' => null, 'revision' => (int)$identity['revision'] + 1,
+                ], ['id' => $identity['id']])->execute();
+                $this->db->createCommand()->insert('{{%auth_audit}}', [
+                    'event' => 'telegram.unlink', 'user_id' => $userId, 'created_at' => time(),
+                ])->execute();
+            }
+            return ['telegram' => null];
+        });
+    }
+
+    private function lockedIdentity(string $subject): array
+    {
+        $this->db->createCommand()->upsert(self::IDENTITIES, [
+            'provider' => 'telegram', 'subject' => $subject, 'created_at' => time(),
+        ], false)->execute();
+        return $this->lock(self::IDENTITIES, ['provider' => 'telegram', 'subject' => $subject]);
+    }
+
+    private function validateIdentityRevision(array $request, array $identity): void
+    {
+        if ((int)$request['identity_revision'] !== (int)$identity['revision']) {
+            throw new ConflictHttpException('Привязка Telegram изменилась. Начните заново.');
+        }
     }
 
     private function browserRequest(string $id, string $proof, ?int $userId, ?string $authKey, bool $lock = false): array

@@ -18,7 +18,7 @@ final class TelegramAuthController extends Controller
     protected function verbs()
     {
         return ['config' => ['GET'], 'identity' => ['GET'], 'start' => ['POST'], 'status' => ['POST'],
-            'complete' => ['POST'], 'cancel' => ['POST'], 'bot-prepare' => ['POST'], 'bot-confirm' => ['POST'], 'bot-register' => ['POST']];
+            'complete' => ['POST'], 'cancel' => ['POST'], 'unlink' => ['POST'], 'bot-prepare' => ['POST'], 'bot-confirm' => ['POST'], 'bot-register' => ['POST']];
     }
 
     public function beforeAction($action)
@@ -29,9 +29,9 @@ final class TelegramAuthController extends Controller
         if (!parent::beforeAction($action)) return false;
         if ($action->id !== 'config') {
             if (str_starts_with($action->id, 'bot-')) $this->authenticateBot();
-            if ($action->id !== 'bot-register' && !$this->config()->available()) throw new HttpException(503, 'Вход через Telegram пока недоступен.');
+            if (!in_array($action->id, ['bot-register', 'identity', 'unlink'], true) && !$this->config()->available()) throw new HttpException(503, 'Вход через Telegram пока недоступен.');
             (new AuthRateLimit(Yii::$app->db))->hit('telegram.' . $action->id,
-                (string)Yii::$app->request->userIP, $action->id === 'start' ? 10 : 120);
+                (string)Yii::$app->request->userIP, in_array($action->id, ['start', 'unlink'], true) ? 10 : 120);
         }
         return true;
     }
@@ -65,6 +65,16 @@ final class TelegramAuthController extends Controller
         if (!is_bool($allowSignup)) throw new BadRequestHttpException('allow_signup должен быть булевым.');
         $user = $this->actor($purpose === 'link');
         return $this->service()->start($purpose, $allowSignup, $user ? (int)$user->id : null, $user?->auth_key);
+    }
+
+    public function actionUnlink(): array
+    {
+        $user = $this->actor(true);
+        $password = Yii::$app->request->post('password');
+        if (!is_string($password) || $password === '' || strlen($password) > 1024) {
+            throw new BadRequestHttpException('Введите пароль аккаунта.');
+        }
+        return $this->service()->unlink((int)$user->id, $user->auth_key, $password);
     }
 
     public function actionStatus(): array { return $this->browserCommand('status'); }

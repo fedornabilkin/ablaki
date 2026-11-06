@@ -20,21 +20,12 @@ class LoginForm extends \dektrium\user\models\LoginForm
         if (isset($rules['passwordValidate'])) {
             $rules['passwordValidate'] = ['password', function ($attribute) {
                 if ($this->user && is_string($this->password)) {
-                    if ((new \common\services\user\LegacyPasswordService())->verify($this->user, $this->password)
-                        || $this->validCurrentPassword()) return;
+                    if ((new \common\services\user\PasswordVerifier())->verify($this->user, $this->password)) return;
                 }
                 $this->addError($attribute, Yii::t('user', 'Invalid login or password'));
             }];
         }
         return $rules;
-    }
-
-    private function validCurrentPassword(): bool
-    {
-        try {
-            return is_string($this->user->password_hash) && $this->user->password_hash !== ''
-                && \dektrium\user\helpers\Password::validate($this->password, $this->user->password_hash);
-        } catch (\yii\base\InvalidArgumentException $error) { return false; }
     }
 
     public function getUser()

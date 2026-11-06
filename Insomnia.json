@@ -13053,6 +13053,39 @@
       "settingRebuildPath": true,
       "settingFollowRedirects": "global",
       "_type": "request"
+    },
+    {
+      "_id": "req_telegram_unlink",
+      "parentId": "fld_telegram_auth_20261104",
+      "name": "Unlink Telegram",
+      "url": "{{ baseUrl }}/auth/telegram/unlink",
+      "method": "POST",
+      "description": "Current site Bearer session and current account password. Revokes earlier approvals; preserves account and progress. Password belongs in a private environment.",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"password\": \"{{ _.account_password }}\"\n}"
+      },
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "parameters": [],
+      "authentication": {
+        "type": "bearer",
+        "token": "{{ _.bearer }}",
+        "disabled": false
+      },
+      "metaSortKey": -605,
+      "isPrivate": false,
+      "settingStoreCookies": false,
+      "settingSendCookies": false,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
     }
   ]
 }
