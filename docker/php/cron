@@ -1,2 +1,3 @@
 @daily /usr/local/bin/php /web/yii2/yii cron/user-clear
 59 * * * * /usr/local/bin/php /web/yii2/yii cron/game-create
+17 * * * * /usr/local/bin/php /web/yii2/yii telegram-auth/cleanup

@@ -152,6 +152,9 @@ use mdm\admin\components\Helper;
             ]
         )?>
 
+        <?php if (!Yii::$app->user->isGuest && Yii::$app->user->can('p-admin')): ?>
+            <div class="sidebar-form"><?= \yii\helpers\Html::a('Настройки авторизации', ['/auth-settings/index'], ['class' => 'btn btn-default btn-block']) ?></div>
+        <?php endif ?>
         <?php if (!Yii::$app->user->isGuest && Helper::checkRoute('/maintenance/clear-cache')): ?>
             <div class="sidebar-form">
                 <?= \yii\helpers\Html::beginForm(['/maintenance/clear-cache'], 'post') ?>

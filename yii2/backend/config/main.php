@@ -91,6 +91,7 @@ return [
     'as access' => [
         'class' => AccessControl::class,
         'allowActions' => [
+            'auth-settings/index', // Controller requires p-admin and retains CSRF protection.
             'entity-lookup/index',
             'entity-lookup/cells',
             'user/security/logout',

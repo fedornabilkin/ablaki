@@ -7,7 +7,7 @@ case "${1:?Choose isolated, database or mariadb}" in
     unset ABL_TEST_DSN
     suites=(frontend-lists game-overview five-game forum-gift forum-install topic68-economy worker-barrier-test world-economy-gameplay user-activity user-cleanup craft-domain world-event-domain world-domain-regression world-build-input world-development-route world-rating)
     if [[ "${CORE_CHECKED:-false}" != true ]]; then
-      suites+=(api-route-catalog world-player-read auth-response daily-reward exchange-refund frontend-api-routing classic-craft-install world-economy-profile)
+      suites+=(api-route-catalog world-player-read auth-response telegram-auth daily-reward exchange-refund frontend-api-routing classic-craft-install world-economy-profile)
     fi
     for suite in "${suites[@]}"; do php "tests/release/$suite.php"; done
     ;;
