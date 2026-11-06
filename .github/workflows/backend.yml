@@ -475,7 +475,11 @@ jobs:
           # Only the bot registration request's peer and status, never headers or user URLs.
           tail -n 2000 /var/log/nginx/php_access.log | awk '$6 == "\"POST" && $7 == "/auth/telegram/bot/register" { print "bot_peer=" $1, "status=" $9 }' | tail -n 5
           PROXY
-          ssh "${options[@]}" -p "$DEPLOY_PORT" "$DEPLOY_USER@$DEPLOY_HOST" 'grep -R -h --include="*.conf" "proxy_set_header.*X-Forwarded-Proto" /etc/nginx 2>/dev/null || true' >> "$RUNNER_TEMP/production-audit/proxy.txt"
+          ssh "${options[@]}" -p "$DEPLOY_PORT" "$DEPLOY_USER@$DEPLOY_HOST" 'sh -s' >> "$RUNNER_TEMP/production-audit/proxy.txt" <<'PROXY_HOST'
+          ls -ld /etc/nginx /etc/nginx/sites-enabled /etc/nginx/conf.d 2>/dev/null || true
+          grep -R -h -E 'proxy_set_header.*(X-Forwarded-Proto|X-Forwarded-For|Front-End-Https)|listen.*443' /etc/nginx 2>/dev/null || true
+          docker ps --format '{{.Names}} {{.Image}} {{.Ports}}'
+          PROXY_HOST
       - uses: actions/upload-artifact@v4
         if: always()
         with:
