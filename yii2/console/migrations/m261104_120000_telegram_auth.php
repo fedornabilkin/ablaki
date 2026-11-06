@@ -8,12 +8,15 @@ final class m261104_120000_telegram_auth extends Migration
     public function up()
     {
         $options = $this->db->driverName === 'mysql' ? 'ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci' : null;
+        $ownerId = $this->db->schema->getTableSchema('{{%user}}', true)->columns['id'];
+        // Legacy production uses INT UNSIGNED; foreign keys must match its exact type.
+        $ownerReference = $this->db->driverName === 'mysql' ? $ownerId->dbType . ' NULL' : $this->integer()->null();
         $tables = [
             '{{%auth_identity}}' => [
                 'id' => $this->primaryKey(),
                 'provider' => $this->string(20)->notNull(),
                 'subject' => $this->string(32)->notNull(),
-                'user_id' => $this->integer()->null(),
+                'user_id' => $ownerReference,
                 'username' => $this->string(64)->null(),
                 'created_at' => $this->integer()->notNull(),
             ],
@@ -23,7 +26,7 @@ final class m261104_120000_telegram_auth extends Migration
                 'status' => $this->string(16)->notNull(),
                 'purpose' => $this->string(8)->notNull(),
                 'allow_signup' => $this->boolean()->notNull()->defaultValue(false),
-                'target_user_id' => $this->integer()->null(),
+                'target_user_id' => $ownerReference,
                 'target_key_hash' => $this->string(64)->null(),
                 'subject' => $this->string(32)->null(),
                 'username' => $this->string(64)->null(),
@@ -31,7 +34,7 @@ final class m261104_120000_telegram_auth extends Migration
                 'created_at' => $this->integer()->notNull(),
                 'expires_at' => $this->integer()->notNull(),
                 'completed_at' => $this->integer()->null(),
-                'result_user_id' => $this->integer()->null(),
+                'result_user_id' => $ownerReference,
                 'result_key_hash' => $this->string(64)->null(),
             ],
             '{{%auth_rate_limit}}' => [
@@ -42,12 +45,20 @@ final class m261104_120000_telegram_auth extends Migration
             '{{%auth_audit}}' => [
                 'id' => $this->primaryKey(),
                 'event' => $this->string(32)->notNull(),
-                'user_id' => $this->integer()->null(),
+                'user_id' => $ownerReference,
                 'created_at' => $this->integer()->notNull(),
             ],
         ];
         foreach ($tables as $name => $columns) {
             if (!$this->db->schema->getTableSchema($name, true)) $this->createTable($name, $columns, $options);
+        }
+        // MySQL DDL commits immediately: repair tables left by an interrupted first install.
+        if ($this->db->driverName === 'mysql') {
+            foreach ([['{{%auth_identity}}', 'user_id'], ['{{%telegram_auth_request}}', 'target_user_id'],
+                ['{{%telegram_auth_request}}', 'result_user_id'], ['{{%auth_audit}}', 'user_id']] as [$table, $column]) {
+                $reference = $this->db->schema->getTableSchema($table, true)->columns[$column];
+                if ($reference->dbType !== $ownerId->dbType) $this->alterColumn($table, $column, $ownerReference);
+            }
         }
         $indexes = [
             ['auth_identity_subject', '{{%auth_identity}}', ['provider', 'subject'], true],
