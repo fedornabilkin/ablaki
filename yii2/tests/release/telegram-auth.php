@@ -66,6 +66,30 @@ if (($argv[1] ?? '') === 'worker') {
     } catch (Throwable $error) { fwrite(STDERR, get_class($error) . ': ' . $error->getMessage()); exit(1); }
     exit(0);
 }
+// Exercise the real API proxy configuration without trusting headers inserted by the test.
+$requestConfig = (require dirname(__DIR__, 2) . '/api/config/main.php')['components']['request'];
+$originalServer = $_SERVER;
+try {
+    foreach ([
+        ['94.250.251.94', 'https', true],
+        ['94.250.251.94', 'http', false],
+        ['94.250.251.94', null, false],
+        ['203.0.113.25', 'https', false],
+        ['192.168.22.15', 'https', false],
+    ] as [$peer, $protocol, $secure]) {
+        $_SERVER = ['REMOTE_ADDR' => $peer, 'HTTP_HOST' => 'api.example.invalid',
+            'HTTP_X_FORWARDED_FOR' => '198.51.100.9, 92.63.98.81',
+            'HTTP_X_FORWARDED_HOST' => 'attacker.invalid', 'HTTP_FRONT_END_HTTPS' => 'on'];
+        if ($protocol !== null) $_SERVER['HTTP_X_FORWARDED_PROTO'] = $protocol;
+        $request = new \yii\web\Request($requestConfig);
+        tgCheck($request->isSecureConnection === $secure, 'HTTPS requires the trusted proxy and secure protocol: ' . $peer . '/' . ($protocol ?? 'absent'));
+        tgCheck($request->userIP === ($peer === '94.250.251.94' ? '92.63.98.81' : $peer), 'forwarded client IP stops at the first untrusted peer');
+        tgCheck(!$request->headers->has('X-Forwarded-Host') && !$request->headers->has('Front-End-Https'), 'unconfigured forwarded headers are discarded');
+    }
+    $_SERVER = ['REMOTE_ADDR' => '203.0.113.25', 'HTTPS' => 'on'];
+    tgCheck((new \yii\web\Request($requestConfig))->isSecureConnection, 'direct TLS remains supported');
+} finally { $_SERVER = $originalServer; }
+
 $db->createCommand()->createTable('user', ['id' => $db->driverName === 'mysql' ? 'int unsigned NOT NULL AUTO_INCREMENT PRIMARY KEY' : 'pk', 'username' => 'varchar(255) UNIQUE',
     'email' => $db->driverName === 'mysql' ? 'varchar(255) NOT NULL UNIQUE' : 'varchar(255) UNIQUE',
     'password_hash' => 'varchar(255)', 'auth_key' => 'varchar(255)', 'registration_ip' => 'varchar(255)',
