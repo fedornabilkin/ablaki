@@ -31,6 +31,6 @@ final class WorldDevelopment
             $node = $byCode[$step['node']] ?? $site;
             $links[$step['action'] . ':' . $step['node']] = !$node ? '/world' : ($step['action'] === 'craft' ? '/world/workspace/' : '/world/nodes/') . $node;
         }
-        return DevelopmentRoute::progress((new WorldProgress($this->db))->quantities($user), $links);
+        return DevelopmentRoute::progress((new WorldProgress($this->db))->quantities($user), $links, EconomyRuntime::current($this->db)['profile'] ?? []);
     }
 }

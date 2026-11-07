@@ -20,25 +20,12 @@ $this->params['breadcrumbs'][] = $this->title;
         'filterModel' => $searchModel,
         'columns' => [
 
-            'id',
             [
                 'attribute' => 'user_id',
                 'class' => UserColumn::class,
             ],
-            [
-                'attribute' => 'item_id',
-                'format' => 'raw',
-                'value' => static function (CraftHistory $model) {
-                    return Html::a($model->item_id . ' ' . $model->item->name, ['item/view', 'id' => $model->item_id]);
-                }
-            ],
-            [
-                'attribute' => 'recipe_id',
-                'format' => 'raw',
-                'value' => static function (CraftHistory $model) {
-                    return Html::a($model->recipe_id . ' ' . $model->recipe->name, ['recipe/view', 'id' => $model->recipe_id]);
-                }
-            ],
+            'item_id',
+            'recipe_id',
             [
                 'attribute' => 'created_at',
                 'class' => CreatedAtColumn::class

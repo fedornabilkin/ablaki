@@ -76,12 +76,13 @@ class WorldCultivation
         if ($guard && !$cycle) throw new GameError('CROP_STATE_INVALID', 'Цикл выращивания требует сверки.');
         return compact('node', 'bed', 'cycle', 'foreign');
     }
-    public function crops(int $page, string $search): array
+    public function crops(int $page, string $search, int $user = 0): array
     {
         if ($page < 1 || $page > 1000000 || mb_strlen($search, 'UTF-8') > 120) throw new GameError('INVALID_FILTER', 'Некорректный фильтр культур.', 422);
-        return (new FinanceReadSnapshot($this->db))->run(function () use ($page, $search) {
+        return (new FinanceReadSnapshot($this->db))->run(function () use ($page, $search, $user) {
             $this->flags->requireFlag('world_read');
             $query = (new Query())->select(['r.*', 'c.code', 'c.name'])->from(['r' => 'world_crop_revision'])->innerJoin(['c' => 'world_crop'], '[[c.id]]=[[r.crop_id]]')->where(['r.status' => 'published']);
+            if ($user > 0 && IntroCropPolicy::used($this->db, $user) >= (EconomyRuntime::current($this->db)['profile']['intro_crop']['sow_limit'] ?? PHP_INT_MAX)) $query->andWhere(['<>', 'c.code', 'starter-carrot']);
             if ($search !== '') $query->andWhere(['or', ['like', 'c.name', $search], ['like', 'c.code', $search]]);
             $total = (int)(clone $query)->count('*', $this->db); $items = [];
             foreach ($query->orderBy(['r.id' => SORT_DESC])->offset(($page - 1) * 20)->limit(20)->all($this->db) as $row) {
@@ -144,6 +145,7 @@ class WorldCultivation
             if ($c['bed']['dug_at'] === null) throw new GameError('BED_NOT_DUG', 'Сначала вскопайте грядку.');
             if ($cycle) throw new GameError('BED_OCCUPIED', 'На грядке уже растёт культура.');
             $rules = $this->one('world_crop_revision', ['id' => $input['crop_revision_id'], 'status' => 'published']);
+            if ($rules) IntroCropPolicy::requireAvailable($this->db, $user, $rules);
         } else {
             if (!$cycle) throw new GameError('CROP_NOT_FOUND', 'На грядке нет активного посева.', 404);
             $rules = $this->one('world_crop_revision', ['id' => $cycle['crop_revision_id']]);

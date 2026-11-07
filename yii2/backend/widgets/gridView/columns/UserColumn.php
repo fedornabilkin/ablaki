@@ -9,7 +9,6 @@
 namespace backend\widgets\gridView\columns;
 
 use common\models\user\UserRelationInterface;
-use yii\helpers\Html;
 
 class UserColumn extends AbstractColumn
 {
@@ -21,6 +20,6 @@ class UserColumn extends AbstractColumn
 
     public function getValue(UserRelationInterface $model): string
     {
-        return Html::a(Html::encode($model->user->username), ['/user/admin/info', 'id' => $model->user->id]);
+        return \backend\support\EntityDisplay::value(\backend\support\EntityDisplay::table($model), 'user_id', $model->user_id, $model->attributes) ?? '—';
     }
 }

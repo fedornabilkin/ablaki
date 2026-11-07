@@ -3,7 +3,7 @@
   "code": "economy-closed-test-v1",
   "status": "candidate",
   "created_on": "2026-10-16",
-  "updated_on": "2026-10-31",
+  "updated_on": "2026-11-06",
   "effective_from": null,
   "activation": "explicit_versioned_publication",
   "currency": "Cr",
@@ -47,6 +47,9 @@
     "funding": "parent_budget"
   },
   "daily": {
+    "fixed_items": {
+      "world-carrot": 1
+    },
     "claim_limit": 5,
     "initial_multiplier": 7,
     "suppressed_by": {
@@ -237,11 +240,11 @@
     "water_quantity_per_action": 1,
     "water_actions_per_cycle": 2,
     "yield": "world-carrot",
-    "yield_quantity": 3,
-    "grow_seconds": 1800,
-    "water_interval_seconds": 900,
-    "water_window_seconds": 900,
-    "harvest_window_seconds": 86400,
+    "yield_quantity": 6,
+    "grow_seconds": 7200,
+    "water_interval_seconds": 3600,
+    "water_window_seconds": 2700,
+    "harvest_window_seconds": 172800,
     "dig_fee_cr": "0.0000",
     "water_fee_cr": "2.0000",
     "sow_fee_cr": "0.0000",
@@ -725,216 +728,239 @@
       "price_cr": "0.0000",
       "work_seconds": 30,
       "materials": {},
-      "description": "Личная стоянка для начала жизни в мире: храните вещи, изготавливайте инструменты и развивайте территорию."
+      "description": "Личная стоянка для начала жизни в мире: храните вещи, изготавливайте инструменты и развивайте территорию.",
+      "max_condition": 20000
     },
     "estate": {
       "name": "Усадьба",
-      "price_cr": "80.0000",
-      "work_seconds": 120,
+      "price_cr": "1000.0000",
+      "work_seconds": 32400,
       "materials": {
-        "classic-plank": 8
+        "classic-plank": 80,
+        "classic-stone": 50,
+        "classic-rope": 16
       },
-      "description": "Усадьба расширяет возможности личного хозяйства. Размещайте постройки внутри её карты."
+      "description": "Усадьба расширяет возможности личного хозяйства. Размещайте постройки внутри её карты.",
+      "max_condition": 30000
     },
     "starter-shelter": {
       "name": "Шалаш",
       "price_cr": "20.0000",
-      "work_seconds": 60,
+      "work_seconds": 600,
       "materials": {
         "classic-plank": 4,
         "classic-rope": 2
       },
       "exposure_class": "covered",
-      "description": "Простой шалаш даёт место для ночлега и помогает защититься от последствий ночи. После постройки отдельно назначьте ночлег."
+      "description": "Простой шалаш даёт место для ночлега и помогает защититься от последствий ночи. После постройки отдельно назначьте ночлег.",
+      "max_condition": 400
     },
     "garden": {
       "name": "Огород",
-      "price_cr": "30.0000",
-      "work_seconds": 60,
+      "price_cr": "40.0000",
+      "work_seconds": 1800,
       "materials": {},
-      "description": "Огород для выращивания культур. Постройте грядки, подготовьте землю, затем посейте семена и следите за поливом."
+      "description": "Огород для выращивания культур. Постройте грядки, подготовьте землю, затем посейте семена и следите за поливом.",
+      "max_condition": 1200
     },
     "garden-bed": {
       "name": "Грядка",
       "price_cr": "10.0000",
-      "work_seconds": 30,
+      "work_seconds": 600,
       "materials": {},
       "capability_requirements": [
         "garden"
       ],
-      "description": "Место для одного посева. Для нового цикла подготовьте землю исправной лопатой, посейте семена и поливайте вовремя."
+      "description": "Место для одного посева. Для нового цикла подготовьте землю исправной лопатой, посейте семена и поливайте вовремя.",
+      "max_condition": 300
     },
     "mine": {
       "name": "Шахта",
-      "price_cr": "70.0000",
-      "work_seconds": 120,
+      "price_cr": "90.0000",
+      "work_seconds": 5400,
       "materials": {
         "classic-plank": 6,
         "classic-stone": 6
       },
-      "description": "Шахта открывает добычу камня, угля и руды партиями. Для выбранной работы нужен подходящий исправный инструмент."
+      "description": "Шахта открывает добычу камня, угля и руды партиями. Для выбранной работы нужен подходящий исправный инструмент.",
+      "max_condition": 4000
     },
     "forge": {
       "name": "Кузница",
-      "price_cr": "40.0000",
-      "work_seconds": 180,
+      "price_cr": "60.0000",
+      "work_seconds": 3600,
       "materials": {
         "classic-plank": 6,
         "classic-stone": 8
       },
-      "description": "Кузница для работы с металлом. Установите необходимые станции и используйте рецепты изготовления."
+      "description": "Кузница для работы с металлом. Установите необходимые станции и используйте рецепты изготовления.",
+      "max_condition": 5000
     },
     "house": {
       "name": "Дом",
-      "price_cr": "180.0000",
-      "work_seconds": 600,
+      "price_cr": "550.0000",
+      "work_seconds": 5400,
       "materials": {
-        "classic-plank": 20,
-        "classic-stone": 12,
-        "classic-rope": 6
+        "classic-plank": 50,
+        "classic-stone": 30,
+        "classic-rope": 12
       },
-      "description": "Дом защищает от ночного урона и открывает комнаты. Проживание на кровати в собственном действующем доме или его комнате даёт ещё 5 партий добычи или наёмной работы в день. Бонус не складывается от нескольких домов."
+      "description": "Дом защищает от ночного урона и открывает комнаты. Проживание на кровати в собственном действующем доме или его комнате даёт ещё 5 партий добычи или наёмной работы в день. Бонус не складывается от нескольких домов.",
+      "max_condition": 8000
     },
     "warehouse": {
       "name": "Склад",
-      "price_cr": "250.0000",
-      "work_seconds": 600,
+      "price_cr": "500.0000",
+      "work_seconds": 7200,
       "materials": {
-        "classic-plank": 30,
-        "classic-stone": 20,
-        "classic-rope": 8
+        "classic-plank": 60,
+        "classic-stone": 40,
+        "classic-rope": 15
       },
       "storage_slots": 100,
-      "description": "Склад для запасов хозяйства. Вместимость и доступные расширения показаны в разделе вещей."
+      "description": "Склад для запасов хозяйства. Вместимость и доступные расширения показаны в разделе вещей.",
+      "max_condition": 10000
     },
     "drilling-rig": {
       "name": "Буровая установка",
-      "price_cr": "250.0000",
-      "work_seconds": 3600,
+      "price_cr": "1500.0000",
+      "work_seconds": 21600,
       "materials": {
-        "classic-plank": 60,
-        "classic-stone": 60,
-        "classic-ingot": 12,
-        "classic-rope": 12
+        "classic-plank": 120,
+        "classic-stone": 120,
+        "classic-ingot": 30,
+        "classic-rope": 24
       },
       "capability_requirements": [
         "mine"
       ],
-      "description": "Долгосрочная цель: 250 кредитов, 60 досок, 60 камня, 12 слитков и 12 верёвок; час самостоятельной стройки с перерывами. Действующая буровая в своей шахте утраивает добычу за партию и заменяет кирку. Оплата наёмного работника удваивается за счёт бюджета владельца."
+      "description": "Крупная совместная стройка. Приглашайте помощников и выделяйте бюджет их оплаты; цена, материалы и полный объём труда показаны в карточке. Утраивает добычу, заменяет кирку и удваивает оплату наёмного работника из бюджета владельца.",
+      "max_condition": 16000
     },
     "forest-plot": {
       "name": "Лесной участок",
-      "price_cr": "20.0000",
-      "work_seconds": 60,
+      "price_cr": "40.0000",
+      "work_seconds": 900,
       "materials": {
         "classic-plank": 2
       },
-      "description": "Лесной участок даёт брёвна. Работайте над партиями с исправным молотком; добыча расходует общий дневной лимит."
+      "description": "Лесной участок даёт брёвна. Работайте над партиями с исправным молотком; добыча расходует общий дневной лимит.",
+      "max_condition": 800
     },
     "stone-plot": {
       "name": "Каменистый участок",
-      "price_cr": "20.0000",
-      "work_seconds": 60,
+      "price_cr": "45.0000",
+      "work_seconds": 900,
       "materials": {
         "classic-plank": 2
       },
-      "description": "Каменистый участок для добычи камня. Подготовьте нужный инструмент и свободное место для результата."
+      "description": "Каменистый участок для добычи камня. Подготовьте нужный инструмент и свободное место для результата.",
+      "max_condition": 1000
     },
     "clay-plot": {
       "name": "Глиняный участок",
-      "price_cr": "25.0000",
-      "work_seconds": 60,
+      "price_cr": "45.0000",
+      "work_seconds": 900,
       "materials": {
         "classic-plank": 2
       },
-      "description": "Глинистый участок для добычи глины. Ресурс поступает в выбранное хранилище после завершения партии."
+      "description": "Глинистый участок для добычи глины. Ресурс поступает в выбранное хранилище после завершения партии.",
+      "max_condition": 800
     },
     "sand-plot": {
       "name": "Песчаный участок",
-      "price_cr": "20.0000",
-      "work_seconds": 60,
+      "price_cr": "40.0000",
+      "work_seconds": 600,
       "materials": {
         "classic-plank": 2
       },
-      "description": "Песчаный участок для добычи песка. Полученные материалы подходят для дальнейшего изготовления."
+      "description": "Песчаный участок для добычи песка. Полученные материалы подходят для дальнейшего изготовления.",
+      "max_condition": 700
     },
     "meadow-plot": {
       "name": "Луговой участок",
-      "price_cr": "15.0000",
-      "work_seconds": 60,
+      "price_cr": "30.0000",
+      "work_seconds": 600,
       "materials": {
         "classic-plank": 1
       },
-      "description": "Луговой участок даёт растительное сырьё. Выберите нужный ресурс в блоке получения ресурсов."
+      "description": "Луговой участок даёт растительное сырьё. Выберите нужный ресурс в блоке получения ресурсов.",
+      "max_condition": 600
     },
     "water-source": {
       "name": "Источник воды",
-      "price_cr": "25.0000",
-      "work_seconds": 90,
+      "price_cr": "50.0000",
+      "work_seconds": 1200,
       "materials": {
         "classic-stone": 3
       },
-      "description": "Источник воды для хозяйства, полива и приготовления еды. Освободите место в хранилище перед получением партии."
+      "description": "Источник воды для хозяйства, полива и приготовления еды. Освободите место в хранилище перед получением партии.",
+      "max_condition": 1400
     },
     "campfire-place": {
       "name": "Место костра",
       "price_cr": "0.0000",
-      "work_seconds": 10,
+      "work_seconds": 120,
       "materials": {},
       "description": "Площадка для костра и приготовления еды. Изготовьте и разместите необходимый предмет на её карте.",
-      "exposure_class": "outdoor"
+      "exposure_class": "outdoor",
+      "max_condition": 200
     },
     "cookfire": {
       "name": "Очаг",
-      "price_cr": "25.0000",
-      "work_seconds": 90,
+      "price_cr": "30.0000",
+      "work_seconds": 1800,
       "materials": {
         "classic-stone": 4,
         "classic-log": 2
       },
       "description": "Очаг для приготовления пищи. Еда восстанавливает здоровье и позволяет поддерживать сытость.",
-      "exposure_class": "outdoor"
+      "exposure_class": "outdoor",
+      "max_condition": 1200
     },
     "trap": {
       "name": "Ловушка",
-      "price_cr": "40.0000",
-      "work_seconds": 120,
+      "price_cr": "60.0000",
+      "work_seconds": 900,
       "materials": {
         "classic-plank": 3,
         "classic-rope": 2
       },
-      "description": "Ловушка даёт добычу после восстановления источника. Время следующей доступной партии показывает сервер."
+      "description": "Ловушка даёт добычу после восстановления источника. Время следующей доступной партии показывает сервер.",
+      "max_condition": 500
     },
     "workshop-building": {
       "name": "Ремесленная мастерская",
-      "price_cr": "50.0000",
-      "work_seconds": 180,
+      "price_cr": "150.0000",
+      "work_seconds": 5400,
       "materials": {
         "classic-plank": 8,
         "classic-stone": 4
       },
-      "description": "Ремесленная мастерская для размещения оборудования и изготовления предметов по доступным рецептам."
+      "description": "Ремесленная мастерская для размещения оборудования и изготовления предметов по доступным рецептам.",
+      "max_condition": 4000
     },
     "storage-building": {
       "name": "Хозсклад",
-      "price_cr": "20.0000",
-      "work_seconds": 180,
+      "price_cr": "40.0000",
+      "work_seconds": 1800,
       "materials": {
         "classic-plank": 4,
         "classic-stone": 2,
         "classic-rope": 1
       },
       "storage_slots": 50,
-      "description": "Кладовая для хранения запасов. Доступные ячейки и содержимое открываются в разделе вещей."
+      "description": "Кладовая для хранения запасов. Доступные ячейки и содержимое открываются в разделе вещей.",
+      "max_condition": 1800
     },
     "small-greenhouse": {
       "name": "Малая теплица",
-      "price_cr": "200.0000",
-      "work_seconds": 600,
+      "price_cr": "400.0000",
+      "work_seconds": 5400,
       "materials": {
-        "classic-plank": 20,
-        "classic-glass": 6,
-        "classic-rope": 5
+        "classic-plank": 30,
+        "classic-glass": 12,
+        "classic-rope": 8
       },
       "capability_requirements": [
         "garden"
@@ -945,18 +971,115 @@
         "max_event_loss_bps": 2500,
         "loss_reduction_bps": 5000
       },
-      "description": "Малая теплица ускоряет рост культур и полив на 20%, а также вдвое снижает лёгкие погодные повреждения посевов."
+      "description": "Малая теплица ускоряет рост культур и полив на 20%, а также вдвое снижает лёгкие погодные повреждения посевов.",
+      "max_condition": 4500
     },
     "field-kitchen": {
       "name": "Полевая кухня",
-      "price_cr": "25.0000",
-      "work_seconds": 120,
+      "price_cr": "60.0000",
+      "work_seconds": 2700,
       "materials": {
         "classic-plank": 6,
         "classic-stone": 4,
         "classic-rope": 2
       },
-      "description": "Хорошая еда по расписанию Москвы: завтрак 06–10, обед 12–16, ужин 18–22. Один приём в каждом окне; порция из вашего рюкзака даёт полное восстановление блюда."
+      "description": "Хорошая еда по расписанию Москвы: завтрак 06–10, обед 12–16, ужин 18–22. Один приём в каждом окне; порция из вашего рюкзака даёт полное восстановление блюда.",
+      "max_condition": 2400
+    },
+    "bedroom": {
+      "name": "Комната",
+      "price_cr": "80.0000",
+      "work_seconds": 1800,
+      "max_condition": 2000,
+      "materials": {
+        "classic-plank": 8
+      }
+    },
+    "workroom": {
+      "name": "Мастерская",
+      "price_cr": "100.0000",
+      "work_seconds": 2700,
+      "max_condition": 2500,
+      "materials": {
+        "classic-plank": 12,
+        "classic-stone": 4
+      }
+    },
+    "place": {
+      "name": "Место",
+      "price_cr": "0.0000",
+      "work_seconds": 120,
+      "max_condition": 200,
+      "materials": {}
+    },
+    "shelf": {
+      "name": "Полка",
+      "price_cr": "5.0000",
+      "work_seconds": 300,
+      "max_condition": 300,
+      "materials": {
+        "classic-plank": 2
+      }
+    },
+    "mini-storage-level-2": {
+      "name": "Мини-склад",
+      "price_cr": "5.0000",
+      "work_seconds": 600,
+      "max_condition": 800,
+      "materials": {
+        "classic-plank": 4,
+        "classic-rope": 1
+      }
+    },
+    "mini-storage-level-3": {
+      "name": "Мини-склад",
+      "price_cr": "5.0000",
+      "work_seconds": 600,
+      "max_condition": 800,
+      "materials": {
+        "classic-plank": 4,
+        "classic-rope": 1
+      }
+    },
+    "mini-storage-level-4": {
+      "name": "Мини-склад",
+      "price_cr": "5.0000",
+      "work_seconds": 600,
+      "max_condition": 800,
+      "materials": {
+        "classic-plank": 4,
+        "classic-rope": 1
+      }
+    },
+    "mini-storage-level-5": {
+      "name": "Мини-склад",
+      "price_cr": "5.0000",
+      "work_seconds": 600,
+      "max_condition": 800,
+      "materials": {
+        "classic-plank": 4,
+        "classic-rope": 1
+      }
+    },
+    "mini-storage-level-6": {
+      "name": "Мини-склад",
+      "price_cr": "5.0000",
+      "work_seconds": 600,
+      "max_condition": 800,
+      "materials": {
+        "classic-plank": 4,
+        "classic-rope": 1
+      }
+    },
+    "mini-storage-level-7": {
+      "name": "Мини-склад",
+      "price_cr": "5.0000",
+      "work_seconds": 600,
+      "max_condition": 800,
+      "materials": {
+        "classic-plank": 4,
+        "classic-rope": 1
+      }
     }
   },
   "actions": {
@@ -1167,13 +1290,13 @@
         "classic-water": 2
       },
       "output": {
-        "world-carrot": 3
+        "world-carrot": 6
       },
       "tools": [
         "world-shovel"
       ],
       "work_seconds": 180,
-      "cooldown_seconds": 1800,
+      "cooldown_seconds": 7200,
       "fee_cr": "2.0000",
       "experience": 5,
       "quota": null,
@@ -2118,5 +2241,28 @@
     "house": {
       "extraction_daily_bonus": 5
     }
+  },
+  "intro_crop": {
+    "grow_seconds": 1200,
+    "water_interval_seconds": 600,
+    "water_window_seconds": 900,
+    "harvest_window_seconds": 86400,
+    "yield_quantity": 3,
+    "sow_limit": 3
+  },
+  "market": {
+    "version": 1,
+    "delivery_bps": 1500,
+    "city_bps": 500,
+    "owner_bps": 500,
+    "bid_bps": 5000,
+    "sell_burn_bps": 1000,
+    "refill_seconds": 1800,
+    "stock_per_item": 100,
+    "capacity": 200,
+    "bot_reserve_cr": "0.0000",
+    "max_quantity": 10,
+    "buy_daily_operations": 20,
+    "buy_daily_cr": "1000.0000"
   }
 }

@@ -192,7 +192,14 @@ class GardenHarvest
                     $seller = $this->one('world_node', ['id' => $garden]);
                     $npc = (new NpcInfrastructure($this->db))->managed($seller, ['store', 'warehouse']);
                     if (!$npc) EconomyQuota::consume($this->db, $p['owner'], 'sales_daily', 1, $operation, $terms['total']);
-                    (new TreasuryLedger($this->db))->receivePersonalPayment($user, $garden, Money::parse($terms['total']), $operation, ($npc ? 'Покупка сырья: ' : 'Покупка урожая: ') . $terms['name']);
+                    $funding = new NpcFunding($this->db);
+                    if ($npc && $funding->ready()) {
+                        $policy = (new NpcInfrastructure($this->db))->policy((int)$seller['root_id']);
+                        (new MarketSettlement($this->db))->pay($user,(int)$policy['bot_user_id'],Money::parse($terms['total']),$operation,'source-'.$garden,'Покупка сырья NPC','world_npc_sale');
+                        $funding->record($policy,$user,$garden,Money::parse($terms['total']),$operation,NpcInfrastructure::role($seller) === 'warehouse' ? 'warehouse' : 'source');
+                    } else {
+                        (new TreasuryLedger($this->db))->receivePersonalPayment($user, $garden, Money::parse($terms['total']), $operation, ($npc ? 'Покупка сырья: ' : 'Покупка урожая: ') . $terms['name']);
+                    }
                 }
                 $inventory->consumeHarvest($p['owner'], $payload['inventory_id'], $payload['quantity'], $action === 'buy' ? 'harvest.sold' : 'harvest.withdrawn');
                 $inventory->applyCraft($user, $p['plan'], $p['target'], [], $p['item'], 'harvest.' . $action);

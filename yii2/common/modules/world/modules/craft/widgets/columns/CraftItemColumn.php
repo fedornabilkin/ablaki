@@ -10,7 +10,6 @@ namespace common\modules\world\modules\craft\widgets\columns;
 
 use backend\widgets\gridView\columns\AbstractColumn;
 use common\modules\world\modules\craft\interfaces\CraftItemRelationInterface;
-use yii\helpers\Html;
 
 class CraftItemColumn extends AbstractColumn
 {
@@ -22,6 +21,6 @@ class CraftItemColumn extends AbstractColumn
 
     public function getValue(CraftItemRelationInterface $model): string
     {
-        return Html::a($model->item->name, ['/world/craft/item/update', 'id' => $model->item->id]);
+        return \backend\support\EntityDisplay::value(\backend\support\EntityDisplay::table($model), 'item_id', $model->item_id, $model->attributes) ?? '—';
     }
 }

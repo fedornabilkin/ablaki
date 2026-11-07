@@ -11,8 +11,8 @@ use yii\db\Query;
 
 $candidate = EconomyProfile::load();
 EconomyProfile::validate($candidate);
-economyCheck($candidate['objects']['drilling-rig']['price_cr'] === '250.0000' && $candidate['objects']['drilling-rig']['work_seconds'] === 3600, 'rig remains a funded premium goal with one hour of active construction');
-economyCheck($candidate['objects']['house']['price_cr'] === '180.0000' && $candidate['objects']['house']['work_seconds'] === 600, 'house is a reachable premium upgrade above the twenty-credit shelter');
+economyCheck($candidate['objects']['drilling-rig']['price_cr'] === '1500.0000' && $candidate['objects']['drilling-rig']['work_seconds'] === 21600, 'rig remains a funded premium goal with six hours of active construction');
+economyCheck($candidate['objects']['house']['price_cr'] === '550.0000' && $candidate['objects']['house']['work_seconds'] === 5400, 'house is a reachable premium upgrade above the twenty-credit shelter');
 foreach ([0, 21, 2.5, '5'] as $bonus) {
     $invalid = $candidate; $invalid['housing_benefits']['house']['extraction_daily_bonus'] = $bonus;
     try { EconomyProfile::validate($invalid); throw new RuntimeException('Invalid bonus accepted'); }
@@ -25,9 +25,26 @@ foreach ([['reward_cr', '0.0000'], ['target_budget_cr', '1.0000'], ['bot_user_id
 }
 $publisher = new EconomyProfilePublisher($db);
 $beforePublication = $npcTotal();
+$acceptedState = static function () use ($db): array {
+    $state = [];
+    foreach (['persone', 'economy_account', 'world_node', 'world_build', 'world_crop_cycle', 'craft_inventory'] as $table) {
+        $state[$table] = (new Query())->from($table)->orderBy('id')->all($db);
+    }
+    return $state;
+};
+$beforeState = $acceptedState();
+$oldTemplate = NodeTemplate::requireOne(['code' => 'mine']);
+$oldTerms = \common\modules\world\models\domain\EconomyConstruction::terms($oldTemplate);
 $quote = $publisher->preview($candidate);
 $publisher->publish($candidate, $quote['digest'], 9001, 'New balance acceptance');
 economyCheck($npcTotal() === $beforePublication, 'publishing the new prices and benefits does not create money');
+economyCheck($acceptedState() === $beforeState, 'publication preserves existing construction prices, time, progress, durability, crops, inventories and every wallet');
+$newTemplate = NodeTemplate::requireOne(['code' => 'mine']);
+economyCheck($newTemplate->worldWorkSeconds() === 5400
+    && \common\modules\world\models\domain\EconomyConstruction::terms($newTemplate)['price_cr'] === '90.0000', 'new mine quotes receive the published ninety-minute and ninety-credit terms');
+economyReject(static fn() => \common\modules\world\models\domain\EconomyConstruction::check($newTemplate, $freshUser, ['terms_digest' => $oldTerms['terms_digest']], false), 'BUILD_TERMS_CHANGED');
+$repeatQuote = $publisher->preview($candidate);
+economyCheck(!$publisher->publish($candidate, $repeatQuote['digest'], 9001, 'Repeat pacing publication')['changed'] && $acceptedState() === $beforeState, 'repeating publication neither charges players nor rewrites accepted terms');
 $policy = (new NpcInfrastructure($db))->policy();
 economyCheck($policy['reward_cr'] === '2.0000' && $policy['target_budget_cr'] === '90.0000' && $policy['idle_budget_cr'] === '0.0000', 'NPC wages and buffers come from the published profile');
 economyCheck(\common\modules\world\models\domain\HiredExtraction::rates(Node::requireOne(['code' => 'npc-bot-mine']))['reward_cr'] === '4.0000', 'NPC drilling work pays four existing credits per batch');
@@ -101,5 +118,24 @@ try {
     $storage = (new Query())->select('id')->from('craft_storage')->where(['node_id' => $fixtures['house-b'], 'kind' => 'placement'])->scalar($db);
     $db->createCommand()->delete('craft_inventory', ['storage_id' => $storage])->execute();
     economyCheck(HousingBenefits::extractionBonus($db, $freshUser, $candidate) === 0, 'an empty house cannot retain the bed benefit');
+} finally { $tx->rollBack(); }
+$tx = $db->beginTransaction();
+try {
+    $intro = (new Query())->select('r.*')->from(['r' => 'world_crop_revision'])->innerJoin(['c' => 'world_crop'], 'c.id=r.crop_id')
+        ->where(['c.code' => 'starter-carrot', 'r.status' => 'published'])->one($db);
+    \common\modules\world\models\domain\IntroCropPolicy::requireAvailable($db, $freshUser, $intro);
+    $bed = (int)(new Query())->select('node_id')->from('world_bed')->orderBy('node_id')->scalar($db);
+    foreach (['harvested', 'cleared', 'withered'] as $status) {
+        \common\modules\world\models\Command::run($freshUser, bin2hex(random_bytes(16)), 'fixture.intro-crop', [], static function ($op) use ($db, $bed, $freshUser, $intro, $status) {
+            $db->createCommand()->insert('world_crop_cycle', ['bed_id' => $bed, 'owner_user_id' => $freshUser,
+                'crop_revision_id' => $intro['id'], 'operation_id' => $op, 'status' => $status, 'planted_at' => time() - 1200,
+                'ready_at' => time(), 'terms_json' => '{}'])->execute();
+            return [];
+        }, true);
+    }
+    economyReject(static fn() => \common\modules\world\models\domain\IntroCropPolicy::requireAvailable($db, $freshUser, $intro), 'INTRO_CROP_COMPLETED');
+    \common\modules\world\models\domain\IntroCropPolicy::requireAvailable($db, $npcUser, $intro);
+    \common\modules\world\models\domain\IntroCropPolicy::requireAvailable($db, $freshUser, ['config_json' => '{}']);
+    economyCheck(true, 'intro crop limit counts completed and abandoned sowings per user, preserving uncapped legacy revisions');
 } finally { $tx->rollBack(); }
 echo "World balance checks passed.\n";

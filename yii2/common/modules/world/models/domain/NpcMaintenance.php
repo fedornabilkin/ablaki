@@ -39,7 +39,8 @@ final class NpcMaintenance
         $operation = $this->operation((int)$policy['bot_user_id'], (int)$policy['world_id'], 'world.npc.maintain');
         $nodes = (new NpcInfrastructure($this->db))->nodes($policy);
         (new NpcStockLogistics($this->db))->consolidate($policy, $nodes, $operation);
-        $this->refresh($policy, $operation);
+        $this->refresh($policy, $operation, true);
+        (new MarketRestocking($this->db))->replenish($policy, $nodes, $operation);
         // Reads remain side-effect free: reopen full sources before the next visitor arrives.
         foreach ($nodes as $source) {
             if (NpcInfrastructure::role($source) !== 'source' || !NodeAvailability::activePath($this->db, (int)$source['id'])) continue;
@@ -48,7 +49,7 @@ final class NpcMaintenance
             foreach (WorldSources::options($place) as $definition) $this->ensureOutputStorage($place, $definition, $operation);
         }
     }
-    public function refresh(array $policy, string $operation): void
+    public function refresh(array $policy, string $operation, bool $periodic = false): void
     {
         if (!$this->db->getTransaction()) throw new \LogicException('NPC maintenance needs a locked world transaction.');
         $infrastructure = new NpcInfrastructure($this->db); $nodes = $infrastructure->nodes($policy);
@@ -70,7 +71,23 @@ final class NpcMaintenance
             }
             if (!empty($policy['settle_public_obligations'])) $this->settleObligations($node, $accounts, $policy);
         }
-        // Keep one new batch funded at every source before filling larger buffers.
+        $funding = new NpcFunding($this->db);
+        if ($funding->ready()) {
+            if ($periodic) {
+                $funding->refill($policy, $nodes, $operation);
+                $shortfall = Money::parse('0');
+                foreach ($nodes as $node) if (NpcInfrastructure::role($node) === 'source') {
+                    $accounts = (new EconomyHierarchy($this->db))->accounts((int)$node['id']);
+                    if (empty($accounts['budget'])) continue;
+                    $available = (new BudgetSpending($this->db))->available((int)$accounts['budget']['id']);
+                    $target = $this->targetBudget($node,$policy);
+                    if ($available->compare($target) < 0) $shortfall = $shortfall->add($target->subtract($available));
+                }
+                $this->db->createCommand()->update('world_npc_policy', ['last_refill_at'=>time(), 'last_shortfall_cr'=>$shortfall->decimal()], ['id'=>$policy['id']])->execute();
+            }
+            return;
+        }
+        // Compatibility while the additive funding migration is not installed.
         foreach ($nodes as $node) if (NpcInfrastructure::role($node) === 'source') $this->fund($node, $policy, $operation, $this->minimumWage((int)$node['id'], $policy), true);
         usort($nodes, static fn($a, $b) => [NpcInfrastructure::role($a) !== 'source', $a['id']] <=> [NpcInfrastructure::role($b) !== 'source', $b['id']]);
         $shortfall = Money::parse('0');
@@ -97,6 +114,7 @@ final class NpcMaintenance
     }
     public function ensureBudget(Node $node, string $operation): void
     {
+        if ((new NpcFunding($this->db))->ready()) return;
         $infrastructure = new NpcInfrastructure($this->db);
         if ($infrastructure->managed($node->getAttributes(), ['source'])) $this->fund($node->getAttributes(), $infrastructure->policy((int)$node->root_id), $operation, null, true);
     }
@@ -122,7 +140,7 @@ final class NpcMaintenance
                     if ($state['next_price'] === null) break;
                     $price = Money::parse($state['next_price']);
                     $purchase = $this->operation((int)$policy['bot_user_id'], (int)$policy['world_id'], 'world.npc.warehouse.expand');
-                    $this->fund($target, $policy, $purchase, $price, true);
+                    if (!(new NpcFunding($this->db))->ready()) $this->fund($target, $policy, $purchase, $price, true);
                     $account = (new EconomyHierarchy($this->db))->accounts($state['finance_node_id'])['budget'];
                     if ((new BudgetSpending($this->db))->available((int)$account['id'])->compare($price) < 0) break;
                     $warehouse->expandFunded((int)$policy['bot_user_id'], (int)$target['id'], $purchase);

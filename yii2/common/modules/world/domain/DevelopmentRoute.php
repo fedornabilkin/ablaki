@@ -4,7 +4,7 @@ namespace common\modules\world\domain;
 /** Ordered guidance, independent of persistence, HTTP and reward accounting. */
 final class DevelopmentRoute
 {
-    public static function stages(): array
+    public static function stages(array $profile = []): array
     {
         return [
             self::stage('home', 'Своя стоянка и ночлег', 'Стройте самостоятельно: бюджет строителей 0. До исследования выберите профессию на странице персонажа: три исследования дают опыт для второго уровня. Выкупайте только нужные ячейки. Кровать разместите в шалаше и выберите проживание.', [
@@ -18,7 +18,7 @@ final class DevelopmentRoute
                 self::task('produced:classic-bed', 'Изготовить кровать', 'starter-site', 'craft'),
                 self::task('lodged', 'Разместить кровать и устроиться на ночлег', 'starter-shelter'),
             ]),
-            self::stage('mining', 'Шахта и первый заработок', 'Каменная кирка уже в стартовом рюкзаке. На своей шахте вы получаете ресурсы, на чужой — указанную оплату. Сначала проверьте закупки города: продажа угля выгоднее за партию, чем наёмная работа. Заказы ограничены объёмом и сроком. Затем выбирайте работу по оплате за партию и доступному бюджету. Каждый день забирайте сырьё на стоянке и обычный ежедневный кредит.', [
+            self::stage('mining', 'Шахта и первый заработок', 'Каменная кирка уже в рюкзаке. На своей шахте вы получаете сырьё, на чужой — указанную оплату. Сравните заказы города, выкуп ресурсов на рынке и оплату работы. Оставляйте часть партий и ресурсов для своего строительства. Выкуп и наём зависят от доступного фонда NPC. Ежедневно забирайте снабжение на стоянке и обычный ежедневный кредит.', [
                 self::task('acquired:world-stone-pickaxe', 'Получить каменную кирку', 'starter-site', 'craft'),
                 self::build('mine', 'Шахта'),
                 self::task('own-source:mine-stone', 'Добыть камень в своей шахте', 'mine'),
@@ -48,7 +48,7 @@ final class DevelopmentRoute
                 self::task('placed:classic-furnace', 'Изготовить и установить плавильню', 'forge', 'craft'),
                 self::task('produced:classic-ingot', 'Выплавить первый слиток', 'forge', 'craft'),
             ]),
-            self::stage('rooms', 'Дом и дочерние объекты', 'Дом — первая дорогая цель: 180 кредитов и 10 минут самостоятельной стройки. Поставьте кровать в доме или его комнате и смените ночлег: дневной лимит добычи и работы вырастет с 20 до 25 партий. Несколько домов не складывают бонус. Затем обустройте комнаты, полку и вложенные склады.', [
+            self::stage('rooms', 'Дом и дочерние объекты', self::buildingTerms($profile, ['house']) . 'Поставьте кровать в собственном доме и смените ночлег, чтобы увеличить дневной лимит добычи. Несколько домов не складывают бонус. Затем обустройте комнаты, полку и вложенные склады. Для ускорения стройки выделите бюджет помощникам.', [
                 self::build('house', 'Дом'), self::build('bedroom', 'Комната', 'house'),
                 self::task('lodged-house', 'Поселиться на кровати в собственном доме: +5 партий в день', 'bedroom'),
                 self::build('workroom', 'Мастерская', 'house'), self::build('place', 'Место', 'bedroom'),
@@ -61,15 +61,35 @@ final class DevelopmentRoute
                 self::build('clay-plot', 'Глиняный участок'), self::build('sand-plot', 'Песчаный участок'),
                 self::build('trap', 'Ловушка'),
             ]),
-            self::stage('expansion', 'Развитое хозяйство', 'Теплица стоит 200 кредитов: урожай созревает на 20% быстрее, потери от слабой непогоды ниже. Создайте в ней отдельную грядку. Склад за 250 кредитов даёт 100 мест для запаса материалов. Расширяйте карту только под нужные объекты; хозсклада на 50 мест достаточно в начале.', [
+            self::stage('expansion', 'Развитое хозяйство', self::buildingTerms($profile, ['small-greenhouse', 'warehouse']) . 'Теплица ускоряет рост и уменьшает потери от слабой непогоды. Создайте в ней отдельную грядку. Большой склад вмещает больше материалов. Расширяйте карту под нужные объекты; в начале достаточно хозсклада.', [
                 self::build('small-greenhouse', 'Малая теплица'),
                 self::task('built:garden-bed@small-greenhouse', 'Построить грядку в теплице', 'small-greenhouse'),
                 self::build('warehouse', 'Склад'),
             ]),
-            self::stage('drilling', 'Буровая установка', 'Цель: 250 кредитов, 60 досок, 60 камня, 12 слитков и 12 верёвок; час самостоятельной стройки с перерывами, бюджет найма 0. Буровая утраивает добычу за одну партию и заменяет кирку. Наёмным работникам платит вдвое больше из бюджета владельца. Копите на новые шахты, ресурсы для расширения и оплату помощников. Фонд NPC конечен и пополняется из существующих публичных денег.', [
+            self::stage('drilling', 'Буровая установка', self::buildingTerms($profile, ['drilling-rig']) . 'Подготовьте материалы по карточке объекта. Буровая повышает выход добычи, заменяет кирку и увеличивает оплату наёмного работника из вашего бюджета. Стройте с перерывами или наймите помощников. Следующие цели — новые шахты, запасы материалов и фонд оплаты труда. Кредиты NPC конечны.', [
                 self::build('drilling-rig', 'Буровая установка', 'mine'),
             ]),
         ];
+    }
+
+    /** Receives the published runtime profile; no duplicated prices or framework dependencies. */
+    private static function buildingTerms(array $profile, array $codes): string
+    {
+        $terms = [];
+        foreach ($codes as $code) {
+            $object = $profile['objects'][$code] ?? null;
+            if (!$object) continue;
+            $price = (string)$object['price_cr'];
+            if (str_contains($price, '.')) $price = rtrim(rtrim($price, '0'), '.');
+            $seconds = (int)$object['work_seconds'];
+            $parts = [];
+            if ($seconds >= 3600) $parts[] = intdiv($seconds, 3600) . ' ч';
+            if (intdiv($seconds % 3600, 60)) $parts[] = intdiv($seconds % 3600, 60) . ' мин';
+            if ($seconds % 60 || !$parts) $parts[] = ($seconds % 60) . ' с';
+            $duration = implode(' ', $parts);
+            $terms[] = $object['name'] . ': ' . $price . ' Cr и ' . $duration . ' самостоятельной работы.';
+        }
+        return $terms ? implode(' ', $terms) . ' ' : '';
     }
 
     private static function stage(string $code, string $title, string $description, array $steps): array
@@ -81,9 +101,9 @@ final class DevelopmentRoute
     private static function build(string $code, string $title, string $parent = 'starter-site'): array
     { return self::task('built:' . $code, 'Построить: ' . $title, $parent); }
 
-    public static function progress(array $quantities, array $links): array
+    public static function progress(array $quantities, array $links, array $profile = []): array
     {
-        $stages = self::stages(); $next = null; $completed = 0; $total = 0;
+        $stages = self::stages($profile); $next = null; $completed = 0; $total = 0;
         foreach ($stages as &$stage) {
             $stage['completed'] = true;
             foreach ($stage['steps'] as &$step) {
