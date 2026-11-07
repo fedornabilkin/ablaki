@@ -54,6 +54,31 @@ class ReleaseReadinessFixture extends \console\controllers\ReleaseController {
     public function stdout($string) { $this->captured .= $string; return strlen($string); }
 }
 $release = new ReleaseReadinessFixture('release', $app);
+$db->createCommand()->addColumn('user', 'username', 'string')->execute();
+$db->createCommand()->addColumn('user', 'blocked_at', 'integer')->execute();
+$db->createCommand()->createTable('auth_assignment', ['user_id' => 'string', 'item_name' => 'string'])->execute();
+$db->createCommand()->update('user', ['username' => 'production-owner', 'blocked_at' => 0], ['id' => 321])->execute();
+$db->createCommand()->insert('auth_assignment', ['user_id' => 321, 'item_name' => 'admin'])->execute();
+$app->set('authManager', new class extends \yii\rbac\DbManager {
+    public function checkAccess($userId, $permissionName, $params = []) { return $permissionName === 'p-admin' && in_array((int)$userId, [321, 322], true); }
+});
+$authorMethod = new \ReflectionMethod($release, 'publicationAuthor');
+checkInstall($authorMethod->invoke($release, '') === 321, 'publication selects the existing administrator and accepts legacy unblocked zero');
+$db->createCommand()->update('user', ['blocked_at' => null], ['id' => 321])->execute();
+checkInstall($authorMethod->invoke($release, '') === 321, 'publication accepts modern unblocked null');
+$db->createCommand()->insert('user', ['id' => 322, 'username' => 'second-admin', 'blocked_at' => 123])->execute();
+$db->createCommand()->insert('auth_assignment', ['user_id' => 322, 'item_name' => 'admin'])->execute();
+checkInstall($authorMethod->invoke($release, '') === 321, 'blocked administrators are excluded from publication authors');
+$db->createCommand()->update('user', ['blocked_at' => null], ['id' => 322])->execute();
+$db->createCommand()->insert('user', ['id' => 323, 'username' => 'regular-user', 'blocked_at' => null])->execute();
+foreach (['', 'missing-owner', 'regular-user'] as $name) {
+    try { $authorMethod->invoke($release, $name); throw new \LogicException('Invalid publication author accepted'); }
+    catch (\RuntimeException $error) { checkInstall(str_contains($error->getMessage(), 'existing active p-admin'), 'ambiguous or missing publication author rejected'); }
+}
+checkInstall($authorMethod->invoke($release, 'production-owner') === 321, 'explicit existing administrator resolves ambiguity');
+$db->createCommand()->update('user', ['blocked_at' => 123], ['id' => 321])->execute();
+try { $authorMethod->invoke($release, 'production-owner'); throw new \LogicException('Blocked author accepted'); }
+catch (\RuntimeException $error) { checkInstall(str_contains($error->getMessage(), 'existing active p-admin'), 'explicit blocked administrator rejected'); }
 $oldWorldRelease = getenv('WORLD_RELEASE');
 try {
     foreach ([null, 'confirmed-production-checkout'] as $context) {
