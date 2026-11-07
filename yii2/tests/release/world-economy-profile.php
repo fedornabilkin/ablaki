@@ -16,6 +16,19 @@ function profileCheck(bool $condition, string $message): void
     if (!$condition) throw new RuntimeException($message);
     echo 'PASS ' . $message . PHP_EOL;
 }
+$releaseCandidate = EconomyProfile::load();
+foreach ([false, true] as $restricted) {
+    $operatorProfile = $releaseCandidate;
+    $operatorProfile['closed_test']['restricted'] = $restricted;
+    $operatorProfile['closed_test']['feedback_path'] = '/forum/read/64';
+    $operatorProfile['closed_test']['all_templates'] = false;
+    $updated = EconomyProfile::forRelease($operatorProfile);
+    profileCheck($updated['closed_test'] === $operatorProfile['closed_test'], 'automatic release retains public/restricted admission and operator settings');
+    unset($updated['closed_test']);
+    $expected = $releaseCandidate; unset($expected['closed_test']);
+    profileCheck($updated === $expected, 'automatic release still uses the bundled economy changes');
+}
+profileCheck(EconomyProfile::forRelease(null) === $releaseCandidate, 'first installation retains safe closed-test defaults');
 function rejectsProfile(array $data, string $message): void
 {
     try { EconomyProfile::report($data); }
