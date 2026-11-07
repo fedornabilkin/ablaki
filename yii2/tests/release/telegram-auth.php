@@ -193,9 +193,16 @@ tgReject(fn() => $complete($boundLogin), 409, 'logout invalidates completed-requ
 $db->createCommand()->update('user', ['blocked_at' => time()], ['id' => $thirdId])->execute();
 $blocked = $start(); $approve($blocked, '555');
 tgReject(fn() => $complete($blocked), 403, 'blocked account cannot authenticate');
-$limiter = new \common\services\auth\AuthRateLimit($db);
+$rateNow = 1_800_000_000;
+$rateClock = static function () use (&$rateNow): int { return $rateNow; };
+$limiter = new \common\services\auth\AuthRateLimit($db, $rateClock);
 $limiter->hit('fixture', 'ip', 2); $limiter->hit('fixture', 'ip', 2);
 tgReject(fn() => $limiter->hit('fixture', 'ip', 2), 429, 'shared rate limit rejects excess attempts');
+$otherLimiter = new \common\services\auth\AuthRateLimit($db, $rateClock);
+tgReject(fn() => $otherLimiter->hit('fixture', 'ip', 2), 429, 'a second worker shares the same rate limit');
+$rateNow += 60;
+$otherLimiter->hit('fixture', 'ip', 2);
+tgCheck(true, 'the next rate window accepts a new attempt');
 
 $settingsMigration = new \m261106_120000_telegram_settings(['db' => $db]);
 $settingsMigration->up(); $settingsMigration->up();
