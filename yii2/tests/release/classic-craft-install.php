@@ -54,6 +54,16 @@ class ReleaseReadinessFixture extends \console\controllers\ReleaseController {
     public function stdout($string) { $this->captured .= $string; return strlen($string); }
 }
 $release = new ReleaseReadinessFixture('release', $app);
+$oldWorldRelease = getenv('WORLD_RELEASE');
+try {
+    foreach ([null, 'confirmed-production-checkout'] as $context) {
+        putenv($context === null ? 'WORLD_RELEASE' : 'WORLD_RELEASE=' . $context);
+        try { $release->actionWorldUpdate(); throw new \LogicException('World update accepted an unpaused/foreign checkout'); }
+        catch (\RuntimeException $error) { checkInstall($error->getMessage() === 'Paused production release context is required.', 'world update rejects missing production pause and foreign checkout'); }
+    }
+} finally {
+    putenv($oldWorldRelease === false ? 'WORLD_RELEASE' : 'WORLD_RELEASE=' . $oldWorldRelease);
+}
 $oldContext = getenv('WORLD_TEST_SETUP'); $oldMode = getenv('WORLD_TEST_MODE');
 try {
     putenv('WORLD_TEST_SETUP'); putenv('WORLD_TEST_MODE');
