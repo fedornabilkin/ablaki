@@ -13,6 +13,9 @@ cat > "$fixture/bin/docker-compose" <<'MOCK'
 #!/usr/bin/env bash
 printf 'compose %s\n' "$*" >> "$FIXTURE_LOG"
 if [[ "$*" = *release/world-update* && "$FIXTURE_SCENARIO" = world_failure ]]; then exit 5; fi
+if [[ "$*" = *release/world-update* ]]; then
+  [[ "$*" = *WORLD_PRODUCTION_UPGRADE=confirmed-production-checkout* ]] || exit 6
+fi
 MOCK
 cat > "$fixture/bin/docker" <<'MOCK'
 #!/usr/bin/env bash
@@ -29,7 +32,7 @@ printf 'make %s\n' "$*" >> "$FIXTURE_LOG"
 MOCK
 chmod +x "$fixture/bin/"*
 export PATH="$fixture/bin:$PATH"
-for scenario in tooling proxy app world world_profile world_failure runtime_mode runtime_content paused missing changed_base changed_compose unchecked; do
+for scenario in tooling proxy app world world_profile world_failure world_correction stale_pending runtime_mode runtime_content paused missing changed_base changed_compose unchecked; do
   repo="$fixture/$scenario"
   git init -q --bare "$repo-origin"
   git init -q -b master "$repo"
@@ -48,7 +51,7 @@ for scenario in tooling proxy app world world_profile world_failure runtime_mode
   case "$scenario" in
     proxy) echo proxy > docker/nginx/test.conf ;;
     app) echo application > yii2/code.php ;;
-    world|world_failure) echo migration > yii2/console/world-migrations/m261107_test.php ;;
+    world|world_failure|world_correction) echo migration > yii2/console/world-migrations/m261107_test.php ;;
     world_profile) echo profile > yii2/common/modules/world/data/economy/closed-test-v1.json ;;
     changed_compose) echo changed >> docker-compose.yaml ;;
     runtime_mode) chmod 644 yii2/api/runtime/.gitignore ;;
@@ -63,11 +66,13 @@ for scenario in tooling proxy app world world_profile world_failure runtime_mode
   control="$repo/yii2/common/runtime/financial-maintenance"; mkdir -p "$control"
   for file in completed world-activation-verified.json rating-precision-verified.json; do echo done > "$control/$file"; done
   [[ "$scenario" != paused ]] || touch "$control/paused"
+  if [[ "$scenario" = stale_pending ]]; then touch "$control/paused"; printf '%040d\n' 3 > "$control/world-release.pending"; fi
   [[ "$scenario" != missing ]] || rm "$control/world-activation-verified.json"
   [[ "$scenario" != changed_base ]] || base=$target
   [[ "$scenario" != unchecked ]] || target=$(printf '%040d' 2)
   export FIXTURE_LOG="$repo/commands.log"
   export FIXTURE_SCENARIO="$scenario"
+  [[ "$scenario" != world_correction ]] || export FIXTURE_SCENARIO=world_failure
   touch "$control/writers.lock"
   sed "s@repo=/var/www/api.ablakin.ru@repo=$repo@" "$source_root/deploy/production-release.sh" > "$fixture/runner.sh"
   status=0
@@ -89,9 +94,16 @@ for scenario in tooling proxy app world world_profile world_failure runtime_mode
           ;;
       esac
       ;;
-    world_failure)
+    world_failure|world_correction)
       [[ "$status" != 0 && -e "$control/paused" && "$(cat "$control/world-release.pending")" = "$target" ]]
       ! grep -Fq 'docker start' "$FIXTURE_LOG"
+      if [[ "$scenario" = world_correction ]]; then
+        echo correction > deploy/correction.txt
+        git add deploy/correction.txt; git commit -qm correction
+        target=$(git rev-parse HEAD); git push -q origin master
+        git reset --hard -q HEAD~1
+        echo operator >> docker-compose.yaml
+      fi
       # The same checked SHA can resume its own interrupted update.
       export FIXTURE_SCENARIO=world
       bash "$fixture/runner.sh" "$target" "$base" > "$fixture/resume.log" 2>&1 || { cat "$fixture/resume.log"; exit 1; }
