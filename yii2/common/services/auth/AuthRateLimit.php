@@ -9,11 +9,11 @@ use yii\web\TooManyRequestsHttpException;
 /** Database counters work across PHP workers and do not rely on a per-process cache. */
 final class AuthRateLimit
 {
-    public function __construct(private Connection $db) {}
+    public function __construct(private Connection $db, private ?\Closure $clock = null) {}
 
     public function hit(string $scope, string $key, int $limit, int $window = 60): void
     {
-        $now = time();
+        $now = $this->clock ? ($this->clock)() : time();
         $id = hash('sha256', $scope . ':' . $key . ':' . intdiv($now, $window));
         // PostgreSQL exposes both the stored row and EXCLUDED in ON CONFLICT.
         $this->db->createCommand()->upsert('{{%auth_rate_limit}}', [
