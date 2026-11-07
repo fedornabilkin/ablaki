@@ -384,7 +384,7 @@ jobs:
         run: |
           options=(-i "$HOME/.ssh/deploy_key" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=yes -o UserKnownHostsFile="$HOME/.ssh/known_hosts")
           ssh "${options[@]}" -p "$DEPLOY_PORT" "$DEPLOY_USER@$DEPLOY_HOST" \
-            'cd /var/code/ablaki && test "$(pwd -P)" = /var/code/ablaki && docker-compose exec -T -e WORLD_RELEASE=confirmed-test-checkout -e WORLD_TEST_SETUP=confirmed-test-checkout -e WORLD_TEST_MODE=1 php php /web/yii2/yii release/world-update 0'
+            'cd /var/code/ablaki && test "$(pwd -P)" = /var/code/ablaki && docker-compose exec -T -e WORLD_RELEASE=confirmed-test-checkout -e WORLD_TEST_SETUP=confirmed-test-checkout -e WORLD_TEST_MODE=1 php php /web/yii2/yii release/world-update 0 fedornabilkin'
       - name: Prepare the explicitly requested funded economy test
         if: env.TARGET == 'test' && inputs.economy_test != '' && inputs.economy_test != 'skip'
         shell: bash
