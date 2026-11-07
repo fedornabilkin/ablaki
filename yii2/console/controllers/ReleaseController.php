@@ -162,7 +162,8 @@ class ReleaseController extends \yii\console\Controller
         \common\modules\world\models\RegistryConfiguration::installed();
         $result = ['changed' => false, 'admin_profile_preserved' => true];
         if ($publishProfile) {
-            $profile = \common\modules\world\models\domain\EconomyProfile::load();
+            $current = \common\modules\world\models\domain\EconomyRuntime::current($db);
+            $profile = \common\modules\world\models\domain\EconomyProfile::forRelease($current['raw_profile']);
             $publisher = new \common\modules\world\models\domain\EconomyProfilePublisher($db);
             $preview = $publisher->preview($profile);
             $result = $publisher->publish($profile, $preview['digest'], (int)$user,
@@ -201,7 +202,8 @@ class ReleaseController extends \yii\console\Controller
         if (!in_array($apply, [0, 1], true)) throw new \InvalidArgumentException('Use 0 or 1.');
         if (!$this->world()) { $this->output(['world' => false]); return 0; }
         $db = Yii::$app->db;
-        $profile = \common\modules\world\models\domain\EconomyProfile::load();
+        $current = \common\modules\world\models\domain\EconomyRuntime::current($db);
+        $profile = \common\modules\world\models\domain\EconomyProfile::forRelease($current['raw_profile'] ?? null);
         $publisher = new \common\modules\world\models\domain\EconomyProfilePublisher($db);
         $preview = $publisher->preview($profile);
         if ($preview['already_current']) { $this->output(['profile' => $preview['current_version'], 'changed' => false]); return 0; }

@@ -310,4 +310,5 @@ $db->createCommand()->update('world_node', ['status' => 'archived'], ['id' => $g
 economyCheck(\common\modules\world\models\domain\CultivationEnvironment::accepted($fixtureCycle)['grow_duration_bps'] === 8000
     && \common\modules\world\models\domain\CultivationEnvironment::snapshot($db, (int)$greenhouseBed->id, $freshUser)['grow_duration_bps'] === 10000, 'accepted growing cycle retains greenhouse benefits while future sowing requires an active greenhouse');
 
+require __DIR__ . '/world-release-access-cases.php';
 echo 'Economy runtime checks passed.' . PHP_EOL;

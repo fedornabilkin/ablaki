@@ -17,6 +17,15 @@ final class EconomyProfile
         return $data;
     }
 
+    /** Publishing bundled balance changes must retain the operator's admission policy. */
+    public static function forRelease(?array $current): array
+    {
+        $profile = self::load();
+        if ($current !== null) $profile['closed_test'] = $current['closed_test'];
+        self::validate($profile);
+        return $profile;
+    }
+
     private static function quantities(array $quantities, array $definitions, string $field): void
     {
         foreach ($quantities as $code => $quantity) {
