@@ -117,7 +117,7 @@ class ReleaseController extends \yii\console\Controller
     }
 
     /** Existing worlds only: no seed, inventory backfill, wallet conversion or flag changes. */
-    public function actionWorldUpdate(int $publishProfile = 0, string $author = 'fedornabilkin'): int
+    public function actionWorldUpdate(int $publishProfile = 0, string $author = ''): int
     {
         if (getenv('WORLD_RELEASE') === 'confirmed-test-checkout') {
             $this->context();
@@ -150,8 +150,7 @@ class ReleaseController extends \yii\console\Controller
             || !\common\modules\world\models\domain\EconomyRuntime::current($db)) {
             throw new \RuntimeException('An already installed world and published profile are required.');
         }
-        $user = (new Query())->select('id')->from('user')->where(['username' => $author, 'blocked_at' => null])->scalar($db);
-        if (!$user || !Yii::$app->authManager->checkAccess((int)$user, 'p-admin')) throw new \RuntimeException('Existing active p-admin author required.');
+        $user = $this->publicationAuthor($author);
         $issues = (new \common\modules\world\support\WorldSchemaAudit($db))->installationIssues();
         if ($issues) throw new \RuntimeException(implode('; ', $issues));
         $before = $this->protectedState();
@@ -173,6 +172,22 @@ class ReleaseController extends \yii\console\Controller
         if ($this->pending()) throw new \RuntimeException('Required migrations remain pending.');
         $this->output($result + ['world_ready' => true, 'protected_state_preserved' => true, 'money_created_cr' => '0.0000']);
         return 0;
+    }
+
+    private function publicationAuthor(string $username): int
+    {
+        // Match the original production activation: attribute publication to the
+        // sole existing administrator, never to a hard-coded test account.
+        $query = (new Query())->select('id')->from('user')
+            ->where(['or', ['blocked_at' => null], ['blocked_at' => 0]]);
+        if ($username !== '') $query->andWhere(['username' => $username]);
+        else $query->andWhere(['id' => (new Query())->select('user_id')->distinct()->from('auth_assignment')]);
+        $administrators = [];
+        foreach ($query->column(Yii::$app->db) as $candidate) {
+            if (Yii::$app->authManager->checkAccess((int)$candidate, 'p-admin')) $administrators[] = (int)$candidate;
+        }
+        if (count($administrators) !== 1) throw new \RuntimeException('Select one existing active p-admin publication author explicitly.');
+        return $administrators[0];
     }
 
     public function actionTestProfile(int $apply = 0, string $author = 'fedornabilkin'): int
