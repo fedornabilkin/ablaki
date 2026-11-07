@@ -56,7 +56,7 @@ class ReleaseReadinessFixture extends \console\controllers\ReleaseController {
 $release = new ReleaseReadinessFixture('release', $app);
 $db->createCommand()->addColumn('user', 'username', 'string')->execute();
 $db->createCommand()->addColumn('user', 'blocked_at', 'integer')->execute();
-$db->createCommand()->createTable('auth_assignment', ['user_id' => 'integer', 'item_name' => 'string'])->execute();
+$db->createCommand()->createTable('auth_assignment', ['user_id' => 'string', 'item_name' => 'string'])->execute();
 $db->createCommand()->update('user', ['username' => 'production-owner', 'blocked_at' => 0], ['id' => 321])->execute();
 $db->createCommand()->insert('auth_assignment', ['user_id' => 321, 'item_name' => 'admin'])->execute();
 $app->set('authManager', new class extends \yii\rbac\DbManager {
