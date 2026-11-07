@@ -14,7 +14,7 @@ control="$repo/yii2/common/runtime/financial-maintenance"
 [[ -s "$control/completed" && -s "$control/world-activation-verified.json" && -s "$control/rating-precision-verified.json" ]]
 [[ ! -L "$control" && ! -L "$control/paused" && ! -L "$control/world-release.pending" && ! -e "$control/rating-precision.pending" && ! -e "$control/world-activation.pending" ]]
 if [[ -e "$control/paused" || -e "$control/world-release.pending" ]]; then
-  [[ -f "$control/world-release.pending" && "$(cat "$control/world-release.pending")" = "$expected_sha" ]]
+  [[ -f "$control/world-release.pending" && "$(cat "$control/world-release.pending")" =~ ^[a-f0-9]{40}$ ]]
 fi
 exec 8>"$control/operator.lock"
 flock -n 8
@@ -36,6 +36,12 @@ git fetch origin master
 [[ "$(git rev-parse FETCH_HEAD)" = "$expected_sha" ]]
 actual=$(git rev-parse HEAD)
 git merge-base --is-ancestor "$actual" "$expected_sha"
+if [[ -e "$control/world-release.pending" ]]; then
+  # Resume the same release, or a checked fast-forward correction of the exact
+  # interrupted checkout. Unrelated/stale maintenance markers remain blocked.
+  pending_sha=$(cat "$control/world-release.pending")
+  [[ "$pending_sha" = "$expected_sha" || "$pending_sha" = "$actual" ]]
+fi
 # An older successful baseline is safe (a superset); a newer baseline than the
 # actual checkout could hide unapplied code and must not shorten verification.
 if [[ -n "$base" ]]; then git merge-base --is-ancestor "$base" "$actual"; fi
@@ -74,7 +80,7 @@ git merge --ff-only "$expected_sha"
 [[ "$(git rev-parse HEAD)" = "$expected_sha" ]]
 if [[ -n "$changes" ]]; then [[ "$(sha256sum docker-compose.yaml | cut -d' ' -f1)" = "$compose_checksum" ]]; fi
 if [[ "$world_update" = true ]]; then
-  docker-compose exec -T -e WORLD_RELEASE=confirmed-production-checkout php php /web/yii2/yii release/world-update "$publish_profile"
+  docker-compose exec -T -e WORLD_RELEASE=confirmed-production-checkout -e WORLD_PRODUCTION_UPGRADE=confirmed-production-checkout php php /web/yii2/yii release/world-update "$publish_profile"
 fi
 if [[ "$runtime" = true ]]; then
   bash deploy/php-runtime-upgrade.sh "$repo" production
