@@ -1641,7 +1641,9 @@
         "user": {
           "login": "admin",
           "password": "123456"
-        }
+        },
+        "world_city_id": 4,
+        "world_request_key": "0123456789abcdef0123456789abcdef"
       },
       "dataPropertyOrder": {
         "&": [
@@ -11886,7 +11888,7 @@
       "name": "GET - State",
       "url": "{{ _.baseUrl }}/v1/world/economy",
       "method": "GET",
-      "description": "Contract: docs/architecture/economy-runtime-api.md. Read-only state with dish-specific backpack restore_hp (at most 8), kitchen_restore_hp, repeat_limit, repeat_remaining, repeat_seconds, restores_at, can_eat and disorder_until. Goals include completed, blocked_reason and funding_settlement_id; can_fund_goals requires world-manage. Completed goals still require an existing funded reserve. Feedback leads to /forum. world_instance is the active root id:created_at string (or null); browser acceptance-checklist results are isolated by user and world instance.\n\n2026-10-30: development is null when disabled, otherwise {version:1, completed, total, next_stage, stages:[{code,title,description,completed,steps:[{code,title,quantity,required,completed,action_href}]}]}. Authenticated read-only server progress; no reward issuance. Internal links target the player own available objects or public NPC source. See docs/architecture/economy-runtime-api.md. 2026-10-31: development has 55 objectives including lodged-house. extraction_daily.maximum is 20 or 25 while lodging on a bed in an owned active house/room; used batches are never reset by moving and remaining stays nonnegative. Published NPC wages are 3 Cr, or 6 Cr with a drill; accepted batches keep their original terms.\n\n2026-10-31: У структурного листа has_finances=false, treasury_enabled=false, balances=null, финансовые действия запрещены; finance_node_id указывает родителя.\n\n2026-11-04: checklist_steps: полный набор {code, completed, quantity, required, action_href}, независимо от состава и финансирования наград. mine_resources_mined подтверждает завершённую добычу в своей шахте, включая исторические партии. Чтение не выдаёт наград.",
+      "description": "Contract: docs/architecture/economy-runtime-api.md. Read-only state with dish-specific backpack restore_hp (at most 8), kitchen_restore_hp, repeat_limit, repeat_remaining, repeat_seconds, restores_at, can_eat and disorder_until. Goals include completed, blocked_reason and funding_settlement_id; can_fund_goals requires world-manage. Completed goals still require an existing funded reserve. Feedback leads to /forum. world_instance is the active root id:created_at string (or null); browser acceptance-checklist results are isolated by user and world instance.\n\n2026-10-30: development is null when disabled, otherwise {version:1, completed, total, next_stage, stages:[{code,title,description,completed,steps:[{code,title,quantity,required,completed,action_href}]}]}. Authenticated read-only server progress; no reward issuance. Internal links target the player own available objects or public NPC source. See docs/architecture/economy-runtime-api.md. 2026-10-31: development has 55 objectives including lodged-house. extraction_daily.maximum is 20 or 25 while lodging on a bed in an owned active house/room; used batches are never reset by moving and remaining stays nonnegative. Published NPC wages are 3 Cr, or 6 Cr with a drill; accepted batches keep their original terms.\n\n2026-10-31: У структурного листа has_finances=false, treasury_enabled=false, balances=null, финансовые действия запрещены; finance_node_id указывает родителя.\n\n2026-11-04: checklist_steps: полный набор {code, completed, quantity, required, action_href}, независимо от состава и финансирования наград. mine_resources_mined подтверждает завершённую добычу в своей шахте, включая исторические партии. Чтение не выдаёт наград.\nAlso returns nullable telegram_reward; claim with the existing goals/claim endpoint and code telegram-link.",
       "body": {},
       "parameters": [],
       "headers": [
@@ -12004,6 +12006,44 @@
       "body": {
         "mimeType": "application/json",
         "text": "{\"request_key\": \"{{ _.economy_request_key }}\", \"code\": \"{{ _.economy_goal_code }}\"}"
+      },
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Accept",
+          "value": "application/json"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "authentication": {
+        "type": "bearer",
+        "token": "{{ _.bearer }}"
+      },
+      "metaSortKey": 4,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_telegram_world_reward",
+      "parentId": "fld_e1a56479acb24b0fc1782280fd0c9402",
+      "modified": 1792195200000,
+      "created": 1792195200000,
+      "name": "POST - Telegram gift",
+      "url": "{{ _.baseUrl }}/v1/world/economy/goals/claim",
+      "method": "POST",
+      "description": "One lifetime inventory gift per account and verified Telegram. Read telegram_reward in economy or world_reward in Telegram identity first. Reuse economy_request_key after a lost response; a fresh key cannot issue another gift. Full backpack rolls back all items and preserves eligibility.",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"request_key\": \"{{ _.economy_request_key }}\",\n  \"code\": \"telegram-link\"\n}"
       },
       "parameters": [],
       "headers": [
@@ -12642,7 +12682,7 @@
       "name": "GET - Character overview (nested)",
       "url": "{{ _.baseUrl }}/v1/world/economy",
       "method": "GET",
-      "description": "Current-player screen: {contract_version:1,economy:{...existing state...},character:{progression:{craft,professions,extraction_work,server_time},construction:{active:Build|null}}}. Replaces three requests on the character page; standalone state, progression and active-build reads remain compatible. See docs/architecture/api-consolidation.md.\n\n2026-11-04: checklist_steps: полный набор {code, completed, quantity, required, action_href}, независимо от состава и финансирования наград. mine_resources_mined подтверждает завершённую добычу в своей шахте, включая исторические партии. Чтение не выдаёт наград.",
+      "description": "Current-player screen: {contract_version:1,economy:{...existing state...},character:{progression:{craft,professions,extraction_work,server_time},construction:{active:Build|null}}}. Replaces three requests on the character page; standalone state, progression and active-build reads remain compatible. See docs/architecture/api-consolidation.md.\n\n2026-11-04: checklist_steps: полный набор {code, completed, quantity, required, action_href}, независимо от состава и финансирования наград. mine_resources_mined подтверждает завершённую добычу в своей шахте, включая исторические партии. Чтение не выдаёт наград.\nAlso returns nullable telegram_reward; claim with the existing goals/claim endpoint and code telegram-link.",
       "body": {},
       "parameters": [
         {
@@ -12713,7 +12753,7 @@
       "name": "My connected Telegram",
       "url": "{{ baseUrl }}/auth/telegram/identity",
       "method": "GET",
-      "description": "For anonymous requests disable Bearer authentication. For binding use the original site session. Secrets belong in a private environment.",
+      "description": "For anonymous requests disable Bearer authentication. For binding use the original site session. Secrets belong in a private environment.\nAlso returns nullable world_reward: stable Telegram inventory gift, claim status and items. No Telegram ID is exposed.",
       "body": {},
       "headers": [],
       "parameters": [],
@@ -13081,6 +13121,72 @@
       "isPrivate": false,
       "settingStoreCookies": false,
       "settingSendCookies": false,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_world_npc_market_listing",
+      "parentId": "fld_d5d30075b45a3e7c360b131d63adcfba",
+      "modified": 1791009594237,
+      "created": 1791009594237,
+      "url": "{{ _.baseUrl }}/v1/world/markets/{{ _.world_city_id }}",
+      "name": "GET /world/markets/{cityId}",
+      "description": "NPC-only city market; see docs/operations/world-pacing-market-2026-11-06.md. GET returns market/buy/sell with exact four-decimal prices, stock and quotas. POST atomically exchanges real stock and credits; copy inventory_id, profile_version and unit_price_cr from GET. One Idempotency-Key per intended trade, reused on retries. Changed price or insufficient funds returns an error without partial debit.",
+      "method": "GET",
+      "body": {},
+      "parameters": [],
+      "headers": [],
+      "authentication": {
+        "type": "bearer",
+        "token": "{{ _.bearer }}",
+        "disabled": false
+      },
+      "metaSortKey": 83,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_world_npc_market_trade",
+      "parentId": "fld_d5d30075b45a3e7c360b131d63adcfba",
+      "modified": 1791009594237,
+      "created": 1791009594237,
+      "url": "{{ _.baseUrl }}/v1/world/markets/{{ _.world_city_id }}/trade",
+      "name": "POST /world/markets/{cityId}/trade",
+      "description": "NPC-only city market; see docs/operations/world-pacing-market-2026-11-06.md. GET returns market/buy/sell with exact four-decimal prices, stock and quotas. POST atomically exchanges real stock and credits; copy inventory_id, profile_version and unit_price_cr from GET. One Idempotency-Key per intended trade, reused on retries. Changed price or insufficient funds returns an error without partial debit. Set world_request_key to a fresh 32-hex key for each new intended trade; keep it unchanged for retries.",
+      "method": "POST",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"direction\": \"buy\",\n  \"inventory_id\": 1,\n  \"quantity\": 1,\n  \"profile_version\": 1,\n  \"unit_price_cr\": \"3.7500\"\n}"
+      },
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "name": "Idempotency-Key",
+          "value": "{{ _.world_request_key }}"
+        }
+      ],
+      "authentication": {
+        "type": "bearer",
+        "token": "{{ _.bearer }}",
+        "disabled": false
+      },
+      "metaSortKey": 83,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
       "settingDisableRenderRequestBody": false,
       "settingEncodeUrl": true,
       "settingRebuildPath": true,

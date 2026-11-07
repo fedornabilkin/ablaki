@@ -25,12 +25,15 @@ class SupplyGrant
         $items = []; $sizes = [];
         $revision = EconomyRuntime::current($this->db);
         $quantities = $revision ? $revision['profile'][$action === 'starter' ? 'starter' : 'daily']['items'] : null;
+        $fixed = $action === 'gather' ? ($revision['profile']['daily']['fixed_items'] ?? []) : [];
+        if ($quantities !== null) $quantities = $fixed + $quantities;
         if ($finite) { $quantities = []; foreach ($finite['items'] as $item) $quantities[$item['code']] = $item['quantity']; }
         $query = (new Query())->from('craft_item')->where(['active' => 1]);
         $quantities !== null ? $query->andWhere(['code' => array_keys($quantities)]) : $query->andWhere(['>', 'gather_quantity', 0]);
         foreach ($query->orderBy(['id' => SORT_ASC])->all($this->db) as $item) {
             $base = $quantities !== null ? $quantities[$item['code']] : (int)$item['gather_quantity'] * ($action === 'starter' ? 3 : 1);
             $entry = ['item_id' => (int)$item['id'], 'name' => (string)$item['name'], 'quantity' => max(1, intdiv($base * $efficiency, 10000))];
+            if (isset($fixed[$item['code']])) $entry['quantity'] = $fixed[$item['code']];
             if ($finite) foreach ($finite['items'] as $planned) if ($planned['item_id'] === $entry['item_id']) {
                 $entry += ['code' => $planned['code'], 'ordinal' => $planned['ordinal'], 'base_quantity' => $planned['base_quantity'], 'grant_limit' => $planned['grant_limit'], 'initial_multiplier' => $planned['initial_multiplier'], 'production_reduction_bps' => $planned['production_reduction_bps']];
                 $entry['quantity'] = $planned['quantity'];

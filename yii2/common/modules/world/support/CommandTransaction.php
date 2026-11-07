@@ -22,6 +22,10 @@ final class CommandTransaction implements CommandMiddleware
                 throw new GameError('SCHEMA_NOT_READY', 'Каталог ещё не подготовлен.', 503);
             }
 
+            if ($command->type === 'world.goal.claim' && ($command->payload['code'] ?? null) === 'telegram-link') {
+                (new \common\modules\world\models\domain\TelegramReward($this->db))->lockIdentity($command->userId);
+            }
+
             if ($command->version === CommandRequest::DIRECT) {
                 $locks->owners($this->participants($command), false);
             }
@@ -51,6 +55,10 @@ final class CommandTransaction implements CommandMiddleware
                 ->andWhere(['not', ['active_key' => null]])
                 ->column($this->db);
             $owners = array_merge($owners, $workers);
+        }
+        if ($command->type === 'world.market.trade' && $this->db->schema->getTableSchema('world_npc_market')) {
+            $market = (new Query())->from('world_npc_market')->where(['city_id' => $command->payload['city_id'] ?? 0])->one($this->db);
+            if ($market) $owners = array_merge($owners, [(int)$market['bot_user_id'], (int)$market['owner_user_id']]);
         }
         return $owners;
     }

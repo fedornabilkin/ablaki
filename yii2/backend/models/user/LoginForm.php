@@ -10,7 +10,7 @@ namespace backend\models\user;
 
 use Yii;
 
-class LoginForm extends \dektrium\user\models\LoginForm
+class LoginForm extends \common\models\user\PasswordLoginForm
 {
     public function loginKey(string $key): bool
     {

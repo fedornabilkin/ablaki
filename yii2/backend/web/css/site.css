@@ -118,3 +118,25 @@ a.desc:after {
 .nav > li > form > button.logout:focus {
     outline: none;
 }
+
+/* Shared admin shell and home: restrained surfaces, clear hierarchy. */
+.skin-blue .main-header .navbar, .skin-blue .main-header .logo { background:#25313e; }
+.skin-blue .main-header .logo:hover, .skin-blue .main-header .navbar .sidebar-toggle:hover { background:#344252; }
+.skin-blue .sidebar-menu>li.active>a, .skin-blue .sidebar-menu>li:hover>a { border-left-color:#e98a25; }
+.skin-blue .sidebar-menu .treeview-menu>li.active>a { color:#ffc477; background:#283746; }
+.sidebar-menu .treeview-menu .treeview-menu { padding-left:12px; }
+.content-wrapper { background:#f1f4f7; }
+.main-header .logo { font-size:17px; }
+.admin-welcome { display:flex; gap:20px; align-items:center; justify-content:space-between; }
+.admin-eyebrow { color:#986127; text-transform:uppercase; font-size:11px; letter-spacing:.12em; font-weight:700; }
+.admin-home .admin-welcome h2 { margin:8px 0; font-size:24px; }
+.admin-home .admin-welcome p { margin:0; }
+.admin-shortcuts, .admin-work-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:14px; }
+.admin-shortcuts>a { display:flex; gap:12px; align-items:center; border:1px solid #e4e9ef; padding:14px; border-radius:8px; color:#354455; }
+.admin-shortcuts>a>i:first-child { color:#b76b1b; width:20px; text-align:center; }
+.admin-shortcuts>a>i:last-child { margin-left:auto; }
+.admin-shortcuts>a:hover { background:#fff9f0; border-color:#edc89e; text-decoration:none; }
+.admin-list-row { display:flex; align-items:baseline; justify-content:space-between; gap:12px; padding:11px 0; border-bottom:1px solid #edf0f4; overflow-wrap:anywhere; }
+.admin-list-row small { display:block; margin-top:4px; }
+.admin-work-grid .wc-panel .btn, .admin-home .wc-grid .btn { margin-top:14px; }
+@media(max-width:640px) { .admin-welcome { align-items:flex-start; flex-direction:column; } .admin-home .admin-welcome h2 { font-size:20px; } .admin-work-grid { grid-template-columns:minmax(0,1fr); } .admin-shortcuts { grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; } .admin-shortcuts>a { padding:11px 8px; gap:7px; font-size:12px; } .admin-shortcuts>a>i:last-child { display:none; } }

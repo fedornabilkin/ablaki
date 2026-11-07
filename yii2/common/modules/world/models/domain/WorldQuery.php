@@ -98,6 +98,7 @@ class WorldQuery
     {
         if (!$rows) return [];
         $ids = array_column($rows, 'id');
+        $marketCities = $this->db->schema->getTableSchema('world_npc_market') && isset(EconomyRuntime::current($this->db)['profile']['market']) ? (new Query())->select('city_id')->from('world_npc_market')->where(['city_id' => $ids])->column($this->db) : [];
         $owners = \common\services\user\PublicProfile::identities($this->db, array_column($rows, 'owner_user_id'));
         $lodging = null;
         if ($this->db->schema->getTableSchema('world_lodging_interval') && $this->db->schema->getTableSchema('world_housing_interval')) {
@@ -205,6 +206,7 @@ class WorldQuery
             }
             if (($settings['npc_role'] ?? null) === 'workshop' && (new NpcInfrastructure($this->db))->managed($row, ['workshop'])) $dto['extensions'][] = 'public_workspace';
             if (($settings['npc_role'] ?? null) === 'source' && (new NpcInfrastructure($this->db))->managed($row, ['source'])) $dto['extensions'][] = 'public_work';
+            if (in_array($row['id'], $marketCities)) $dto['extensions'][] = 'market';
             $dto['owner'] = ['id' => $row['owner_user_id'] === null ? null : (int)$row['owner_user_id'], 'user' => $owners[(int)$row['owner_user_id']] ?? null, 'owned_by_me' => $dto['owned_by_me'], 'has_finances' => $dto['has_finances']];
             $result[] = $dto;
         }

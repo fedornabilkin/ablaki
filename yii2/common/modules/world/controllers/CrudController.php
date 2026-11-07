@@ -33,7 +33,7 @@ abstract class CrudController extends Controller
     {
         if ($model->load(Yii::$app->request->post())) {
             if ($model instanceof \common\modules\world\models\LockedRecord) $model->formVersion = (string)Yii::$app->request->post('formVersion', '');
-            if ($model->save()) return $this->redirect(['view', 'id' => $model->id]);
+            if (\common\modules\world\models\admin\WorldFormAudit::save($model,(int)Yii::$app->user->id,(string)Yii::$app->request->post('comment',''))) return $this->redirect(['view', 'id' => $model->id]);
         }
         return $this->render('form', ['model' => $model]);
     }
@@ -42,7 +42,7 @@ abstract class CrudController extends Controller
         $model = $this->modelClass::requireOne($id);
         if ($model instanceof \common\modules\world\models\NodeTemplate) $model->enabled = 0;
         else $model->status = $model instanceof \common\modules\world\models\WorldEvent ? 'closed' : 'archived';
-        if (!$model->save()) Yii::$app->session->setFlash('error', implode(' ', $model->getFirstErrors()));
+        if (!\common\modules\world\models\admin\WorldFormAudit::save($model,(int)Yii::$app->user->id,(string)Yii::$app->request->post('comment',''))) Yii::$app->session->setFlash('error', implode(' ', $model->getFirstErrors()));
         return $this->redirect(['view', 'id' => $model->id]);
     }
 }

@@ -18,7 +18,7 @@ $this->params['breadcrumbs'][] = $this->title;
         'filterModel' => $searchModel,
         'columns' => [
 
-            'id',
+            'storage_id',
             [
                 'attribute' => 'user_id',
                 'class' => UserColumn::class,

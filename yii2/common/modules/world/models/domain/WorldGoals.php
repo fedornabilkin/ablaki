@@ -101,6 +101,7 @@ final class WorldGoals
     public function claim(int $user, string $code, string $operation): array
     {
         if (!$this->db->getTransaction()) throw new \LogicException('Goal claim needs command locks.');
+        if ($code === TelegramReward::CODE) return (new TelegramReward($this->db))->claim($user, $operation);
         $selected = null;
         foreach ($this->state($user)['goals'] as $goal) if ($goal['code'] === $code) $selected = $goal;
         if (!$selected || !$selected['can_claim']) throw new GameError('GOAL_NOT_READY', 'Выполните шаги цели; награда должна быть обеспечена бюджетом и ещё не получена.', 409);

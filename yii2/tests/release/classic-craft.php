@@ -21,7 +21,7 @@ class CraftIdentity implements \yii\web\IdentityInterface {
     public function validateAuthKey($key){return false;}
 }
 $dsn=getenv('ABL_TEST_DSN');
-if ($dsn&&!preg_match('/^(mysql|pgsql):host=127\.0\.0\.1;port=(3306|5432);dbname=ablakin_ci$/D',$dsn)) throw new RuntimeException('Dedicated CI DB required.');
+if ($dsn&&!preg_match('/^(mysql|pgsql):host=127\.0\.0\.1;port=(3306|5432|33316);dbname=ablakin_ci$/D',$dsn)) throw new RuntimeException('Dedicated CI DB required.');
 $app=new \yii\web\Application(['id'=>'craft-tests','basePath'=>dirname(__DIR__,2),'vendorPath'=>dirname(__DIR__,2).'/vendor',
     'container'=>['definitions'=>[\yii\rest\Serializer::class=>\api\components\ListSerializer::class]],
     'modules'=>['v1'=>['class'=>\api\modules\v1\Module::class]],

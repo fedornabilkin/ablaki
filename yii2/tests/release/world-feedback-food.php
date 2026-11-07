@@ -522,7 +522,16 @@ try {
     economyCheck((int)(new Query())->from('world_builder')->where(['user_id' => $freshUser])->count('*', $db) === 1 && (int)\common\modules\world\models\Build::requireOne($b->id)->worked_seconds === 0, 'legacy suspended work cannot renew a second construction session');
     $price = \common\modules\world\models\domain\WorldMapCells::purchasePricing(['base_price' => '0.5000', 'outer_ring_multiplier' => 10, 'bulk_minimum' => 3, 'discount_bps' => 500], [['x' => 1, 'y' => 0], ['x' => 2, 'y' => 0]]);
     economyCheck(array_column($price['unit_prices'], 'price') === ['0.5000', '10.0000'], 'distant rings cost twenty times the adjacent ring without changing starting cells');
-    economyCheck(\common\modules\world\models\domain\EconomyProfile::load()['objects']['forge']['price_cr'] === '40.0000' && 250 - (20 + 50 + 10 + 120 + 40 + 3.8 + 4) > 0, '250 starting credits cover shelter, garden, bed, mine, forge, eight adjacent cells and two waterings');
+    $candidate = \common\modules\world\models\domain\EconomyProfile::load();
+    $corePrice = \common\modules\world\modules\economy\value\Money::parse('0');
+    foreach (['starter-shelter', 'garden', 'garden-bed', 'mine', 'forge'] as $code) {
+        $corePrice = $corePrice->add(\common\modules\world\modules\economy\value\Money::parse($candidate['objects'][$code]['price_cr']));
+    }
+    $adjacent = [['x'=>-1,'y'=>-1], ['x'=>0,'y'=>-1], ['x'=>1,'y'=>-1], ['x'=>-1,'y'=>0], ['x'=>1,'y'=>0], ['x'=>-1,'y'=>1], ['x'=>0,'y'=>1], ['x'=>1,'y'=>1]];
+    $land = \common\modules\world\models\domain\WorldMapCells::purchasePricing(['base_price' => $candidate['map']['base_price_cr']] + $candidate['map'], $adjacent);
+    $water = \common\modules\world\modules\economy\value\Money::parse($candidate['crop']['water_fee_cr'])->multiply(2);
+    $startMoney = \common\modules\world\modules\economy\value\Money::parse($candidate['starter']['credits_cr']);
+    economyCheck($startMoney->compare($corePrice->add(\common\modules\world\modules\economy\value\Money::parse($land['total']))->add($water)) > 0, 'city starting credits cover current core prices, eight adjacent cells and two paid waterings');
 } finally { $tx->rollBack(); }
 $tx = $db->beginTransaction();
 try {

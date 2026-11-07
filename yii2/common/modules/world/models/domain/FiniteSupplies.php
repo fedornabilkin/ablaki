@@ -19,6 +19,7 @@ final class FiniteSupplies
         $limit = (int)($profile['daily']['claim_limit'] ?? 5); $limit = max(1, min(30, $limit));
         $period = WorldTime::dayWindow($db, time());
         $quantities = $profile['daily']['items'];
+        $fixed = $profile['daily']['fixed_items'] ?? [];
         $suppressed = $profile['daily']['suppressed_by'] ?? [
             'classic-log' => ['forest-plot'], 'classic-stone' => ['stone-plot', 'mine'],
             'classic-fibre' => ['meadow-plot'], 'classic-herb' => ['meadow-plot'], 'classic-water' => ['water-source']];
@@ -38,9 +39,9 @@ final class FiniteSupplies
             $code = trim($item['code']); $id = (int)$item['id'];
             // Newly introduced gatherable catalogue entries get their own allowance only.
             $base = $quantities[$code] ?? (!isset($profile['items'][$code]) ? (int)$item['gather_quantity'] : 0);
-            $base = isset($accepted[$id]) ? (int)$accepted[$id]['base_quantity'] : $base;
-            $cap = isset($accepted[$id]) ? (int)$accepted[$id]['grant_limit'] : $limit;
-            $initial = isset($accepted[$id]) ? (int)$accepted[$id]['initial_multiplier'] : max($limit, (int)($profile['daily']['initial_multiplier'] ?? 7));
+            $base = $fixed[$code] ?? (isset($accepted[$id]) ? (int)$accepted[$id]['base_quantity'] : $base);
+            $cap = isset($fixed[$code]) ? 0 : (isset($accepted[$id]) ? (int)$accepted[$id]['grant_limit'] : $limit);
+            $initial = isset($fixed[$code]) ? 0 : (isset($accepted[$id]) ? (int)$accepted[$id]['initial_multiplier'] : max($limit, (int)($profile['daily']['initial_multiplier'] ?? 7)));
             if ($base < 1) continue;
             $reduced = false; foreach ($suppressed[$code] ?? [] as $source) if (isset($built['built:' . $source])) $reduced = true;
             $left = max(0, $cap - ($used[$id] ?? 0));
@@ -48,6 +49,8 @@ final class FiniteSupplies
             if ($reduced) $quantity = intdiv($quantity + 1, 2);
             if ($left && isset($accepted[$id])) $quantity = min($quantity, (int)$accepted[$id]['quantity'] - 1);
             $quantity = max($minimum, $quantity);
+            // Safety food never decays, gets multiplied or depends on night/production.
+            if (isset($fixed[$code])) { $quantity = $fixed[$code]; $reduced = false; }
             if ((!$left && !$minimum) || $quantity < 1) continue;
             $remaining = max($remaining, $left); $future = true;
             $display[] = ['item_id' => $id, 'code' => $code, 'name' => trim($item['name']), 'quantity' => $quantity, 'production_reduction_bps' => $reduced ? 5000 : 0, 'remaining' => $left, 'limit' => $cap, 'minimum_only' => $left === 0];

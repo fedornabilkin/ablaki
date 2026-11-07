@@ -23,6 +23,7 @@ return [
     'modules' => [
         'user' => [
             'class' => 'dektrium\user\Module',
+            'modelMap' => ['LoginForm' => \backend\models\user\LoginForm::class],
 //            'admins' => ['admin'],
             'adminPermission' => 'p-admin',
             // following line will restrict access to profile, recovery, registration and settings controllers from backend

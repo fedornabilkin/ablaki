@@ -279,6 +279,7 @@ final class EconomyScenario
                     $this->state['supply_claims'][$item] = $used + 1;
                 } else $grant[$item] = max(1, intdiv($amount * $this->efficiency(), 10000));
             }
+            $grant = ($this->profile['daily']['fixed_items'] ?? []) + $grant;
             if (!$grant) return;
             $this->stock($grant, 1); $this->state['daily'][$day] = true;
         } elseif ($action === 'grant') {

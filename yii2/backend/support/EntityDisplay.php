@@ -2,6 +2,7 @@
 namespace backend\support;
 
 use common\modules\world\admin\WorldEntityCatalog;
+use common\modules\world\admin\ControlCatalog;
 use mdm\admin\components\Helper;
 use Yii;
 use yii\db\ActiveRecord;
@@ -13,14 +14,17 @@ final class EntityDisplay
 {
     public static function routes(): array
     {
+        if (isset(Yii::$app->params['entityDisplayRoutes'])) return Yii::$app->params['entityDisplayRoutes'];
         $routes = ['world_node' => '/world/node', 'world_template' => '/world/template', 'world_event' => '/world/event',
             'user' => '/user/admin', 'persone' => '/person', 'craft_item' => '/world/craft/item',
             'craft_recipe' => '/world/craft/recipe', 'craft_category' => '/world/craft/category',
-            'craft_history' => '/world/craft/history', 'craft_inventory' => '/world/craft/inventory',
+            'craft_history' => '/world/control', 'craft_inventory' => '/world/control',
             'todo' => '/todo', 'fact' => '/fact', 'comission' => '/commission',
             'forum_theme' => '/forum/theme', 'forum_comment' => '/forum/comment'];
         foreach (WorldEntityCatalog::definitions() as $table => $definition) if (!isset($routes[$table])) $routes[$table] = '/' . $definition['route'];
-        return $routes;
+        Yii::$app->params['entityDisplayCatalog'] = (new ControlCatalog(Yii::$app->db))->entries();
+        foreach (Yii::$app->params['entityDisplayCatalog'] as $table => $entry) if (!isset($routes[$table])) $routes[$table] = '/world/control';
+        return Yii::$app->params['entityDisplayRoutes'] = $routes;
     }
     public static function table($model): ?string
     {
@@ -41,9 +45,11 @@ final class EntityDisplay
         if ($field === 'theme_id') return 'forum_theme';
         if ($field === 'comment_id' && strpos((string)$table, 'forum_') === 0) return 'forum_comment';
         if ($field === 'template_id' || $field === 'parent_template_id') return 'world_template';
-        if ($field === 'storage_id') return 'craft_storage';
+        if (preg_match('/(^|_)storage_id$/D', $field)) return 'craft_storage';
+        if (preg_match('/(^|_)account_id$/D', $field)) return 'economy_account';
+        if ($field === 'subject_id' && strpos((string)$table, 'economy_') === 0) return 'economy_subject';
         if (preg_match('/(^|_)node_id$/D', $field) || in_array($field, ['settlement_id', 'building_id', 'room_id', 'bed_id', 'garden_id', 'starter_site_id', 'garden_node_id'], true)
-            || ($field === 'parent_id' && (!$table || $table === 'world_node'))) return 'world_node';
+            || $field === 'site_id' || ($field === 'parent_id' && (!$table || $table === 'world_node'))) return 'world_node';
         return null;
     }
     public static function url(string $table, array $row): ?array
@@ -55,15 +61,22 @@ final class EntityDisplay
         if (!$schema || !$schema->primaryKey) return null;
         $key = array_intersect_key($row, array_flip($schema->primaryKey));
         if (count($key) !== count($schema->primaryKey)) return null;
+        if ($route === '/world/control') return [$route . '/view', 'entity' => $table, 'key' => $key];
         return [$route . ($table === 'user' ? '/info' : '/view')] + (count($key) === 1 ? ['id' => reset($key)] : ['key' => $key]);
     }
     public static function label(string $table, array $row, int $depth = 0): string
     {
         foreach (['username', 'name', 'label', 'title', 'code'] as $field) if (!empty($row[$field])) return (string)$row[$field];
-        $parts = [WorldEntityCatalog::definitions()[$table]['label'] ?? ucfirst(str_replace('_', ' ', $table))];
+        if ($table === 'persone' && !empty($row['user_id']) && ($user = self::row('user', $row['user_id']))) return $user['username'];
+        if ($table === 'craft_inventory') {
+            $item = !empty($row['item_id']) ? self::row('craft_item', $row['item_id']) : null;
+            return $item ? self::label('craft_item', $item) . (isset($row['item_quantity']) ? ' × ' . $row['item_quantity'] : '') : 'Свободная ячейка';
+        }
+        $parts = [WorldEntityCatalog::definitions()[$table]['label'] ?? Yii::$app->params['entityDisplayCatalog'][$table]['label'] ?? ucfirst(str_replace('_', ' ', $table))];
         $kinds = ['budget' => 'Бюджет', 'treasury' => 'Казна', 'backpack' => 'Рюкзак', 'placement' => 'Размещение', 'stockpile' => 'Склад'];
+        if ($table === 'craft_storage') $parts = [];
         if (!empty($row['role']) || !empty($row['kind'])) { $kind = $row['role'] ?? $row['kind']; $parts[] = $kinds[$kind] ?? $kind; }
-        if ($depth < 2) foreach (['node_id', 'storage_id', 'item_id', 'owner_user_id'] as $field) {
+        if ($depth < 3) foreach (['node_id', 'site_id', 'storage_id', 'item_id', 'recipe_id', 'subject_id', 'owner_user_id', 'user_id'] as $field) {
             $target = self::target($table, $field);
             if ($target && !empty($row[$field]) && ($related = self::row($target, $row[$field]))) { $parts[] = self::label($target, $related, $depth + 1); break; }
         }
@@ -84,20 +97,21 @@ final class EntityDisplay
     {
         $schema = Yii::$app->db->schema->getTableSchema($table);
         return array_values(array_unique(array_merge($schema->primaryKey, array_intersect(array_keys($schema->columns),
-            ['username', 'name', 'label', 'title', 'code', 'kind', 'role', 'node_id', 'node_type', 'hierarchy_level', 'storage_id', 'item_id', 'owner_user_id', 'position']))));
+            ['username', 'name', 'label', 'title', 'code', 'kind', 'role', 'node_id', 'site_id', 'node_type', 'hierarchy_level', 'storage_id', 'item_id', 'item_quantity', 'recipe_id', 'subject_id', 'owner_user_id', 'user_id', 'position']))));
     }
-    public static function warm(array $models): void
+    public static function warm(array $models, ?string $entityTable = null): void
     {
         $ids = [];
         foreach ($models as $model) {
-            $table = self::table($model);
+            $table = $entityTable ?? self::table($model);
             if (!$table) continue;
-            foreach ($model->getAttributes() as $field => $id) if ($id !== null && substr($field, -3) === '_id' && ($target = self::target($table, $field))) $ids[$target][(string)$id] = $id;
+            foreach (is_array($model) ? $model : $model->getAttributes() as $field => $id) if ($id !== null && substr($field, -3) === '_id' && ($target = self::target($table, $field))) $ids[$target][(string)$id] = $id;
         }
         foreach ($ids as $table => $values) {
             $schema = Yii::$app->db->schema->getTableSchema($table);
             if (!$schema || count($schema->primaryKey) !== 1) continue;
             $pk = $schema->primaryKey[0];
+            foreach ($values as $id) Yii::$app->params['entityDisplayRows'][$table][(string)$id] = null;
             foreach ((new Query())->select(self::fields($table))->from($table)->where([$pk => array_values($values)])->all() as $row) Yii::$app->params['entityDisplayRows'][$table][(string)$row[$pk]] = $row;
         }
     }

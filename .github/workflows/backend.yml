@@ -148,6 +148,8 @@ jobs:
         run: |
           for suite in api-route-catalog world-player-read auth-response telegram-auth daily-reward exchange-refund frontend-api-routing classic-craft-install; do php "tests/release/$suite.php"; done
           if [[ -f tests/release/world-economy-profile.php ]]; then php tests/release/world-economy-profile.php; fi
+          php tests/release/world-construction-pacing.php
+          php tests/release/world-development-route.php
   full_before:
     name: Required application checks before production
     needs: plan
@@ -479,6 +481,9 @@ jobs:
           ls -ld /etc/nginx /etc/nginx/sites-enabled /etc/nginx/conf.d 2>/dev/null || true
           grep -R -n -E 'server_name.*api\.ablakin\.ru|proxy_set_header.*(X-Forwarded-Proto|X-Forwarded-For|Front-End-Https)|include.*proxy|listen.*443' /etc/nginx 2>/dev/null || true
           docker ps --format '{{.Names}} {{.Image}} {{.Ports}}'
+          printf 'ssh_uid='; id -u
+          sudo -n -l 2>/dev/null || true
+          awk 'NR >= 90 && NR <= 135 || NR >= 185 && NR <= 215' /etc/nginx/sites-available/ablakin.ru
           PROXY_HOST
       - uses: actions/upload-artifact@v4
         if: always()

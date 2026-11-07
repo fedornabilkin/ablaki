@@ -162,6 +162,7 @@ try {
     $db->pdo->exec('DROP TRIGGER reject_token');
     require __DIR__ . '/legacy-auth-cases.php';
     require __DIR__ . '/auth-algorithm-cases.php';
+    require __DIR__ . '/admin-auth-cases.php';
     echo "Authentication response regression passed without any live API or database.\n";
 } finally {
     $db->close();
