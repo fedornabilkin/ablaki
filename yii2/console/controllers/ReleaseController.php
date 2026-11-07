@@ -181,7 +181,12 @@ class ReleaseController extends \yii\console\Controller
         $query = (new Query())->select('id')->from('user')
             ->where(['or', ['blocked_at' => null], ['blocked_at' => 0]]);
         if ($username !== '') $query->andWhere(['username' => $username]);
-        else $query->andWhere(['id' => (new Query())->select('user_id')->distinct()->from('auth_assignment')]);
+        else {
+            // Yii RBAC stores user_id as a string; user.id is numeric (PostgreSQL
+            // does not implicitly compare these types inside an IN subquery).
+            $assigned = (new Query())->select('user_id')->distinct()->from('auth_assignment')->column(Yii::$app->db);
+            $query->andWhere(['id' => array_map('intval', $assigned)]);
+        }
         $administrators = [];
         foreach ($query->column(Yii::$app->db) as $candidate) {
             if (Yii::$app->authManager->checkAccess((int)$candidate, 'p-admin')) $administrators[] = (int)$candidate;
