@@ -24,6 +24,9 @@ return [
         'user' => [
             'class' => 'dektrium\user\Module',
             'modelMap' => ['LoginForm' => \backend\models\user\LoginForm::class],
+            // Match API login: legacy accounts may have no confirmed_at value.
+            'enableConfirmation' => false,
+            'enableUnconfirmedLogin' => true,
 //            'admins' => ['admin'],
             'adminPermission' => 'p-admin',
             // following line will restrict access to profile, recovery, registration and settings controllers from backend

@@ -35,3 +35,61 @@ foreach ([false, true] as $legacy) {
         authResponseCheck(!$form->login() && $app->user->isGuest, 'admin rejects '.$case.' credentials for '.($legacy?'legacy':'modern').' account');
     }
 }
+
+// Use the actual application policies: inherited module defaults previously differed.
+$adminPolicy = Yii::createObject(\yii\helpers\ArrayHelper::merge($authCommonConfig['modules']['user'], $backendConfig['modules']['user']), ['admin-policy', $app]);
+$apiPolicy = Yii::createObject(\yii\helpers\ArrayHelper::merge($authCommonConfig['modules']['user'], $authApiConfig['modules']['user']), ['api-policy', $app]);
+authResponseCheck($adminPolicy->enableConfirmation === $apiPolicy->enableConfirmation
+    && $adminPolicy->enableUnconfirmedLogin === $apiPolicy->enableUnconfirmedLogin,
+    'frontend and admin have the same effective email confirmation policy');
+foreach ([false, true] as $legacy) {
+    $password = $legacy ? 'legacy-password' : '  Modern&password  ';
+    $hash = $legacy ? md5($password . md5('fixture-salt')) : password_hash($password, PASSWORD_BCRYPT);
+    foreach (['FixtureUser', 'fixture@example.invalid'] as $login) {
+        $db->createCommand()->update('user', ['password_hash'=>$hash, 'salt'=>$legacy?'fixture-salt':null,
+            'confirmed_at'=>null, 'blocked_at'=>null, 'auth_key'=>null], ['id'=>1])->execute();
+        $module->enableConfirmation = $adminPolicy->enableConfirmation;
+        $module->enableUnconfirmedLogin = $adminPolicy->enableUnconfirmedLogin;
+        $app->user->setIdentity(null);
+        $form = Yii::createObject(\dektrium\user\models\LoginForm::class);
+        $form->login = $login; $form->password = $password; $form->rememberMe = false;
+        $db->pdo->exec("CREATE TRIGGER admin_no_credential_write BEFORE UPDATE OF password_hash,salt,auth_key ON user BEGIN SELECT RAISE(ABORT,'admin password login must not rewrite credentials'); END");
+        try {
+            authResponseCheck($form->login() && (int)$app->user->id === 1,
+                'configured admin accepts '.($legacy?'legacy':'modern').' credentials without confirmed email or a token');
+            authResponseCheck($db->createCommand('SELECT auth_key FROM user WHERE id=1')->queryScalar() === null,
+                'admin password login does not require or generate a legacy-site token');
+        } finally { $db->pdo->exec('DROP TRIGGER admin_no_credential_write'); }
+        $module->enableConfirmation = $apiPolicy->enableConfirmation;
+        $module->enableUnconfirmedLogin = $apiPolicy->enableUnconfirmedLogin;
+        $app->user->setIdentity(null);
+        $app->request->setBodyParams(['login'=>$login, 'password'=>$password]);
+        authResponseCheck(!empty(authWithoutPasswordWrites($app, 'login')['token']),
+            'configured frontend accepts the same unconfirmed account and password');
+    }
+    $module->enableConfirmation = $adminPolicy->enableConfirmation;
+    $module->enableUnconfirmedLogin = $adminPolicy->enableUnconfirmedLogin;
+    $db->createCommand()->update('user', ['blocked_at'=>time()], ['id'=>1])->execute();
+    $app->user->setIdentity(null);
+    $form = Yii::createObject(\dektrium\user\models\LoginForm::class);
+    $form->login = 'FixtureUser'; $form->password = $password;
+    authResponseCheck(!$form->login() && $app->user->isGuest,
+        'configured admin still rejects a blocked account without confirmed email');
+}
+
+// Keep the existing admin login-key route compatible during the transition.
+$db->createCommand()->update('user', ['blocked_at'=>null, 'auth_key'=>'fixture-admin-key'], ['id'=>1])->execute();
+$app->user->setIdentity(null);
+$form = Yii::createObject(\dektrium\user\models\LoginForm::class);
+$db->pdo->exec("CREATE TRIGGER admin_key_no_password_write BEFORE UPDATE OF password_hash,salt ON user BEGIN SELECT RAISE(ABORT,'key login must preserve passwords'); END");
+try {
+    authResponseCheck($form->loginKey('fixture-admin-key') && (int)$app->user->id === 1,
+        'existing admin token login still works without rewriting the password');
+    $rotatedKey = $db->createCommand('SELECT auth_key FROM user WHERE id=1')->queryScalar();
+    authResponseCheck(is_string($rotatedKey) && $rotatedKey !== '' && $rotatedKey !== 'fixture-admin-key',
+        'existing admin token login still rotates its key');
+    $app->user->setIdentity(null);
+    $form = Yii::createObject(\dektrium\user\models\LoginForm::class);
+    authResponseCheck(!$form->loginKey('fixture-admin-key') && $app->user->isGuest,
+        'consumed admin login key cannot be reused');
+} finally { $db->pdo->exec('DROP TRIGGER admin_key_no_password_write'); }

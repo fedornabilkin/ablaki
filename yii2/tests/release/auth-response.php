@@ -7,6 +7,9 @@ require dirname(__DIR__, 2) . '/vendor/yiisoft/yii2/Yii.php';
 Yii::setAlias('@common', dirname(__DIR__, 2) . '/common');
 Yii::setAlias('@api', dirname(__DIR__, 2) . '/api');
 error_reporting(E_ALL & ~E_DEPRECATED);
+// Load real policies before test output (API config removes an HTTP header).
+$authApiConfig = require dirname(__DIR__, 2) . '/api/config/main.php';
+$authCommonConfig = require dirname(__DIR__, 2) . '/common/config/main.php';
 
 use api\modules\v1\models\User;
 use yii\web\Application;
