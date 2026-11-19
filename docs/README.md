@@ -1,6 +1,6 @@
 # Документация backend
 
-Актуально на **7 ноября 2026**. Мир работает на production с 1 ноября. **[Очередь планов](plan/README.md)** и [короткий план оставшейся приёмки](plan/2026-10-21-mvp-launch-readiness.md#короткий-план-запуска) отделяют завершённую активацию от ручных проверок, аварийного восстановления и наблюдения.
+Сверено 19 ноября 2026. Мир работает на production с 1 ноября. **[Очередь планов](plan/README.md)** и [короткий план оставшейся приёмки](plan/2026-10-21-mvp-launch-readiness.md#короткий-план-запуска) отделяют завершённую активацию от ручных проверок, аварийного восстановления и наблюдения.
 
 | Раздел | Содержание |
 | --- | --- |
@@ -16,11 +16,11 @@
 - [Полный пакет мира и админки, 7 ноября](plan/done/2026-11-07-full-package-release.md): test → production завершены; backend `a05baad`, frontend `08298ca`. Открытый доступ к миру сохранён, миграции применены, балансы и инвентари проверены, финансовая пауза снята.
 - [Управление миром и пополнение NPC, 7 ноября](operations/world-control-center.md): опубликовано — 80% фактической выручки, предел 500 Cr/сутки, адаптивная админка и исправления с аудитом.
 
-- [Вход через Telegram](architecture/telegram-auth.md): сайт/API и env подготовлены; отдельный бот и включение — [следующий этап](plan/2026-11-04-telegram-auth.md).
+- Вход через Telegram и бот на VPS опубликованы. Мобильную проверку и повторную доставку update вести по B4 плана бота. [План интеграции](plan/done/2026-11-04-telegram-auth.md) · [Приёмка бота](https://github.com/fedornabilkin/ablaki-tg-bot/blob/master/PLAN.md)
 
 - [Приёмка 4 ноября](plan/done/2026-11-04-world-acceptance-catalogs.md): полный каталог, состав рецептов и исторические факты добычи; backend `325afe7` / frontend `ce831cc` опубликованы, полный CI прошёл.
 
-- [Активация production 1 ноября](operations/world-production-activation.md): InnoDB, точные деньги, сверка 24 849 владельцев, открытый мир и постоянный worker. При активации из bot выделены 25 000 Cr на 100 стартов и 810 Cr NPC. [Первичный аудит схемы](operations/production-schema-review-2026-10-31.md) — исторический срез; [оставшийся пункт C3](plan/2026-10-31-production-schema-compatibility.md) — аварийное восстановление, а не повторная установка.
+- [Активация production 1 ноября](operations/world-production-activation.md): InnoDB, точные деньги, сверка 24 849 владельцев, открытый мир и постоянный worker. При активации из bot выделены 25 000 Cr на 100 стартов и 810 Cr NPC. [Первичный аудит схемы](operations/production-schema-review-2026-10-31.md) — исторический срез; [оставшаяся репетиция восстановления и отката, H2/H4](plan/2026-09-26-world-database.md) — аварийное восстановление, а не повторная установка.
 - [Этапы выращивания, 3 ноября](architecture/world-cultivation-states.md): два явных полива, один текущий таймер, сохранение старых посевов. [Выпуск](plan/done/2026-11-03-cultivation-stages.md): backend d6d6f96 / frontend af177ee, полный CI и production подтверждены.
 - [Оптимизация обычной выкладки](plan/done/2026-11-02-release-optimization.md): выбор проверок по изменениям и пропуск документационных публикаций; [полный хронометраж](plan/2026-10-19-test-deployment-optimization.md) ещё в работе.
 
@@ -39,7 +39,7 @@
 
 - [Что осталось в приёмке после запуска](plan/2026-10-21-mvp-launch-readiness.md) и [приёмка ACC](plan/2026-10-15-world-closed-test-acceptance.md).
 - [Чистый локальный мир 29 октября](operations/local-world-reset-2026-10-29.md): два места по 250, награды/заказы, NPC, время 1:1; аккаунты и деньги сохранены.
-- [Чеклист приёмки](../../frontend/docs/operations/world-mvp-checklist.md): автоматические/ручные результаты, комментарии и экспорт из браузера.
+- [Чеклист приёмки](https://github.com/fedornabilkin/ablaki-front/blob/master/docs/operations/world-mvp-checklist.md): автоматические/ручные результаты, комментарии и экспорт из браузера.
 - [Аудит test/production 29 октября](operations/world-production-readiness-2026-10-29.md): исторический срез до уже выполненной активации 1 ноября.
 - [Ускоренная выкладка](operations/fast-test-release-2026-10-26.md) внедрена; [серия замеров](plan/2026-10-19-test-deployment-optimization.md) остаётся открытой.
 
@@ -53,7 +53,7 @@
 
 - [Общая цепочка команд и финансовая история, 30 октября](architecture/simple-world.md#общая-цепочка-команд--2026-10-30): middleware без общего статического контекста, совместимость повторов и единая запись расходов вкладов.
 
-- [Проверка Компоновщика/Посетителя и интерфейса, 30 октября](../../frontend/docs/operations/2026-10-30-interface-consistency.md): реальные потребители обхода, защита дерева и границы интеграции предметов/событий. Чистая проверка домена: `php yii2/tests/release/world-composite.php` из корня backend.
+- [Проверка Компоновщика/Посетителя и интерфейса, 30 октября](https://github.com/fedornabilkin/ablaki-front/blob/master/docs/operations/2026-10-30-interface-consistency.md): реальные потребители обхода, защита дерева и границы интеграции предметов/событий. Чистая проверка домена: `php yii2/tests/release/world-composite.php` из корня backend.
 
 - [Общая очередь мира](plan/2026-10-15-world-closed-test.md), [дорожная карта backend](plan/2026-09-26-world-backend.md) и [БД](plan/2026-09-26-world-database.md).
 - [API простой модели](architecture/simple-world-api.md), [экономика](architecture/economy-runtime-api.md), [инструкция выкладки](operations/production-test-deployment.md).
